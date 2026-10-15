@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
+import '../utils/numista_error_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -503,7 +504,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Save failed: $e'), backgroundColor: _kRed),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Save failed. Please try again.')), backgroundColor: _kRed),
         );
       }
     }
@@ -652,7 +653,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Submission failed: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Submission failed. Please try again.')),
           backgroundColor: Colors.red[700],
         ),
       );
@@ -689,7 +690,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update CAC sticker status: $e'), backgroundColor: _kRed),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not update CAC sticker status. Please try again.')), backgroundColor: _kRed),
         );
       }
     }
@@ -1229,7 +1230,7 @@ class _CoinImagePairState extends State<_CoinImagePair> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Failed to submit flag: $e'),
+                              content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not submit flag. Please try again.')),
                               backgroundColor: Colors.orange,
                             ),
                           );
@@ -1959,7 +1960,7 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load coin details. Please try again.');
           _loading = false;
         });
       }
@@ -2598,7 +2599,7 @@ class _PaperTrailCardState extends State<_PaperTrailCard> {
         setState(() => _error = 'Server error ${resp.statusCode}.');
       }
     } catch (e) {
-      setState(() => _error = 'Could not open receipt: $e');
+      setState(() => _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not open receipt. Please try again.'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -4397,7 +4398,7 @@ class _OwnerPhotoHero extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Photo upload failed. Please try again.')), backgroundColor: Colors.red),
         );
       }
     }

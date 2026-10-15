@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/numista_error_helper.dart';
 import '../services/family_subaccount_service.dart';
 
 class FamilySettingsScreen extends StatefulWidget {
@@ -63,7 +64,7 @@ class _FamilySettingsScreenState extends State<FamilySettingsScreen> {
       _loadSubAccounts();
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'An error occurred. Please try again.')), backgroundColor: Colors.red),
       );
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/numista_error_helper.dart';
 import '../services/wishlist_service.dart';
 import '../services/epn_service.dart';
 import '../models/coin_model.dart';
@@ -88,7 +89,7 @@ class _DealsScreenState extends State<DealsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load deals. Please try again.');
           _loading = false;
         });
       }

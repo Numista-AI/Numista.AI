@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../utils/numista_error_helper.dart';
 import '../services/coin_search_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/epn_service.dart';
@@ -1037,7 +1038,7 @@ class _AddToWishlistDialogState extends State<_AddToWishlistDialog> {
       Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add to wishlist: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not add to wish list. Please try again.')), backgroundColor: Colors.red),
       );
     }
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:intl/intl.dart' as intl;
+import '../utils/numista_error_helper.dart';
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -478,7 +479,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         _coinsTimeoutTimer?.cancel();
         if (mounted) {
           setState(() {
-            _coinsError = e.toString();
+            _coinsError = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load your collection. Please try again.');
             _isLoadingCoins = false;
           });
         }
@@ -486,7 +487,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _coinsError = e.toString();
+          _coinsError = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load your collection. Please try again.');
           _isLoadingCoins = false;
         });
       }
@@ -2823,7 +2824,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               }
                             } catch (e) {
                               if (mounted) {
-                                messenger.showSnackBar(SnackBar(content: Text('Error ungrouping set: $e'), backgroundColor: Colors.red));
+                                messenger.showSnackBar(SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not ungroup set. Please try again.')), backgroundColor: Colors.red));
                               }
                             }
                           }),
@@ -4116,7 +4117,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Save failed: $e'),
+                      content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Save failed. Please try again.')),
                       backgroundColor: _red,
                       duration: Duration(seconds: 6)));
                 }
@@ -4310,7 +4311,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating set: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not create set. Please try again.')), backgroundColor: Colors.red),
         );
       }
     }
@@ -5031,7 +5032,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Upload failed: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Photo upload failed. Please try again.')),
           backgroundColor: _red,
         ));
       }
@@ -5507,7 +5508,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Photo upload failed. Please try again.')), backgroundColor: Colors.red));
       }
     }
   }
@@ -6054,7 +6055,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString().replaceAll('Exception:', '').trim();
+          _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load data. Please try again.');
           _isLoading = false;
         });
       }

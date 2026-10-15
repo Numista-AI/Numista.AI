@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/numista_error_helper.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CoinSetViewer
@@ -145,7 +146,7 @@ class _CoinSetViewerState extends State<CoinSetViewer> {
         _loading = false;
       });
     } catch (e) {
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() { _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load coin set. Please try again.'); _loading = false; });
     }
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/numista_error_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
@@ -224,7 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Export failed: ${e.toString().split('\n').first}'),
+                        content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Export failed. Please try again.')),
                         backgroundColor: Colors.red.shade700,
                       ),
                     );
@@ -563,7 +564,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('❌ Clear failed: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Clear failed. Please try again.')),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 8),
         ));
@@ -1671,7 +1672,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Sweep failed: $e'),
+            SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Sweep failed. Please try again.')),
                 backgroundColor: Colors.red));
       }
     } finally {
@@ -2616,7 +2617,7 @@ class _DedupDialogState extends State<_DedupDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Auto-clean failed: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Auto-clean failed. Please try again.')),
           backgroundColor: Colors.red,
         ));
       }

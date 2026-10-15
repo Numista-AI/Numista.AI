@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/numista_error_helper.dart';
 import '../services/lateral_transfer_service.dart';
 
 class TransferInboxScreen extends StatefulWidget {
@@ -59,7 +60,7 @@ class _TransferInboxScreenState extends State<TransferInboxScreen> {
       setState(() => _isLoading = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Claim failed: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Claim failed. Please try again.')), backgroundColor: Colors.red),
       );
     }
   }

@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../services/http_auth_client.dart';
+import '../utils/numista_error_helper.dart';
 import '../widgets/grade_badge_widget.dart';
 
 
@@ -127,7 +128,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error committing items: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Error committing items. Please try again.')),
           backgroundColor: Colors.red[700],
         ),
       );
@@ -196,7 +197,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error deleting items: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Error deleting items. Please try again.')),
           backgroundColor: Colors.red[700],
         ),
       );
@@ -263,7 +264,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error deleting item: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Error deleting item. Please try again.')),
           backgroundColor: Colors.red[700],
         ),
       );
@@ -405,7 +406,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       messenger.showSnackBar(SnackBar(content: Text('Could not open document (HTTP ${res.statusCode})$msg')));
                     }
                   } catch (e) {
-                    messenger.showSnackBar(SnackBar(content: Text('Error opening file: $e')));
+                    messenger.showSnackBar(SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Error opening file. Please try again.'))));
                   }
                 },
                 icon: const Icon(Icons.open_in_new, size: 14, color: Color(0xFFFFD700)),
@@ -450,7 +451,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Failed to delete document: $e')),
+                                  SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to delete document. Please try again.'))),
                                 );
                               }
                             }
@@ -561,7 +562,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[700]),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to commit set. Please try again.')), backgroundColor: Colors.red[700]),
       );
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -624,7 +625,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[700]),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to expand set. Please try again.')), backgroundColor: Colors.red[700]),
       );
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -993,7 +994,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               } catch (e) {
                                 setDialogState(() => isSaving = false);
                                 dialogMessenger.showSnackBar(
-                                  SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red[700]),
+                                  SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Save failed. Please try again.')), backgroundColor: Colors.red[700]),
                                 );
                               }
                             },
@@ -1072,7 +1073,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               } catch (e) {
                                 setDialogState(() => isSaving = false);
                                 dialogMessenger.showSnackBar(
-                                  SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[700]),
+                                  SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'An error occurred while saving. Please try again.')), backgroundColor: Colors.red[700]),
                                 );
                               }
                             },
@@ -1408,7 +1409,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.error_outline, color: Colors.red),
                         title: const Text('Item Rendering Warning', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                        subtitle: Text(e.toString(), style: const TextStyle(fontSize: 12)),
+                        subtitle: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Unable to render this item.'), style: const TextStyle(fontSize: 12)),
                       ),
                     );
                   }

@@ -1501,7 +1501,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              "ℹ️ Safely adding items directly to your Firestore collection tracker.",
+              "ℹ️ Safely saves your selected coins directly to your collection.",
               style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
               textAlign: TextAlign.center,
             ),

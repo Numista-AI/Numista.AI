@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../utils/numista_error_helper.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -1101,7 +1102,7 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
         _error = null;
       });
     } catch (e) {
-      setState(() => _error = 'Failed to pick image: $e');
+      setState(() => _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not pick image. Please try again.'));
     }
   }
 

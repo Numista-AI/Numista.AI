@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../utils/numista_error_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -578,7 +579,7 @@ class _ProfileTabState extends State<_ProfileTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'An error occurred. Please try again.')), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -1300,7 +1301,7 @@ class _DivisionTabState extends State<_DivisionTab> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving division plan: $e')),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not save division plan. Please try again.'))),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -1787,7 +1788,7 @@ class _GenerateTabState extends State<_GenerateTab> {
       setState(() => _generating = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString().replaceFirst('Exception: ', '')}'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not generate report. Please try again.')),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 8),
         ),
@@ -2198,7 +2199,7 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'An error occurred. Please try again.')), backgroundColor: Colors.red),
         );
       }
     } finally {
