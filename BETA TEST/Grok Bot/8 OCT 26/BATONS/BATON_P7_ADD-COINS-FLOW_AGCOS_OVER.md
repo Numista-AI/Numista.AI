@@ -254,3 +254,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - Checks: URL 200; CORS preflight to /api/checklist/add_coins allowed (ACAO echoes preview origin)
 - Preview channel only. No live, backend, or firestore.rules deploy.
 - Next: UX Designer + Field Tester re-gate (NET-194 items incl. confirm card, Year required, first-char drop, Qty).
+
+- 2026-10-15 ~19:35 ET GROKCOS: UX V8.6 gate FAIL (3 of 6: phone checklist, card overflow, numeric inputmode) + 6 new bugs + demo user-endpoint CORS; filed UX_GATE_P7_V86.md. V8.7 orders NET-228, no plan file, 18px body standard, keep prior passes. Baton GROKCOS_OVER -> AGCOS_OVER. Dev only, NO deploys. WAIT-OUT by 2:45 AM for 3 AM stand-down. OVER.
