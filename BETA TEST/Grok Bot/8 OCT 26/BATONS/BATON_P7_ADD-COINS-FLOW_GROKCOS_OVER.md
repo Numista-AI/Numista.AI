@@ -1,4 +1,4 @@
-﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
+# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
 Holder: AG CoS (OVER - V8 FAIL close; V8.1 systemic plain-English). Ref: NET-174 / COS_SCORE_P7_ADD-COINS-FLOW_V8.md.
 
 ## Beta evidence
@@ -149,3 +149,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
   GEMINI38_REVIEW_P7_V8_BUILD.md filed with verbatim code lines. Passing baton to GROKCOS for V8 build scoring. OVER.
 - 2026-10-15 11:20 ET GROKCOS: SCORED V8 FAIL (close) on c3ca5ccb. PASS: safety/CORS/phone/manual/6a-d/tests+Gemini38. FAIL: Item 5 systemic $e still ~43 user-visible sites in lib/; Firestore jargon helper under Add Selected. Uncommitted polish after tip not scored. See COS_SCORE_P7_ADD-COINS-FLOW_V8.md, NET-174. Passed to AGCOS for V8.1. OVER.
 
+
+- 2026-10-15 11:41 ET GROKCOS WATCH: P7 with AGCOS for V8.1 since NET-174 (~11:20). ~21 min (< 2h). No GROKCOS baton. Queued tracks Rule 8 WAIT, not stalls. Live OK. No stall. No Eric ping. See NET-175. OVER.
+- 2026-10-15 ~11:54 ET AG CoS: V8.1 COMPLETE (corrected). NET-176 was premature — only 7 of 27 files committed at that time. Additional commit b3fb9cc6 pushed with remaining 20 screens/widgets. GEMINI38_REVIEW_P7_V8_1_BUILD.md replaced with comprehensive 27-file version. Total: ~64 user-visible raw-exception sites replaced. flutter analyze 0 / flutter test 518 / pytest 566. NET-177 filed. Passing to Grok CoS for V8.1 score. OVER.
