@@ -646,6 +646,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           icon: Icons.keyboard_outlined,
           label: 'Type it in',
           onTap: () {
+            // NOTE: This creates a new AddCoinsHub State on every 'Type it in' tap.
+            // Text typed during a visit is lost on Back+re-enter (expected — each visit is fresh).
+            // The FT 'first char dropped' bug was investigated in V8.6: see GEMINI38_REVIEW.
+            // Within a single visit, controllers in _AddCoinManualFormState prevent rebuild loss.
             Navigator.push(
               context,
               MaterialPageRoute(

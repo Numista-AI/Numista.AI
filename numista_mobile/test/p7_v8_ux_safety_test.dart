@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -764,6 +764,84 @@ void main() {
 
   // â”€â”€ V8.6: Quantity regression fix â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   group('P7 V8.6 Item Q: Quantity field starts empty', () {
+    testWidgets('p7_v86_quantity_field_starts_empty_not_prefilled', (WidgetTester tester) async {
+      // Regression: _formData had 'Quantity': '1' in an earlier draft.
+      // If Quantity field starts with '1', typing '3' gives '13'.
+      // The correct behaviour: starts empty (hint '1'), blank submit -> defaults to '1'.
+      setTestViewSize(tester, width: 1200, height: 2000);
+      bool submitted = false;
+      Map<String, dynamic>? payload;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AddCoinManualForm(
+                onSubmit: (data) {
+                  submitted = true;
+                  payload = data;
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final fields = find.byType(TextFormField);
+      // Index 8 is Quantity: 0=Year, 1=MintMark, 2=Denomination, 3=Program/Series,
+      // 4=Theme, 5=Variety, 6=Condition, 7=Cost, 8=Quantity
+      expect(
+        tester.widget<TextFormField>(fields.at(8)).controller?.text ?? '',
+        equals(''),
+        reason: 'Quantity controller text must be empty on initial build',
+      );
+
+      await tester.enterText(fields.at(0), '1921');            // Year
+      await tester.enterText(fields.at(2), 'Quarter Dollar'); // Denomination  
+      await tester.enterText(fields.at(3), 'Washington Quarter'); // Program/Series
+      // Leave Quantity blank — do NOT enter anything
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save to My Collection'));
+      await tester.pumpAndSettle();
+      expect(submitted, isTrue);
+      expect(payload!['Quantity'], equals('1'),
+          reason: 'Blank Quantity should default to 1, not be blank or contain prefilled digits');
+    });
+
+    testWidgets('p7_v86_typing_3_in_quantity_gives_3_not_13', (WidgetTester tester) async {
+      // Regression: if Quantity starts prefilled with '1', typing '3' appends to give '13'.
+      // After fix: Quantity starts empty, typing '3' gives '3'.
+      setTestViewSize(tester, width: 1200, height: 2000);
+      Map<String, dynamic>? payload;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AddCoinManualForm(
+                onSubmit: (data) { payload = data; },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final fields = find.byType(TextFormField);
+      expect(
+        tester.widget<TextFormField>(fields.at(8)).controller?.text ?? '',
+        equals(''),
+        reason: 'Quantity starts empty',
+      );
+      await tester.enterText(fields.at(0), '1921');
+      await tester.enterText(fields.at(2), 'Quarter Dollar');
+      await tester.enterText(fields.at(3), 'Washington Quarter');
+      // Type '3' into Quantity field
+      await tester.enterText(fields.at(8), '3');
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save to My Collection'));
+      await tester.pumpAndSettle();
+      expect(payload!['Quantity'], equals('3'),
+          reason: 'Typing 3 in a blank Quantity field must give 3, not 13');
+    });
+
     testWidgets('p7_v86_quantity_field_empty_on_first_build', (WidgetTester tester) async {
       // VERIFIES: Quantity box controller text is '' on first build.
       // On e8b978f2 (_formData had 'Quantity':'1'), _qtyCtrl initialised with
@@ -866,6 +944,31 @@ void main() {
     //   test p7_v85_year_field_survives_setstate_rebuild which passes on V8.5+).
     //   This test instead documents what DOES happen on key-forced remount
     //   (Year resets). Both e8b978f2 and V8.5+ produce empty Year after remount.
+
+    testWidgets('p7_v86_year_first_char_not_dropped_in_form', (WidgetTester tester) async {
+      // Tests that the very first character typed into Year is retained
+      setTestViewSize(tester, width: 1200, height: 2000);
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: AddCoinManualForm(onSubmit: (_) {}),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      // Focus the Year field and type one digit
+      final yearField = find.byType(TextFormField).first;
+      await tester.tap(yearField);
+      await tester.pump();
+      await tester.enterText(yearField, '1');
+      await tester.pump();
+      // Year field must contain '1' — not empty
+      expect(
+        tester.widget<TextFormField>(yearField).controller?.text ?? '',
+        equals('1'),
+        reason: 'First character typed must not be dropped',
+      );
+    });
 
     testWidgets('p7_v86_key_forced_remount_resets_year_field', (WidgetTester tester) async {
       // Simulates Navigator.push creating a new AddCoinManualForm State.
