@@ -236,3 +236,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-15 ~6:10 PM ET GROKCOS: CORS backend fix staged on deploy/cors-preview-20261015 @ b611eaca; deploy BLOCKED (gcloud reauth needed). See NET-218.
 
 - 2026-10-15 18:05 ET GROKCOS: SCORED V8.5 PLAN GO w/ conditions (Year ^\d{4}$ + write-path guard; repro test for lost text; NEW must-fix coinDoc drops Retailer/Invoice/Notes; real before-quotes; split CORS vs offline in error helper). See COS_SCORE_P7_ADD-COINS-FLOW_V8_5_PLAN_V1.md, NET-219. Baton stays AGCOS_OVER (build). Watch: no stalls; queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT. No ERIC baton. No deploy YES. No Eric ping. Live OK (numista.ai 200, vault 200). OVER.
+
+- 2026-10-15 18:12 ET GROKCOS EVE-WATCH: no new GROKCOS score since NET-219 V8.5 PLAN GO (~7m). P7 with AGCOS building V8.5. Under 2h, no stall. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT. No ERIC baton. Overnight quiet — no Eric ping. Live OK. 3 AM AG stand-down applies later. See NET-220. OVER.
