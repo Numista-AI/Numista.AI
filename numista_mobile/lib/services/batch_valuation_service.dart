@@ -13,7 +13,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:http/http.dart' as http;
+import 'http_auth_client.dart';
 import '../constants.dart';
 import 'auth_service.dart';
 
@@ -356,9 +356,8 @@ class BatchValuationService {
     required String metalContent,
     required String country,
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$kApiBaseUrl/api/estimate_value_text'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'year':           year,
         'denomination':   denomination,
@@ -385,9 +384,8 @@ class BatchValuationService {
     required String country,
     required String details,
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$kApiBaseUrl/api/estimate_value_general'),
-      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'item_type':    itemType,
         'name':         name,

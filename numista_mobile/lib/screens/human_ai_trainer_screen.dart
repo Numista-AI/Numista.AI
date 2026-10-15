@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../services/http_auth_client.dart';
 import '../constants.dart';
@@ -170,12 +168,9 @@ class _HumanAiTrainerScreenState extends State<HumanAiTrainerScreen>
   Future<void> _loadStats() async {
     _loadImageStats();
     try {
-      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
-      if (idToken == null) return;
-      final authHeaders = {'Authorization': 'Bearer $idToken'};
       final results = await Future.wait([
-        http.get(Uri.parse('$_apiUrl/api/grade_review/stats'), headers: authHeaders),
-        http.get(Uri.parse('$_apiUrl/api/nicknames/stats')),
+        HttpAuthClient.get(Uri.parse('$_apiUrl/api/grade_review/stats')),
+        HttpAuthClient.get(Uri.parse('$_apiUrl/api/nicknames/stats')),
       ]);
       if (!mounted) return;
       if (results[0].statusCode == 200) {
@@ -366,11 +361,8 @@ class _GradeReviewTabState extends State<_GradeReviewTab>
   Future<void> _load() async {
     setState(() { _loading = true; _error = ''; });
     try {
-      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
-      if (idToken == null) { setState(() { _loading = false; _error = 'Not signed in.'; }); return; }
-      final res = await http.get(
-          Uri.parse('$_apiUrl/api/grade_review/queue?limit=30'),
-          headers: {'Authorization': 'Bearer $idToken'});
+      final res = await HttpAuthClient.get(
+          Uri.parse('$_apiUrl/api/grade_review/queue?limit=30'));
       if (res.statusCode == 200 && mounted) {
         final data  = jsonDecode(res.body);
         final items = (data['results'] as List)
@@ -892,7 +884,7 @@ class _CoinCropImageState extends State<_CoinCropImage> {
           '$_api/api/coin_crop'
           '?coin_id=${Uri.encodeComponent(widget.coinId)}'
           '&user_email=${Uri.encodeComponent(widget.userEmail)}');
-      final res = await http.get(uri).timeout(const Duration(seconds: 15));
+      final res = await HttpAuthClient.get(uri, timeout: const Duration(seconds: 15));
       if (!mounted) { return; }
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -1306,7 +1298,7 @@ class _CommunityReviewTabState extends State<_CommunityReviewTab>
   Future<void> _load() async {
     setState(() { _loading = true; _error = ''; });
     try {
-      final res = await http.get(Uri.parse(
+      final res = await HttpAuthClient.get(Uri.parse(
           '$_apiUrl/api/nicknames?status=pending&limit=50'));
       if (res.statusCode == 200) {
         final data  = jsonDecode(res.body);
@@ -1333,8 +1325,9 @@ class _CommunityReviewTabState extends State<_CommunityReviewTab>
     }
     setState(() => _pendingVotes[item.id] = rating);
     try {
-      final res = await http.post(
+      final res = await HttpAuthClient.post(
         Uri.parse('$_apiUrl/api/nicknames/${item.id}/vote'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {'user_email': myEmail, 'rating': rating.toString()},
       );
       if (res.statusCode == 200 && mounted) {
@@ -1566,11 +1559,15 @@ class _SubmitTabState extends State<_SubmitTab> {
     }
     setState(() { _submitting = true; _feedback = ''; });
     try {
-      final res = await http.post(Uri.parse('$_apiUrl/api/nicknames/submit'), body: {
-        'user_email': AuthService.userEmail,
-        'nickname': nickname, 'maps_to': mapsTo, 'category': _category,
-        'example': _exampleCtrl.text.trim(), 'notes': _notesCtrl.text.trim(),
-      });
+      final res = await HttpAuthClient.post(
+        Uri.parse('$_apiUrl/api/nicknames/submit'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'user_email': AuthService.userEmail,
+          'nickname': nickname, 'maps_to': mapsTo, 'category': _category,
+          'example': _exampleCtrl.text.trim(), 'notes': _notesCtrl.text.trim(),
+        },
+      );
       if (res.statusCode == 200 && mounted) {
         final data   = jsonDecode(res.body);
         final status = data['status'] ?? 'error';
@@ -1721,7 +1718,7 @@ class _ApprovedDictTabState extends State<_ApprovedDictTab>
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final res = await http.get(Uri.parse(
+      final res = await HttpAuthClient.get(Uri.parse(
           '$_apiUrl/api/nicknames?status=approved&limit=100'));
       if (res.statusCode == 200 && mounted) {
         final data  = jsonDecode(res.body);

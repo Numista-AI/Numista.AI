@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'http_auth_client.dart';
 
 class SubAccountModel {
   final String childId;
@@ -55,10 +55,9 @@ class FamilySubaccountService {
     required double bequestPercentage,
     String userTier = 'Pro',
   }) async {
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/subaccounts'),
       headers: {
-        'Content-Type': 'application/json',
         'user_tier': userTier,
       },
       body: jsonEncode({
@@ -80,7 +79,7 @@ class FamilySubaccountService {
 
   /// List all sub-accounts for parent
   Future<List<SubAccountModel>> fetchSubAccounts(String parentEmail) async {
-    final response = await http.get(
+    final response = await HttpAuthClient.get(
       Uri.parse('$baseUrl/subaccounts?parent_email=$parentEmail'),
     );
 
@@ -94,7 +93,7 @@ class FamilySubaccountService {
 
   /// Delete sub-account
   Future<bool> deleteSubAccount(String childId, String parentEmail) async {
-    final response = await http.delete(
+    final response = await HttpAuthClient.delete(
       Uri.parse('$baseUrl/subaccounts/$childId?parent_email=$parentEmail'),
     );
     return response.statusCode == 200;
