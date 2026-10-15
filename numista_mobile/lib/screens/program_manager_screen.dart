@@ -292,6 +292,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   }
 
   Future<void> _loadTotalReferenceCount() async {
+    if (FirebaseAuth.instance.currentUser == null) return;
     try {
       final snap = await FirebaseFirestore.instance
           .collection('coins_reference')
@@ -769,6 +770,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           Text(
             'Advances overall record by ${programOverallAdvancement.toStringAsFixed(2)}%',
             style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            softWrap: true,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 10),
           
@@ -1286,8 +1290,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                           const SizedBox(width: 8),
                           // Design / state name — shown when meaningful (non-empty and not just the year)
                           if (coin.name.isNotEmpty && coin.name != (coin.year ?? ''))
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 180),
+                            Flexible(
                               child: Text(
                                 coin.name,
                                 overflow: TextOverflow.ellipsis,
@@ -1761,7 +1764,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Browse Demo Mode: Sign in to save coins to your collection.'),
+            content: Text('Browse Demo Mode: Create a free account to save coins to your collection.'),
             backgroundColor: Color(0xFFF59E0B),
           ),
         );
@@ -1817,7 +1820,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Browse Demo Mode: Sign in to save coins to your collection.'),
+            content: Text('Browse Demo Mode: Create a free account to save coins to your collection.'),
             backgroundColor: Color(0xFFF59E0B),
           ),
         );

@@ -1669,6 +1669,8 @@ class _GenerateTabState extends State<_GenerateTab> {
   }
 
   Future<void> _loadCoinCount() async {
+    if (widget.uid.isEmpty) return;
+    if (FirebaseAuth.instance.currentUser == null) return; // demo/signed-out guard — prevents Firestore 403
     try {
       final snap = await FirebaseFirestore.instance
           .collection('users')

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -686,7 +687,62 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 // ITEM 9: Tab order matches priority: upload → camera → manual → cert → sku → roll → world → set
                 _buildUploadFilesTab(),
                 _buildCameraScannerTab(),
-                _buildManualEntryTab(),
+                Builder(
+                  builder: (ctx) => GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
+                        builder: (_) => AddCoinsHub(
+                          showManualFullScreen: true,
+                          initialCoinPreset: widget.initialCoinPreset,
+                        ),
+                      ),
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.keyboard_outlined, size: 48, color: Color(0xFF64748B)),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Type it in',
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Open the manual entry form to enter full details for your coin.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: () => Navigator.push(
+                                ctx,
+                                MaterialPageRoute(
+                                  builder: (_) => AddCoinsHub(
+                                    showManualFullScreen: true,
+                                    initialCoinPreset: widget.initialCoinPreset,
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(Icons.open_in_new, size: 16),
+                              label: const Text('Open Manual Entry'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF3B82F6),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 _buildCertLookupTab(),   // P7 FIX: unified PCGS/NGC/CAC tab (was _buildPcgsImportTab)
                 _buildSkuImportTab(),
                 _buildRollEntryTab(),
@@ -3129,7 +3185,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             hint: 'e.g. 1921 Morgan Dollar'),
         const SizedBox(height: 14),
         Row(children: [
-          Expanded(child: _certManualField('Year', _certManualYear, hint: 'e.g. 1921')),
+          Expanded(child: _certManualField('Year', _certManualYear, hint: 'e.g. 1921',
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
           const SizedBox(width: 14),
           Expanded(child: _certManualField('Grade', _certManualGrade, hint: 'e.g. MS-64')),
         ]),
@@ -3236,7 +3294,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Widget _certManualField(String label, TextEditingController ctrl,
-      {String? hint, bool readOnly = false, int maxLines = 1}) {
+      {String? hint, bool readOnly = false, int maxLines = 1,
+       TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: const TextStyle(
           fontSize: 18, fontWeight: FontWeight.w600,
@@ -3246,6 +3305,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         controller: ctrl,
         readOnly: readOnly,
         maxLines: maxLines,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         style: TextStyle(
             fontSize: 18,
             color: readOnly ? const Color(0xFF64748B) : const Color(0xFF1E293B)),
@@ -4903,7 +4964,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             const SizedBox(height: 20),
 
             // Form inputs
-            _camInputField('Year', _picYear),
+            _camInputField('Year', _picYear,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
             const SizedBox(height: 12),
             _camInputField('Denomination', _picDenom),
             const SizedBox(height: 12),
@@ -4956,7 +5019,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     );
   }
 
-  Widget _camInputField(String label, TextEditingController ctrl, {int maxLines = 1}) {
+  Widget _camInputField(String label, TextEditingController ctrl,
+      {int maxLines = 1, TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -4965,6 +5029,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         TextField(
           controller: ctrl,
           maxLines: maxLines,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
           style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B)),
           decoration: InputDecoration(
             isDense: true,

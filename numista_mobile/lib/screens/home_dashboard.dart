@@ -148,9 +148,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
   BatchValuationProgress _valuation = const BatchValuationProgress();
   StreamSubscription<BatchValuationProgress>? _valuationSub;
 
+  // ── Upcoming Mint Releases future (stable — created once in initState) ──
+  late final Future<List<UpcomingRelease>> _upcomingFuture;
+
   @override
   void initState() {
     super.initState();
+    _upcomingFuture = UpcomingReleasesService.fetchUpcoming();
     _fetchSpotPrices();
     _fetchNews();
     _loadDismissedNews();
@@ -913,7 +917,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                   // ── Upcoming Mint Releases ────────────────────────
                   FutureBuilder<List<UpcomingRelease>>(
-                    future: UpcomingReleasesService.fetchUpcoming(),
+                    future: _upcomingFuture,
                     builder: (context, snapshot) {
                       if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox.shrink();
                       final releases = snapshot.data!.take(3).toList();

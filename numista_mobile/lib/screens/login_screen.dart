@@ -591,11 +591,10 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildSignInTab() {
-    return SingleChildScrollView(
-      child: AutofillGroup(
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return AutofillGroup(
+      child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
           _label('Email Address'),
           const SizedBox(height: 6),
           _textField(controller: _emailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.username, AutofillHints.email]),
@@ -708,16 +707,14 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ],
       ),
-      ),
     );
   }
 
   Widget _buildCreateTab() {
-    return SingleChildScrollView(
-      child: AutofillGroup(
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return AutofillGroup(
+      child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
           _label('Your Name (optional)'),
           const SizedBox(height: 6),
           _textField(controller: _nameCtrl, hint: 'Eric  (or leave blank)', keyboardType: TextInputType.name),
@@ -835,7 +832,6 @@ class _LoginScreenState extends State<LoginScreen>
               textAlign: TextAlign.center,
             ),
         ],
-      ),
       ),
     );
   }

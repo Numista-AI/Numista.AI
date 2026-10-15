@@ -77,6 +77,10 @@ class UpcomingReleasesService {
   static const String _baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
   static const String _cacheKey = 'upcoming_releases_cache';
 
+  // Guard: only attempt a network fetch once per app session.
+  // Subsequent calls return from cache directly to avoid repeated server spam.
+  static bool _fetchAttempted = false;
+
   static Future<List<UpcomingRelease>> fetchUpcoming() async {
     return _fetchData('/api/mint-releases/upcoming');
   }
@@ -86,6 +90,8 @@ class UpcomingReleasesService {
   }
 
   static Future<List<UpcomingRelease>> _fetchData(String endpoint) async {
+    if (_fetchAttempted) return _loadCachedReleases();
+    _fetchAttempted = true;
     try {
       final response = await http
           .get(Uri.parse('$_baseUrl$endpoint'))
