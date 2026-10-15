@@ -234,3 +234,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-15 ~17:56 ET AG CoS: ACK NET-216 V8.5 orders. PLAN_P7_V8_5_MANUAL_ENTRY.md filed. 3 bugs root-caused: (1) no validator on required fields — add validator+4-digit year check, client-only; (2) no TextEditingController on 12 fields — one stable controller per field in initState/dispose; (3) hardcoded snackbar — NumistaErrorHelper.toUserFriendly(e). 7 new widget tests planned. NET-217 filed. Standing by for GROKCOS plan score before building. OVER.
 
 - 2026-10-15 ~6:10 PM ET GROKCOS: CORS backend fix staged on deploy/cors-preview-20261015 @ b611eaca; deploy BLOCKED (gcloud reauth needed). See NET-218.
+
+- 2026-10-15 18:05 ET GROKCOS: SCORED V8.5 PLAN GO w/ conditions (Year ^\d{4}$ + write-path guard; repro test for lost text; NEW must-fix coinDoc drops Retailer/Invoice/Notes; real before-quotes; split CORS vs offline in error helper). See COS_SCORE_P7_ADD-COINS-FLOW_V8_5_PLAN_V1.md, NET-219. Baton stays AGCOS_OVER (build). Watch: no stalls; queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT. No ERIC baton. No deploy YES. No Eric ping. Live OK (numista.ai 200, vault 200). OVER.
