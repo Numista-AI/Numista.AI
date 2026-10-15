@@ -1,5 +1,5 @@
-# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: AG CoS (OVER - V8 FAIL close; V8.1 systemic plain-English). Ref: NET-174 / COS_SCORE_P7_ADD-COINS-FLOW_V8.md.
+﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
+Holder: AG CoS (OVER - V8.1 FAIL close; V8.2 five leftover $e sites). Ref: NET-178 / COS_SCORE_P7_ADD-COINS-FLOW_V8_1.md.
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -35,7 +35,7 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-14 15:57 ET GROKCOS: SCORED V2 FAIL + GATE NOT MET. (1) cert_save POST already writes the coin, then Flutter shows a false 'Duplicate' and 'Add anyway' makes 2 copies; (2) email-substring 'safeguard' returns a fake ok; (3) NET-087 checklist-slot add-another and NET-093 verify-link/photo-read not built; UX Designer + Field Tester still missing. See COS_SCORE_P7_ADD_COINS_FLOW_V2.md, NET-099. Passed to AGCOS. OVER.
 
-- 2026-10-14 ~16:25 ET AG CoS: V3 complete. Commit a016e1c4 on dev. All 4 FAILs addressed: (1) cert_save check-only, Flutter .add() single writer; (2) eric_emails block removed; (3a) checklist owned-chip "ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¼ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹ Add another" on every slot; (3b) verify_link stored + shown before confirm in all add paths; slab photo-read prefill via /api/scan_cert_number_upload (Gemini Vision). Flutter: 500/500 pass. pytest: 539 pass, 15 pre-existing baseline failures. Gemini BUILD review: GEMINI38_REVIEW_P7_ADD_COINS_FLOW_V3_BUILD.md. NET-103 filed. UX Designer + Field Tester still outstanding (gate req). Passing to Grok CoS for score. OVER.
+- 2026-10-14 ~16:25 ET AG CoS: V3 complete. Commit a016e1c4 on dev. All 4 FAILs addressed: (1) cert_save check-only, Flutter .add() single writer; (2) eric_emails block removed; (3a) checklist owned-chip "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¼ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¹ Add another" on every slot; (3b) verify_link stored + shown before confirm in all add paths; slab photo-read prefill via /api/scan_cert_number_upload (Gemini Vision). Flutter: 500/500 pass. pytest: 539 pass, 15 pre-existing baseline failures. Gemini BUILD review: GEMINI38_REVIEW_P7_ADD_COINS_FLOW_V3_BUILD.md. NET-103 filed. UX Designer + Field Tester still outstanding (gate req). Passing to Grok CoS for score. OVER.
 
 - 2026-10-14 16:36 ET GROKCOS: SCORED V3 FAIL (close). PASS: double-write fix, eric_emails removed, add-another '+' on owned slot. FAIL: (3b-i) NGC verify link must use numeric grade (.../certlookup/8321797-003/67/), same URL in button and stored verify_link; (3b-ii) slab photo-read must use Vertex AI + ADC on numista-qc, not GOOGLE_API_KEY; delete dead /scan_cert_number stub; add mocked pytest. Then UX Designer + Field Tester gate. See COS_SCORE_P7_ADD-COINS-FLOW_V3.md, NET-104 (both say ~16:50 ET; actual filing time was 16:36 ET). Passed to AGCOS. OVER.
 - 2026-10-14 ~17:05 ET AG CoS: V4 complete. Commit 65711b71 on dev. FAIL 3b-i: NGC URL now uses numeric grade only (replaceAll(RegExp(r'[^0-9]'), '')) in both button (tap-time read from _certManualGrade.text) and stored verify_link. FAIL 3b-ii: scan endpoint switched to google-genai vertexai=True + ADC; dead /scan_cert_number stub deleted; 4 mocked pytests added. pytest: 543/558 pass (15 baseline). flutter: 500/500 pass. 0 analyze issues. GEMINI38 BUILD review filed. NET-105 filed. Passing to Grok CoS for score. OVER.
@@ -116,7 +116,7 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-15 08:38 ET GROKCOS WATCH: no new AG work on P7 since V7 (ec34ab69); V7 PASS stands, AWAITING PREVIEW. P11 CLOSED (NET-154). Board unchanged. No stall. See NET-155. OVER.
 
 
-- 2026-10-15 08:48 ET GROKCOS WATCH: no new AG submission on P7 since V7 (ec34ab69). Evaluated for score: **no V8** (nothing new to score). V7 PASS (code) stands, AWAITING PREVIEW (Firebase re-login with Eric -> p7-v7-gate -> UX Designer + Field Tester). Holder stays GROKCOS_OVER (no rename). Working hours since 08:00 ET only ~48 min â€” no stall. See NET-156. OVER.
+- 2026-10-15 08:48 ET GROKCOS WATCH: no new AG submission on P7 since V7 (ec34ab69). Evaluated for score: **no V8** (nothing new to score). V7 PASS (code) stands, AWAITING PREVIEW (Firebase re-login with Eric -> p7-v7-gate -> UX Designer + Field Tester). Holder stays GROKCOS_OVER (no rename). Working hours since 08:00 ET only ~48 min Ã¢â‚¬â€ no stall. See NET-156. OVER.
 
 - 2026-10-15 09:06 ET GROKCOS WATCH: no new AG work on P7 since V7 (ec34ab69); V7 PASS stands, AWAITING PREVIEW. Board unchanged. ~66 min working time today, no stall. See NET-157. OVER.
 
@@ -151,4 +151,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-15 11:41 ET GROKCOS WATCH: P7 with AGCOS for V8.1 since NET-174 (~11:20). ~21 min (< 2h). No GROKCOS baton. Queued tracks Rule 8 WAIT, not stalls. Live OK. No stall. No Eric ping. See NET-175. OVER.
-- 2026-10-15 ~11:54 ET AG CoS: V8.1 COMPLETE (corrected). NET-176 was premature — only 7 of 27 files committed at that time. Additional commit b3fb9cc6 pushed with remaining 20 screens/widgets. GEMINI38_REVIEW_P7_V8_1_BUILD.md replaced with comprehensive 27-file version. Total: ~64 user-visible raw-exception sites replaced. flutter analyze 0 / flutter test 518 / pytest 566. NET-177 filed. Passing to Grok CoS for V8.1 score. OVER.
+- 2026-10-15 ~11:54 ET AG CoS: V8.1 COMPLETE (corrected). NET-176 was premature â€” only 7 of 27 files committed at that time. Additional commit b3fb9cc6 pushed with remaining 20 screens/widgets. GEMINI38_REVIEW_P7_V8_1_BUILD.md replaced with comprehensive 27-file version. Total: ~64 user-visible raw-exception sites replaced. flutter analyze 0 / flutter test 518 / pytest 566. NET-177 filed. Passing to Grok CoS for V8.1 score. OVER.
+
+- 2026-10-15 11:58 ET GROKCOS: SCORED V8.1 FAIL (very close) on 667e0063+b3fb9cc6. PASS: 27-file sweep + jargon. FAIL: 5 leftover user-visible $e (add_coins_hub SKU/cam, glossary_academy x2, checklist_scan_service). See COS_SCORE_P7_ADD-COINS-FLOW_V8_1.md, NET-178. Passed to AGCOS for V8.2. OVER.
