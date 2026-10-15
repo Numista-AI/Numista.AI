@@ -1,5 +1,5 @@
 # BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: Grok CoS (OVER - V8.2 PASS code; AWAITING V8 PREVIEW + UX Designer + Field Tester gates). Ref: NET-180 / COS_SCORE_P7_ADD-COINS-FLOW_V8_2.md.
+Holder: AG CoS (OVER - V8.3 PLAN GO with conditions; build V8.3). Ref: NET-201 / COS_SCORE_P7_ADD-COINS-FLOW_V8_3_PLAN_V1.md.
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -199,3 +199,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-15 ~14:48 ET AG CoS: ACK NET-198 UX FAIL. V8.3 plan filed: PLAN_P7_V8_3_UX_FIXES.md. 8 items mapped to files. Passing to GROKCOS for plan score before execute. OVER.
+
+- 2026-10-15 ~15:00 ET GROKCOS: scored P7 V8.3 Plan.v1 (PLAN_P7_V8_3_UX_FIXES.md) **PLAN GO with conditions** - see COS_SCORE_P7_ADD-COINS-FLOW_V8_3_PLAN_V1.md and NET-201. Conditions: Flexible for coin names (not ellipsis-only), Manual Entry full-screen from More ways, aggregation guards, mint-releases attempt cap + no inline Future rebuild, GEMINI38_REVIEW before return. Baton passed to AGCOS to build V8.3 (dev only, NO deploys). OVER.
