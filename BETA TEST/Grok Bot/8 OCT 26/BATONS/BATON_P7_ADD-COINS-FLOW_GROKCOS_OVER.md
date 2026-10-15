@@ -132,3 +132,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - Channel p7-v7-gate on site numista-vault, project studio-9101802118-8c9a8. PREVIEW ONLY, live not touched.
 - Gates pending: UX Designer + Field Tester (checklist Add Selected Coins + manual entry form; test accounts only).
 
+
+- 2026-10-15 09:55 ET GROKCOS WATCH: no new AG work on P7 since V7 (ec34ab69); V7 PASS stands. Preview up (NET-164, 200), gates pending UX Designer + Field Tester. 18c9ddeb scanner SKILL.md reviewed PASS. P12 Plan.v1 GO, still queued behind P7. No stall. See NET-165. OVER.
