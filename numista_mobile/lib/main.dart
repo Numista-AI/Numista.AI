@@ -14,6 +14,7 @@ import 'services/guest_seed_service.dart';
 import 'widgets/auth_gate.dart';
 import 'constants.dart';  // ITEM 10: kApiBaseUrl startup guard
 import 'package:google_fonts/google_fonts.dart';
+import 'utils/numista_error_helper.dart';
 
 
 Future<void> main() async {
@@ -205,7 +206,7 @@ Future<void> main() async {
                       fontSize: 22,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              Text(e.toString(),
+              Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'The app could not start. Please reload the page or contact support@numista.ai.'),
                   style: const TextStyle(
                       color: Colors.orangeAccent, fontSize: 14)),
               const SizedBox(height: 24),

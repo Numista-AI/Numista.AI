@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'storage_service.dart';
+import 'utils/numista_error_helper.dart';
 
 const _electricBlue = Color(0xFF4C8CDA);
 const _neuralBronze = Color(0xFF8B6B00);
@@ -42,7 +43,7 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.redAccent,
-            content: Text('Sync error: $e',
+            content: Text(NumistaErrorHelper.toUserFriendly(e),
                 style: const TextStyle(color: Colors.white)),
             duration: const Duration(seconds: 6),
           ),

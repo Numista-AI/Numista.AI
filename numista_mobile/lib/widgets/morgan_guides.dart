@@ -268,7 +268,7 @@ class MorganGuides {
       MorganStep(
         narration:
             "Tap the blue 'Add Selected Coins' button at the bottom.",
-        hint: "I'll save all selected coins directly to your collection tracker.",
+        hint: "I'll save all selected coins to your collection.",
         nextLabel: "Add coins →",
         position: GuidePosition.bottomRight,
       ),

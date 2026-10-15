@@ -4578,7 +4578,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       }
     } catch (e) {
       setState(() {
-        _camError = 'Save failed with error: $e';
+        _camError = NumistaErrorHelper.toUserFriendly(e);
         _camSaving = false;
       });
     }

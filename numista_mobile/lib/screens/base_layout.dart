@@ -46,6 +46,7 @@ import 'coin_detail_screen.dart';
 import 'upcoming_releases_screen.dart';
 import '../theme/numista_theme.dart';
 import '../services/ui_variant_service.dart';
+import '../utils/numista_error_helper.dart';
 
 
 class BaseLayout extends StatefulWidget {
@@ -185,7 +186,7 @@ class _BaseLayoutState extends State<BaseLayout> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error opening coin: $e')),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e))),
         );
       }
     }
