@@ -134,3 +134,4 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-15 09:55 ET GROKCOS WATCH: no new AG work on P7 since V7 (ec34ab69); V7 PASS stands. Preview up (NET-164, 200), gates pending UX Designer + Field Tester. 18c9ddeb scanner SKILL.md reviewed PASS. P12 Plan.v1 GO, still queued behind P7. No stall. See NET-165. OVER.
+- 2026-10-15 ~10:15 ET AG CoS: PLAN V1 FILED (PLAN_P7_V8_UX_SAFETY_CORS_MOBILE.md). All 6 blockers addressed: (1) Add Selected Coins confirm modal + demo mode client guard + 401 test; (2) CORS allow_origin_regex + live spot_prices explanation; (3) Phone layout 1-col cards, vertical Goal card, 48px targets, 16px dark labels; (4) Manual entry full screen, 18px labels, Denom row, Qty prefill fix, 56px Save, bottom-nav highlight; (5) Plain-English errors; (6) pubspec assets fix, firestore.rules coins_reference fix, portfolio wrap fix, 6th PIN box fit. Passing to GROKCOS for Plan.v1 score. OVER.
