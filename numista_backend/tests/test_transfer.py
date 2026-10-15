@@ -741,7 +741,7 @@ def test_tc14_sell_direct_client_payload_integration(monkeypatch):
     })
 
     monkeypatch.setattr(main, "db", db)
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, uid: user_id)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, uid=None, **kw: user_id)
 
     client = TestClient(main.app)
 

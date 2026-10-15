@@ -51,7 +51,7 @@ def test_detect_receipt_mime_fallback_extension():
 
 def test_receipt_view_url_jpg_and_pdf(monkeypatch):
     """Verify receipt_view_url accurately reflects filename and file_type for both JPG and PDF."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
@@ -107,7 +107,7 @@ def test_receipt_view_url_jpg_and_pdf(monkeypatch):
 
 def test_receipt_stream_jpeg_serves_image_jpeg(monkeypatch):
     """Verify streaming a JPG receipt serves image/jpeg MIME type, resolving blank white page."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
@@ -144,7 +144,7 @@ def test_receipt_stream_jpeg_serves_image_jpeg(monkeypatch):
 
 def test_receipt_stream_pdf_serves_application_pdf(monkeypatch):
     """Verify streaming a PDF receipt serves application/pdf MIME type."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
@@ -180,7 +180,7 @@ def test_receipt_stream_pdf_serves_application_pdf(monkeypatch):
 
 def test_receipt_stream_user_isolation(monkeypatch):
     """Verify access denied (403) when attempting to stream a blob outside the user's folder."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
@@ -211,7 +211,7 @@ def test_receipt_stream_user_isolation(monkeypatch):
 
 def test_receipt_stream_bucket_pinned_to_import_bucket(monkeypatch):
     """Verify that foreign buckets in gcs_path are ignored and storage client is pinned to IMPORT_BUCKET."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
@@ -242,7 +242,7 @@ def test_receipt_stream_bucket_pinned_to_import_bucket(monkeypatch):
 
 def test_receipt_stream_content_disposition_sanitization(monkeypatch):
     """Verify that Content-Disposition header is properly sanitized when filename contains quotes or special chars."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
@@ -274,7 +274,7 @@ def test_receipt_stream_content_disposition_sanitization(monkeypatch):
 
 def test_receipt_view_url_encodes_plus_email(monkeypatch):
     """Verify that user_email with plus signs is URL-encoded in signed_url."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
@@ -296,7 +296,7 @@ def test_receipt_view_url_encodes_plus_email(monkeypatch):
 
 def test_receipt_stream_not_found(monkeypatch):
     """Verify 404 returned when receipt or blob does not exist."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
