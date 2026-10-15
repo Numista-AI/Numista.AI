@@ -117,3 +117,14 @@ section of the report, it MUST:
 - Never push to `main`
 - Never mutate production Firestore (`--execute` on real collections)
 - Respect `SUITE_MANIFEST.json` `forbidden_accounts` and `protected_files`
+
+---
+
+## 9. Docs-Only Commit Rule (NET-158 / 578b374a Mandate)
+
+- **STRICT ENFORCEMENT**: The project-scanner MUST commit documentation and test report artifacts ONLY (`SCAN_REPORT.md`, `numista_tests/reports/pytest-output.txt`).
+- **NEVER** stage or commit source code modifications (`*.py`, `*.dart`, `*.js`, `*.json`) during a scan session.
+- If a scan detects code defects, deprecation warnings, or test failures, report them in `SCAN_REPORT.md` under the appropriate status tier (`🟡 PASS WITH HOLDS` or `🔴 FAIL`).
+- Remediating code defects requires a separate dedicated baton, implementation step, and GEMINI38 review before landing on `dev`.
+- Always use explicit file paths when staging: `git add SCAN_REPORT.md numista_tests/reports/pytest-output.txt`. Never use `git add .` or `git add -A`.
+
