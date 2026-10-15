@@ -19,27 +19,33 @@ class AddCoinManualForm extends StatefulWidget {
 class _AddCoinManualFormState extends State<AddCoinManualForm> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers for fields that need real-time transformation
-  final _mintCtrl = TextEditingController();
-
-  final Map<String, dynamic> _formData = {
-    'Year': '',
-    'Mint Mark': '',
-    'Denomination': '',
-    'Program/Series': '',
-    'Theme/Subject': '',
-    'Variety': '',
-    'Condition': 'Ungraded',
-    'Cost': '',
-    'Quantity': '',
-    'Storage Location': '',
-    'Retailer/Website': '',
-    'Retailer Invoice #': '',
-    'Notes': '',
-  };
+  // ── Persistent controllers (created in initState, disposed in dispose) ──────
+  // One controller per field. This ensures text survives any parent rebuild
+  // (tab switch, IndexedStack rebuild, setState on _isProcessing, keyboard
+  // appearance changes) without losing the first character or blanking Year.
+  // The real observed trigger: the ManualEntry screen is pushed as a full-screen
+  // Scaffold route via showManualFullScreen in add_coins_hub.dart. If the route
+  // is popped and re-pushed (e.g. user goes back and re-enters), the State is
+  // remounted and _formData defaults are used. Controllers keep values stable
+  // within a single mount.
+  late final TextEditingController _yearCtrl;
+  late final TextEditingController _mintCtrl;
+  late final TextEditingController _denomCtrl;
+  late final TextEditingController _programCtrl;
+  late final TextEditingController _themeCtrl;
+  late final TextEditingController _varietyCtrl;
+  late final TextEditingController _conditionCtrl;
+  late final TextEditingController _costCtrl;
+  late final TextEditingController _qtyCtrl;
+  late final TextEditingController _retailerCtrl;
+  late final TextEditingController _invoiceCtrl;
+  late final TextEditingController _storageCtrl;
+  late final TextEditingController _notesCtrl;
 
   static const _accent = Color(0xFF3B82F6);
-  Color get _border => Theme.of(context).brightness == Brightness.dark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+  Color get _border => Theme.of(context).brightness == Brightness.dark
+      ? const Color(0xFF334155)
+      : const Color(0xFFCBD5E1);
   static const _labelStyle = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w600,
@@ -47,9 +53,41 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     letterSpacing: 0.3,
   );
 
+  final _formData = <String, dynamic>{'Condition': 'Ungraded', 'Quantity': '1'};
+
+  @override
+  void initState() {
+    super.initState();
+    _yearCtrl      = TextEditingController(text: _formData['Year'] as String? ?? '');
+    _mintCtrl      = TextEditingController(text: _formData['Mint Mark'] as String? ?? '');
+    _denomCtrl     = TextEditingController(text: _formData['Denomination'] as String? ?? '');
+    _programCtrl   = TextEditingController(text: _formData['Program/Series'] as String? ?? '');
+    _themeCtrl     = TextEditingController(text: _formData['Theme/Subject'] as String? ?? '');
+    _varietyCtrl   = TextEditingController(text: _formData['Variety'] as String? ?? '');
+    _conditionCtrl = TextEditingController(text: _formData['Condition'] as String? ?? 'Ungraded');
+    _costCtrl      = TextEditingController(text: _formData['Cost'] as String? ?? '');
+    _qtyCtrl       = TextEditingController(text: _formData['Quantity'] as String? ?? '');
+    _retailerCtrl  = TextEditingController(text: _formData['Retailer/Website'] as String? ?? '');
+    _invoiceCtrl   = TextEditingController(text: _formData['Retailer Invoice #'] as String? ?? '');
+    _storageCtrl   = TextEditingController(text: _formData['Storage Location'] as String? ?? '');
+    _notesCtrl     = TextEditingController(text: _formData['Notes'] as String? ?? '');
+  }
+
   @override
   void dispose() {
+    _yearCtrl.dispose();
     _mintCtrl.dispose();
+    _denomCtrl.dispose();
+    _programCtrl.dispose();
+    _themeCtrl.dispose();
+    _varietyCtrl.dispose();
+    _conditionCtrl.dispose();
+    _costCtrl.dispose();
+    _qtyCtrl.dispose();
+    _retailerCtrl.dispose();
+    _invoiceCtrl.dispose();
+    _storageCtrl.dispose();
+    _notesCtrl.dispose();
     super.dispose();
   }
 
@@ -69,6 +107,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 context,
                 'Year',
                 'e.g. 1921',
+                controller: _yearCtrl,
                 isRequired: true,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -84,6 +123,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             context,
             'Denomination',
             'e.g. Quarter Dollar, Dime, Cent',
+            controller: _denomCtrl,
             isRequired: true,
           ),
           const SizedBox(height: 12),
@@ -91,16 +131,20 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             context,
             'Program/Series',
             'e.g. Morgan Silver Dollar',
+            controller: _programCtrl,
             isRequired: true,
           ),
-          _buildField(context, 'Theme/Subject', 'e.g. Liberty Head'),
-          _buildField(context, 'Variety', 'e.g. Double Die, Over Mint Mark'),
+          _buildField(context, 'Theme/Subject', 'e.g. Liberty Head',
+              controller: _themeCtrl),
+          _buildField(context, 'Variety', 'e.g. Double Die, Over Mint Mark',
+              controller: _varietyCtrl),
 
           const SizedBox(height: 8),
           // ── Section: Condition ────────────────────────────────────────────
           _sectionHeader('Condition & Grading', Icons.grade),
           const SizedBox(height: 12),
-          _buildField(context, 'Condition', 'e.g. MS65, AU58, Ungraded'),
+          _buildField(context, 'Condition', 'e.g. MS65, AU58, Ungraded',
+              controller: _conditionCtrl),
 
           const SizedBox(height: 8),
           // ── Section: Purchase ─────────────────────────────────────────────
@@ -112,6 +156,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 context,
                 'Cost',
                 '25.00',
+                controller: _costCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 prefixText: '\$ ',
               ),
@@ -122,20 +167,25 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 context,
                 'Quantity',
                 '1',
+                controller: _qtyCtrl,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
             ),
           ]),
-          _buildField(context, 'Retailer/Website', 'e.g. APMEX, eBay'),
-          _buildField(context, 'Retailer Invoice #', 'e.g. INV-9988'),
+          _buildField(context, 'Retailer/Website', 'e.g. APMEX, eBay',
+              controller: _retailerCtrl),
+          _buildField(context, 'Retailer Invoice #', 'e.g. INV-9988',
+              controller: _invoiceCtrl),
 
           const SizedBox(height: 8),
           // ── Section: Storage ──────────────────────────────────────────────
           _sectionHeader('Storage & Notes', Icons.inventory_2_outlined),
           const SizedBox(height: 12),
-          _buildField(context, 'Storage Location', 'e.g. Safe Box A, Folder 2'),
-          _buildField(context, 'Notes', 'Any additional notes', maxLines: 3),
+          _buildField(context, 'Storage Location', 'e.g. Safe Box A, Folder 2',
+              controller: _storageCtrl),
+          _buildField(context, 'Notes', 'Any additional notes',
+              controller: _notesCtrl, maxLines: 3),
 
           const SizedBox(height: 32),
 
@@ -169,15 +219,25 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
   void _submit() {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      // Ensure mint mark is always uppercase
-      _formData['Mint Mark'] = (_formData['Mint Mark'] as String).toUpperCase();
-      // GI-NOM-01: Normalize manual entry to formal US Mint denomination
-      final rawDenom = _formData['Denomination'] as String? ?? '';
-      _formData['Denomination'] = DenominationCanon.normalize(rawDenom);
-      // Qty prefill bug fix: default to '1' if left blank
-      final qtyStr = _formData['Quantity']?.toString().trim() ?? '';
-      _formData['Quantity'] = qtyStr.isEmpty ? '1' : qtyStr;
-      widget.onSubmit(_formData);
+
+      // Read values from controllers (controllers are the source of truth).
+      final formData = <String, dynamic>{
+        'Year':               _yearCtrl.text.trim(),
+        'Mint Mark':          _mintCtrl.text.toUpperCase(),
+        'Denomination':       DenominationCanon.normalize(_denomCtrl.text.trim()),
+        'Program/Series':     _programCtrl.text.trim(),
+        'Theme/Subject':      _themeCtrl.text.trim(),
+        'Variety':            _varietyCtrl.text.trim(),
+        'Condition':          _conditionCtrl.text.trim(),
+        'Cost':               _costCtrl.text.trim(),
+        'Quantity':           _qtyCtrl.text.trim().isEmpty ? '1' : _qtyCtrl.text.trim(),
+        'Retailer/Website':   _retailerCtrl.text.trim(),
+        'Retailer Invoice #': _invoiceCtrl.text.trim(),
+        'Storage Location':   _storageCtrl.text.trim(),
+        'Notes':              _notesCtrl.text.trim(),
+      };
+
+      widget.onSubmit(formData);
     }
   }
 
@@ -219,7 +279,6 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             inputFormatters: [UpperCaseTextFormatter()],
             style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
             decoration: _inputDeco(context, 'D, S, P, W'),
-            onSaved: (val) => _formData['Mint Mark'] = (val ?? '').toUpperCase(),
           ),
         ],
       ),
@@ -230,6 +289,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     BuildContext context,
     String key,
     String hint, {
+    TextEditingController? controller,
     bool isRequired = false,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
@@ -268,19 +328,50 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
           ),
           const SizedBox(height: 6),
           TextFormField(
-            initialValue: _formData[key]?.toString().isNotEmpty == true
-                ? _formData[key].toString()
+            controller: controller,
+            initialValue: controller == null
+                ? (_formData[key]?.toString().isNotEmpty == true ? _formData[key].toString() : null)
                 : null,
             keyboardType: keyboardType,
             inputFormatters: inputFormatters,
             maxLines: maxLines,
             style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
             decoration: _inputDeco(context, hint, prefixText: prefixText),
+            validator: isRequired ? (val) => _validatorFor(key, val) : null,
             onSaved: (val) => _formData[key] = val ?? '',
           ),
         ],
       ),
     );
+  }
+
+  /// Returns the validator message for a field.
+  String? _validatorFor(String key, String? val) {
+    final v = val?.trim() ?? '';
+    if (v.isEmpty) {
+      switch (key) {
+        case 'Year':
+          return 'Please enter the year on the coin, like 1921.';
+        case 'Denomination':
+          return 'Please enter the denomination, like Quarter Dollar.';
+        case 'Program/Series':
+          return 'Please enter the series name, like Morgan Silver Dollar.';
+        default:
+          return 'This field is required.';
+      }
+    }
+    // Year extra: must be exactly 4 digits and not in the future
+    if (key == 'Year') {
+      if (!RegExp(r'^\d{4}$').hasMatch(v)) {
+        return 'Year must be 4 digits, like 1921.';
+      }
+      final year = int.tryParse(v);
+      final nextYear = DateTime.now().year + 1;
+      if (year != null && year > nextYear) {
+        return 'That year is in the future. Please check the year on the coin.';
+      }
+    }
+    return null;
   }
 
   InputDecoration _inputDeco(BuildContext context, String hint, {String? prefixText}) {
@@ -304,6 +395,12 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: _accent, width: 1.5)),
+      errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFEF4444))),
+      focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5)),
     );
   }
 }

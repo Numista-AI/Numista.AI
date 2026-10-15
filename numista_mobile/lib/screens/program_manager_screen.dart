@@ -1889,6 +1889,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     }
 
 
+    // Capture count before the request (before _selectedToAdd.clear() on success)
+    final selectedCount = _selectedToAdd.length;
+
     try {
       const baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
       // HttpAuthClient.post injects the Firebase Bearer token — bare http.post returned 401
@@ -1954,9 +1957,13 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final coinWord = selectedCount == 1 ? '1 coin' : '$selectedCount coins';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(NumistaErrorHelper.toUserFriendly(e)),
+            content: Text(NumistaErrorHelper.toUserFriendlyWithContext(
+              e,
+              action: 'add your $coinWord',
+            )),
             backgroundColor: Colors.red,
           ),
         );

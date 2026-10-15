@@ -94,6 +94,11 @@ void main() {
       expect(saveBtnSize.height, greaterThanOrEqualTo(56.0));
 
       // Test Qty bug fix: submit without touching Qty -> defaults to '1'
+      // Fill required fields so validation succeeds
+      final textFields = find.byType(TextFormField);
+      await tester.enterText(textFields.at(0), '1921'); // Year
+      await tester.enterText(textFields.at(2), 'Quarter Dollar'); // Denomination
+      await tester.enterText(textFields.at(3), 'Washington Quarter'); // Program/Series
       await tester.ensureVisible(saveBtnFinder);
       await tester.tap(saveBtnFinder);
       await tester.pumpAndSettle();
@@ -101,10 +106,7 @@ void main() {
       expect(submittedData!['Quantity'], '1');
 
       // Test Qty bug fix: type '1' into empty field -> produces '1' (never '11')
-      final textFields = find.byType(TextFormField);
       submittedData = null;
-      // Enter '1921' in Year
-      await tester.enterText(textFields.at(0), '1921');
       // Enter '1' in Quantity (index 8)
       await tester.enterText(textFields.at(8), '1');
       await tester.ensureVisible(saveBtnFinder);
@@ -236,7 +238,7 @@ void main() {
         'XMLHttpRequest error., uri=https://numista-backend-568985927038.us-central1.run.app/api/endpoint',
       );
       final translated = NumistaErrorHelper.toUserFriendly(err);
-      expect(translated, 'Unable to connect to the server. Please check your internet connection and try again.');
+      expect(translated, "The Numista.AI server didn't answer. Try again in a moment.");
       expect(translated.contains('http'), isFalse);
       expect(translated.contains('uri='), isFalse);
       expect(translated.contains('XMLHttpRequest'), isFalse);
@@ -482,6 +484,281 @@ void main() {
       UpcomingReleasesService.resetForTest();
       expect(UpcomingReleasesService.wasAttempted(ep1), isFalse);
       expect(UpcomingReleasesService.wasAttempted(ep2), isFalse);
+    });
+  });
+
+  // ── V8.5 Item 1: Required-field validators ────────────────────────────────
+  group('P7 V8.5 Item 1: Required-field validators block bad saves', () {
+    Widget buildForm({required List<Map<String, dynamic>> submitted}) {
+      return MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: AddCoinManualForm(
+              onSubmit: (data) => submitted.add(data),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('p7_v85_year_validator_blocks_empty_save',
+        (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 2400);
+      final submitted = <Map<String, dynamic>>[];
+      await tester.pumpWidget(buildForm(submitted: submitted));
+      await tester.pumpAndSettle();
+
+      // Tap Save without entering Year
+      await tester.ensureVisible(find.text('Save to My Collection'));
+      await tester.tap(find.text('Save to My Collection'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull,
+          reason: 'No exception — validator shows inline error');
+      expect(find.text('Please enter the year on the coin, like 1921.'), findsOneWidget,
+          reason: 'Year validator message visible');
+      expect(submitted, isEmpty, reason: 'onSubmit must NOT be called');
+    });
+
+    testWidgets('p7_v85_year_validator_blocks_non4digit',
+        (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 2400);
+      final submitted = <Map<String, dynamic>>[];
+      await tester.pumpWidget(buildForm(submitted: submitted));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+          find.widgetWithText(TextFormField, 'e.g. 1921'), '192');
+      await tester.ensureVisible(find.text('Save to My Collection'));
+      await tester.tap(find.text('Save to My Collection'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Year must be 4 digits, like 1921.'), findsOneWidget,
+          reason: 'Non-4-digit year error visible');
+      expect(submitted, isEmpty);
+    });
+
+    testWidgets('p7_v85_year_validator_blocks_future_year',
+        (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 2400);
+      final submitted = <Map<String, dynamic>>[];
+      await tester.pumpWidget(buildForm(submitted: submitted));
+      await tester.pumpAndSettle();
+
+      final futureYear = (DateTime.now().year + 5).toString();
+      await tester.enterText(
+          find.widgetWithText(TextFormField, 'e.g. 1921'), futureYear);
+      await tester.ensureVisible(find.text('Save to My Collection'));
+      await tester.tap(find.text('Save to My Collection'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('That year is in the future. Please check the year on the coin.'), findsOneWidget,
+          reason: 'Future year error visible');
+      expect(submitted, isEmpty);
+    });
+
+    testWidgets('p7_v85_denomination_validator_blocks_empty_save',
+        (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 2400);
+      final submitted = <Map<String, dynamic>>[];
+      await tester.pumpWidget(buildForm(submitted: submitted));
+      await tester.pumpAndSettle();
+
+      // Fill Year only, leave Denomination blank
+      await tester.enterText(
+          find.widgetWithText(TextFormField, 'e.g. 1921'), '1921');
+      await tester.ensureVisible(find.text('Save to My Collection'));
+      await tester.tap(find.text('Save to My Collection'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Please enter the denomination, like Quarter Dollar.'), findsOneWidget,
+          reason: 'Denomination validator message visible');
+      expect(submitted, isEmpty);
+    });
+  });
+
+  // ── V8.5 Item 2: Controllers survive setState rebuild ────────────────────
+  group('P7 V8.5 Item 2: Controllers survive parent rebuild (first char, Year blank)', () {
+    testWidgets('p7_v85_year_field_survives_setstate_rebuild',
+        (WidgetTester tester) async {
+      // Repro test: on e8b978f2 (initialValue, no controller) a rebuild
+      // triggered by setState would remount the TextFormField and lose text.
+      // After V8.5 (persistent controller), text survives.
+      bool processing = false;
+      late StateSetter outerSetState;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                outerSetState = setState;
+                return SingleChildScrollView(
+                  child: AddCoinManualForm(
+                    isProcessing: processing,
+                    onSubmit: (_) {},
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Type into Year (including the FIRST character)
+      await tester.enterText(find.byType(TextFormField).first, '1921');
+      await tester.pump();
+
+      // Simulate parent setState (like hub's _isProcessing = true)
+      outerSetState(() => processing = true);
+      await tester.pump();
+      outerSetState(() => processing = false);
+      await tester.pump();
+
+      // Year field must still show '1921' — controller survives the rebuild
+      expect(find.widgetWithText(TextFormField, '1921'), findsOneWidget,
+          reason: 'Year value must survive parent setState rebuild');
+    });
+
+    testWidgets('p7_v85_all_fields_survive_rebuild_at_389px',
+        (WidgetTester tester) async {
+      setTestViewSize(tester, width: 389, height: 844);
+      bool processing = false;
+      late StateSetter outerSetState;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                outerSetState = setState;
+                return SingleChildScrollView(
+                  child: AddCoinManualForm(
+                    isProcessing: processing,
+                    onSubmit: (_) {},
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, '1921');
+      await tester.pump();
+      outerSetState(() => processing = true);
+      await tester.pump();
+      outerSetState(() => processing = false);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.widgetWithText(TextFormField, '1921'), findsOneWidget,
+          reason: 'Year survives rebuild at 389px');
+    });
+
+    testWidgets('p7_v85_all_13_fields_in_submit_payload',
+        (WidgetTester tester) async {
+      // Verifies the fix for Item 2b: Retailer/Website, Retailer Invoice #,
+      // Notes were silently dropped from coinDoc on e8b978f2.
+      setTestViewSize(tester, width: 800, height: 2400);
+      Map<String, dynamic>? payload;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: AddCoinManualForm(
+              onSubmit: (data) => payload = data,
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final fields = find.byType(TextFormField);
+      // Fill required fields at minimum
+      await tester.enterText(fields.at(0), '1921');   // Year
+      await tester.enterText(fields.at(2), 'Quarter Dollar'); // Denomination
+      await tester.enterText(fields.at(3), 'Washington Quarter'); // Program/Series
+      // Fill optional fields
+      await tester.enterText(fields.at(4), 'Liberty Head'); // Theme
+      await tester.enterText(fields.at(5), 'DDO');          // Variety
+      await tester.enterText(fields.at(7), '25.00');        // Cost
+      await tester.enterText(fields.at(8), '2');            // Quantity
+      await tester.enterText(fields.at(9), 'APMEX');        // Retailer
+      await tester.enterText(fields.at(10), 'INV-001');     // Invoice
+      await tester.enterText(fields.at(11), 'Box A');       // Storage
+      await tester.enterText(fields.at(12), 'Nice coin');   // Notes
+
+      await tester.ensureVisible(find.text('Save to My Collection'));
+      await tester.tap(find.text('Save to My Collection'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(payload, isNotNull, reason: 'onSubmit must be called');
+      expect(payload!['Retailer/Website'], equals('APMEX'));
+      expect(payload!['Retailer Invoice #'], equals('INV-001'));
+      expect(payload!['Notes'], equals('Nice coin'));
+      // All 13 keys present
+      for (final key in [
+        'Year', 'Mint Mark', 'Denomination', 'Program/Series', 'Theme/Subject',
+        'Variety', 'Condition', 'Cost', 'Quantity', 'Retailer/Website',
+        'Retailer Invoice #', 'Storage Location', 'Notes',
+      ]) {
+        expect(payload!.containsKey(key), isTrue,
+            reason: 'payload must contain key: $key');
+      }
+    });
+  });
+
+  // ── V8.5 Item 3: NumistaErrorHelper unit tests ────────────────────────────
+  group('P7 V8.5 Item 3: NumistaErrorHelper splits CORS vs offline vs 4xx vs 5xx', () {
+    test('XMLHttpRequest maps to server-no-answer (not offline)', () {
+      final msg = NumistaErrorHelper.toUserFriendly('XMLHttpRequest error.');
+      expect(msg, contains("server didn't answer"),
+          reason: 'CORS/web block is server-no-answer, not offline');
+    });
+
+    test('Failed to fetch maps to server-no-answer', () {
+      final msg = NumistaErrorHelper.toUserFriendly('Failed to fetch');
+      expect(msg, contains("server didn't answer"));
+    });
+
+    test('SocketException maps to offline (no internet)', () {
+      final msg = NumistaErrorHelper.toUserFriendly(
+          Exception('SocketException: Failed host lookup'));
+      expect(msg, contains('internet connection'));
+    });
+
+    test('http.ClientException (typed) maps to server-no-answer', () {
+      final msg = NumistaErrorHelper.toUserFriendly(
+          http.ClientException('Connection refused'));
+      expect(msg, contains("server didn't answer"));
+    });
+
+    test('statusCode 401 maps to sign-in message', () {
+      final msg = NumistaErrorHelper.toUserFriendly(null, statusCode: 401);
+      expect(msg, contains('sign in'));
+    });
+
+    test('statusCode 403 maps to permission message', () {
+      final msg = NumistaErrorHelper.toUserFriendly(null, statusCode: 403);
+      expect(msg, contains('permission'));
+    });
+
+    test('statusCode 500 maps to server error message', () {
+      final msg = NumistaErrorHelper.toUserFriendly(null, statusCode: 500);
+      expect(msg, contains('unavailable'));
+    });
+
+    test('toUserFriendlyWithContext prefixes action', () {
+      final msg = NumistaErrorHelper.toUserFriendlyWithContext(
+        'XMLHttpRequest error.',
+        action: 'save your 1921 coin',
+      );
+      expect(msg, startsWith("Couldn't save your 1921 coin"));
+      expect(msg, contains("server didn't answer"));
     });
   });
 }

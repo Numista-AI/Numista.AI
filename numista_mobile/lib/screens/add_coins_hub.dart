@@ -1953,7 +1953,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       // _pendingIdempotencyKey intentionally NOT cleared so retry reuses same key
       setState(() {
         _mintSetSaving = false;
-        _mintSetMsg    = 'Could not save set - please check your connection and try again.';
+        _mintSetMsg    = NumistaErrorHelper.toUserFriendlyWithContext(e, action: 'save your mint set');
         _mintSetDone   = false;
       });
     }
@@ -2005,25 +2005,51 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         country != 'us' &&
                         country != 'usa';
 
-                    // ── Build Firestore document from form data ──────────────
+                    // ── Defence-in-depth: validate required fields before write ─
+                    final yearStr  = (data['Year'] ?? '').toString().trim();
+                    final denomStr = (data['Denomination'] ?? '').toString().trim();
+                    final progStr  = (data['Program/Series'] ?? '').toString().trim();
+                    if (!RegExp(r'^\d{4}$').hasMatch(yearStr)) {
+                      if (!mounted) return;
+                      setState(() => _isProcessing = false);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: const Text('Please enter the year on the coin, like 1921.'),
+                        backgroundColor: Colors.red,
+                      ));
+                      return;
+                    }
+                    if (denomStr.isEmpty || progStr.isEmpty) {
+                      if (!mounted) return;
+                      setState(() => _isProcessing = false);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: const Text('Denomination and Program/Series are required.'),
+                        backgroundColor: Colors.red,
+                      ));
+                      return;
+                    }
+
+                    // ── Build Firestore document from form data (all 13 fields) ─
                     final coinDoc = <String, dynamic>{
-                      'Year':              data['Year'] ?? '',
-                      'Mint Mark':         data['Mint Mark'] ?? '',
-                      'Denomination':      data['Denomination'] ?? '',
-                      'Program/Series':    data['Program/Series'] ?? '',
-                      'Theme/Subject':     data['Theme/Subject'] ?? '',
-                      'Variety':           data['Variety'] ?? '',
-                      'Condition':         data['Condition'] ?? '',
-                      'Cost':              data['Cost'] ?? '',
-                      'Quantity':          int.tryParse(data['Quantity'] ?? '1') ?? 1,
-                      'Storage Location':  data['Storage Location'] ?? '',
-                      'Country':           data['Country'] ?? 'United States',
-                      'is_foreign':        isForeign || data['is_foreign'] == true,
-                      'source':            'manual',
-                      'Added':             FieldValue.serverTimestamp(),
+                      'Year':                yearStr,
+                      'Mint Mark':           data['Mint Mark'] ?? '',
+                      'Denomination':        denomStr,
+                      'Program/Series':      progStr,
+                      'Theme/Subject':       data['Theme/Subject'] ?? '',
+                      'Variety':             data['Variety'] ?? '',
+                      'Condition':           data['Condition'] ?? '',
+                      'Cost':                data['Cost'] ?? '',
+                      'Quantity':            int.tryParse(data['Quantity'] ?? '1') ?? 1,
+                      'Storage Location':    data['Storage Location'] ?? '',
+                      'Retailer/Website':    data['Retailer/Website'] ?? '',
+                      'Retailer Invoice #':  data['Retailer Invoice #'] ?? '',
+                      'Notes':               data['Notes'] ?? '',
+                      'Country':             data['Country'] ?? 'United States',
+                      'is_foreign':          isForeign || data['is_foreign'] == true,
+                      'source':              'manual',
+                      'Added':               FieldValue.serverTimestamp(),
                       // ITEM 6: stamp is_demo: false so real coins remain visible after display filter ships
-                      'is_demo':           false,
-                      'is_demo_cleared':   false,
+                      'is_demo':             false,
+                      'is_demo_cleared':     false,
                     };
 
                     // ── Save to Firestore ────────────────────────────────────
@@ -2053,9 +2079,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   } catch (e) {
                     if (!mounted) return;
                     setState(() => _isProcessing = false);
+                    final year = (data['Year'] ?? '').toString().trim();
+                    final coinLabel = year.isNotEmpty ? '$year coin' : 'coin';
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Text('Couldn\'t save coin. Please check your connection and try again.'),
+                        content: Text(NumistaErrorHelper.toUserFriendlyWithContext(
+                          e,
+                          action: 'save your $coinLabel',
+                        )),
                         backgroundColor: Colors.red,
                       ),
                     );
