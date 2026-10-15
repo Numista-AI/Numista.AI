@@ -10,3 +10,5 @@ Source: 1 NUMISTA.AI\BETA TEST\MY TESTING\15 OCT 26\ (docx, SS1-5, checklist PDF
 OVER
 
 ADD (Eric 10:35 AM ET), SYSTEMIC RULE: the card and primary image show the side UNIQUE to that coin, never the shared common side. Presidential $1 shows the president (not the Liberty reverse). American Women Quarters show the honoree (not the Washington obverse). Same for state/ATB quarters, Native American $1, Innovation $1, etc. Add a per-program 'distinctive side' field, audit every program, and add a test. Example: 2008P JQA and 2007P John Adams both show Liberty today.
+
+ADD (Eric 10:35 AM ET), SYSTEMIC RULE: the card and primary image show the side UNIQUE to that coin, never the shared common side. Presidential $1 shows the president (not the Liberty reverse). American Women Quarters show the honoree (not the Washington obverse). Same for state/ATB quarters, Native American $1, Innovation $1, etc. Add a per-program 'distinctive side' field, audit every program, and add a test. Example: 2008P JQA and 2007P John Adams both show Liberty today.
