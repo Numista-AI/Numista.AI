@@ -133,8 +133,8 @@ void main() {
                   final confirmed = await showDialog<bool>(
                     context: ctx,
                     builder: (dCtx) => AlertDialog(
-                      title: const Text('Add to Collection?'),
-                      content: const Text('Are you sure you want to add 2 selected coins?'),
+                      title: const Text('Add Selected Coins?'),
+                      content: const Text('Save 2 coin(s) from "Morgan Silver Dollars" to your collection?'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(dCtx, false),
@@ -142,7 +142,7 @@ void main() {
                         ),
                         ElevatedButton(
                           onPressed: () => Navigator.pop(dCtx, true),
-                          child: const Text('Add Coins'),
+                          child: const Text('Save to Collection'),
                         ),
                       ],
                     ),
@@ -167,14 +167,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Dialog is open
-      expect(find.text('Add to Collection?'), findsOneWidget);
+      expect(find.text('Add Selected Coins?'), findsOneWidget);
 
       // Tap Cancel
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
 
       // Dialog dismissed, 0 HTTP calls
-      expect(find.text('Add to Collection?'), findsNothing);
+      expect(find.text('Add Selected Coins?'), findsNothing);
       expect(httpCallCount, 0);
     });
 
@@ -199,7 +199,10 @@ void main() {
                   // Replicate guard inside _addSelectedCoins
                   if (GuestSeedService.isBrowseDemoMode) {
                     ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(content: Text('Sign in to add coins to your collection.')),
+                      const SnackBar(
+                        content: Text('Browse Demo Mode: Sign in to save coins to your collection.'),
+                        backgroundColor: Color(0xFFF59E0B),
+                      ),
                     );
                     return;
                   }
@@ -221,7 +224,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify sign in snackbar appears and HTTP call count is strictly 0
-      expect(find.text('Sign in to add coins to your collection.'), findsOneWidget);
+      expect(find.text('Browse Demo Mode: Sign in to save coins to your collection.'), findsOneWidget);
       expect(httpCallCount, 0);
     });
   });

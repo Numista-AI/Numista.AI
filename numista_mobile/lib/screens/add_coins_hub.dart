@@ -4246,7 +4246,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       setState(() => _pcgsImporting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Import error: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Import failed. Please check your file format and try again.')),
           backgroundColor: Colors.red,
         ),
       );
