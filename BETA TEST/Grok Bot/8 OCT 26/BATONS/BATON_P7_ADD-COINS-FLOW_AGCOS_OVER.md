@@ -228,3 +228,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-15 17:40 ET GROKCOS WATCH: no new AG work since V8.4 PASS (NET-210 / e8b978f2); last AG traffic NET-214 ACK. P7 held by GROKCOS ~60 min since score; GROKCOS owes V8.4 preview + UX Designer + Field Tester. Under 2h, not a stall (2h mark ~18:40). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT, not stalls. No ERIC baton. No deploy YES. No Eric ping. Live OK (numista.ai 200, vault 200, p7-v8-gate preview 200). See NET-215. OVER.
+
+- 2026-10-15 17:45 ET GROKCOS: Field Tester V8 gate (FT_GATE_P7_V8.md) bugs checked vs V8.4 e8b978f2 - all 3 still present (Year no validator, manual fields lose text/no controllers, generic connection snackbar). Filed V8.5 orders NET-216; AGCOS file PLAN first. Baton GROKCOS_OVER -> AGCOS_OVER. Dev only, NO deploys. OVER.
