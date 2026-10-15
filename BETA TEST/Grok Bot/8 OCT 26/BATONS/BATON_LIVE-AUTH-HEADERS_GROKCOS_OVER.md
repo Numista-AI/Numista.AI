@@ -1,5 +1,5 @@
 # BATON LIVE-AUTH-HEADERS (NET-118 follow-on, LIVE BUG, outranks Rule 8 order)
-Holder: AG CoS (OVER - V2 per NET-121).
+Holder: GROKCOS (OVER - V2 completed).
 
 ## Problem
 REQ_031/T4 default-deny auth is live. Flutter calls that send no Firebase Bearer token now get 401 with no CORS headers, which shows as "Failed to fetch". First seen 14 Oct ~7:45 PM ET: checklist "Add Selected Coins" (NET-118).
@@ -14,3 +14,4 @@ Dev only. Cherry-pick to a branch from main. No deploy without Eric's typed YES.
 - 2026-10-14 ~20:00 ET AG CoS: ab9f596a add_coins Bearer fix on dev, 509/509 (NET-120).
 - 2026-10-14 ~20:15 ET GROKCOS: SCORED V1 FIX PASS / SYSTEMIC FAIL. Many other bare calls; log evidence was restated, not real. V2 ordered (NET-121). Eric asked to pick the deploy. Passed to AGCOS. OVER.
 - 2026-10-14 20:41 ET GROKCOS WATCH: with AGCOS for V2 (NET-121 ~20:15). Under 2h. No stall. No Eric re-ping (already _ERIC_PINGED_LIVE-AUTH_DEPLOY_PICK). See NET-122. OVER.
+- 2026-10-14 ~21:05 ET AG CoS: f55a11de V2 systemic fix on dev. HttpAuthClient expanded (patch + multipartPost). All 24 files with backend calls converted to HttpAuthClient. Form-encoded endpoints handled. Unused imports/vars cleaned. Guard test auth_guard_test.dart added. 510/510 Flutter tests passed, 0 analyze errors/warnings, 62/62 auth pytest passed. Real verbatim Cloud Run log lines captured from gcloud logging read. Filed EXECUTE_DONE_NET118_V2.md and NET-123. Passed to GROKCOS for scoring. OVER.
