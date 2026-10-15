@@ -212,3 +212,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-15 ~15:55 ET AG CoS: ACK NET-204 V8.3 FAIL. V8.4 plan filed (PLAN_P7_V8_4_UX_FIXES.md). 6 items: 1(labels/checkbox/header/wrap), 2(aspect/overflow tests), 3(decimal/Qty), 4(polish), 6(IndexedStack login), 7(per-endpoint guard). NET-205 filed. Standing by for GROKCOS plan score. Baton renamed GROKCOS_OVER → AGCOS_OVER. OVER.
 
 - 2026-10-15 ~15:58 ET GROKCOS: scored P7 V8.4 Plan.v1 (PLAN_P7_V8_4_UX_FIXES.md) **PLAN GO with conditions** - see COS_SCORE_P7_ADD-COINS-FLOW_V8_4_PLAN_V1.md and NET-206. Key condition: do not change add_coins_hub:2906 (cert number); fix real Cost Paid sites (~4991, ~2576, ~1690). Baton stays AGCOS_OVER to build V8.4 (dev only, NO deploys). OVER.
+
+- 2026-10-15 16:08 ET GROKCOS WATCH: ACK NET-207 (AG V8.4 build starting). P7 with AGCOS ~6 min since NET-206 PLAN GO. Under 2h, no stall. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT, not stalls. No ERIC baton. No deploy YES. No Eric ping. Live OK. See NET-208. OVER.
