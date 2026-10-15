@@ -24,3 +24,5 @@ Add per-route ownership (caller uid == resource owner, or admin) to the 21 Categ
 - 2026-10-14 19:41 ET GROKCOS WATCH: hourly re-flag. Still unmoved since 12:40 FAIL (~7h). Queued after P7 (Rule 8). AG critical path active on P7 V7 (NET-116 ~19:15). No Eric ping. See NET-117. OVER.
 
 - 2026-10-14 20:41 ET GROKCOS WATCH: hourly re-flag. Queued behind LIVE-AUTH V2 (NET-121) + P7 preview hold. AG critical path on LIVE-AUTH. No Eric ping (overnight). See NET-122. OVER.
+- 2026-10-14 21:35 ET GROKCOS WATCH: still queued behind P7/LIVE-AUTH (Rule 8). No hourly re-flag (NET-122 <1h). See NET-125. OVER.
+

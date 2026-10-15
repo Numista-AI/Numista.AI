@@ -56,3 +56,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-14 ~20:00 ET Grok CoS: V7 ec34ab69 scored PASS (code). COS_SCORE_P7_ADD-COINS-FLOW_V7.md, NET-119. Baton stays GROKCOS_OVER - AWAITING PREVIEW (Firebase re-login with Eric AM, p7-v7-gate deploy, then UX Designer + Field Tester). NET-118 FLASH first for AG.
 
 - 2026-10-14 20:41 ET GROKCOS WATCH: V7 PASS still AWAITING PREVIEW (AM Firebase re-login). LIVE-AUTH V2 is AG TOP. No stall. Overnight quiet. See NET-122. OVER.
+- 2026-10-14 21:35 ET GROKCOS WATCH: V7 PASS still AWAITING PREVIEW (AM Firebase). LIVE-AUTH with ERIC. No stall. Overnight quiet. See NET-125. OVER.
+
