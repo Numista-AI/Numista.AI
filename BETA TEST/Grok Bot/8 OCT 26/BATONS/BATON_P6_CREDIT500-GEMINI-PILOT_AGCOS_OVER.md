@@ -27,3 +27,5 @@ Holder: Grok CoS (passing for score). Ref: NET-074, CREDIT500_SPEND_PLAN.md.
 
 - 2026-10-14 20:41 ET GROKCOS WATCH: still Rule 8 WAIT behind LIVE-AUTH / P7. No Eric ping (overnight). See NET-122. OVER.
 - 2026-10-14 22:08 ET GROKCOS WATCH: still Rule 8 WAIT behind LIVE-AUTH / P7. No Eric ping (overnight). See NET-126. OVER.
+
+- 2026-10-15 19:45 ET GROKCOS WATCH: hourly re-flag. Still AGCOS_OVER queued behind P7 V8.7 (Rule 8). Not a stall. Overnight quiet. See NET-230. OVER.
