@@ -715,7 +715,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                             const Text(
                               'Open the manual entry form to enter full details for your coin.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                              style: TextStyle(fontSize: 16, color: Color(0xFF64748B)),
                             ),
                             const SizedBox(height: 24),
                             ElevatedButton.icon(
@@ -729,7 +729,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                                 ),
                               ),
                               icon: const Icon(Icons.open_in_new, size: 16),
-                              label: const Text('Open Manual Entry'),
+                              label: const Text('Open Manual Entry', style: TextStyle(fontSize: 16)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF3B82F6),
                                 foregroundColor: Colors.white,
@@ -1688,7 +1688,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               _mintSetField(_mintSetNameCtrl,     'Set Name',       'e.g. 2026 US Mint Uncirculated Coin Set'),
               const SizedBox(height: 12),
               _mintSetField(_mintSetCostCtrl,     'Purchase Price', 'e.g. \$27.95',
-                  keyboardType: TextInputType.number),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))]),
               const SizedBox(height: 12),
               _mintSetField(_mintSetDateCtrl,     'Purchase Date',  'e.g. 2026-07-22'),
               const SizedBox(height: 12),
@@ -1813,10 +1814,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Widget _mintSetField(TextEditingController ctrl, String label, String hint,
-      {TextInputType? keyboardType}) {
+      {TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters}) {
     return TextField(
       controller: ctrl,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: const TextStyle(color: Color(0xFF1E293B)),
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
@@ -2573,7 +2575,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 TextField(
                   controller: costCtrl,
                   style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A)),
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
                   decoration: InputDecoration(
                     hintText: 'e.g. 197.95',
                     hintStyle: TextStyle(color: _isDark ? Colors.white38 : const Color(0xFF5A5C69)),
@@ -4988,7 +4991,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: _camInputField('Cost Paid', _picCost)),
+                Expanded(child: _camInputField('Cost Paid', _picCost,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))])),
                 const SizedBox(width: 12),
                 Expanded(child: _camInputField('Storage Location', _picStorage)),
               ],

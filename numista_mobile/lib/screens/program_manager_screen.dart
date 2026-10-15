@@ -474,7 +474,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                 crossAxisCount: isNarrow ? 1 : 3,
                                 crossAxisSpacing: 16,
                                 mainAxisSpacing: 16,
-                                childAspectRatio: isNarrow ? 2.6 : 1.4, // Full width on mobile, standard on desktop
+                                childAspectRatio: isNarrow ? 2.6 : 1.6, // Full width on mobile, standard on desktop
                               ),
                               itemCount: enrichedPrograms.length,
                               itemBuilder: (context, index) {
@@ -606,7 +606,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                     crossAxisCount: isNarrow ? 1 : 3,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: isNarrow ? 2.6 : 1.4,
+                    childAspectRatio: isNarrow ? 2.6 : 1.6,
                   ),
                   itemCount: programs.length,
                   itemBuilder: (context, index) {
@@ -745,15 +745,15 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(program.years, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+          Text(program.years, style: const TextStyle(fontSize: 16, color: Color(0xFF64748B))),
           const Spacer(),
           
           // Progress text
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${pct.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
-              Text('$collected / $total Collected', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              Text('${pct.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+              Text('$collected / $total Collected', style: const TextStyle(fontSize: 16, color: Color(0xFF64748B))),
             ],
           ),
           const SizedBox(height: 8),
@@ -769,7 +769,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           const SizedBox(height: 6),
           Text(
             'Advances overall record by ${programOverallAdvancement.toStringAsFixed(2)}%',
-            style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 16, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
             softWrap: true,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -791,6 +791,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 foregroundColor: const Color(0xFF0F172A),
                 side: const BorderSide(color: Color(0xFFE2E8F0)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                minimumSize: const Size(double.infinity, 48),
               ),
               child: const Text('View Checklist'),
             ),
@@ -864,43 +865,50 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 child: Text(
                   program.name,
                   style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               // ── Print Checklist Button ─────────────────────────────────
-              ElevatedButton.icon(
-                onPressed: _generatingProgramId == program.id
-                    ? null
-                    : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
-                icon: _generatingProgramId == program.id
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.print, size: 16),
-                label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF63366),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // ── Download PDF Button ────────────────────────────────────
-              OutlinedButton.icon(
-                onPressed: _generatingProgramId == program.id
-                    ? null
-                    : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
-                icon: const Icon(Icons.download_rounded, size: 16),
-                label: const Text('Download PDF'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
-                  side: const BorderSide(color: Color(0xFF2563EB)),
-                  elevation: 0,
-                ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _generatingProgramId == program.id
+                        ? null
+                        : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
+                    icon: _generatingProgramId == program.id
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.print, size: 16),
+                    label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF63366),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                    ),
+                  ),
+                  // ── Download PDF Button ────────────────────────────────────
+                  OutlinedButton.icon(
+                    onPressed: _generatingProgramId == program.id
+                        ? null
+                        : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
+                    icon: const Icon(Icons.download_rounded, size: 16),
+                    label: const Text('Download PDF'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF2563EB),
+                      side: const BorderSide(color: Color(0xFF2563EB)),
+                      elevation: 0,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -948,13 +956,13 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         Text('AI Coin Reference Search',
                             style: TextStyle(
                                 color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                fontSize: 15,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold)),
                         const SizedBox(height: 3),
                         Text(
                           'Search 1,900+ coins from this program in the Vertex AI reference library',
                           style: TextStyle(
-                              color: isDark ? Colors.white.withAlpha(150) : const Color(0xFF64748B), fontSize: 12, height: 1.4),
+                              color: isDark ? Colors.white.withAlpha(150) : const Color(0xFF64748B), fontSize: 16, height: 1.4),
                         ),
                       ],
                     ),
@@ -1433,8 +1441,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             SizedBox(
-                                              width: 24,
-                                              height: 24,
+                                              width: 48,
+                                              height: 48,
                                               child: Checkbox(
                                                 value: isSelected,
                                                 onChanged: (bool? value) {
@@ -1448,6 +1456,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                                   _tryAdvanceMorganCoinsChecked();
                                                 },
                                                 activeColor: const Color(0xFF3B82F6),
+                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                               ),
                                             ),
                                             const SizedBox(width: 6),

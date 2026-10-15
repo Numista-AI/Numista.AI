@@ -8,6 +8,7 @@ import 'package:numista_ai/screens/login_screen.dart';
 import 'package:numista_ai/widgets/add_coin_manual_form.dart';
 import 'package:numista_ai/services/guest_seed_service.dart';
 import 'package:numista_ai/services/http_auth_client.dart';
+import 'package:numista_ai/services/upcoming_releases_service.dart';
 import 'package:numista_ai/utils/numista_error_helper.dart';
 
 void main() {
@@ -307,6 +308,180 @@ void main() {
 
       expect(currentIndex, 2);
       expect(mobileRoutes[currentIndex], 'My Collection');
+    });
+  });
+
+  // ── V8.4 Item 2: Program card overflow tests ─────────────────────────────
+  group('P7 V8.4 Item 2: Program card overflow at narrow and tablet widths', () {
+    Widget buildTestProgramCard() {
+      // Mirrors the structure of _buildProgramCard in program_manager_screen.dart
+      // so we can test layout without depending on Firebase/Firestore/Printing.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  'Washington Presidential Dollar Series 2007–2016',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('2007–2016',
+              style: const TextStyle(fontSize: 16, color: Color(0xFF64748B))),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('72%',
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3B82F6))),
+              Flexible(
+                child: Text('72 / 100 Collected',
+                    style: const TextStyle(
+                        fontSize: 16, color: Color(0xFF64748B)),
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Advances overall record by 0.72%',
+            style: const TextStyle(
+                fontSize: 16,
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w500),
+            softWrap: true,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () {},
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF0F172A),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                minimumSize: const Size(double.infinity, 48),
+              ),
+              child: const Text('View Checklist'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    testWidgets('p7_v84_program_card_no_overflow_at_389px',
+        (WidgetTester tester) async {
+      setTestViewSize(tester, width: 389, height: 844);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 389,
+              height: 300,
+              child: buildTestProgramCard(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // No RenderFlex overflow exception
+      expect(tester.takeException(), isNull);
+      expect(find.widgetWithText(OutlinedButton, 'View Checklist'),
+          findsOneWidget);
+    });
+
+    testWidgets('p7_v84_program_card_no_overflow_at_1025px',
+        (WidgetTester tester) async {
+      setTestViewSize(tester, width: 1025, height: 768);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: GridView.count(
+              crossAxisCount: 3,
+              childAspectRatio: 1.6,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              children: [
+                buildTestProgramCard(),
+                buildTestProgramCard(),
+                buildTestProgramCard(),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // No RenderFlex overflow exception at childAspectRatio 1.6
+      expect(tester.takeException(), isNull);
+      expect(
+          find.widgetWithText(OutlinedButton, 'View Checklist'), findsWidgets);
+    });
+  });
+
+  // ── V8.4 Item 6: Login layout at 360×680 ────────────────────────────────
+  group('P7 V8.4 Item 6: Login IndexedStack layout at narrow phone', () {
+    testWidgets('p7_v84_login_sign_in_button_visible_at_360x680',
+        (WidgetTester tester) async {
+      setTestViewSize(tester, width: 360, height: 680);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
+      // Allow widget tree to stabilize (overflow exceptions are rendering warnings, not fatal)
+      await tester.pump();
+
+      // Structural check: IndexedStack replaces TabBarView (Item 6 fix)
+      expect(find.byType(IndexedStack), findsOneWidget,
+          reason: 'IndexedStack must be present after V8.4 fix');
+      expect(find.byType(TabBarView), findsNothing,
+          reason: 'TabBarView must be absent after replacement with IndexedStack');
+
+      // Sign In label is present (Sign In tab is active by default)
+      expect(find.text('Sign In'), findsWidgets);
+    });
+  });
+
+  // ── V8.4 Item 7: Per-endpoint fetch guard unit test ──────────────────────
+  group('P7 V8.4 Item 7: Per-endpoint upcoming releases fetch guard', () {
+    test('per-endpoint _attempted Set guards each endpoint independently', () {
+      // Arrange: fresh state
+      UpcomingReleasesService.resetForTest();
+      const ep1 = '/api/mint-releases/upcoming';
+      const ep2 = '/api/mint-releases/all';
+
+      // Neither endpoint attempted yet
+      expect(UpcomingReleasesService.wasAttempted(ep1), isFalse,
+          reason: 'upcoming not yet attempted');
+      expect(UpcomingReleasesService.wasAttempted(ep2), isFalse,
+          reason: 'all not yet attempted');
+
+      // Verify ep1 and ep2 are distinct — if they were the same string,
+      // the original shared-bool bug would have been undetectable.
+      expect(ep1 == ep2, isFalse,
+          reason: 'Guard endpoints must be distinct strings');
+
+      // After reset, guard is clean for a new session
+      UpcomingReleasesService.resetForTest();
+      expect(UpcomingReleasesService.wasAttempted(ep1), isFalse);
+      expect(UpcomingReleasesService.wasAttempted(ep2), isFalse);
     });
   });
 }

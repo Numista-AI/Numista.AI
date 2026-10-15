@@ -28,7 +28,8 @@ class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
 
   late final TabController _tabCtrl;
-  static const _signInTab = 0;
+  // ignore: unused_field
+  static const _signInTab = 0; // Tab-index constant (kept for readability)
 
   // ─── Form controllers ─────────────────────────────────────────────────────
   final _emailCtrl       = TextEditingController();
@@ -286,23 +287,25 @@ class _LoginScreenState extends State<LoginScreen>
                             children: [
                               Image.asset('assets/logo_owl.png', height: 52),
                               const SizedBox(width: 14),
-                              const Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'NUMISTA.AI',
-                                    style: TextStyle(
-                                      color: _text,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.5,
+                              const Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'NUMISTA.AI',
+                                      style: TextStyle(
+                                        color: _text,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.5,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    'AI-Powered Coin Collection Manager',
-                                    style: TextStyle(color: _sub, fontSize: NumistaTheme.textBodySm),
-                                  ),
-                                ],
+                                    Text(
+                                      'AI-Powered Coin Collection Manager',
+                                      style: TextStyle(color: _sub, fontSize: NumistaTheme.textBodySm),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -315,15 +318,19 @@ class _LoginScreenState extends State<LoginScreen>
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: _border),
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _StatBadge(value: '100+', label: 'Coin\nTypes'),
-                                _StatDivider(),
-                  _StatBadge(value: '5,142', label: 'Reference\nCoins'),
-                                _StatDivider(),
-                                _StatBadge(value: 'AI+', label: 'Community\nVerified'),
-                              ],
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _StatBadge(value: '100+', label: 'Coin\nTypes'),
+                                  _StatDivider(),
+                                  _StatBadge(value: '5,142', label: 'Reference\nCoins'),
+                                  _StatDivider(),
+                                  _StatBadge(value: 'AI+', label: 'Community\nVerified'),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -481,28 +488,21 @@ class _LoginScreenState extends State<LoginScreen>
         if (_error != null) ...[ _banner(_error!, isError: true), const SizedBox(height: 16) ],
         if (_successMsg != null) ...[ _banner(_successMsg!, isError: false), const SizedBox(height: 16) ],
 
-        // Tab views — sized to content, no fixed height needed
-        AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          child: SizedBox(
-            height: _tabCtrl.index == _signInTab ? (_usePasswordSignIn ? 280 : 560) : 360,
-            child: TabBarView(
-              controller: _tabCtrl,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [ _buildSignInTab(), _buildCreateTab() ],
-            ),
-          ),
+        // Tab views — natural height via IndexedStack; outer SingleChildScrollView handles scroll
+        IndexedStack(
+          index: _tabCtrl.index,
+          children: [ _buildSignInTab(), _buildCreateTab() ],
         ),
 
         const SizedBox(height: 20),
-        _divider('or'),
+        SizedBox(width: double.infinity, child: _divider('or')),
         const SizedBox(height: 20),
 
         // Google Sign-In
         _googleButton(),
 
         const SizedBox(height: 16),
-        _divider('explore without an account'),
+        SizedBox(width: double.infinity, child: _divider('explore without an account')),
         const SizedBox(height: 16),
 
         // ── Single Primary Demo CTA (Zero-Write, Instant Load) ─────────
@@ -950,9 +950,17 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _divider(String label) => Row(children: [
         const Expanded(child: Divider(color: _border)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(label, style: TextStyle(color: _grey.withAlpha(180), fontSize: NumistaTheme.textBodySm)),
+        Flexible(
+          flex: 10,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              label,
+              style: TextStyle(color: _grey.withAlpha(180), fontSize: NumistaTheme.textBodySm),
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+            ),
+          ),
         ),
         const Expanded(child: Divider(color: _border)),
       ]);
