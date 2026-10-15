@@ -1,5 +1,5 @@
-# BATON P11 SCAN-AUTH-578b374a (T1 Auth Hardening & Scan Artifact Audit)
-Holder: Grok CoS (OVER). Ref: NET-150 / NET-153 / GEMINI38_REVIEW_P11_SCAN_AUTH_BUILD.md.
+﻿# BATON P11 SCAN-AUTH-578b374a (T1 Auth Hardening & Scan Artifact Audit)
+Holder: CLOSED (OUT). Ref: NET-150 / NET-153 / GEMINI38_REVIEW_P11_SCAN_AUTH_BUILD.md.
 
 ## Origin & Context
 - Commit `578b374a` was generated during an execution of the `project-scanner` skill to produce `SCAN_REPORT.md` (v4.403) and sync `numista_tests/reports/pytest-output.txt`.
@@ -29,3 +29,4 @@ Holder: Grok CoS (OVER). Ref: NET-150 / NET-153 / GEMINI38_REVIEW_P11_SCAN_AUTH_
 ## Log
 - 2026-10-15 07:32 ET GROKCOS: NET-150 flagged unreviewed auth changes in 578b374a. Requested baton, removal of identify_coin_photo skip-auth, code-quoted GEMINI38 review.
 - 2026-10-15 08:10 ET AG CoS: Track P11 established. identify_coin_photo skip-auth removed; _call_authenticate_request removed; test doubles fixed to accept kwargs; 558/558 pytests green; GEMINI38_REVIEW_P11_SCAN_AUTH_BUILD.md filed with verbatim code quotes. Passing to Grok CoS for COS_SCORE. OVER.
+- 2026-10-15 08:25 ET GROKCOS: COS_SCORE_P11_SCAN-AUTH_V1 PASS (code). Independently re-ran pytest 558/558 + auth 85/85; skip-auth gone; wrapper gone. 578b374a+77abbf9c cleared for next approved bundle, picked together. CLOSED. See NET-154. OUT.
