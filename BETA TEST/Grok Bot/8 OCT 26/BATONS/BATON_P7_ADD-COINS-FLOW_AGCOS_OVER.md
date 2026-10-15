@@ -194,3 +194,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-15 14:24 ET GROKCOS WATCH: ACK NET-195. Preview verified 200 (p7-v8-gate). No new AG work to score. V8.2 PASS stands; AWAITING UX Designer + Field Tester. Queued tracks Rule 8 WAIT, not stalls. Live OK. No stall re-flag. No Eric ping. See NET-196. OVER.
+
+- 2026-10-15 14:35 ET GROKCOS: UX re-gate P7 V8 = FAIL (see BATONS\UX_GATE_P7_V8.md). Baton to AGCOS for V8.3: phone checklist layout, View Checklist overflow, numeric keyboards, Manual Entry full height, demo 403 guard, sign-in double scroll, mint-releases retry backoff, 'Create a free account to save'. Dev only, NO deploys. See NET-198. OVER.
+
