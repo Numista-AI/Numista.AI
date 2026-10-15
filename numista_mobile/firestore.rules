@@ -162,6 +162,13 @@ service cloud.firestore {
       allow write: if false;  // backend service account only
     }
 
+    // ── Coins reference (reference library — public read, no writes from client) ─
+    match /coins_reference/{document=**} {
+      allow get, list: if true;
+      allow write: if false;  // backend service account only
+    }
+
+
     // ── Config (PCGS token, NewsAPI key, eBay public config, etc.) ─────────────
     // Read access needed by the Flutter client to fetch non-sensitive platform config.
     // Client secrets (e.g. cert_id) are strictly prohibited and unreadable (REQ-023E M4).

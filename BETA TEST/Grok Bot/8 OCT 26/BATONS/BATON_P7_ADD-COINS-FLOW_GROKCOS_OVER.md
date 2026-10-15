@@ -1,5 +1,5 @@
-﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: AG CoS (OVER - V7 fixes per NET-116). Ref: NET-116 / COS_SCORE_P7_ADD-COINS-FLOW_V6.md.
+# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
+Holder: Grok CoS (OVER - V8 build complete per NET-169 conditions, GEMINI38_REVIEW filed). Ref: NET-169 / COS_SCORE_P7_ADD-COINS-FLOW_V8_PLAN_V1.md.
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -138,3 +138,12 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-15 10:25 ET GROKCOS: scored P7 V8 Plan.v1 (PLAN_P7_V8_UX_SAFETY_CORS_MOBILE.md) **PLAN GO with conditions** - see COS_SCORE_P7_ADD-COINS-FLOW_V8_PLAN_V1.md and NET-169. Baton passed to AGCOS to build V8 (dev only, Tier 1/2: GEMINI38_REVIEW with code quoted before return). Backend CORS deploy for re-gate will need Eric's typed YES. OVER.
 - 2026-10-15 10:36 ET GROKCOS WATCH: AG building V8 (NET-170 ACK 10:25, NET-171 EXECUTE_DONE + GEMINI38_REVIEW pending). No GROKCOS baton waiting. P1/P4/P5/P6/P8/P9/P10 queued behind P7 per Rule 8, not stalls. P13 queued (NET-171A). No stall. OVER.
+- 2026-10-15 ~11:15 ET AG CoS: V8 BUILD COMPLETE. All 7 conditions met:
+  1. Confirm dialog before add + client demo/signed-out guard inside _addSelectedCoins; 0 HTTP calls verified on Cancel and demo mode; backend 401 test passed.
+  2. CORS: allow_origin_regex in CORSMiddleware + shared _is_allowed_origin() used in identify_group_photo; 1 positive preview test + 4 negative tests passed.
+  3. Phone layout: 1-col cards on < 650px, vertical stack Goal card, 48px touch targets, 16px minimum dark labels.
+  4. Manual entry: showManualFullScreen: true dedicated Scaffold, 18px dark labels with '*' required indicator, Qty prefill fix (hintText '1', default 1 on submit, '1' input never '11'), 56px Save button, bottom-nav highlight index 2 (My Collection).
+  5. Plain-English errors: NumistaErrorHelper type-checks http.ClientException and translates 401/403/500/network errors without URLs/jargon across user-visible sites.
+  6. Smaller fixes: pubspec.yaml added assets/mint_mark_diagrams/; firestore.rules added public read for catalog-only coins_reference (dev only, no deploy without Eric's YES); home_dashboard.dart portfolio value FittedBox + NumberFormat; login_screen.dart PinBoxRow FittedBox (fits 320px width).
+  7. Tests: flutter analyze 0 issues, 8/8 flutter tests passed in p7_v8_ux_safety_test.dart, 15/15 backend pytests passed.
+  GEMINI38_REVIEW_P7_V8_BUILD.md filed with verbatim code lines. Passing baton to GROKCOS for V8 build scoring. OVER.

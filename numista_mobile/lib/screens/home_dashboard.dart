@@ -1268,11 +1268,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
         // ── Main value display ──────────────────────────────────────────────
         if (hasValue) ...[
-          Text(fmt.format(displayVal),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(
+              fmt.format(displayVal),
+              maxLines: 1,
               style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
-                  color: _accent)),
+                  color: _accent),
+            ),
+          ),
           Text(
             advanced ? 'CPG Retail Market basis' : 'Wholesale / Greysheet Bid basis',
             style: TextStyle(
@@ -1284,13 +1291,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
         ]
         else if (isRunning)
-          Text(
-            hasProgress ? '${fmt.format(displayVal)} (est.)' : 'Valuing\u2026',
-            style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                color: _accent),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(
+              hasProgress ? '${fmt.format(displayVal)} (est.)' : 'Valuing\u2026',
+              maxLines: 1,
+              style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: _accent),
+            ),
           )
+
         else
           Text('Pending AI Valuation',
               style: TextStyle(

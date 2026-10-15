@@ -31,7 +31,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     'Variety': '',
     'Condition': 'Ungraded',
     'Cost': '',
-    'Quantity': '1',
+    'Quantity': '',
     'Storage Location': '',
     'Retailer/Website': '',
     'Retailer Invoice #': '',
@@ -64,15 +64,35 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
           _sectionHeader('Identity', Icons.tag),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(flex: 2, child: _buildField(context, 'Year', 'e.g. 1921',
-                keyboardType: TextInputType.number)),
+            Expanded(
+              child: _buildField(
+                context,
+                'Year',
+                'e.g. 1921',
+                isRequired: true,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _buildMintMarkField(context)),
-            const SizedBox(width: 12),
-            Expanded(flex: 2, child: _buildField(context, 'Denomination', 'e.g. Quarter Dollar, Dime, Cent')),
+            Expanded(
+              child: _buildMintMarkField(context),
+            ),
           ]),
           const SizedBox(height: 12),
-          _buildField(context, 'Program/Series', 'e.g. Morgan Silver Dollar'),
+          _buildField(
+            context,
+            'Denomination',
+            'e.g. Quarter Dollar, Dime, Cent',
+            isRequired: true,
+          ),
+          const SizedBox(height: 12),
+          _buildField(
+            context,
+            'Program/Series',
+            'e.g. Morgan Silver Dollar',
+            isRequired: true,
+          ),
           _buildField(context, 'Theme/Subject', 'e.g. Liberty Head'),
           _buildField(context, 'Variety', 'e.g. Double Die, Over Mint Mark'),
 
@@ -87,12 +107,25 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
           _sectionHeader('Purchase Details', Icons.receipt_long),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(child: _buildField(context, 'Cost', 'e.g. \$25.00',
-                keyboardType: TextInputType.number,
-                prefixText: '\$')),
+            Expanded(
+              child: _buildField(
+                context,
+                'Cost',
+                '25.00',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                prefixText: '\$ ',
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _buildField(context, 'Quantity', 'e.g. 1',
-                keyboardType: TextInputType.number)),
+            Expanded(
+              child: _buildField(
+                context,
+                'Quantity',
+                '1',
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+            ),
           ]),
           _buildField(context, 'Retailer/Website', 'e.g. APMEX, eBay'),
           _buildField(context, 'Retailer Invoice #', 'e.g. INV-9988'),
@@ -108,21 +141,22 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
 
           SizedBox(
             width: double.infinity,
+            height: 56,
             child: ElevatedButton.icon(
               onPressed: widget.isProcessing ? null : _submit,
               icon: widget.isProcessing
                   ? const SizedBox(
-                      height: 18, width: 18,
+                      height: 20, width: 20,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.check_circle_outline, size: 18),
+                  : const Icon(Icons.check_circle_outline, size: 20),
               label: Text(
-                widget.isProcessing ? 'Saving…' : 'Submit to Collection',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                widget.isProcessing ? 'Saving…' : 'Save to My Collection',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _accent,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 18),
+                minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
@@ -140,6 +174,9 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
       // GI-NOM-01: Normalize manual entry to formal US Mint denomination
       final rawDenom = _formData['Denomination'] as String? ?? '';
       _formData['Denomination'] = DenominationCanon.normalize(rawDenom);
+      // Qty prefill bug fix: default to '1' if left blank
+      final qtyStr = _formData['Quantity']?.toString().trim() ?? '';
+      _formData['Quantity'] = qtyStr.isEmpty ? '1' : qtyStr;
       widget.onSubmit(_formData);
     }
   }
@@ -159,15 +196,32 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
 
   /// Special Mint Mark field — auto-uppercase on every keystroke.
   Widget _buildMintMarkField(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final labelColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: _mintCtrl,
-        textCapitalization: TextCapitalization.characters,
-        inputFormatters: [UpperCaseTextFormatter()],
-        style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B)),
-        decoration: _inputDeco(context, 'Mint Mark', 'D, S, P, W'),
-        onSaved: (val) => _formData['Mint Mark'] = (val ?? '').toUpperCase(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Mint Mark',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: labelColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: _mintCtrl,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [UpperCaseTextFormatter()],
+            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
+            decoration: _inputDeco(context, 'D, S, P, W'),
+            onSaved: (val) => _formData['Mint Mark'] = (val ?? '').toUpperCase(),
+          ),
+        ],
       ),
     );
   }
@@ -176,34 +230,68 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     BuildContext context,
     String key,
     String hint, {
+    bool isRequired = false,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
     String? prefixText,
     int maxLines = 1,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final labelColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        initialValue: _formData[key]?.toString(),
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B)),
-        decoration: _inputDeco(context, key, hint, prefixText: prefixText),
-        onSaved: (val) => _formData[key] = val ?? '',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RichText(
+            text: TextSpan(
+              text: key,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: labelColor,
+              ),
+              children: isRequired
+                  ? const [
+                      TextSpan(
+                        text: ' *',
+                        style: TextStyle(
+                          color: Color(0xFFEF4444),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextFormField(
+            initialValue: _formData[key]?.toString().isNotEmpty == true
+                ? _formData[key].toString()
+                : null,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            maxLines: maxLines,
+            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
+            decoration: _inputDeco(context, hint, prefixText: prefixText),
+            onSaved: (val) => _formData[key] = val ?? '',
+          ),
+        ],
       ),
     );
   }
 
-  InputDecoration _inputDeco(BuildContext context, String label, String hint, {String? prefixText}) {
+  InputDecoration _inputDeco(BuildContext context, String hint, {String? prefixText}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final borderCol = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
 
     return InputDecoration(
-      labelText: label,
       hintText: hint,
       prefixText: prefixText,
       prefixStyle: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
-      labelStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
-      hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 13),
+      hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
       filled: true,
       fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),

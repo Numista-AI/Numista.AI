@@ -22,12 +22,14 @@ import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../theme/numista_theme.dart';
 import '../services/http_auth_client.dart';
+import '../utils/numista_error_helper.dart';
 
 
 class AddCoinsHub extends StatefulWidget {
   final Function(String)? onNavigate;
   final String? initialTabName;
   final bool showCertFullScreen;
+  final bool showManualFullScreen;
   final bool showAddAnotherConfirm;
   final Map<String, dynamic>? initialCoinPreset;
 
@@ -36,6 +38,7 @@ class AddCoinsHub extends StatefulWidget {
     this.onNavigate,
     this.initialTabName,
     this.showCertFullScreen = false,
+    this.showManualFullScreen = false,
     this.showAddAnotherConfirm = false,
     this.initialCoinPreset,
   });
@@ -565,7 +568,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save coin: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to save coin. Please try again.')),
           backgroundColor: Colors.red,
         ),
       );
@@ -593,6 +596,16 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           leading: const BackButton(),
         ),
         body: _buildCertLookupTab(),
+      );
+    }
+
+    if (widget.showManualFullScreen) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Add Coin Manually'),
+          leading: const BackButton(),
+        ),
+        body: _buildManualEntryTab(),
       );
     }
 
@@ -632,8 +645,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           icon: Icons.keyboard_outlined,
           label: 'Type it in',
           onTap: () {
-            setState(() => _showMoreWays = true);
-            _tabController.animateTo(2);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AddCoinsHub(
+                  showManualFullScreen: true,
+                  initialCoinPreset: widget.initialCoinPreset,
+                ),
+              ),
+            );
           },
         ),
         _QuickAddCard(
@@ -2422,7 +2442,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       if (!mounted) return;
       setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add SKU: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to add SKU. Please try again.')), backgroundColor: Colors.red),
       );
     }
   }
@@ -3385,7 +3405,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       if (!mounted) return;
       setState(() => _certManualSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Couldn\'t save coin. Please try again. ($e)'),
+        content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Couldn\'t save coin. Please try again.')),
         backgroundColor: Colors.red,
       ));
     }
@@ -4036,7 +4056,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       if (!mounted) return;
       setState(() {
         _pcgsLookupLoading = false;
-        _pcgsLookupError   = e.toString().replaceFirst('Exception: ', '');
+        _pcgsLookupError   = NumistaErrorHelper.toUserFriendly(e, fallback: 'Cert lookup failed. Please verify the cert number and try again.');
       });
     }
   }

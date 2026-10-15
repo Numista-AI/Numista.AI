@@ -87,6 +87,8 @@ flutter:
     - assets/
     - assets/data/
     - assets/fonts/
+    - assets/mint_mark_diagrams/
+
 
   fonts:
     - family: Roboto

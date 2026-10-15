@@ -1420,39 +1420,43 @@ class PinBoxRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(6, (i) {
-        return Container(
-          width: 48,
-          height: 52,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: filled[i] ? const Color(0xFFF63366) : Colors.grey.shade400,
-              width: 2,
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(6, (i) {
+          return Container(
+            width: 44,
+            height: 50,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: filled[i] ? const Color(0xFFF63366) : Colors.grey.shade400,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.transparent,
             ),
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.transparent,
-          ),
-          alignment: Alignment.center,
-          child: filled[i]
-              ? (showDigits
-                  ? Text(digits[i],
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700))
-                  : Container(
-                      width: 14,
-                      height: 14,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFFF63366),
-                      ),
-                    ))
-              : const SizedBox.shrink(),
-        );
-      }),
+            alignment: Alignment.center,
+            child: filled[i]
+                ? (showDigits
+                    ? Text(digits[i],
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700))
+                    : Container(
+                        width: 14,
+                        height: 14,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFFF63366),
+                        ),
+                      ))
+                : const SizedBox.shrink(),
+          );
+        }),
+      ),
     );
   }
+
 }
 
 typedef _PinBoxRow = PinBoxRow;

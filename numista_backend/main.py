@@ -57,13 +57,27 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 
+ALLOWED_ORIGIN_REGEX = r"^https://numista-vault--[a-z0-9-]+\.web\.app$"
+_allowed_origin_re = re.compile(ALLOWED_ORIGIN_REGEX)
+
+def _is_allowed_origin(origin: str) -> bool:
+    if not origin:
+        return False
+    if origin in ALLOWED_ORIGINS:
+        return True
+    if _allowed_origin_re.fullmatch(origin):
+        return True
+    return False
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 from routes.subaccount_routes import router as subaccount_router
 from routes.pcgs_routes import router as pcgs_router
@@ -5572,10 +5586,11 @@ async def identify_group_photo(
     """Identify multiple coins in a single group photo.
     Returns identification JSON only — does NOT write to collection (L8: proposal-only)."""
     req_origin = request.headers.get("origin") or ""
-    cors_origin = req_origin if req_origin in ALLOWED_ORIGINS else ("*" if not req_origin else ALLOWED_ORIGINS[0])
+    is_allowed = _is_allowed_origin(req_origin)
+    cors_origin = req_origin if is_allowed else ("*" if not req_origin else ALLOWED_ORIGINS[0])
     cors_headers = {
         "Access-Control-Allow-Origin": cors_origin,
-        "Access-Control-Allow-Credentials": "true" if cors_origin in ALLOWED_ORIGINS else "false",
+        "Access-Control-Allow-Credentials": "true" if is_allowed else "false",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
     }

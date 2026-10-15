@@ -558,7 +558,15 @@ class _BaseLayoutState extends State<BaseLayout> {
       'AI Deepdive',
       'Settings & Backup',
     ];
-    final currentIndex = mobileRoutes.indexOf(_activeRoute).clamp(0, 4);
+    int effectiveIndex = mobileRoutes.indexOf(_activeRoute);
+    if (effectiveIndex == -1) {
+      if (_activeRoute == 'Add New Coins') {
+        effectiveIndex = 2; // Map 'Add New Coins' to 'My Collection' tab
+      } else {
+        effectiveIndex = 0;
+      }
+    }
+    final currentIndex = effectiveIndex.clamp(0, 4);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
