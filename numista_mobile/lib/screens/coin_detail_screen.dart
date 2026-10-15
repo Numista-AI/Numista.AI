@@ -667,7 +667,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
           .update({'hasCac': value});
       
       // Trigger a refresh call on the backend in the background
-      http.post(
+      HttpAuthClient.post(
         Uri.parse('$kApiBaseUrl/api/greysheet/refresh'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
@@ -1939,7 +1939,7 @@ class _GreysheetPricingTableState extends State<_GreysheetPricingTable> {
 
   Future<void> _fetchPricing() async {
     try {
-      final response = await http.get(Uri.parse('$kApiBaseUrl/api/greysheet/pricing/${widget.gsid}'));
+      final response = await HttpAuthClient.get(Uri.parse('$kApiBaseUrl/api/greysheet/pricing/${widget.gsid}'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (mounted) {
@@ -2581,14 +2581,7 @@ class _PaperTrailCardState extends State<_PaperTrailCard> {
         '$apiBase/api/receipts/${Uri.encodeComponent(userEmail)}/$receiptId/view_url',
       );
 
-      final user = FirebaseAuth.instance.currentUser;
-      final token = await user?.getIdToken();
-      final resp = await http.get(
-        url,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
+      final resp = await HttpAuthClient.get(url);
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final signedUrl = data['signed_url'] as String?;
@@ -4351,12 +4344,12 @@ class _OwnerPhotoHero extends StatelessWidget {
     // HEIC conversion if needed
     if (ext == 'heic' || ext == 'heif') {
       try {
-        final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
         final uri = Uri.parse('$kApiBaseUrl/api/convert_heic');
-        final request = http.MultipartRequest('POST', uri);
-        if (idToken != null) request.headers['Authorization'] = 'Bearer $idToken';
-        request.files.add(http.MultipartFile.fromBytes('image', uploadBytes, filename: 'photo.$ext'));
-        final response = await request.send().timeout(const Duration(seconds: 30));
+        final response = await HttpAuthClient.multipartPost(
+          uri,
+          files: [http.MultipartFile.fromBytes('image', uploadBytes, filename: 'photo.$ext')],
+          timeout: const Duration(seconds: 30),
+        );
         if (response.statusCode == 200 && response.headers['x-converted'] == 'true') {
           uploadBytes = Uint8List.fromList(await response.stream.toBytes());
           ext = 'jpg';

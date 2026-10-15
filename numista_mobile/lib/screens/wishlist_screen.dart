@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
+import '../constants.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -128,9 +129,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
         });
       }
 
-      final response = await http.post(
-        Uri.parse('https://numista-backend-568985927038.us-central1.run.app/api/wishlist/create-share'),
-        headers: {'Content-Type': 'application/json'},
+      final response = await HttpAuthClient.post(
+        Uri.parse('$kApiBaseUrl/api/wishlist/create-share'),
         body: jsonEncode({
           'user_email': userEmail,
           'owner_alias': userEmail.split('@').first,

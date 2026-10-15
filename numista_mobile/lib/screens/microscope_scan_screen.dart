@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
 import '../constants.dart';
 import '../services/hardware_service.dart';
 import '../services/auth_service.dart';
@@ -1544,7 +1544,7 @@ class _MicroscopePricingAdvisorState extends State<_MicroscopePricingAdvisor> {
     try {
       // 1. Resolve GSID
       final resolveUrl = Uri.parse('$kApiBaseUrl/api/greysheet/resolve');
-      final resolveResp = await http.post(
+      final resolveResp = await HttpAuthClient.post(
         resolveUrl,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -1563,7 +1563,7 @@ class _MicroscopePricingAdvisorState extends State<_MicroscopePricingAdvisor> {
           _gsid = gsid;
           // 2. Fetch Pricing table
           final pricingUrl = Uri.parse('$kApiBaseUrl/api/greysheet/pricing/$gsid');
-          final pricingResp = await http.get(pricingUrl);
+          final pricingResp = await HttpAuthClient.get(pricingUrl);
           if (pricingResp.statusCode == 200) {
             final pricingData = jsonDecode(pricingResp.body);
             if (mounted) {

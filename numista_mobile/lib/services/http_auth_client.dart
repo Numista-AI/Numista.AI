@@ -121,4 +121,43 @@ class HttpAuthClient {
       if (ownClient) c.close();
     }
   }
+
+  /// Send an authenticated PATCH request.
+  static Future<http.Response> patch(
+    Uri url, {
+    http.Client? client,
+    Map<String, String>? headers,
+    Object? body,
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
+    final reqHeaders = await _buildHeaders(headers);
+    final ownClient = client == null && httpClientOverride == null;
+    final c = httpClientOverride ?? client ?? http.Client();
+    try {
+      return await c.patch(url, headers: reqHeaders, body: body).timeout(timeout);
+    } finally {
+      if (ownClient) c.close();
+    }
+  }
+
+  /// Send an authenticated multipart POST request.
+  /// Use this instead of http.MultipartRequest for backend calls.
+  static Future<http.StreamedResponse> multipartPost(
+    Uri url, {
+    required List<http.MultipartFile> files,
+    Map<String, String>? fields,
+    Map<String, String>? headers,
+    Duration timeout = const Duration(seconds: 60),
+  }) async {
+    final token = await getIdToken();
+    final request = http.MultipartRequest('POST', url);
+    if (token != null && token.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    if (headers != null) request.headers.addAll(headers);
+    if (fields != null) request.fields.addAll(fields);
+    request.files.addAll(files);
+    final c = httpClientOverride ?? http.Client();
+    return await c.send(request).timeout(timeout);
+  }
 }

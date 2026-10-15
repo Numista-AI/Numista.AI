@@ -6,7 +6,6 @@ import '../services/guest_seed_service.dart';
 import '../services/morgan_prefs.dart';
 import '../widgets/morgan_settings_panel.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/http_auth_client.dart';
 import '../constants.dart';
@@ -476,14 +475,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _fetchCoinCount(String email) async {
     try {
-      // Get Firebase ID token for Bearer auth (Dimes Bug v2.2 — gate 4)
-      final user = FirebaseAuth.instance.currentUser;
-      final idToken = await user?.getIdToken();
-      if (idToken == null) return;
-
-      final resp = await http.get(
+      final resp = await HttpAuthClient.get(
         Uri.parse('$_apiUrl/api/collection/count?user_email=${Uri.encodeComponent(email)}'),
-        headers: {'Authorization': 'Bearer $idToken'},
       );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -1182,9 +1175,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return;
       }
 
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse('$kApiBaseUrl/api/sandbox/clear'),
-        headers: {'Authorization': 'Bearer $idToken'},
       );
 
       if (!context.mounted) return;
@@ -1664,8 +1656,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     setState(() => _dedupRunning = true);
     try {
-      final resp = await http.post(
+      final resp = await HttpAuthClient.post(
         Uri.parse('$_apiUrl/api/dedup_sweep'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {'user_email': AuthService.userEmail},
       );
       if (resp.statusCode == 200) {
@@ -2598,8 +2591,9 @@ class _DedupDialogState extends State<_DedupDialog> {
 
     setState(() => _autoCleanRunning = true);
     try {
-      final resp = await http.post(
+      final resp = await HttpAuthClient.post(
         Uri.parse('$_apiUrl/api/dedup_sweep/auto_clean'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {'user_email': widget.userEmail},
       );
       if (resp.statusCode == 200) {

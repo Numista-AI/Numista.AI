@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../constants.dart';
 import '../services/auth_service.dart';
+import '../services/http_auth_client.dart';
 import '../services/guest_seed_service.dart';
 import 'privacy_screen.dart';
 import 'terms_screen.dart';
@@ -1118,10 +1119,6 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
 
     try {
       final uri = Uri.parse('$kApiBaseUrl/api/identify_coin_photo');
-      final request = http.MultipartRequest('POST', uri);
-
-      request.fields['user_email'] = 'guest@numista.ai';
-      request.fields['save_to_collection'] = 'false';
 
       // Helper to parse content type
       MediaType getMediaType(String filename) {
@@ -1134,21 +1131,30 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
         return MediaType.parse(mime);
       }
 
-      request.files.add(http.MultipartFile.fromBytes(
-        'image_a',
-        _obverseBytes!,
-        filename: _obverseName ?? 'obverse.jpg',
-        contentType: getMediaType(_obverseName ?? 'obverse.jpg'),
-      ));
+      final files = <http.MultipartFile>[
+        http.MultipartFile.fromBytes(
+          'image_a',
+          _obverseBytes!,
+          filename: _obverseName ?? 'obverse.jpg',
+          contentType: getMediaType(_obverseName ?? 'obverse.jpg'),
+        ),
+        http.MultipartFile.fromBytes(
+          'image_b',
+          _reverseBytes!,
+          filename: _reverseName ?? 'reverse.jpg',
+          contentType: getMediaType(_reverseName ?? 'reverse.jpg'),
+        ),
+      ];
 
-      request.files.add(http.MultipartFile.fromBytes(
-        'image_b',
-        _reverseBytes!,
-        filename: _reverseName ?? 'reverse.jpg',
-        contentType: getMediaType(_reverseName ?? 'reverse.jpg'),
-      ));
-
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 45));
+      final streamedResponse = await HttpAuthClient.multipartPost(
+        uri,
+        fields: {
+          'user_email': 'guest@numista.ai',
+          'save_to_collection': 'false',
+        },
+        files: files,
+        timeout: const Duration(seconds: 45),
+      );
       final responseBody = await streamedResponse.stream.bytesToString();
 
       if (streamedResponse.statusCode == 200) {

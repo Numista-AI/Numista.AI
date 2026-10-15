@@ -1,8 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'http_auth_client.dart';
 import '../constants.dart';
 import '../models/estate_models.dart';
 
@@ -42,15 +41,8 @@ class EstateReportService {
       ...identity.toJson(),
     };
 
-    final user = FirebaseAuth.instance.currentUser;
-    final token = await user?.getIdToken();
-
-    final response = await http.post(
+    final response = await HttpAuthClient.post(
       Uri.parse('$_baseUrl/generate_estate_report'),
-      headers: {
-        'Content-Type': 'application/json',
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-      },
       body: jsonEncode(body),
     ).timeout(
       const Duration(seconds: 240),

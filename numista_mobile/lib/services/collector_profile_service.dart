@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:firebase_auth/firebase_auth.dart';
+import 'http_auth_client.dart';
 import '../constants.dart';
 
 /// Service managing episodic Collector Memory and AI Preferences
@@ -24,20 +23,8 @@ class CollectorProfileService {
   /// Fetch collector profile for the current user
   static Future<Map<String, dynamic>> getProfile() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
-      if (user != null) {
-        final token = await user.getIdToken();
-        if (token != null && token.isNotEmpty) {
-          headers['Authorization'] = 'Bearer $token';
-        }
-      }
-
-      final response = await http.get(
+      final response = await HttpAuthClient.get(
         Uri.parse('$_baseUrl/api/ai/profile'),
-        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -57,17 +44,6 @@ class CollectorProfileService {
   /// Update collector profile preferences (strict lowercase snake_case keys)
   static Future<bool> updateProfile(Map<String, dynamic> updates) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
-      if (user != null) {
-        final token = await user.getIdToken();
-        if (token != null && token.isNotEmpty) {
-          headers['Authorization'] = 'Bearer $token';
-        }
-      }
-
       final payload = <String, dynamic>{};
       if (updates.containsKey('preferred_series')) {
         payload['preferred_series'] = updates['preferred_series'] ?? [];
@@ -91,9 +67,8 @@ class CollectorProfileService {
         payload['opt_in_chat_extraction'] = updates['opt_in_chat_extraction'] == true;
       }
 
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse('$_baseUrl/api/ai/profile'),
-        headers: headers,
         body: jsonEncode(payload),
       );
 

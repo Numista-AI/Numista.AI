@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
@@ -277,20 +278,23 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _scrollToBottom();
 
     try {
-      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
       final uri = Uri.parse('$kApiBaseUrl/api/identify_group_photo');
-      final request = http.MultipartRequest('POST', uri);
-      request.headers['Authorization'] = 'Bearer $idToken';
-      request.fields['user_email'] = AuthService.userEmail;
-      request.fields['message'] = userMessage;
-      request.files.add(http.MultipartFile.fromBytes(
-        'image',
-        bytes,
-        filename: name,
-        contentType: MediaType('image', name.split('.').last.toLowerCase()),
-      ));
-
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 90));
+      final streamedResponse = await HttpAuthClient.multipartPost(
+        uri,
+        fields: {
+          'user_email': AuthService.userEmail,
+          'message': userMessage,
+        },
+        files: [
+          http.MultipartFile.fromBytes(
+            'image',
+            bytes,
+            filename: name,
+            contentType: MediaType('image', name.split('.').last.toLowerCase()),
+          ),
+        ],
+        timeout: const Duration(seconds: 90),
+      );
       final responseBody = await streamedResponse.stream.bytesToString();
       final data = jsonDecode(responseBody) as Map<String, dynamic>;
 
@@ -395,12 +399,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
 
     try {
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse('$kApiBaseUrl/api/deep_dive'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
         body: jsonEncode({
           'user_email':          AuthService.userEmail,
           'query':               effectiveQuery,
@@ -1410,13 +1410,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _scrollToBottom();
 
     try {
-      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
-      final previewResponse = await http.post(
+      final previewResponse = await HttpAuthClient.post(
         Uri.parse('$kApiBaseUrl/api/preview_cost_split'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
         body: jsonEncode({
           'coins': (payload['coins'] as List).map((c) => {
             'year': c['year']?.toString() ?? '',
@@ -1595,8 +1590,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _scrollToBottom();
 
     try {
-      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
-      
       final body = {
         'user_email': AuthService.userEmail,
         'coins': (payload['coins'] as List).map((c) => {
@@ -1619,12 +1612,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
       };
       if (costOverrides != null) body['cost_overrides'] = costOverrides;
 
-      final response = await http.post(
+      final response = await HttpAuthClient.post(
         Uri.parse('$kApiBaseUrl/api/commit_group_photo'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $idToken',
-        },
         body: jsonEncode(body),
       );
 
