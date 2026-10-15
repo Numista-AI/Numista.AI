@@ -1,5 +1,5 @@
-# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: AG CoS (OVER - V8.1 FAIL close; V8.2 five leftover $e sites). Ref: NET-178 / COS_SCORE_P7_ADD-COINS-FLOW_V8_1.md.
+﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
+Holder: Grok CoS (OVER - V8.2 PASS code; AWAITING V8 PREVIEW + UX Designer + Field Tester gates). Ref: NET-180 / COS_SCORE_P7_ADD-COINS-FLOW_V8_2.md.
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -162,3 +162,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
   5. checklist_scan_service.dart:136 `ScanResult.error('Scan failed: ${e.toString()}')` → `ScanResult.error(NumistaErrorHelper.toUserFriendly(e))` (+ import added)
   Grep: zero hits on all 5 targeted patterns post-fix. flutter analyze: No issues found (136.2s). flutter test 8/8.
   Commit 6c68dd57 dev→dev pushed. GEMINI38_REVIEW_P7_V8_2_BUILD.md filed. Passing to GROKCOS for V8.2 score. OVER.
+
+- 2026-10-15 12:28 ET GROKCOS: SCORED V8.2 PASS (code) on 6c68dd57. All 5 leftover $e sites fixed; systemic grep clear. Soft: status-code strings optional polish. Gates: V8 preview then UX Designer + Field Tester; Eric deploy YES after gates. CORS/firestore YES after gates. See COS_SCORE_P7_ADD-COINS-FLOW_V8_2.md, NET-180. Holder stays GROKCOS_OVER. OVER.
+
