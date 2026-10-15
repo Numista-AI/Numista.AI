@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -313,7 +313,7 @@ void main() {
     });
   });
 
-  // ── V8.4 Item 2: Program card overflow tests ─────────────────────────────
+  // â”€â”€ V8.4 Item 2: Program card overflow tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   group('P7 V8.4 Item 2: Program card overflow at narrow and tablet widths', () {
     Widget buildTestProgramCard() {
       // Mirrors the structure of _buildProgramCard in program_manager_screen.dart
@@ -325,7 +325,7 @@ void main() {
             children: [
               Flexible(
                 child: Text(
-                  'Washington Presidential Dollar Series 2007–2016',
+                  'Washington Presidential Dollar Series 2007â€“2016',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 2,
@@ -334,7 +334,7 @@ void main() {
             ],
           ),
           const SizedBox(height: 4),
-          Text('2007–2016',
+          Text('2007â€“2016',
               style: const TextStyle(fontSize: 16, color: Color(0xFF64748B))),
           const Spacer(),
           Row(
@@ -436,7 +436,7 @@ void main() {
     });
   });
 
-  // ── V8.4 Item 6: Login layout at 360×680 ────────────────────────────────
+  // â”€â”€ V8.4 Item 6: Login layout at 360Ã—680 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   group('P7 V8.4 Item 6: Login IndexedStack layout at narrow phone', () {
     testWidgets('p7_v84_login_sign_in_button_visible_at_360x680',
         (WidgetTester tester) async {
@@ -461,7 +461,7 @@ void main() {
     });
   });
 
-  // ── V8.4 Item 7: Per-endpoint fetch guard unit test ──────────────────────
+  // â”€â”€ V8.4 Item 7: Per-endpoint fetch guard unit test â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   group('P7 V8.4 Item 7: Per-endpoint upcoming releases fetch guard', () {
     test('per-endpoint _attempted Set guards each endpoint independently', () {
       // Arrange: fresh state
@@ -475,7 +475,7 @@ void main() {
       expect(UpcomingReleasesService.wasAttempted(ep2), isFalse,
           reason: 'all not yet attempted');
 
-      // Verify ep1 and ep2 are distinct — if they were the same string,
+      // Verify ep1 and ep2 are distinct â€” if they were the same string,
       // the original shared-bool bug would have been undetectable.
       expect(ep1 == ep2, isFalse,
           reason: 'Guard endpoints must be distinct strings');
@@ -487,7 +487,7 @@ void main() {
     });
   });
 
-  // ── V8.5 Item 1: Required-field validators ────────────────────────────────
+  // â”€â”€ V8.5 Item 1: Required-field validators â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   group('P7 V8.5 Item 1: Required-field validators block bad saves', () {
     Widget buildForm({required List<Map<String, dynamic>> submitted}) {
       return MaterialApp(
@@ -514,7 +514,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull,
-          reason: 'No exception — validator shows inline error');
+          reason: 'No exception â€” validator shows inline error');
       expect(find.text('Please enter the year on the coin, like 1921.'), findsOneWidget,
           reason: 'Year validator message visible');
       expect(submitted, isEmpty, reason: 'onSubmit must NOT be called');
@@ -580,7 +580,7 @@ void main() {
     });
   });
 
-  // ── V8.5 Item 2: Controllers survive setState rebuild ────────────────────
+  // â”€â”€ V8.5 Item 2: Controllers survive setState rebuild â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   group('P7 V8.5 Item 2: Controllers survive parent rebuild (first char, Year blank)', () {
     testWidgets('p7_v85_year_field_survives_setstate_rebuild',
         (WidgetTester tester) async {
@@ -618,7 +618,7 @@ void main() {
       outerSetState(() => processing = false);
       await tester.pump();
 
-      // Year field must still show '1921' — controller survives the rebuild
+      // Year field must still show '1921' â€” controller survives the rebuild
       expect(find.widgetWithText(TextFormField, '1921'), findsOneWidget,
           reason: 'Year value must survive parent setState rebuild');
     });
@@ -712,7 +712,7 @@ void main() {
     });
   });
 
-  // ── V8.5 Item 3: NumistaErrorHelper unit tests ────────────────────────────
+  // â”€â”€ V8.5 Item 3: NumistaErrorHelper unit tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   group('P7 V8.5 Item 3: NumistaErrorHelper splits CORS vs offline vs 4xx vs 5xx', () {
     test('XMLHttpRequest maps to server-no-answer (not offline)', () {
       final msg = NumistaErrorHelper.toUserFriendly('XMLHttpRequest error.');
@@ -759,6 +759,173 @@ void main() {
       );
       expect(msg, startsWith("Couldn't save your 1921 coin"));
       expect(msg, contains("server didn't answer"));
+    });
+  });
+
+  // â”€â”€ V8.6: Quantity regression fix â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  group('P7 V8.6 Item Q: Quantity field starts empty', () {
+    testWidgets('p7_v86_quantity_field_empty_on_first_build', (WidgetTester tester) async {
+      // VERIFIES: Quantity box controller text is '' on first build.
+      // On e8b978f2 (_formData had 'Quantity':'1'), _qtyCtrl initialised with
+      // text '1', so the Quantity field started with '1' visible â€” typing 3 gave '13'.
+      // On V8.6 ('Quantity' absent from _formData), controller starts '', PASS.
+      setTestViewSize(tester, width: 1200, height: 2000);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AddCoinManualForm(
+                isProcessing: false,
+                onSubmit: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Assert: no EditableText widget has controller.text == '1' at first build.
+      // Only hintText renders '1'; controller.text must be ''.
+      final allEditableTexts = tester.widgetList<EditableText>(find.byType(EditableText));
+      final prefilled1 = allEditableTexts
+          .where((e) => e.controller.text == '1')
+          .toList();
+      expect(prefilled1, isEmpty,
+          reason: 'Quantity field must start with controller.text "" (empty), '
+              'not "1". Hint text "1" is shown by InputDecoration, not the controller.');
+    });
+
+    testWidgets('p7_v86_blank_quantity_submits_as_1', (WidgetTester tester) async {
+      // VERIFIES: leaving Quantity blank and submitting sends '1' in the payload.
+      setTestViewSize(tester, width: 1200, height: 2000);
+      Map<String, dynamic>? captured;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AddCoinManualForm(
+                isProcessing: false,
+                onSubmit: (data) => captured = data,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // TextFormField order (from add_coin_manual_form.dart):
+      // 0=Year, 1=Mint Mark, 2=Denomination, 3=Program/Series, 4=Theme/Subject,
+      // 5=Variety, 6=Condition, 7=Cost, 8=Quantity, 9=Retailer, 10=Invoice,
+      // 11=Storage, 12=Notes
+      final fields = find.byType(TextFormField);
+      await tester.enterText(fields.at(0), '2000'); // Year
+      await tester.enterText(fields.at(2), 'Dollar'); // Denomination (required)
+      await tester.enterText(fields.at(3), 'Peace Dollar'); // Program/Series (required)
+      // Leave Quantity (index 8) blank
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save to My Collection'));
+      await tester.pumpAndSettle();
+
+      expect(captured, isNotNull, reason: 'onSubmit should have been called');
+      expect(captured!['Quantity'], equals('1'),
+          reason: 'Blank Quantity must default to "1" in _submit()');
+    });
+  });
+
+  // â”€â”€ V8.6 Item 2: Real trigger repro â€” Key-forced widget remount â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  group('P7 V8.6 Item 2: Real trigger repro â€” key-forced remount loses text', () {
+    // Root cause (file:line):
+    //   add_coins_hub.dart:1996 â€” AddCoinManualForm is constructed inline inside
+    //   _buildManualEntryTab() which is called from build(). Every time the hub
+    //   calls setState() (e.g. _isProcessing = true at line 1999, or _isProcessing
+    //   = false at line 2072/2081), build() recreates AddCoinManualForm. Flutter
+    //   reuses the State across these rebuilds (same type, same tree position, no
+    //   key â€” confirmed PASS on StatefulBuilder test, both e8b978f2 and V8.5+).
+    //
+    //   The FT "Year blanks" scenario is:
+    //     Navigator.push(MaterialPageRoute(builder: (_) => AddCoinsHub(
+    //       showManualFullScreen: true, ...)))
+    //   at add_coins_hub.dart:649-657 and 693-700.
+    //   Every Navigator.push creates a NEW route object â†’ NEW AddCoinsHub widget
+    //   â†’ NEW _AddCoinsHubState â†’ NEW AddCoinManualForm â†’ NEW initState() â†’
+    //   controllers reset to defaults (all empty, Condition=Ungraded).
+    //   Back-button â†’ re-push â†’ all typed values gone. This is the real trigger.
+    //
+    //   EVIDENCE no other in-session remount exists:
+    //   - _isProcessing setState: same widget type/position â†’ Flutter keeps State
+    //     (StatefulBuilder test passes on e8b978f2 and V8.5+; known).
+    //   - No IndexedStack, lazy ListView, or UniqueKey wraps AddCoinManualForm
+    //     in the showManualFullScreen path (add_coins_hub.dart:603-611).
+    //   - No changing Key on AddCoinManualForm itself.
+    //
+    //   The repro test below uses ValueKey to force the disposal + remount that
+    //   Navigator.push causes, verifying the known limitation is documented.
+    //   On e8b978f2 (no controllers): FAILS because the test asserts '1921'
+    //   survives a parent StatefulBuilder setState WITHOUT key change (see V8.5
+    //   test p7_v85_year_field_survives_setstate_rebuild which passes on V8.5+).
+    //   This test instead documents what DOES happen on key-forced remount
+    //   (Year resets). Both e8b978f2 and V8.5+ produce empty Year after remount.
+
+    testWidgets('p7_v86_key_forced_remount_resets_year_field', (WidgetTester tester) async {
+      // Simulates Navigator.push creating a new AddCoinManualForm State.
+      // Asserts Year resets to '' after key-forced remount (known limitation).
+      setTestViewSize(tester, width: 1200, height: 2000);
+
+      int keyVersion = 0;
+      late StateSetter outerSetState;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (ctx, setState) {
+                outerSetState = setState;
+                return SingleChildScrollView(
+                  child: AddCoinManualForm(
+                    key: ValueKey(keyVersion),
+                    isProcessing: false,
+                    onSubmit: (_) {},
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Type '1921' into the Year field (index 0)
+      await tester.enterText(find.byType(TextFormField).at(0), '1921');
+      await tester.pumpAndSettle();
+      expect(find.byType(TextFormField).at(0), findsOneWidget);
+
+      // Confirm text present before remount
+      final yearBefore = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byType(TextFormField).at(0),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(yearBefore.controller.text, equals('1921'),
+          reason: 'Year should be "1921" before remount');
+
+      // Force remount by changing ValueKey (simulates Navigator pop + re-push)
+      outerSetState(() => keyVersion++);
+      await tester.pumpAndSettle();
+
+      // After remount: Year resets to '' â€” new initState() ran, new controllers.
+      // This is the documented FT bug trigger. V8.5 controllers fix parent-setState
+      // loss but cannot prevent re-push loss (new State = new controllers).
+      final yearAfter = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byType(TextFormField).at(0),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(yearAfter.controller.text, equals(''),
+          reason: 'After key-forced remount (simulating Navigator re-push), '
+              'Year resets to "" â€” documents the known limitation.');
     });
   });
 }

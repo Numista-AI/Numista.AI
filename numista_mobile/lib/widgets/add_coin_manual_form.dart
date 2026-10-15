@@ -53,7 +53,10 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     letterSpacing: 0.3,
   );
 
-  final _formData = <String, dynamic>{'Condition': 'Ungraded', 'Quantity': '1'};
+  // Condition is pre-populated; Quantity is intentionally absent so _qtyCtrl
+  // starts empty (hintText '1' shows). Submitting an empty Quantity defaults to
+  // '1' in _submit(). This prevents the "typing 3 gives 13" regression.
+  final _formData = <String, dynamic>{'Condition': 'Ungraded'};
 
   @override
   void initState() {
