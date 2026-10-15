@@ -125,3 +125,10 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-15 09:38 ET GROKCOS WATCH: no new AG work on P7 since V7 (ec34ab69); V7 PASS stands, AWAITING PREVIEW. NET-159 scanner pause needs Eric in AG UI (relayed). P12 queued (NET-161). ~98 min working time, no stall. See NET-162. OVER.
+
+## 15 Oct 26 ~09:50 ET - P7 V7 preview deployed (GROKCOS)
+- Preview URL: https://numista-vault--p7-v7-gate-o3flke1i.web.app (expires 2026-10-22 09:50)
+- Build: dev @ 308b0c61 (includes V7 ec34ab69), flutter build web --release FLUTTER_ENV=prod OK
+- Channel p7-v7-gate on site numista-vault, project studio-9101802118-8c9a8. PREVIEW ONLY, live not touched.
+- Gates pending: UX Designer + Field Tester (checklist Add Selected Coins + manual entry form; test accounts only).
+
