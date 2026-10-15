@@ -30,7 +30,7 @@ import requests as _requests
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException, Depends
 
-from routes.deps import logger, get_current_user, db
+from routes.deps import logger, get_current_user, db, MODEL_FLASH
 
 # google-genai SDK — Vertex AI + ADC (no API key). Patchable at module level for tests.
 from google import genai as _genai
@@ -379,7 +379,7 @@ async def scan_cert_number_upload(
     """
     NET-093: OCR a grading slab photo to extract the cert number and grader.
     Accepts multipart/form-data with field 'file' (JPEG/PNG/WEBP).
-    Uses Gemini Vision (gemini-2.0-flash-002) via Vertex AI + ADC.
+    Uses Gemini Vision (gemini-3.8-flash) via Vertex AI + ADC.
     Returns {cert_number, grader, confidence, message}.
 
     Grader detection rules (same as auto-detect in Flutter):
@@ -419,7 +419,7 @@ async def scan_cert_number_upload(
 
         image_part = _genai_types.Part.from_bytes(data=raw, mime_type=mime)
         response = _scan_client.models.generate_content(
-            model="gemini-2.0-flash-002",
+            model=MODEL_FLASH,
             contents=[prompt, image_part],
             config=_genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
