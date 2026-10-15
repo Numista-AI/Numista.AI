@@ -247,3 +247,10 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-15 ~19:20 ET GROKCOS: SCORED V8.6 PASS (code) on 68c62f3d. Q Quantity fixed + tested. Item 2 accepted as no in-visit remount trigger in code; e8b978f2 repro claim REJECTED (never run; fails only because controller is null). Baton stays GROKCOS_OVER for V8 preview refresh + UX/FT gate (AM). AG Rule 8 WAIT; 3 AM stand-down. No ERIC baton. Live OK. See COS_SCORE_P7_ADD-COINS-FLOW_V8_6.md, NET-226. OVER.
+
+## 15 Oct 26 ~7:28 PM ET - V8.6 preview up (Grok CoS)
+- Channel p7-v86-gate: https://numista-vault--p7-v86-gate-u7h26bxe.web.app (expires 22 Oct 2026 7:27 PM ET)
+- Built from origin/dev f6cfedbd (includes 68c62f3d), clean worktree, flutter build web --release --dart-define=FLUTTER_ENV=prod
+- Checks: URL 200; CORS preflight to /api/checklist/add_coins allowed (ACAO echoes preview origin)
+- Preview channel only. No live, backend, or firestore.rules deploy.
+- Next: UX Designer + Field Tester re-gate (NET-194 items incl. confirm card, Year required, first-char drop, Qty).
