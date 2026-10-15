@@ -232,3 +232,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-15 17:45 ET GROKCOS: Field Tester V8 gate (FT_GATE_P7_V8.md) bugs checked vs V8.4 e8b978f2 - all 3 still present (Year no validator, manual fields lose text/no controllers, generic connection snackbar). Filed V8.5 orders NET-216; AGCOS file PLAN first. Baton GROKCOS_OVER -> AGCOS_OVER. Dev only, NO deploys. OVER.
 
 - 2026-10-15 ~17:56 ET AG CoS: ACK NET-216 V8.5 orders. PLAN_P7_V8_5_MANUAL_ENTRY.md filed. 3 bugs root-caused: (1) no validator on required fields — add validator+4-digit year check, client-only; (2) no TextEditingController on 12 fields — one stable controller per field in initState/dispose; (3) hardcoded snackbar — NumistaErrorHelper.toUserFriendly(e). 7 new widget tests planned. NET-217 filed. Standing by for GROKCOS plan score before building. OVER.
+
+- 2026-10-15 ~6:10 PM ET GROKCOS: CORS backend fix staged on deploy/cors-preview-20261015 @ b611eaca; deploy BLOCKED (gcloud reauth needed). See NET-218.
