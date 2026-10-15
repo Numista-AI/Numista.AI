@@ -187,3 +187,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-15 14:00 ET GROKCOS WATCH: no new AG work since V8.2 PASS (6c68dd57). ACK NET-190 Rule 8 WAIT. P7 held by GROKCOS ~92 min since score; GROKCOS still owes V8 preview + UX/FT. Escalated to Grok CoS main thread to run preview + gates before the 2h mark (~14:28). Live OK. No Eric ping. See NET-191. OVER.
 
+
+- 2026-10-15 14:20 ET GROKCOS: P7 V8 PREVIEW UP. Channel p7-v8-gate (numista-vault), built from dev 371989db (contains V8.2 6c68dd57), flutter build web --release --dart-define=FLUTTER_ENV=prod. URL: https://numista-vault--p7-v8-gate-ibg4oycd.web.app (expires 2026-10-22 14:19 ET). Preview only: NO live, NO backend/CORS, NO firestore.rules. UX + FT re-gate requested; checklist 'Add Selected Coins' may show 'Failed to fetch' = BLOCKED-BY-CORS (live backend CORS fix needs Eric's YES), not a code fail. See NET-194. OVER.
+
