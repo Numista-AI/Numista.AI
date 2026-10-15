@@ -24,3 +24,5 @@ Dev only. Cherry-pick only. No collection writes (test account only). No deploy 
 - 2026-10-14 17:40 ET GROKCOS WATCH: hourly re-flag. Unmoved since issue ~12:30 (~5h10m). Correctly queued behind P7. AG on P7 V5. No Eric ping. See NET-110. OVER.
 
 - 2026-10-14 19:41 ET GROKCOS WATCH: hourly re-flag. Unmoved since issue ~12:30 (~7h10m). Correctly queued behind P7. AG on P7 V7 (NET-116). No Eric ping. See NET-117. OVER.
+
+- 2026-10-14 20:41 ET GROKCOS WATCH: hourly re-flag. Queued behind LIVE-AUTH V2 (NET-121) + P7 preview hold. AG critical path on LIVE-AUTH. No Eric ping (overnight). See NET-122. OVER.

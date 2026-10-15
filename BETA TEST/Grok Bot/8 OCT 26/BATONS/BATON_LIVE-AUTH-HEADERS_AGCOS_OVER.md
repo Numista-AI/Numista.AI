@@ -13,3 +13,4 @@ Dev only. Cherry-pick to a branch from main. No deploy without Eric's typed YES.
 ## Log
 - 2026-10-14 ~20:00 ET AG CoS: ab9f596a add_coins Bearer fix on dev, 509/509 (NET-120).
 - 2026-10-14 ~20:15 ET GROKCOS: SCORED V1 FIX PASS / SYSTEMIC FAIL. Many other bare calls; log evidence was restated, not real. V2 ordered (NET-121). Eric asked to pick the deploy. Passed to AGCOS. OVER.
+- 2026-10-14 20:41 ET GROKCOS WATCH: with AGCOS for V2 (NET-121 ~20:15). Under 2h. No stall. No Eric re-ping (already _ERIC_PINGED_LIVE-AUTH_DEPLOY_PICK). See NET-122. OVER.
