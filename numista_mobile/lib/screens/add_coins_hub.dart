@@ -2374,7 +2374,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       });
     } catch (e) {
       setState(() {
-        _skuError = 'Error looking up SKU: $e';
+        _skuError = NumistaErrorHelper.toUserFriendly(e);
         _skuSearching = false;
       });
     }
@@ -4360,7 +4360,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         _camError = null;
       });
     } catch (e) {
-      setState(() => _camError = 'Failed to capture image: $e');
+      setState(() => _camError = NumistaErrorHelper.toUserFriendly(e));
     }
   }
 
