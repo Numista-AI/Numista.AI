@@ -10,3 +10,10 @@
 1. ONE JOB AT A TIME. Work one baton until it reaches a scored checkpoint. No parallel tracks or background builds. Order: P7 fix (per NET-099/100), then P5, then P6 rerun, P4, P8, P10, P9.
 2. READ ONLY RECENT RADIO. Old messages are in RADIO NET\ARCHIVE. Don't open ARCHIVE unless a current message names a file there. On each wake, read only the files that are new since your last ACK.
 4. TWO STRIKES. If a build, deploy, test run or command fails twice in a row for the same reason, STOP. File a NET message with the error and your best guess, and wait. No retry loops.
+
+## Rule 9 - GEMINI QUOTA SAVER II (Eric, 16 Oct 2026 ~9:00 AM ET)
+1. NO TIMER WHEN NOT HOLDING. When the baton is with GROKCOS or ERIC, AG does NOT re-arm its 25-minute self-wake timer (Rule 7). AG stands down and waits for Eric's "check radio" or the next baton passed to AGCOS.
+2. ONE WATCHER. Only one AG conversation watches the board at a time. Conversation aa4cea77 is RETIRED - do not resume it.
+3. ONE REVIEW PER VERSION. One GEMINI38 review per build version, never repeated. Skip the GEMINI38 review entirely for fixes touching 2 files or fewer.
+4. FRESH CONVERSATION PER PHASE. Start a new AG conversation for each phase (P7, P5, P6, ...). Do not carry one long conversation across phases.
+5. NO "BOARD UNCHANGED" NOTES. Grok-side watches (and AG) do not file NET notes just to say the board is unchanged. Log only when something changes.
