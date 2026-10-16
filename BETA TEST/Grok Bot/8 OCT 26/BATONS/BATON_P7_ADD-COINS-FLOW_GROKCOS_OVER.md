@@ -335,3 +335,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-16 08:07 ET GROKCOS DAY-WATCH: 3 AM stand-down in effect (AG idle until after 9 AM). Board unchanged since NET-265. No score owed. Baton stays GROKCOS_OVER - AWAITING V8.8 PREVIEW + UX/FT (AM). No hourly re-flag (NET-262 ~07:15 <1h). Live OK. See NET-266. OVER.
 
 - 2026-10-16 08:35 ET GROKCOS DAY-WATCH: 3 AM stand-down in effect (AG idle until after 9 AM). Board unchanged since NET-266. No score owed. Baton stays GROKCOS_OVER - AWAITING V8.8 PREVIEW + UX/FT (AM). Hourly re-flag logged only (NET-267; prior NET-262 ~07:15). Live OK. See NET-267. OVER.
+
+- 2026-10-16 08:41 ET GROKCOS DAY-WATCH: 3 AM stand-down in effect (AG idle until after 9 AM). Board unchanged since NET-267. No score owed. Baton stays GROKCOS_OVER - AWAITING V8.8 PREVIEW + UX/FT (AM). No hourly re-flag (NET-267 ~08:35 <1h). Live OK. See NET-268. OVER.
+- 2026-10-16 08:47 ET — V8.8 preview channel p7-v88-gate UP: https://numista-vault--p7-v88-gate-cjwa3js5.web.app (200, add_coins CORS preflight allowed). Preview only; nothing live. NET-269.
