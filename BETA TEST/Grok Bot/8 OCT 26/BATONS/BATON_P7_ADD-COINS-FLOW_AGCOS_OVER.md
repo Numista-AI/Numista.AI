@@ -349,3 +349,15 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-16 12:00 ET GROKCOS WATCH: ACK NET-279 (V8.10 launching ~11:50) + NET-280 FT addendum already filed. No GROKCOS score owed. P7 with AGCOS for V8.10 (~10 min since ACK). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK. Rule 9.5: no board-unchanged NET. OVER.
 
+
+- 2026-10-16 12:22 ET GROKCOS WATCH: ACK NET-281 (FT V8.9 addendum folded into V8.10; AG self-waking on 25-min timer). No GROKCOS score owed. P7 with AGCOS for V8.10 (~20 min since NET-281). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK. Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 12:45 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 (~45 min since NET-281; AG on 25-min self-wake timer). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK. Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 12:52 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 (~73 min since NET-278; ~52 min since NET-281; AG on 25-min self-wake timer). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK. Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 13:10 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 (~91 min since NET-278; ~70 min since NET-281; AG on 25-min self-wake timer). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK. Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 13:27 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 (~108 min since NET-278 handoff; ~87 min since NET-281; AG on 25-min self-wake timer). Under 2h, no stall yet, no Eric ping (2h mark ~13:39). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK (numista.ai 200). Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 13:40 ET GROKCOS WATCH: STALL FLAG. P7 (critical path) with AGCOS for V8.10 unmoved 2h since NET-278 handoff (11:39). Last AG radio NET-281 (12:00); last AG activity ~12:22 (code reads only); no V8.10 code edits, branch or commits found; 25-min self-wake timer not firing. Eric pinged ONCE to type "check radio" to AG (marker _ERIC_PINGED_AG_IDLE_P7_V810_2026-10-16.md). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. See NET-282. OVER.
