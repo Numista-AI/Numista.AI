@@ -58,13 +58,15 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  static bool _cachedDemoActive = false;
   bool _welcomeDone = false;
   Future<bool>? _shouldShowWelcome;
 
   @override
   void initState() {
     super.initState();
-    if (widget.isDemo) {
+    if (widget.isDemo || GuestSeedService.isBrowseDemoMode) {
+      _cachedDemoActive = true;
       GuestSeedService.activateBrowseDemo();
     }
   }
@@ -72,10 +74,13 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void didUpdateWidget(AuthGate oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isDemo && !GuestSeedService.isBrowseDemoMode) {
-      GuestSeedService.activateBrowseDemo().then((_) {
-        if (mounted) setState(() {});
-      });
+    if (widget.isDemo || _cachedDemoActive || GuestSeedService.isBrowseDemoMode) {
+      _cachedDemoActive = true;
+      if (!GuestSeedService.isBrowseDemoMode) {
+        GuestSeedService.activateBrowseDemo().then((_) {
+          if (mounted) setState(() {});
+        });
+      }
     }
   }
 
@@ -93,13 +98,14 @@ class _AuthGateState extends State<AuthGate> {
         if (snapshot.hasData && snapshot.data != null) {
           final isRealUser = !snapshot.data!.isAnonymous;
           // INVARIANT: a real Firebase user must never see demo data.
-          if (isRealUser && GuestSeedService.isBrowseDemoMode) {
+          if (isRealUser && (GuestSeedService.isBrowseDemoMode || _cachedDemoActive)) {
+            _cachedDemoActive = false;
             GuestSeedService.deactivateBrowseDemo();
             debugPrint(
                 '[AUTH] Demo mode cleared for real user ${snapshot.data!.uid}');
           }
 
-          if (GuestSeedService.isBrowseDemoMode) {
+          if (GuestSeedService.isBrowseDemoMode || _cachedDemoActive) {
             return const BaseLayout(isDemoMode: true);
           }
 
@@ -145,7 +151,8 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         // 2. If demo mode requested or active, show BaseLayout in demo mode
-        if (widget.isDemo || GuestSeedService.isBrowseDemoMode) {
+        if (widget.isDemo || GuestSeedService.isBrowseDemoMode || _cachedDemoActive) {
+          _cachedDemoActive = true;
           return const BaseLayout(isDemoMode: true);
         }
 

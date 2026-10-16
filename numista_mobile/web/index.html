@@ -70,6 +70,7 @@
   ════════════════════════════════════════════════════════════════ -->
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://numista-backend-568985927038.us-central1.run.app" crossorigin>
@@ -143,6 +144,32 @@
       document.body.removeChild(a);
       setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
     };
+  </script>
+  <script>
+    // Systemic static inputmode observer for Flutter Web
+    (function() {
+      function tagInputModes() {
+        var inputs = document.querySelectorAll('input');
+        for (var i = 0; i < inputs.length; i++) {
+          var el = inputs[i];
+          var label = (el.getAttribute('aria-label') || el.getAttribute('name') || el.getAttribute('placeholder') || '').toLowerCase();
+          var parentLabel = (el.parentElement ? (el.parentElement.getAttribute('aria-label') || '') : '').toLowerCase();
+          var full = label + ' ' + parentLabel;
+          if (full.indexOf('year') !== -1 || full.indexOf('qty') !== -1 || full.indexOf('quantity') !== -1) {
+            if (el.getAttribute('inputmode') !== 'numeric') el.setAttribute('inputmode', 'numeric');
+          } else if (full.indexOf('cost') !== -1 || full.indexOf('price') !== -1) {
+            if (el.getAttribute('inputmode') !== 'decimal') el.setAttribute('inputmode', 'decimal');
+          }
+        }
+      }
+      if (typeof MutationObserver !== 'undefined') {
+        var observer = new MutationObserver(function() { tagInputModes(); });
+        document.addEventListener('DOMContentLoaded', function() {
+          observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-label', 'placeholder'] });
+          setInterval(tagInputModes, 500);
+        });
+      }
+    })();
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>

@@ -1388,19 +1388,27 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   Widget _buildUnifiedDashboard(String email) {
+    final isUnauthOrDemo = GuestSeedService.isBrowseDemoMode ||
+        email.isEmpty ||
+        AuthService.statsDocPath.contains('unknown');
+
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.doc(AuthService.statsDocPath).snapshots(),
+      stream: isUnauthOrDemo
+          ? const Stream.empty()
+          : FirebaseFirestore.instance.doc(AuthService.statsDocPath).snapshots(),
       builder: (context, statsSnap) {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: _coinsStream,
           builder: (context, coinsSnap) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: email.isNotEmpty
+              stream: (!isUnauthOrDemo && email.isNotEmpty)
                   ? FirebaseFirestore.instance.collection(AuthService.currencyPath).snapshots()
-                  : Stream.empty(),
+                  : const Stream.empty(),
               builder: (context, currencySnap) {
                 return StreamBuilder<List<WorldItem>>(
-                  stream: WorldItemService.worldItemsStream(),
+                  stream: isUnauthOrDemo
+                      ? const Stream.empty()
+                      : WorldItemService.worldItemsStream(),
                   builder: (context, worldSnap) {
                     return FutureBuilder<bool>(
                       future: ValuationModeService.isAdvancedMode(),
@@ -3957,6 +3965,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ['Theme/Subject', data[_F.themeSubject]?.toString()],
         ['Variety',       data[_F.variety]?.toString()],
         ['Metal',         data[_F.metalContent]?.toString()],
+        ['Quantity',      (data['Quantity'] ?? data['quantity'] ?? '1').toString()],
       ]),
       section('CONDITION & AUTHENTICATION', [
         ['Condition',    data[_F.condition]?.toString()],
@@ -3976,7 +3985,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ['Invoice #',   data[_F.retailerInvoice]?.toString()],
         ['Storage',     data[_F.storageLocation]?.toString()],
         ['Ref #',       data[_F.personalRef]?.toString()],
-        ['Notes',       data[_F.personalNotes]?.toString()],
+        ['Notes',       (data['Notes'] ?? data['notes'] ?? data[_F.personalNotes] ?? data['personalNotes'])?.toString()],
       ]),
     ]);
   }

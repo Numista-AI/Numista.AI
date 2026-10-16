@@ -9,10 +9,14 @@ void applyStaticInputModes(Map<String, String?> modes) {
       final node = inputs.item(i);
       if (node != null && node.isA<web.HTMLInputElement>()) {
         final input = node as web.HTMLInputElement;
-        final name = (input.getAttribute('name') ?? input.getAttribute('placeholder') ?? '').toLowerCase();
+        final label = (input.getAttribute('aria-label') ??
+                       input.getAttribute('placeholder') ??
+                       input.getAttribute('name') ?? '').toLowerCase();
+        final parentLabel = (input.parentElement?.getAttribute('aria-label') ?? '').toLowerCase();
+        final full = '$label $parentLabel';
         for (final entry in modes.entries) {
-          if (entry.value != null && name.contains(entry.key.toLowerCase())) {
-            input.inputMode = entry.value!;
+          if (entry.value != null && full.contains(entry.key.toLowerCase())) {
+            input.setAttribute('inputmode', entry.value!);
             break;
           }
         }

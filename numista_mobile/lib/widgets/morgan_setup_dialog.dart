@@ -125,7 +125,7 @@ class _MorganSetupDialogState extends State<_MorganSetupDialog> {
         if (event is KeyDownEvent &&
             event.logicalKey == LogicalKeyboardKey.escape) {
           MorganPrefs.markSetupDone();
-          Navigator.of(context).pop(false);
+          Navigator.of(context).pop(true);
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
@@ -175,13 +175,24 @@ class _MorganSetupDialogState extends State<_MorganSetupDialog> {
   Widget _buildNameScreen() {
     return Padding(
       key: const ValueKey('name'),
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.fromLTRB(28, 16, 28, 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: IconButton(
+              icon: Icon(Icons.close, color: _sub, size: 20),
+              tooltip: 'Skip',
+              onPressed: () async {
+                await MorganPrefs.markSetupDone();
+                if (mounted) Navigator.of(context).pop(true);
+              },
+            ),
+          ),
           // Morgan avatar (small)
           _SmallOwl(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
           // Question
           Text(

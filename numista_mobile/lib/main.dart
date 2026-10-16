@@ -11,6 +11,7 @@ import 'screens/public_wishlist_view_screen.dart';
 import 'services/theme_provider.dart';
 import 'widgets/morgan_feedback_drawer.dart';
 import 'services/guest_seed_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/auth_gate.dart';
 import 'constants.dart';  // ITEM 10: kApiBaseUrl startup guard
 import 'package:google_fonts/google_fonts.dart';
@@ -220,6 +221,16 @@ Future<void> main() async {
     ));
     return;
   }
+
+  // Restore persistent Browse Demo state from SharedPreferences across reloads
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final wasDemoActive = prefs.getBool('browse_demo_active') ?? false;
+    if (wasDemoActive || isPendingDemo) {
+      await GuestSeedService.activateBrowseDemo();
+      isPendingDemo = true;
+    }
+  } catch (_) {}
 
   runApp(NumistaAIApp(
     isPendingDemo: isPendingDemo,

@@ -15,6 +15,10 @@ import 'package:numista_ai/utils/web_input_helper.dart';
 import 'package:numista_ai/utils/text_sanitizer.dart';
 import 'package:numista_ai/services/set_expansion_helper.dart';
 import 'package:numista_ai/services/morgan_prefs.dart';
+import 'package:numista_ai/utils/slot_resolver.dart';
+import 'package:numista_ai/services/coin_programs_data.dart';
+import 'package:numista_ai/models/program_model.dart';
+import 'package:numista_ai/services/checklist_generator_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -1374,6 +1378,99 @@ void main() {
       expect(await MorganPrefs.isSetupDone(), isFalse);
       await MorganPrefs.markSetupDone();
       expect(await MorganPrefs.isSetupDone(), isTrue);
+    });
+  });
+
+  group('P7 V8.10 Fixes: Semiquincentennial Slots, Validation Clearing, Mojibake Export', () {
+    test('p7_v810_slot_resolver_2026_currency_distinct_matching', () {
+      final program = CoinProgramsData.usPrograms.values
+          .expand((p) => p)
+          .firstWhere((p) => p.id == '2026_semiquincentennial_currency');
+      final centSlot = program.coins.firstWhere((c) => c.id == '2026_cent');
+      final nickelSlot = program.coins.firstWhere((c) => c.id == '2026_nickel');
+      final mayflowerSlot = program.coins.firstWhere((c) => c.id == '2026_quarter_mayflower');
+
+      final centCoin = {
+        'name': '1776 ~ 2026 Collectible Cent',
+        'Denomination': '1c',
+        'Year': '2026',
+        'Theme/Subject': 'Semiquincentennial 1776 ~ 2026',
+      };
+
+      final nickelCoin = {
+        'name': '1776 ~ 2026 Jefferson Nickel',
+        'Denomination': '5c',
+        'Year': '2026',
+        'Theme/Subject': 'Semiquincentennial 1776 ~ 2026',
+      };
+
+      final mayflowerQuarter = {
+        'name': 'America250 Quarter #1: Mayflower Compact',
+        'Denomination': '25c',
+        'Year': '2026',
+        'Theme/Subject': 'Mayflower Compact',
+      };
+
+      // Cent matches Cent slot, but NOT Nickel or Quarter
+      expect(SlotResolver.isMatch(centCoin, program, centSlot), isTrue);
+      expect(SlotResolver.isMatch(centCoin, program, nickelSlot), isFalse);
+      expect(SlotResolver.isMatch(centCoin, program, mayflowerSlot), isFalse);
+
+      // Nickel matches Nickel slot, but NOT Cent or Quarter
+      expect(SlotResolver.isMatch(nickelCoin, program, nickelSlot), isTrue);
+      expect(SlotResolver.isMatch(nickelCoin, program, centSlot), isFalse);
+      expect(SlotResolver.isMatch(nickelCoin, program, mayflowerSlot), isFalse);
+
+      // Mayflower quarter matches Mayflower slot, but NOT Cent or Nickel
+      expect(SlotResolver.isMatch(mayflowerQuarter, program, mayflowerSlot), isTrue);
+      expect(SlotResolver.isMatch(mayflowerQuarter, program, centSlot), isFalse);
+      expect(SlotResolver.isMatch(mayflowerQuarter, program, nickelSlot), isFalse);
+    });
+
+    test('p7_v810_checklist_generator_service_sanitizes_mojibake', () {
+      expect(ChecklistGeneratorService.legalDisclaimer, contains('CONFIDENTIAL ESTATE'));
+      expect(TextSanitizer.fixMojibake('2022 United Kingdom Â£2 Silver'), '2022 United Kingdom £2 Silver');
+    });
+
+    testWidgets('p7_v810_manual_form_clears_validation_on_input', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 600, height: 2400);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: AddCoinManualForm(
+                onSubmit: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap Save with empty fields to trigger validation
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save to My Collection'));
+      await tester.pumpAndSettle();
+
+      // Verification: error texts visible
+      expect(find.text('Please enter the denomination, like Quarter Dollar.'), findsOneWidget);
+      expect(find.text('Please enter the series name, like Morgan Silver Dollar.'), findsOneWidget);
+
+      // Enter denomination
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Denomination')), 'Quarter Dollar');
+      await tester.pumpAndSettle();
+
+      // Denomination error is cleared immediately
+      expect(find.text('Please enter the denomination, like Quarter Dollar.'), findsNothing);
+      // Program/Series error still visible until typed
+      expect(find.text('Please enter the series name, like Morgan Silver Dollar.'), findsOneWidget);
+
+      // Enter series
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Program/Series')), 'Washington Quarters');
+      await tester.pumpAndSettle();
+
+      // Program/Series error is also cleared immediately
+      expect(find.text('Please enter the series name, like Morgan Silver Dollar.'), findsNothing);
     });
   });
 }

@@ -178,6 +178,8 @@ class BetaChecklistService {
 
   /// Toggle task completed state manually from the modal UI.
   static Future<void> toggleTaskCompleted(String taskId, bool isCompleted) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (GuestSeedService.isBrowseDemoMode || user == null || user.isAnonymous) return;
     try {
       final docRef = _getDocRef();
       final doc = await docRef.get();
@@ -230,6 +232,8 @@ class BetaChecklistService {
 
   /// Toggle task skipped state (for N/A hardware tasks).
   static Future<void> toggleTaskSkipped(String taskId, bool isSkipped) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (GuestSeedService.isBrowseDemoMode || user == null || user.isAnonymous) return;
     try {
       final docRef = _getDocRef();
       final doc = await docRef.get();
@@ -339,6 +343,7 @@ class BetaChecklistService {
     if (user == null || user.isAnonymous) return;
 
     final uid = _userIdentifier;
+    if (uid.contains('unknown') || uid.contains('guest_demo_user')) return;
     final docRef = _getDocRef();
 
     try {

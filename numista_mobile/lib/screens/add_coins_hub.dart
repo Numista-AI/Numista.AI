@@ -290,10 +290,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   /// saved directly to the collection (not sent to the Review Hub).
   void _showManualAddedSnackbar() {
     if (!mounted) return;
+    final sw = MediaQuery.of(context).size.width;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        width: 400,
+        margin: EdgeInsets.only(bottom: 24, right: 16, left: sw > 440 ? sw - 416 : 16),
         content: const Row(children: [
           Icon(Icons.check_circle, color: Colors.white, size: 20),
           SizedBox(width: 10),
@@ -554,9 +555,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       if (!mounted) return;
       setState(() => _isProcessing = false);
 
+      final sw = MediaQuery.of(context).size.width;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         behavior: SnackBarBehavior.floating,
-        width: 400,
+        margin: EdgeInsets.only(bottom: 24, right: 16, left: sw > 440 ? sw - 416 : 16),
         duration: const Duration(seconds: 3),
         content: const Text('✅ Coin added to your collection!'),
         backgroundColor: const Color(0xFF10B981),
@@ -2013,12 +2015,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 isProcessing: _isProcessing,
                 onSubmit: (data) async {
                   if (GuestSeedService.isBrowseDemoMode) {
+                    final sw = MediaQuery.of(context).size.width;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         behavior: SnackBarBehavior.floating,
-                        width: 400,
-                        content: Text('Demo mode — create a free account to save coins.'),
-                        backgroundColor: Color(0xFFF59E0B),
+                        margin: EdgeInsets.only(bottom: 24, right: 16, left: sw > 440 ? sw - 416 : 16),
+                        duration: const Duration(seconds: 4),
+                        content: const Text('Demo mode — create a free account to save coins.'),
+                        backgroundColor: const Color(0xFFF59E0B),
                       ),
                     );
                     return;

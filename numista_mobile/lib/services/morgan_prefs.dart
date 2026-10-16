@@ -36,13 +36,15 @@ class MorganPrefs {
   static Future<bool> isSetupDone() async {
     final p = await SharedPreferences.getInstance();
     return (p.getBool(_key('setup_done')) ?? false) ||
-           (p.getBool('morgan_setup_done_global') ?? false);
+           (p.getBool('morgan_setup_done_global') ?? false) ||
+           (p.getBool('morgan_guest_setup_done') ?? false);
   }
 
   static Future<void> markSetupDone() async {
     final p = await SharedPreferences.getInstance();
     await p.setBool(_key('setup_done'), true);
     await p.setBool('morgan_setup_done_global', true);
+    await p.setBool('morgan_guest_setup_done', true);
   }
 
   // ── Show on startup ──────────────────────────────────────────────────────────

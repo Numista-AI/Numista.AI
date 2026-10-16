@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/denomination_canon.dart';
+import '../utils/web_input_helper.dart';
 
 class AddCoinManualForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onSubmit;
@@ -20,14 +21,6 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
   final _formKey = GlobalKey<FormState>();
 
   // ── Persistent controllers (created in initState, disposed in dispose) ──────
-  // One controller per field. This ensures text survives any parent rebuild
-  // (tab switch, IndexedStack rebuild, setState on _isProcessing, keyboard
-  // appearance changes) without losing the first character or blanking Year.
-  // The real observed trigger: the ManualEntry screen is pushed as a full-screen
-  // Scaffold route via showManualFullScreen in add_coins_hub.dart. If the route
-  // is popped and re-pushed (e.g. user goes back and re-enters), the State is
-  // remounted and _formData defaults are used. Controllers keep values stable
-  // within a single mount.
   late final TextEditingController _yearCtrl;
   late final TextEditingController _mintCtrl;
   late final TextEditingController _denomCtrl;
@@ -42,15 +35,21 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
   late final TextEditingController _storageCtrl;
   late final TextEditingController _notesCtrl;
 
-  // V8.7 FIX Item 3: FocusNodes for numeric fields.
-  // On web, Flutter's engine sets inputmode via go9() (go9(){return"numeric"}
-  // for integer, go9(){return"decimal"} for decimal per built main.dart.js).
-  // However, the DOM setup code (b2p()) explicitly removes inputmode for all
-  // non-email/password types. We re-inject it on focus using WebInputHelper.
+  // ── Dedicated persistent FocusNodes for all fields to prevent focus detach
+  // and dropped first character during rebuilds.
   late final FocusNode _yearFocus;
+  late final FocusNode _mintFocus;
+  late final FocusNode _denomFocus;
+  late final FocusNode _programFocus;
+  late final FocusNode _themeFocus;
+  late final FocusNode _varietyFocus;
+  late final FocusNode _conditionFocus;
   late final FocusNode _costFocus;
   late final FocusNode _qtyFocus;
-
+  late final FocusNode _retailerFocus;
+  late final FocusNode _invoiceFocus;
+  late final FocusNode _storageFocus;
+  late final FocusNode _notesFocus;
 
   static const _accent = Color(0xFF3B82F6);
   Color get _border => Theme.of(context).brightness == Brightness.dark
@@ -63,9 +62,6 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     letterSpacing: 0.3,
   );
 
-  // Condition is pre-populated; Quantity is intentionally absent so _qtyCtrl
-  // starts empty (hintText '1' shows). Submitting an empty Quantity defaults to
-  // '1' in _submit(). This prevents the "typing 3 gives 13" regression.
   final _formData = <String, dynamic>{'Condition': 'Ungraded'};
 
   @override
@@ -85,15 +81,24 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _storageCtrl   = TextEditingController(text: _formData['Storage Location'] as String? ?? '');
     _notesCtrl     = TextEditingController(text: _formData['Notes'] as String? ?? '');
 
-    // V8.9 FIX 3: Static inputmode assignment per field.
-    // FocusNode listeners removed to eliminate dropped first characters (FIX 2)
-    // and inverted keypad states (FIX 3).
-    _yearFocus = FocusNode();
-    _costFocus = FocusNode();
-    _qtyFocus  = FocusNode();
+    _yearFocus      = FocusNode();
+    _mintFocus      = FocusNode();
+    _denomFocus     = FocusNode();
+    _programFocus   = FocusNode();
+    _themeFocus     = FocusNode();
+    _varietyFocus   = FocusNode();
+    _conditionFocus = FocusNode();
+    _costFocus      = FocusNode();
+    _qtyFocus       = FocusNode();
+    _retailerFocus  = FocusNode();
+    _invoiceFocus   = FocusNode();
+    _storageFocus   = FocusNode();
+    _notesFocus     = FocusNode();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WebInputHelper.applyStaticInputModes();
+    });
   }
-
-
 
   @override
   void dispose() {
@@ -110,9 +115,21 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _invoiceCtrl.dispose();
     _storageCtrl.dispose();
     _notesCtrl.dispose();
+
     _yearFocus.dispose();
+    _mintFocus.dispose();
+    _denomFocus.dispose();
+    _programFocus.dispose();
+    _themeFocus.dispose();
+    _varietyFocus.dispose();
+    _conditionFocus.dispose();
     _costFocus.dispose();
     _qtyFocus.dispose();
+    _retailerFocus.dispose();
+    _invoiceFocus.dispose();
+    _storageFocus.dispose();
+    _notesFocus.dispose();
+
     super.dispose();
   }
 
@@ -156,7 +173,13 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             'Denomination',
             'e.g. Quarter Dollar, Dime, Cent',
             controller: _denomCtrl,
+            focusNode: _denomFocus,
             isRequired: true,
+            onChanged: (val) {
+              if (val.trim().isNotEmpty) {
+                _formKey.currentState?.validate();
+              }
+            },
           ),
           const SizedBox(height: 12),
           _buildField(
@@ -164,19 +187,25 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             'Program/Series',
             'e.g. Morgan Silver Dollar',
             controller: _programCtrl,
+            focusNode: _programFocus,
             isRequired: true,
+            onChanged: (val) {
+              if (val.trim().isNotEmpty) {
+                _formKey.currentState?.validate();
+              }
+            },
           ),
           _buildField(context, 'Theme/Subject', 'e.g. Liberty Head',
-              controller: _themeCtrl),
+              controller: _themeCtrl, focusNode: _themeFocus),
           _buildField(context, 'Variety', 'e.g. Double Die, Over Mint Mark',
-              controller: _varietyCtrl),
+              controller: _varietyCtrl, focusNode: _varietyFocus),
 
           const SizedBox(height: 8),
           // ── Section: Condition ────────────────────────────────────────────
           _sectionHeader('Condition & Grading', Icons.grade),
           const SizedBox(height: 12),
           _buildField(context, 'Condition', 'e.g. MS65, AU58, Ungraded',
-              controller: _conditionCtrl),
+              controller: _conditionCtrl, focusNode: _conditionFocus),
 
           const SizedBox(height: 8),
           // ── Section: Purchase ─────────────────────────────────────────────
@@ -189,7 +218,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 'Cost',
                 '25.00',
                 controller: _costCtrl,
-                focusNode: _costFocus,  // V8.7: inputmode="decimal" on web focus
+                focusNode: _costFocus,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
                 prefixText: '\$ ',
@@ -202,26 +231,25 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 'Quantity',
                 '1',
                 controller: _qtyCtrl,
-                focusNode: _qtyFocus,  // V8.7: inputmode="numeric" on web focus
+                focusNode: _qtyFocus,
                 keyboardType: const TextInputType.numberWithOptions(decimal: false),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-
               ),
             ),
           ]),
           _buildField(context, 'Retailer/Website', 'e.g. APMEX, eBay',
-              controller: _retailerCtrl),
+              controller: _retailerCtrl, focusNode: _retailerFocus),
           _buildField(context, 'Retailer Invoice #', 'e.g. INV-9988',
-              controller: _invoiceCtrl),
+              controller: _invoiceCtrl, focusNode: _invoiceFocus),
 
           const SizedBox(height: 8),
           // ── Section: Storage ──────────────────────────────────────────────
           _sectionHeader('Storage & Notes', Icons.inventory_2_outlined),
           const SizedBox(height: 12),
           _buildField(context, 'Storage Location', 'e.g. Safe Box A, Folder 2',
-              controller: _storageCtrl),
+              controller: _storageCtrl, focusNode: _storageFocus),
           _buildField(context, 'Notes', 'Any additional notes',
-              controller: _notesCtrl, maxLines: 3),
+              controller: _notesCtrl, focusNode: _notesFocus, maxLines: 3),
 
           const SizedBox(height: 32),
 
@@ -294,6 +322,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _storageCtrl.clear();
     _notesCtrl.clear();
     _formData.clear();
+    if (mounted) setState(() {});
   }
 
   Widget _sectionHeader(String title, IconData icon) {
@@ -329,7 +358,9 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
           ),
           const SizedBox(height: 6),
           TextFormField(
+            key: const ValueKey('manual_field_mint_mark'),
             controller: _mintCtrl,
+            focusNode: _mintFocus,
             textCapitalization: TextCapitalization.characters,
             inputFormatters: [UpperCaseTextFormatter()],
             style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
@@ -346,7 +377,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     String hint, {
     TextEditingController? controller,
     bool isRequired = false,
-    FocusNode? focusNode,          // V8.7: for web inputmode injection
+    FocusNode? focusNode,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
     String? prefixText,
@@ -385,8 +416,9 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
           ),
           const SizedBox(height: 6),
           TextFormField(
+            key: ValueKey('manual_field_$key'),
             controller: controller,
-            focusNode: focusNode,  // V8.7: triggers inputmode injection on focus
+            focusNode: focusNode,
             initialValue: controller == null
                 ? (_formData[key]?.toString().isNotEmpty == true ? _formData[key].toString() : null)
                 : null,
