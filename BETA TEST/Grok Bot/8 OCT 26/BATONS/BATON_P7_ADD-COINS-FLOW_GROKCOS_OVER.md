@@ -260,3 +260,19 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-15 19:45 ET GROKCOS EVE-WATCH: ACK NET-229. No GROKCOS score owed. P7 with AGCOS building V8.7 (~3 min since ACK; critical path moved ~19:35 on NET-228). Under 2h, no stall (2h mark ~21:35). Queued P1 HOLD; P4/P5/P6/P8/P9/P10 Rule 8 WAIT, not stalls (hourly re-flag). No ERIC baton. No deploy YES. Overnight quiet - no Eric ping. Live OK. 3 AM AG stand-down (WAIT-OUT by 2:45 AM if not done). See NET-230. OVER.
 
 - 2026-10-15 20:13 ET GROKCOS EVE-WATCH: No GROKCOS score owed. P7 with AGCOS building V8.7 (dev tree edits ~20:10 ET; ~30 min since NET-229). Under 2h, no stall (2h mark ~21:35). Queued P1 HOLD; P4/P5/P6/P8/P9/P10 Rule 8 WAIT (next hourly re-flag ~20:45). No ERIC baton. No deploy YES. Overnight quiet - no Eric ping. Live OK. 3 AM stand-down (WAIT-OUT by 2:45 AM). See NET-231. OVER.
+
+- 2026-10-15 ~20:30 ET AG CoS: V8.7 BUILD COMPLETE. Commit fa9f3f5c on origin/dev. All NET-228 items addressed:
+  1. Phone checklist layout at 389px: Download PDF & Print Checklist wrapped cleanly using Column + Wrap, all buttons >= 48px, coin names & mint chips wrapped to 2 lines without clipping, program title restored with 3-line wrapping, helper text >= 18px.
+  2. Program cards sized to content: Replaced Spacer() with SizedBox(height: 12), narrow view switched to ListView.builder (unconstrained height), wide view childAspectRatio: 1.1, buttons >= 48px, progress text in Flexible.
+  3. Numeric keypad & DOM inputmode: Focus listeners added to _yearFocus, _costFocus, _qtyFocus calling WebInputHelper.setActiveInputMode('numeric'/'decimal'). DOM inputmode verified against built main.dart.js (A.aSO / A.aCB prototypes).
+  4. New bugs resolved:
+     - Pound sign Â£2 mojibake sanitized in home_dashboard, my_collection_screen, coin_detail_screen, inventory_gallery; £/€/¥ preserved cleanly.
+     - Ask Morgan FAB hidden when activeRoute == 'Add New Coins' (no overlap).
+     - Caption under Add reworded for demo mode ('Browse Demo Mode: Check off coins to explore checklist features. Create a free account to save permanently.').
+     - Tablet sidebar 'Ask Morgan' contrast fixed (Color(0xFF0F172A) in light mode).
+     - Sign-in logo added errorBuilder fallback and gaplessPlayback.
+     - Tablet card titles wrapped up to 3 lines (maxLines: 3, TextOverflow.clip).
+     - Demo CORS: auth_service fallback email user?.email ?? '' (never unknown@numista.ai); home_dashboard _loadDismissedNews unauth/anonymous guard; my_collection_screen _fetchCompletionStats unauth guard.
+  5. 18px body text standard applied across P7 screens.
+  6. All prior passes intact: 559/559 Flutter tests pass (including 39 in p7_v8_ux_safety_test.dart); 566/566 pytest backend tests pass; flutter analyze lib/ -> 0 issues found.
+  GEMINI38_REVIEW_P7_V8_7_BUILD.md filed. Passing baton to Grok CoS for V8.7 build score. OVER.
