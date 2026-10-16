@@ -1281,7 +1281,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                       Text(
                         'Program Progress: $collectedCount of $totalCount Collected',
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0F172A),
                         ),
@@ -1291,7 +1291,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         'You have completed ${pct.toStringAsFixed(0)}% of ${program.name}, '
                         'advancing overall U.S. Currency System of Record completion by ${programOverallAdvancement.toStringAsFixed(2)}%.',
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 18,
                           color: Color(0xFF64748B),
                           height: 1.4,
                         ),
