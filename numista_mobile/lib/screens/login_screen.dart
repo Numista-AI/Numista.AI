@@ -285,7 +285,16 @@ class _LoginScreenState extends State<LoginScreen>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Image.asset('assets/logo_owl.png', height: 52),
+                              Image.asset(
+                                'assets/logo_owl.png',
+                                height: 52,
+                                gaplessPlayback: true,
+                                errorBuilder: (context, error, stackTrace) => const SizedBox(
+                                  height: 52,
+                                  width: 52,
+                                  child: Icon(Icons.circle_outlined, size: 52, color: Color(0xFF3B82F6)),
+                                ),
+                              ),
                               const SizedBox(width: 14),
                               const Flexible(
                                 child: Column(
@@ -370,7 +379,16 @@ class _LoginScreenState extends State<LoginScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Logo
-            Image.asset('assets/logo_owl.png', height: 90),
+            Image.asset(
+              'assets/logo_owl.png',
+              height: 90,
+              gaplessPlayback: true,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(
+                height: 90,
+                width: 90,
+                child: Icon(Icons.circle_outlined, size: 90, color: Color(0xFF3B82F6)),
+              ),
+            ),
             const SizedBox(height: 20),
 
             // Headline

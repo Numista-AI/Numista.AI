@@ -24,6 +24,7 @@ import '../constants.dart';
 import '../theme/numista_theme.dart';
 import '../services/http_auth_client.dart';
 import '../utils/numista_error_helper.dart';
+import '../utils/web_input_helper.dart';  // V8.7: inputmode injection on web
 
 
 class AddCoinsHub extends StatefulWidget {
@@ -719,7 +720,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                             const Text(
                               'Open the manual entry form to enter full details for your coin.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 16, color: Color(0xFF64748B)),
+                              style: TextStyle(fontSize: 18, color: Color(0xFF64748B)),
                             ),
                             const SizedBox(height: 24),
                             ElevatedButton.icon(
@@ -733,7 +734,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                                 ),
                               ),
                               icon: const Icon(Icons.open_in_new, size: 16),
-                              label: const Text('Open Manual Entry', style: TextStyle(fontSize: 16)),
+                              label: const Text('Open Manual Entry', style: TextStyle(fontSize: 18)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF3B82F6),
                                 foregroundColor: Colors.white,
@@ -1693,7 +1694,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               const SizedBox(height: 12),
               _mintSetField(_mintSetCostCtrl,     'Purchase Price', 'e.g. \$27.95',
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))]),
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+                  webInputMode: 'decimal'),   // V8.7 Item 3: inputmode="decimal" on web
               const SizedBox(height: 12),
               _mintSetField(_mintSetDateCtrl,     'Purchase Date',  'e.g. 2026-07-22'),
               const SizedBox(height: 12),
@@ -1818,11 +1820,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Widget _mintSetField(TextEditingController ctrl, String label, String hint,
-      {TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters}) {
+      {TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters,
+       String? webInputMode}) {   // V8.7: 'numeric' or 'decimal' for web inputmode
     return TextField(
       controller: ctrl,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      onTap: (webInputMode != null && kIsWeb)
+          ? () => WebInputHelper.setActiveInputMode(webInputMode)
+          : null,
       style: const TextStyle(color: Color(0xFF1E293B)),
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
@@ -2873,7 +2879,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         : effectiveGrader == 'NGC'
                             ? 'Enter your 7-digit NGC cert number (e.g. 1234567 or 1234567-001)'
                             : 'Enter your CAC cert number (e.g. CAC12345 or CACG12345)',
-                    style: const TextStyle(fontSize: 16, color: Color(0xFF334155)),
+                    style: const TextStyle(fontSize: 18, color: Color(0xFF334155)),
                   ),
                   const SizedBox(height: 14),
 
@@ -2882,7 +2888,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     onPressed: _pcgsLookupLoading ? null : _scanSlabPhoto,
                     icon: const Icon(Icons.camera_alt_outlined, size: 22),
                     label: const Text('📷 Take a photo of the label',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 56),
                       foregroundColor: const Color(0xFF2563EB),
@@ -3224,8 +3230,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         const SizedBox(height: 14),
         Row(children: [
           Expanded(child: _certManualField('Year', _certManualYear, hint: 'e.g. 1921',
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
+              keyboardType: const TextInputType.numberWithOptions(decimal: false),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              webInputMode: 'numeric')),   // V8.7 Item 3: inputmode="numeric" on web
           const SizedBox(width: 14),
           Expanded(child: _certManualField('Grade', _certManualGrade, hint: 'e.g. MS-64')),
         ]),
@@ -3286,7 +3293,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   foregroundColor: const Color(0xFF2563EB),
                   side: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
                   backgroundColor: Colors.white,
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
@@ -3333,7 +3340,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
   Widget _certManualField(String label, TextEditingController ctrl,
       {String? hint, bool readOnly = false, int maxLines = 1,
-       TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters}) {
+       TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters,
+       FocusNode? focusNode,          // V8.7: for web inputmode injection
+       String? webInputMode}) {       // 'numeric', 'decimal', or null
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: const TextStyle(
           fontSize: 18, fontWeight: FontWeight.w600,
@@ -3341,10 +3350,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       const SizedBox(height: 6),
       TextField(
         controller: ctrl,
+        focusNode: focusNode,
         readOnly: readOnly,
         maxLines: maxLines,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
+        onTap: (webInputMode != null && kIsWeb)
+            ? () => WebInputHelper.setActiveInputMode(webInputMode)
+            : null,
         style: TextStyle(
             fontSize: 18,
             color: readOnly ? const Color(0xFF64748B) : const Color(0xFF1E293B)),
@@ -3358,6 +3371,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
           focusedBorder: OutlineInputBorder(
+
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
         ),
@@ -4997,13 +5011,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             // Edit Fields Group
             const Text(
               'Verify and edit the AI extracted details below before adding to your collection:',
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 18),
             ),
             const SizedBox(height: 20),
 
             // Form inputs
             _camInputField('Year', _picYear,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: false),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
             const SizedBox(height: 12),
             _camInputField('Denomination', _picDenom),
@@ -5044,7 +5058,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.check_circle_outline, size: 20),
               label: Text(_camSaving ? 'Saving to Collection...' : 'Confirm & Save to Collection',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF10B981),
                 foregroundColor: Colors.white,
@@ -5060,17 +5074,21 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Widget _camInputField(String label, TextEditingController ctrl,
-      {int maxLines = 1, TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters}) {
+      {int maxLines = 1, TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters,
+       String? webInputMode}) {   // V8.7: 'numeric' or 'decimal' for web inputmode
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+        Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
           maxLines: maxLines,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
+          onTap: (webInputMode != null && kIsWeb)
+              ? () => WebInputHelper.setActiveInputMode(webInputMode)
+              : null,
           style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B)),
           decoration: InputDecoration(
             isDense: true,

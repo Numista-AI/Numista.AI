@@ -606,21 +606,25 @@ class _BaseLayoutState extends State<BaseLayout> {
         ),
       ),
       // FAB column: Morgan owl (always) + Add Coins (Collection tab only)
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          _MorganFab(onTap: _showMorganDialog),
-          if (_activeRoute == 'My Collection') ...[
-            const SizedBox(height: 12),
-            FloatingActionButton(
-              heroTag: 'fab_add_coins',
-              onPressed: () => setState(() => _activeRoute = 'Add New Coins'),
-              backgroundColor: const Color(0xFFF63366),
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
+      // V8.7 FIX Item4: add bottom margin so Morgan FAB doesn't overlap Add button on phone
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (_activeRoute != 'Add New Coins') _MorganFab(onTap: _showMorganDialog),
+            if (_activeRoute == 'My Collection') ...[
+              const SizedBox(height: 12),
+              FloatingActionButton(
+                heroTag: 'fab_add_coins',
+                onPressed: () => setState(() => _activeRoute = 'Add New Coins'),
+                backgroundColor: const Color(0xFFF63366),
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
@@ -1695,19 +1699,19 @@ class _MorganSidebarButtonState extends State<_MorganSidebarButton> {
                 ),
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Ask Morgan',
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: NumistaTheme.textCaption,
+                            color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A),
+                            fontSize: NumistaTheme.textBodySm,
                             fontWeight: FontWeight.w600)),
                     Text('Your AI guide',
                         style: TextStyle(
-                            color: Color(0xFF2DD4BF),
-                            fontSize: NumistaTheme.textCaption)),
+                            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2DD4BF) : const Color(0xFF0F172A).withAlpha(180),
+                            fontSize: NumistaTheme.textBodySm)),
                   ],
                 ),
               ),

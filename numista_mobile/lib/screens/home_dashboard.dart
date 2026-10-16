@@ -218,6 +218,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
   }
   Future<void> _loadDismissedNews() async {
+    final authUser = FirebaseAuth.instance.currentUser;
+    if (authUser == null || authUser.isAnonymous) return; // demo/guest: skip
     try {
       // ITEM 1: GET /api/dismissed_news (no path param — identity from JWT Bearer token).
       final resp = await HttpAuthClient.get(
@@ -276,6 +278,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
     if (raw == 'Pending' || raw.isEmpty) return 0.0;
     // Normalise all dash variants and strip commas
     final norm = raw
+        .replaceAll('Â£', '£')
+        .replaceAll('Â', '')
         .replaceAll('\u2013', '-')   // en-dash
         .replaceAll('\u2014', '-')   // em-dash
         .replaceAll('\u2012', '-')   // figure dash
@@ -755,7 +759,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                               // Build a human-readable coin name
                               // Priority: Program/Series > Theme/Subject > Denomination > fallback
-                              final cleanDenom = denom.trim();
+                              final cleanDenom = denom.replaceAll('Â£', '£').replaceAll('Â', '').trim();
                               final denomFallback = cleanDenom.isNotEmpty && cleanDenom != 'Multiple'
                                   ? (cleanDenom[0].toUpperCase() + cleanDenom.substring(1))
                                       .replaceAll(r'$', '')
@@ -774,9 +778,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               // value is numeric (e.g. "1" → "$1") or already has it.
                               // Word-form denominations (penny, nickel, dime, quarter) stay as-is.
                               String fmtDenom(String d) {
-                                final cleanD = d.trim();
+                                final cleanD = d.replaceAll('Â£', '£').replaceAll('Â', '').trim();
                                 if (cleanD.isEmpty || cleanD == 'Multiple') return '';
-                                if (cleanD.startsWith(r'$')) return cleanD;              // already has $
+                                if (cleanD.startsWith(r'$') || cleanD.startsWith('£') || cleanD.startsWith('€') || cleanD.startsWith('¥')) return cleanD;              // already has currency symbol
                                 final numeric = double.tryParse(
                                     cleanD.replaceAll(RegExp(r'[^\d.]'), ''));
                                 if (numeric != null && cleanD.contains(RegExp(r'^[\d]'))) {

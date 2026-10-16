@@ -178,6 +178,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   Future<void> _fetchCompletionStats() async {
+    final authUser = FirebaseAuth.instance.currentUser;
+    if (authUser == null || authUser.isAnonymous) return;  // demo: skip
     try {
       final userEmail = AuthService.userEmail;
       if (userEmail.isEmpty) return;
@@ -3248,9 +3250,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final v = _rowField(m, 'mint_mark', _F.mintMark).trim();
         return (v == 'null' || v == 'nan') ? '' : v;
       case _F.denomination:
-        final rawD = _rowField(m, 'denomination', _F.denomination).trim();
+        final rawD = _rowField(m, 'denomination', _F.denomination).replaceAll('Â£', '£').replaceAll('Â', '').trim();
         if (rawD.isEmpty || rawD == 'null') return '';
-        if (rawD.startsWith(r'$')) return rawD;         // '$1', '$5' etc -- keep as-is
+        if (rawD.startsWith(r'$') || rawD.startsWith('£') || rawD.startsWith('€') || rawD.startsWith('¥')) return rawD;         // '$1', '£2' etc -- keep as-is
         if (RegExp(r'^\d+(\.\d+)?$').hasMatch(rawD)) { // '1', '25' etc -- add $
           final n = double.tryParse(rawD);
           return (n != null && n == n.truncateToDouble())

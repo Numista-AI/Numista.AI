@@ -379,7 +379,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                     child: const Text('PROGRAM MANAGER', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                   ),
                   const SizedBox(height: 8),
-                  const Text('Track your progress on official US Mint series.', style: TextStyle(color: Color(0xFF64748B), fontSize: 14)),
+                  const Text('Track your progress on official US Mint series.', style: TextStyle(color: Color(0xFF64748B), fontSize: 18)),
                   const SizedBox(height: 24),
                   
                   // Sorting Dropdown
@@ -467,23 +467,42 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                             const SizedBox(height: 16),
                             Text(categoryName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF31333F))),
                             const SizedBox(height: 16),
-                            GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: isNarrow ? 1 : 3,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                                childAspectRatio: isNarrow ? 2.6 : 1.6, // Full width on mobile, standard on desktop
+                            if (isNarrow)
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: enrichedPrograms.length,
+                                itemBuilder: (context, index) {
+                                  final data = enrichedPrograms[index];
+                                  final prog = data['program'] as CoinProgram;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: _buildProgramCard(prog, data['collectedCount'] as int, data['totalCount'] as int, data['pct'] as double),
+                                  );
+                                },
+                              )
+                            else
+                              // V8.7 FIX Item2: Wrap instead of GridView so cards size to
+                              // content — no fixed childAspectRatio that clips View Checklist
+                              // button or 'Advances overall record' caption.
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  const double spacing = 16;
+                                  const int crossCount = 3;
+                                  final cardWidth = (constraints.maxWidth - spacing * (crossCount - 1)) / crossCount;
+                                  return Wrap(
+                                    spacing: spacing,
+                                    runSpacing: spacing,
+                                    children: enrichedPrograms.map((data) {
+                                      final prog = data['program'] as CoinProgram;
+                                      return SizedBox(
+                                        width: cardWidth,
+                                        child: _buildProgramCard(prog, data['collectedCount'] as int, data['totalCount'] as int, data['pct'] as double),
+                                      );
+                                    }).toList(),
+                                  );
+                                },
                               ),
-                              itemCount: enrichedPrograms.length,
-                              itemBuilder: (context, index) {
-                                final data = enrichedPrograms[index];
-                                final prog = data['program'] as CoinProgram;
-                                
-                                return _buildProgramCard(prog, data['collectedCount'] as int, data['totalCount'] as int, data['pct'] as double);
-                              },
-                            ),
                             const SizedBox(height: 32),
                           ],
                         );
@@ -599,21 +618,38 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: isNarrow ? 1 : 3,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: isNarrow ? 2.6 : 1.6,
+                if (isNarrow)
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: programs.length,
+                    itemBuilder: (context, index) {
+                      final prog = programs[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildSkeletonCard(prog.name, prog.years),
+                      );
+                    },
+                  )
+                else
+                  // V8.7 FIX Item2: Wrap skeleton to match real card grid
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      const double spacing = 16;
+                      const int crossCount = 3;
+                      final cardWidth = (constraints.maxWidth - spacing * (crossCount - 1)) / crossCount;
+                      return Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: programs.map((prog) {
+                          return SizedBox(
+                            width: cardWidth,
+                            child: _buildSkeletonCard(prog.name, prog.years),
+                          );
+                        }).toList(),
+                      );
+                    },
                   ),
-                  itemCount: programs.length,
-                  itemBuilder: (context, index) {
-                    final prog = programs[index];
-                    return _buildSkeletonCard(prog.name, prog.years);
-                  },
-                ),
                 const SizedBox(height: 32),
               ],
             );
@@ -652,8 +688,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               fontSize: 16,
               color: Color(0xFFCBD5E1), // ghost — same position, lighter colour
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            maxLines: 3,
+            overflow: TextOverflow.clip,
           ),
           const SizedBox(height: 4),
           // Ghosted year range
@@ -661,7 +697,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             years,
             style: const TextStyle(fontSize: 12, color: Color(0xFFE2E8F0)),
           ),
-          const Spacer(),
+          const SizedBox(height: 12),
           // Grey shimmer — progress text row
           Container(
             height: 12,
@@ -734,9 +770,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               Expanded(
                 child: Text(
                   program.name,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF0F172A)),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFF0F172A)),
+                  maxLines: 3,
+                  overflow: TextOverflow.clip,
                 ),
               ),
               const SizedBox(width: 8),
@@ -745,15 +781,21 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(program.years, style: const TextStyle(fontSize: 16, color: Color(0xFF64748B))),
-          const Spacer(),
+          Text(program.years, style: const TextStyle(fontSize: 18, color: Color(0xFF64748B))),
+          const SizedBox(height: 12),
           
           // Progress text
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${pct.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
-              Text('$collected / $total Collected', style: const TextStyle(fontSize: 16, color: Color(0xFF64748B))),
+              Text('${pct.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+              Flexible(
+                child: Text(
+                  '$collected / $total Collected',
+                  style: const TextStyle(fontSize: 18, color: Color(0xFF64748B)),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -769,10 +811,10 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           const SizedBox(height: 6),
           Text(
             'Advances overall record by ${programOverallAdvancement.toStringAsFixed(2)}%',
-            style: const TextStyle(fontSize: 16, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 18, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
             softWrap: true,
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            overflow: TextOverflow.clip,
           ),
           const SizedBox(height: 10),
           
@@ -793,7 +835,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 minimumSize: const Size(double.infinity, 48),
               ),
-              child: const Text('View Checklist'),
+              child: const Text('View Checklist', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             ),
           )
         ],
@@ -839,79 +881,158 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     final pct = totalCount > 0 ? (collectedCount / totalCount) * 100 : 0.0;
     final programOverallAdvancement = _totalReferenceCount > 0 ? (collectedCount / _totalReferenceCount) * 100 : 0.0;
 
+    final isNarrow = MediaQuery.of(context).size.width < 650;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
+      padding: EdgeInsets.all(isNarrow ? 16.0 : 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Nav Row
-          Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => setState(() {
-                  _selectedProgram = null;
-                  _selectedToAdd.clear();
-                }),
-                icon: const Icon(Icons.arrow_back, size: 16),
-                label: const Text('Back'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF0F172A),
-                  side: const BorderSide(color: Color(0xFFCBD5E1)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Text(
-                  program.name,
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              // ── Print Checklist Button ─────────────────────────────────
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _generatingProgramId == program.id
-                        ? null
-                        : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
-                    icon: _generatingProgramId == program.id
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.print, size: 16),
-                    label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF63366),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
+          if (isNarrow)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() {
+                        _selectedProgram = null;
+                        _selectedToAdd.clear();
+                      }),
+                      icon: const Icon(Icons.arrow_back, size: 16),
+                      label: const Text('Back'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0F172A),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        minimumSize: const Size(0, 48),
+                      ),
                     ),
-                  ),
-                  // ── Download PDF Button ────────────────────────────────────
-                  OutlinedButton.icon(
-                    onPressed: _generatingProgramId == program.id
-                        ? null
-                        : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
-                    icon: const Icon(Icons.download_rounded, size: 16),
-                    label: const Text('Download PDF'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF2563EB),
-                      side: const BorderSide(color: Color(0xFF2563EB)),
-                      elevation: 0,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        program.name,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        maxLines: 3,
+                        overflow: TextOverflow.clip,
+                      ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _generatingProgramId == program.id
+                          ? null
+                          : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
+                      icon: _generatingProgramId == program.id
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.print, size: 16),
+                      label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF63366),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        minimumSize: const Size(0, 48),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _generatingProgramId == program.id
+                          ? null
+                          : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
+                      icon: const Icon(Icons.download_rounded, size: 16),
+                      label: const Text('Download PDF'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF2563EB),
+                        side: const BorderSide(color: Color(0xFF2563EB)),
+                        elevation: 0,
+                        minimumSize: const Size(0, 48),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => setState(() {
+                    _selectedProgram = null;
+                    _selectedToAdd.clear();
+                  }),
+                  icon: const Icon(Icons.arrow_back, size: 16),
+                  label: const Text('Back'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F172A),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    minimumSize: const Size(0, 48),
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Text(
+                    program.name,
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _generatingProgramId == program.id
+                          ? null
+                          : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
+                      icon: _generatingProgramId == program.id
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.print, size: 16),
+                      label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF63366),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        minimumSize: const Size(0, 48),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _generatingProgramId == program.id
+                          ? null
+                          : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
+                      icon: const Icon(Icons.download_rounded, size: 16),
+                      label: const Text('Download PDF'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF2563EB),
+                        side: const BorderSide(color: Color(0xFF2563EB)),
+                        elevation: 0,
+                        minimumSize: const Size(0, 48),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           const SizedBox(height: 24),
           
           // Program History Card — Coin Reference Search
@@ -1245,7 +1366,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                       Text(
                         'No coins found matching active filters\n(Mint: $_selectedMintFilter, Finish: $_selectedFinishFilter)',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.5),
+                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 18, height: 1.5),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton(
@@ -1260,8 +1381,22 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 );
               }
 
-              return Container(
-                decoration: BoxDecoration(
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    program.name,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.clip,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
                   color: Colors.white,
                   border: Border.all(color: const Color(0xFFE2E6E9)),
                   borderRadius: BorderRadius.circular(8),
@@ -1290,7 +1425,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                               coin.year ?? '',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontSize: 18,
                                 color: Color(0xFF0F172A),
                               ),
                             ),
@@ -1301,9 +1436,11 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                             Flexible(
                               child: Text(
                                 coin.name,
-                                overflow: TextOverflow.ellipsis,
+                                softWrap: true,
+                                maxLines: 2,
+                                overflow: TextOverflow.clip,
                                 style: const TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w600,
                                   color: Color(0xFF1E293B),
                                 ),
@@ -1362,8 +1499,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                                 color: Color(0xFF10B981)),
                                             const SizedBox(width: 4),
                                             Text(chipLabel,
+                                                softWrap: true,
                                                 style: const TextStyle(
-                                                  fontSize: 16,
+                                                  fontSize: 18,
                                                   color: Color(0xFF065F46),
                                                   fontWeight: FontWeight.w600,
                                                 )),
@@ -1396,7 +1534,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                         ),
                                         child: const Text('+ Add another copy',
-                                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                                       ),
                                     ],
                                   );
@@ -1410,8 +1548,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(chipLabel,
+                                        softWrap: true,
                                         style: const TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 18,
                                           color: Color(0xFFD97706),
                                           fontStyle: FontStyle.italic,
                                           fontWeight: FontWeight.w600,
@@ -1462,8 +1601,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                             const SizedBox(width: 6),
                                             Text(
                                               chipLabel,
+                                              softWrap: true,
                                               style: const TextStyle(
-                                                fontSize: 16,
+                                                fontSize: 18,
                                                 fontWeight: FontWeight.w600,
                                                 color: Color(0xFF0F172A),
                                               ),
@@ -1483,7 +1623,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
                   },
                 ),
-              );
+              ),
+            ],
+          );
             },
           ),
 
@@ -1507,15 +1649,24 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         backgroundColor: const Color(0xFF3B82F6),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                     ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              "ℹ️ Safely saves your selected coins directly to your collection.",
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-              textAlign: TextAlign.center,
+            Builder(
+              builder: (context) {
+                final isRealUser = FirebaseAuth.instance.currentUser != null
+                    && !FirebaseAuth.instance.currentUser!.isAnonymous
+                    && !GuestSeedService.isBrowseDemoMode;
+                return Text(
+                  isRealUser
+                      ? "ℹ️ Safely saves your selected coins directly to your collection."
+                      : "ℹ️ Sign in to save selected coins to your collection.",
+                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 18.0),
+                  textAlign: TextAlign.center,
+                );
+              },
             ),
           ],
         ],

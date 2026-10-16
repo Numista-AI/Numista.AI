@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/denomination_canon.dart';
+import '../utils/web_input_helper.dart';
 
 class AddCoinManualForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onSubmit;
@@ -42,6 +44,16 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
   late final TextEditingController _storageCtrl;
   late final TextEditingController _notesCtrl;
 
+  // V8.7 FIX Item 3: FocusNodes for numeric fields.
+  // On web, Flutter's engine sets inputmode via go9() (go9(){return"numeric"}
+  // for integer, go9(){return"decimal"} for decimal per built main.dart.js).
+  // However, the DOM setup code (b2p()) explicitly removes inputmode for all
+  // non-email/password types. We re-inject it on focus using WebInputHelper.
+  late final FocusNode _yearFocus;
+  late final FocusNode _costFocus;
+  late final FocusNode _qtyFocus;
+
+
   static const _accent = Color(0xFF3B82F6);
   Color get _border => Theme.of(context).brightness == Brightness.dark
       ? const Color(0xFF334155)
@@ -74,7 +86,27 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _invoiceCtrl   = TextEditingController(text: _formData['Retailer Invoice #'] as String? ?? '');
     _storageCtrl   = TextEditingController(text: _formData['Storage Location'] as String? ?? '');
     _notesCtrl     = TextEditingController(text: _formData['Notes'] as String? ?? '');
+
+    // V8.7 FIX Item 3: inputmode injection on web.
+    // Flutter web b2p() removes inputmode for all non-email/password types.
+    // We re-set it on focus so the UX gate DOM shows inputmode="numeric" /
+    // inputmode="decimal" immediately when the user taps a field.
+    _yearFocus = FocusNode();
+    _costFocus = FocusNode();
+    _qtyFocus  = FocusNode();
+    if (kIsWeb) {
+      _yearFocus.addListener(() {
+        if (_yearFocus.hasFocus) WebInputHelper.setActiveInputMode('numeric');
+      });
+      _costFocus.addListener(() {
+        if (_costFocus.hasFocus) WebInputHelper.setActiveInputMode('decimal');
+      });
+      _qtyFocus.addListener(() {
+        if (_qtyFocus.hasFocus) WebInputHelper.setActiveInputMode('numeric');
+      });
+    }
   }
+
 
   @override
   void dispose() {
@@ -91,8 +123,12 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _invoiceCtrl.dispose();
     _storageCtrl.dispose();
     _notesCtrl.dispose();
+    _yearFocus.dispose();
+    _costFocus.dispose();
+    _qtyFocus.dispose();
     super.dispose();
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -111,8 +147,9 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 'Year',
                 'e.g. 1921',
                 controller: _yearCtrl,
+                focusNode: _yearFocus,  // V8.7: inputmode="numeric" on web focus
                 isRequired: true,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(decimal: false),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
             ),
@@ -160,7 +197,9 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 'Cost',
                 '25.00',
                 controller: _costCtrl,
+                focusNode: _costFocus,  // V8.7: inputmode="decimal" on web focus
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
                 prefixText: '\$ ',
               ),
             ),
@@ -171,8 +210,10 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 'Quantity',
                 '1',
                 controller: _qtyCtrl,
-                keyboardType: TextInputType.number,
+                focusNode: _qtyFocus,  // V8.7: inputmode="numeric" on web focus
+                keyboardType: const TextInputType.numberWithOptions(decimal: false),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+
               ),
             ),
           ]),
@@ -204,7 +245,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                   : const Icon(Icons.check_circle_outline, size: 20),
               label: Text(
                 widget.isProcessing ? 'Saving…' : 'Save to My Collection',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _accent,
@@ -294,6 +335,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     String hint, {
     TextEditingController? controller,
     bool isRequired = false,
+    FocusNode? focusNode,          // V8.7: for web inputmode injection
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
     String? prefixText,
@@ -332,6 +374,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
           const SizedBox(height: 6),
           TextFormField(
             controller: controller,
+            focusNode: focusNode,  // V8.7: triggers inputmode injection on focus
             initialValue: controller == null
                 ? (_formData[key]?.toString().isNotEmpty == true ? _formData[key].toString() : null)
                 : null,

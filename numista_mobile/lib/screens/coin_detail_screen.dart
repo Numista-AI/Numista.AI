@@ -65,7 +65,7 @@ Color _kBorder(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF2D3143) : cons
 /// Formats a raw denomination string for display.
 /// "5"  → "$5"   |  "25" → "$25"  |  "$5" → "$5"  |  "Half Dollar" → "Half Dollar"
 String _fmtDenomination(String raw) {
-  final s = raw.trim();
+  final s = raw.replaceAll('Â£', '£').replaceAll('Â', '').trim();
   if (s.isEmpty) return s;
   // Already has a currency symbol or is non-numeric — pass through
   if (s.startsWith(r'$') || s.startsWith('£') || s.startsWith('€') ||

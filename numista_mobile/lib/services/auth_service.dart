@@ -61,7 +61,7 @@ class AuthService {
   static String get userEmail {
     final user = _auth.currentUser;
     if (user?.isAnonymous == true) return 'guest';
-    final rawEmail = user?.email ?? 'unknown@numista.ai';
+    final rawEmail = user?.email ?? '';  // never return placeholder email
     return rawEmail.trim().toLowerCase();
   }
 

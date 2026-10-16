@@ -141,7 +141,7 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
               final rawMint = data['Mint Mark']?.toString().trim() ?? '';
               final mintMark = (rawMint.toLowerCase() == 'null' || rawMint.toLowerCase() == 'nan') ? '' : rawMint;
 
-              final rawDenom = data['Denomination']?.toString().trim() ?? '';
+              final rawDenom = data['Denomination']?.toString().replaceAll('Â£', '£').replaceAll('Â', '').trim() ?? '';
               final denomination = (rawDenom.toLowerCase() == 'null' || rawDenom.toLowerCase() == 'nan' || rawDenom.isEmpty)
                   ? 'Unknown Coin'
                   : rawDenom;
