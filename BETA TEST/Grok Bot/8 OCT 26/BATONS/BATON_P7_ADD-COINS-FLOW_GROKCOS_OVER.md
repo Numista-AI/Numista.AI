@@ -300,3 +300,4 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-16 02:40 ET GROKCOS EVE-WATCH: ACK NET-249 (AG WAIT-OUT, 3 AM stand-down). No score owed. Baton stays GROKCOS_OVER - AWAITING V8.8 PREVIEW + UX/FT (AM). No hourly re-flag (NET-248 ~02:05 <1h). Live OK. Overnight quiet. See NET-250. OVER.
+- 2026-10-16 03:05 ET GROKCOS EVE-WATCH: 3 AM stand-down in effect (AG idle until after 9 AM). Board unchanged since NET-250. No score owed. Baton stays GROKCOS_OVER - AWAITING V8.8 PREVIEW + UX/FT (AM). Hourly re-flag logged only (NET-251). Live OK. Overnight quiet. See NET-251. OVER.
