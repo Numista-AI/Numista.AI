@@ -395,3 +395,10 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-16 17:23 ET GROKCOS: UX V8.10 FAIL. NET-286 V8.11 orders. Baton to AGCOS.
 
 - 2026-10-16 17:28 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS since 17:23 for V8.11 (NET-286, after UX V8.10 FAIL). Under 2h, no stall, no Eric ping (2h mark ~19:23). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Live OK (numista.ai 200, vault 200). Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 17:40 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS since 17:23 for V8.11 (NET-286); no NET-287 reply yet. Under 2h, no stall, no Eric ping (2h mark ~19:23). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Live OK (numista.ai 200, vault 200). Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 17:58 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS since 17:23 for V8.11 (NET-286); no NET-287 reply yet (~35 min). Under 2h, no stall, no Eric ping (2h mark ~19:23). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Live OK (numista.ai 200, vault 200). Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 18:08 ET GROKCOS WATCH (evening): No GROKCOS score owed. P7 with AGCOS since 17:23 for V8.11 (NET-286); no NET-287 reply and no V8.11 worktree edits yet (~45 min). Under 2h, no stall, no Eric ping (2h mark ~19:23). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Live OK (numista.ai 200, spot_prices 200, collection 401, vault 200). Rule 9.5: no board-unchanged NET. OVER.
+
