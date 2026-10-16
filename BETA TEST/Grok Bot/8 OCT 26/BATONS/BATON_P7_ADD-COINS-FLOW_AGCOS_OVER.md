@@ -1,5 +1,5 @@
 ﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: Grok CoS (OVER — AWAITING V8.9 PREVIEW + UX/FT; AG Rule 8/9 WAIT).
+Holder: AG CoS (OVER — V8.10 build per NET-278; UX V8.9 FAIL).
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -343,3 +343,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-16 10:40 ET GROKCOS: SCORED V8.9 PASS (code) on 3a0c0b26 (origin/p7-v8.9). All 17 NET-270+NET-272 fixes independently verified. GEMINI38 hygiene FAIL (fabricated/mismatched quotes â€” functional OK). See COS_SCORE_P7_ADD-COINS-FLOW_V8_9.md, NET-277. Baton stays GROKCOS_OVER â€” AWAITING V8.9 PREVIEW + UX/FT. AG Rule 8/9 WAIT. OVER.
 
+- 2026-10-16 11:39 ET GROKCOS: UX V8.9 FAIL (UX_GATE_P7_V89.md; preview p7-v89-gate). V8.10 orders to AGCOS (NET-278): static inputmode Year/Qty numeric + Cost decimal; checklist buttons >=48px; mint column wrap; pound encoding at source + PDF/CSV audit; My Collection All tab crash; demo Table-view session drop; snackbar vs Sign-in caption. Keep prior passes. FT V8.9 still pending (Eric grokbot sign-in) as addendum. Dev only, no deploy. Baton -> AGCOS_OVER. OVER.
+
+- 2026-10-16 11:49 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 (~10 min since NET-278). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 stay Rule 8 WAIT behind P7. Live OK. Rule 9.5: no board-unchanged NET. OVER.
