@@ -70,6 +70,16 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   @override
+  void didUpdateWidget(AuthGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isDemo && !GuestSeedService.isBrowseDemoMode) {
+      GuestSeedService.activateBrowseDemo().then((_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: widget.authStream ?? FirebaseAuth.instance.authStateChanges(),
@@ -81,12 +91,18 @@ class _AuthGateState extends State<AuthGate> {
 
         // Signed in -> show welcome screen on first launch, then main app
         if (snapshot.hasData && snapshot.data != null) {
+          final isRealUser = !snapshot.data!.isAnonymous;
           // INVARIANT: a real Firebase user must never see demo data.
-          if (GuestSeedService.isBrowseDemoMode) {
+          if (isRealUser && GuestSeedService.isBrowseDemoMode) {
             GuestSeedService.deactivateBrowseDemo();
             debugPrint(
                 '[AUTH] Demo mode cleared for real user ${snapshot.data!.uid}');
           }
+
+          if (GuestSeedService.isBrowseDemoMode) {
+            return const BaseLayout(isDemoMode: true);
+          }
+
           assert(!GuestSeedService.isBrowseDemoMode,
               'INTEGRITY: Browse Demo still active after deactivateBrowseDemo(). '
               'User: ${snapshot.data!.uid}. deactivateBrowseDemo() has a logic defect.');

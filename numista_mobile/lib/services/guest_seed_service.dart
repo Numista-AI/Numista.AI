@@ -21,16 +21,29 @@ class GuestSeedService {
 
   static bool get isBrowseDemoMode => _browseDemoActive;
 
+  static const _prefDemoActiveKey = 'browse_demo_active';
+
   /// Activate Browse Demo: load JSON into memory, no Firestore.
   static Future<void> activateBrowseDemo() async {
-    final jsonStr = await rootBundle.loadString('assets/guest_demo_coins.json');
-    _demoCoinCache = List<Map<String, dynamic>>.from(jsonDecode(jsonStr));
     _browseDemoActive = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefDemoActiveKey, true);
+    } catch (_) {}
+    if (_demoCoinCache.isEmpty) {
+      try {
+        final jsonStr = await rootBundle.loadString('assets/guest_demo_coins.json');
+        _demoCoinCache = List<Map<String, dynamic>>.from(jsonDecode(jsonStr));
+      } catch (_) {}
+    }
   }
 
   static void deactivateBrowseDemo() {
     _browseDemoActive = false;
     _demoCoinCache = [];
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool(_prefDemoActiveKey, false);
+    }).catchError((_) {});
   }
 
   /// FOR TESTS ONLY. Sets _browseDemoActive without requiring rootBundle

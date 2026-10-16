@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
+import '../services/guest_seed_service.dart';
 
 /// Centralized error translation helper for Numista.AI.
 /// Transforms raw exceptions into plain-English messages without
@@ -37,7 +38,11 @@ class NumistaErrorHelper {
     required String action,
     int? statusCode,
   }) {
+    if (GuestSeedService.isBrowseDemoMode) {
+      return 'Demo mode — create a free account to save coins.';
+    }
     final base = toUserFriendly(error, statusCode: statusCode);
+    if (base.toLowerCase().contains('demo mode')) return base;
     return "Couldn't $action — $base";
   }
 
@@ -52,8 +57,12 @@ class NumistaErrorHelper {
 
   static String? _fromStatusCode(int? code) {
     if (code == null) return null;
-    if (code == 401) return _signIn;
-    if (code == 403) return _permission;
+    if (code == 401 || code == 403) {
+      if (GuestSeedService.isBrowseDemoMode) {
+        return 'Demo mode — create a free account to save coins.';
+      }
+      return code == 401 ? _signIn : _permission;
+    }
     if (code == 404) return 'The requested resource was not found. Please try again.';
     if (code >= 500) return _serverError;
     return null;
@@ -66,6 +75,9 @@ class NumistaErrorHelper {
         return _serverNoAnswer;
       case 'permission-denied':
       case 'unauthenticated':
+        if (GuestSeedService.isBrowseDemoMode) {
+          return 'Demo mode — create a free account to save coins.';
+        }
         return _signIn;  // was _permission — for manual save, permission-denied means session expired
       case 'not-found':
         return 'The data wasn\'t found. It may have been deleted.';
@@ -104,11 +116,16 @@ class NumistaErrorHelper {
     if (str.contains('401') ||
         str.contains('unauthenticated') ||
         str.contains('unauthorized') ||
-        str.contains('permission-denied')) {
+        str.contains('permission-denied') ||
+        str.contains('403') ||
+        str.contains('Forbidden')) {
+      if (GuestSeedService.isBrowseDemoMode) {
+        return 'Demo mode — create a free account to save coins.';
+      }
+      if (str.contains('403') || str.contains('Forbidden')) {
+        return _permission;
+      }
       return _signIn;
-    }
-    if (str.contains('403') || str.contains('Forbidden')) {
-      return _permission;
     }
 
     // Server errors by status code string.

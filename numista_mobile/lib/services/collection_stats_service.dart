@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
+import 'guest_seed_service.dart';
 import 'set_expansion_helper.dart';
 
 class CollectionStatsService {
@@ -31,8 +33,10 @@ class CollectionStatsService {
   /// Uses expansion-aware counting via set_expansion_helper.
   /// Writes exclusively to canonical 4-segment path: users/{uid}/metadata/collection_stats.
   static Future<Map<String, dynamic>> rebuildAndUpsertStats() async {
-    if (AuthService.coinsPath.contains('unknown')) {
-      throw StateError('Cannot rebuild collection_stats for unauthenticated user path.');
+    final user = FirebaseAuth.instance.currentUser;
+    final isRealUser = user != null && !user.isAnonymous;
+    if (!isRealUser || GuestSeedService.isBrowseDemoMode || AuthService.coinsPath.contains('unknown')) {
+      return {'coin_count': 0, 'supply_count': 0, 'est_value': 0.0};
     }
 
     final db = FirebaseFirestore.instance;

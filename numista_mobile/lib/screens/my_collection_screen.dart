@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:intl/intl.dart' as intl;
 import '../utils/numista_error_helper.dart';
+import '../utils/text_sanitizer.dart';
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -255,7 +256,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     // Listen to Firebase Auth state before binding collection stream
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user != null) {
+      if (user != null || GuestSeedService.isBrowseDemoMode) {
         _subscribeCoinsStream();
       } else {
         if (mounted) {
@@ -267,6 +268,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         }
       }
     });
+
+    // If demo mode or user already present, kick off stream subscription immediately
+    if (GuestSeedService.isBrowseDemoMode || FirebaseAuth.instance.currentUser != null) {
+      _subscribeCoinsStream();
+    }
+
 
     // Listen to batch valuation progress for the live badge in _buildFiltersRow
     _valuationSub = BatchValuationService.instance.progressStream.listen((p) {
@@ -421,7 +428,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       return GuestSeedService.getDemoCoinsStream();
     }
     if (AuthService.coinsPath.contains('unknown')) {
-      throw StateError('Cannot query unauthenticated coinsPath');
+      return const Stream.empty();
     }
     Query<Map<String, dynamic>> q =
         FirebaseFirestore.instance.collection(AuthService.coinsPath);
@@ -437,7 +444,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     _coinsSnapSub?.cancel();
     _coinsTimeoutTimer?.cancel();
 
-    if (AuthService.coinsPath.contains('unknown')) {
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+    if (!isRealUser && !GuestSeedService.isBrowseDemoMode && AuthService.coinsPath.contains('unknown')) {
       if (mounted) {
         setState(() {
           _coinsError = 'Unauthenticated access attempt';
@@ -1398,8 +1407,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       builder: (context, modeSnap) {
                         final advanced = modeSnap.data ?? false;
                         // Use _cachedCoinsDocs (same data source as Coins tab)
-                        // instead of coinsSnap which races stream assignment on first mount
-                        final coinsDocs = _cachedCoinsDocs;
+                        // falling back to coinsSnap which resolves stream data
+                        final coinsDocs = _cachedCoinsDocs.isNotEmpty ? _cachedCoinsDocs : (coinsSnap.data?.docs ?? []);
                         final currencyDocs = currencySnap.data?.docs ?? [];
                         final worldDocs = worldSnap.data ?? [];
 
@@ -1463,9 +1472,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           } else if (addedTs is String) {
                             addedDate = DateTime.tryParse(addedTs);
                           }
-                          final denom = data['Denomination']?.toString() ?? '';
+                          final denom = TextSanitizer.fixMojibake(data['Denomination']?.toString() ?? '');
                           final year = data['Year']?.toString() ?? '';
-                          final title = '$year $denom'.trim();
+                          final title = TextSanitizer.fixMojibake('$year $denom'.trim());
 
                           final coinCpg = _parseNumber(data['cpgRetail']);
                           final coinBid = _parseNumber(data['greysheetBid']);

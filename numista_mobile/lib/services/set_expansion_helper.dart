@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../utils/text_sanitizer.dart';
 
 /// Shared set-expansion and counting helpers for the Dart client.
 ///
@@ -133,22 +134,24 @@ ExpansionResult expandCollection(
           ...Map<String, dynamic>.from(child), // Full parity: program_id, Strike Type, Variety, variety_id, Metal Content etc.
           'coin_id': '${docId}__set_coin_$idx',
           'year': childYear,
-          'denomination': childDenom,
+          'denomination': TextSanitizer.fixMojibake(childDenom),
           'mint_mark': _getField(child, ['Mint Mark', 'mint_mark']),
           'condition':
               _getField(child, ['Condition', 'condition']).isNotEmpty
                   ? _getField(child, ['Condition', 'condition'])
                   : parentCond,
           'theme_subject':
-              _getField(child, ['Theme/Subject', 'theme_subject']),
+              TextSanitizer.fixMojibake(_getField(child, ['Theme/Subject', 'theme_subject'])),
           'program_series':
-              _getField(child, ['Program/Series', 'program_series']),
+              TextSanitizer.fixMojibake(_getField(child, ['Program/Series', 'program_series'])),
           'ai_estimated_value': _getField(
               child, ['AI Estimated Value', 'ai_estimated_value'],
               defaultVal: '\$0.00'),
           'cost': _getField(child, ['Cost', 'cost', 'purchase_cost'],
               defaultVal: '\$0.00'),
           'item_type': childItemType,
+          'Quantity': child['Quantity'] ?? child['quantity'] ?? 1,
+          'quantity': child['quantity'] ?? child['Quantity'] ?? 1,
           'from_set': docId, // parent doc.id — system number
           'from_set_name': setName, // display label
           'is_set_parent': false,
@@ -167,17 +170,18 @@ ExpansionResult expandCollection(
         'variety_id':  d['variety_id']?.toString()  ?? '',
         'coin_id': docId,
         'year': _getField(d, ['Year', 'year']),
-        'denomination': _getField(d, ['Denomination', 'denomination']),
+        'denomination': TextSanitizer.fixMojibake(_getField(d, ['Denomination', 'denomination'])),
         'mint_mark': _getField(d, ['Mint Mark', 'mint_mark']),
         'condition': _getField(d, ['Condition', 'condition']),
-        'theme_subject': _getField(d, ['Theme/Subject', 'theme_subject']),
-        'program_series': _getField(d, ['Program/Series', 'program_series']),
+        'theme_subject': TextSanitizer.fixMojibake(_getField(d, ['Theme/Subject', 'theme_subject'])),
+        'program_series': TextSanitizer.fixMojibake(_getField(d, ['Program/Series', 'program_series'])),
         'ai_estimated_value': _getField(
             d, ['AI Estimated Value', 'ai_estimated_value'],
             defaultVal: '\$0.00'),
         'cost': _getField(d, ['Cost', 'cost', 'purchase_cost'],
             defaultVal: '\$0.00'),
-        'item_type': rawItemType.isNotEmpty ? rawItemType : 'coin',
+        'Quantity': d['Quantity'] ?? d['quantity'] ?? 1,
+        'quantity': d['quantity'] ?? d['Quantity'] ?? 1,
         'from_set': null,
         'from_set_name': null,
         'is_set_parent': false,
@@ -186,7 +190,9 @@ ExpansionResult expandCollection(
   }
 
   final parentOnly = allItems.where((r) => r['from_set'] == null).toList();
-  final totalCoins = allItems.where((r) => isPhysicalCoin(r)).length;
+  final totalCoins = allItems
+      .where((r) => isPhysicalCoin(r))
+      .fold<int>(0, (sum, r) => sum + getCoinQuantity(r));
   final totalLots = parentOnly.length;
 
   return ExpansionResult(
@@ -202,7 +208,20 @@ ExpansionResult expandCollection(
 // Counting Rules
 // ---------------------------------------------------------------------------
 
+/// Safely extracts quantity from a coin record, defaulting to 1.
+int getCoinQuantity(Map<String, dynamic> row) {
+  final q = row['Quantity'] ?? row['quantity'] ?? row['qty'];
+  if (q is int) return q > 0 ? q : 1;
+  if (q is num) return q.toInt() > 0 ? q.toInt() : 1;
+  if (q is String) {
+    final parsed = int.tryParse(q.trim());
+    if (parsed != null && parsed > 0) return parsed;
+  }
+  return 1;
+}
+
 /// True if this row is a set parent (after expansion).
+
 bool isSetParent(Map<String, dynamic> row) {
   final flag = row['is_set_parent'];
   if (flag != null) return flag == true;

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:numista_ai/constants.dart';
 import 'package:numista_ai/services/http_auth_client.dart';
+import 'guest_seed_service.dart';
 
 class MarketNewsArticle {
   final String title;
@@ -45,6 +46,9 @@ class MarketNewsService {
 
   /// Fetches news articles from backend /api/news/feed proxy with local SharedPreferences fallback.
   static Future<List<MarketNewsArticle>> fetchNewsFeed() async {
+    if (GuestSeedService.isBrowseDemoMode) {
+      return _loadCachedNews();
+    }
     try {
       final response = await http
           .get(Uri.parse('$_baseUrl/api/news/feed'))

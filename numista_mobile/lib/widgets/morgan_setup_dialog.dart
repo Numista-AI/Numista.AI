@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/morgan_prefs.dart';
 
@@ -16,7 +17,8 @@ import '../services/morgan_prefs.dart';
 Future<bool> showMorganSetup(BuildContext context) {
   return showGeneralDialog<bool>(
     context: context,
-    barrierDismissible: false,
+    barrierDismissible: true,
+    barrierLabel: 'Dismiss',
     barrierColor: Colors.black87,
     transitionDuration: const Duration(milliseconds: 350),
     transitionBuilder: (ctx, anim, secondaryAnim, child) => FadeTransition(
@@ -29,7 +31,10 @@ Future<bool> showMorganSetup(BuildContext context) {
     ),
     pageBuilder: (ctx, animation, secondaryAnimation) =>
         const _MorganSetupDialog(),
-  ).then((v) => v ?? false);
+  ).then((v) {
+    MorganPrefs.markSetupDone();
+    return v ?? false;
+  });
 }
 
 // ── Internal dialog widget ─────────────────────────────────────────────────────
@@ -90,12 +95,14 @@ class _MorganSetupDialogState extends State<_MorganSetupDialog> {
     ];
   }
 
-  void _pickChip(String chip) {
+  Future<void> _pickChip(String chip) async {
     if (chip == 'Skip') {
       _ctrl.text = '';
-    } else {
-      _ctrl.text = chip;
+      await MorganPrefs.markSetupDone();
+      if (mounted) Navigator.of(context).pop(true);
+      return;
     }
+    _ctrl.text = chip;
     _ctrl.selection =
         TextSelection(baseOffset: 0, extentOffset: _ctrl.text.length);
     _focus.requestFocus();
@@ -112,7 +119,18 @@ class _MorganSetupDialogState extends State<_MorganSetupDialog> {
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
+          MorganPrefs.markSetupDone();
+          Navigator.of(context).pop(false);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
       backgroundColor: Colors.transparent,
       body: Center(
         child: ConstrainedBox(
@@ -149,6 +167,7 @@ class _MorganSetupDialogState extends State<_MorganSetupDialog> {
           ),
         ),
       ),
+    ),
     );
   }
 

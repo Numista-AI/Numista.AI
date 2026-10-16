@@ -11,6 +11,10 @@ import 'package:numista_ai/services/guest_seed_service.dart';
 import 'package:numista_ai/services/http_auth_client.dart';
 import 'package:numista_ai/services/upcoming_releases_service.dart';
 import 'package:numista_ai/utils/numista_error_helper.dart';
+import 'package:numista_ai/utils/web_input_helper.dart';
+import 'package:numista_ai/utils/text_sanitizer.dart';
+import 'package:numista_ai/services/set_expansion_helper.dart';
+import 'package:numista_ai/services/morgan_prefs.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -108,11 +112,16 @@ void main() {
 
       // Test Qty bug fix: type '1' into empty field -> produces '1' (never '11')
       submittedData = null;
+      // Re-enter required fields since form was reset after successful submit (V8.9 Fix 11)
+      await tester.enterText(textFields.at(0), '1921');
+      await tester.enterText(textFields.at(2), 'Quarter Dollar');
+      await tester.enterText(textFields.at(3), 'Washington Quarter');
       // Enter '1' in Quantity (index 8)
       await tester.enterText(textFields.at(8), '1');
       await tester.ensureVisible(saveBtnFinder);
       await tester.tap(saveBtnFinder);
       await tester.pumpAndSettle();
+      expect(submittedData, isNotNull);
       expect(submittedData!['Quantity'], '1');
     });
   });
@@ -1306,6 +1315,65 @@ void main() {
 
       expect(find.byKey(const Key('fab_morgan')), findsOneWidget);
       expect(find.byKey(const Key('fab_add_coins')), findsOneWidget);
+    });
+  });
+
+  group('P7 V8.9 Fixes: Systemic Qty, WebInputHelper, Mojibake, Morgan Setup', () {
+    test('p7_v89_web_input_helper_static_attribute_map', () {
+      final helper = WebInputHelper();
+      expect(helper.attributeMap['Year'], 'numeric');
+      expect(helper.attributeMap['Quantity'], 'numeric');
+      expect(helper.attributeMap['Qty'], 'numeric');
+      expect(helper.attributeMap['Cost'], 'decimal');
+      expect(helper.attributeMap['Mint Mark'], isNull);
+      expect(helper.attributeMap['Denomination'], isNull);
+      expect(helper.attributeMap['Retailer'], isNull);
+      expect(helper.attributeMap['Invoice'], isNull);
+      expect(helper.attributeMap['Storage'], isNull);
+      expect(helper.attributeMap['Notes'], isNull);
+    });
+
+    test('p7_v89_mojibake_text_sanitizer_repair', () {
+      expect(TextSanitizer.fixMojibake('2022 United Kingdom Ã‚Â£2 Silver'), '2022 United Kingdom £2 Silver');
+      expect(TextSanitizer.fixMojibake('Ã‚Â£50'), '£50');
+      expect(TextSanitizer.fixMojibake('Normal 1921 Morgan Dollar'), 'Normal 1921 Morgan Dollar');
+      expect(TextSanitizer.fixMojibake(''), '');
+    });
+
+    test('p7_v89_qty_count_summation_in_expansion', () {
+      final rawDocs = [
+        {
+          'id': 'coin_1',
+          'Year': '1921',
+          'Denomination': 'Dollar',
+          'Quantity': 3,
+          'Purchase Price': '30.00',
+        },
+        {
+          'id': 'coin_2',
+          'Year': '1964',
+          'Denomination': 'Half Dollar',
+          'quantity': 2,
+          'Purchase Price': '15.00',
+        },
+        {
+          'id': 'coin_3',
+          'Year': '2000',
+          'Denomination': 'Quarter',
+          'Purchase Price': '5.00',
+        },
+      ];
+
+      final result = expandCollection(rawDocs, ['coin_1', 'coin_2', 'coin_3']);
+      // Total coins should sum 3 + 2 + 1 = 6, NOT rawDocs.length (3)
+      expect(result.totalCoins, 6);
+    });
+
+    test('p7_v89_morgan_setup_done_flag_persists_globally', () async {
+      SharedPreferences.setMockInitialValues({});
+      expect(await MorganPrefs.isSetupDone(), isFalse);
+      await MorganPrefs.markSetupDone();
+      expect(await MorganPrefs.isSetupDone(), isTrue);
     });
   });
 }

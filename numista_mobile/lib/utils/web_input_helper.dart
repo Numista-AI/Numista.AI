@@ -1,16 +1,13 @@
 // lib/utils/web_input_helper.dart
-// V8.7 FIX Item 3: Sets inputmode on Flutter web <input> elements so mobile
-// browsers show the correct numeric / decimal soft keyboard.
+// V8.9 FIX 3 & FIX 2: Sets inputmode STATICALLY per field.
+// Focus-based swapping was removed to eliminate dropped first characters (FIX 2)
+// and inverted numeric keypad states (FIX 3).
 //
-// Flutter web (3.41.5) emits type="text" for all TextFormFields. The engine
-// has go9(){return"numeric"} / go9(){return"decimal"} for numberWithOptions,
-// but the DOM setup code (b2p()) calls removeAttribute("inputmode") for all
-// non-password / non-email types, and only restores it after the keyboard
-// connection is opened (on focus).
-//
-// Solution: attach a FocusNode listener to each numeric / decimal field and
-// call setActiveInputMode() on focus. On web, this finds the active
-// Flutter text-editing <input> element and sets inputmode.
+// Static mappings:
+// - Year field: inputmode="numeric"
+// - Qty field:  inputmode="numeric"
+// - Cost field: inputmode="decimal"
+// - All text fields: no inputmode set (null)
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -18,12 +15,42 @@ import 'web_input_helper_stub.dart'
     if (dart.library.js_interop) 'web_input_helper_web.dart' as impl;
 
 class WebInputHelper {
-  WebInputHelper._();
+  /// Instantiable for unit tests and attribute inspection.
+  WebInputHelper();
 
-  /// Sets inputmode on the currently active Flutter web <input>.
-  /// No-op on native platforms.
-  static void setActiveInputMode(String mode) {
+  static const Map<String, String?> staticFieldInputModes = {
+    'Year': 'numeric',
+    'Quantity': 'numeric',
+    'Qty': 'numeric',
+    'Cost': 'decimal',
+    'Mint Mark': null,
+    'Denomination': null,
+    'Program/Series': null,
+    'Theme/Subject': null,
+    'Variety': null,
+    'Condition': null,
+    'Retailer/Website': null,
+    'Retailer Invoice #': null,
+    'Storage Location': null,
+    'Notes': null,
+  };
+
+  /// Returns the static inputmode for a field name, or null if standard text.
+  static String? inputModeForField(String fieldName) => staticFieldInputModes[fieldName];
+
+  /// Returns the static attribute map per field type for testing and inspection.
+  Map<String, String?> get attributeMap => Map.unmodifiable(staticFieldInputModes);
+
+  /// Sets static inputmode attributes on DOM elements per field type.
+  static void applyStaticInputModes() {
     if (!kIsWeb) return;
-    impl.setActiveInputMode(mode);
+    impl.applyStaticInputModes(staticFieldInputModes);
+  }
+
+  /// Deprecated focus-based hook, now a safe no-op to prevent focus loss / character dropping.
+  static void setActiveInputMode(String mode) {
+    // Focus-based swapping removed in V8.9 to prevent dropped first character (FIX 2)
+    // and inverted numeric keypad (FIX 3).
   }
 }
+

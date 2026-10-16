@@ -2,20 +2,26 @@
 import 'dart:js_interop';
 import 'package:web/web.dart' as web;
 
-void setActiveInputMode(String mode) {
+void applyStaticInputModes(Map<String, String?> modes) {
   try {
-    final active = web.document.activeElement;
-    if (active != null && active.isA<web.HTMLInputElement>()) {
-      (active as web.HTMLInputElement).inputMode = mode;
-      return;
-    }
-    // Fallback: scan all input elements inside the flutter text editing host
     final inputs = web.document.querySelectorAll('input');
     for (int i = 0; i < inputs.length; i++) {
       final node = inputs.item(i);
       if (node != null && node.isA<web.HTMLInputElement>()) {
-        (node as web.HTMLInputElement).inputMode = mode;
+        final input = node as web.HTMLInputElement;
+        final name = (input.getAttribute('name') ?? input.getAttribute('placeholder') ?? '').toLowerCase();
+        for (final entry in modes.entries) {
+          if (entry.value != null && name.contains(entry.key.toLowerCase())) {
+            input.inputMode = entry.value!;
+            break;
+          }
+        }
       }
     }
   } catch (_) {}
 }
+
+void setActiveInputMode(String mode) {
+  // Safe no-op in V8.9 to prevent inputmode swapping on focus
+}
+

@@ -9,8 +9,13 @@ class MorganPrefs {
   MorganPrefs._();
 
   // ── Key helpers ─────────────────────────────────────────────────────────────
-  static String _uid() =>
-      FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+  static String _uid() {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+    } catch (_) {
+      return 'guest';
+    }
+  }
 
   static String _key(String k) => 'morgan_${_uid()}_$k';
 
@@ -30,12 +35,14 @@ class MorganPrefs {
   /// True once the user has completed the one-time name setup dialog.
   static Future<bool> isSetupDone() async {
     final p = await SharedPreferences.getInstance();
-    return p.getBool(_key('setup_done')) ?? false;
+    return (p.getBool(_key('setup_done')) ?? false) ||
+           (p.getBool('morgan_setup_done_global') ?? false);
   }
 
   static Future<void> markSetupDone() async {
     final p = await SharedPreferences.getInstance();
     await p.setBool(_key('setup_done'), true);
+    await p.setBool('morgan_setup_done_global', true);
   }
 
   // ── Show on startup ──────────────────────────────────────────────────────────

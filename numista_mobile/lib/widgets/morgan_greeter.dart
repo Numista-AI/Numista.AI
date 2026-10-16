@@ -459,6 +459,7 @@ class _MorganGreeterState extends State<MorganGreeter>
     final setupDone = await MorganPrefs.isSetupDone();
     if (!setupDone && mounted) {
       final confirmed = await showMorganSetup(context);
+      await MorganPrefs.markSetupDone();
       if (!confirmed) return; // user dismissed without confirming
     }
 

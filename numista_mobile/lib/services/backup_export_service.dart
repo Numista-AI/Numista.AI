@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'backup_export_stub.dart'
     if (dart.library.js_interop) 'backup_export_web.dart' as dl_impl;
 import 'auth_service.dart';
+import '../utils/text_sanitizer.dart';
 
 /// Handles exporting the user's Firestore collection into a schemaVersion: 1 JSON bundle
 /// or a companion CSV spreadsheet for legal estate planning and offline backup.
@@ -212,7 +213,7 @@ class BackupExportService {
 
   static String cleanCsvCell(dynamic val) {
     if (val == null) return '""';
-    var str = val.toString().replaceAll('"', '""');
+    var str = TextSanitizer.fixMojibake(val.toString()).replaceAll('"', '""');
     if (str.isNotEmpty && '=+-@\t\r'.contains(str[0])) {
       str = "'$str";
     }

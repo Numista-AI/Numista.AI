@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/denomination_canon.dart';
-import '../utils/web_input_helper.dart';
 
 class AddCoinManualForm extends StatefulWidget {
   final Function(Map<String, dynamic>) onSubmit;
@@ -87,25 +85,14 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _storageCtrl   = TextEditingController(text: _formData['Storage Location'] as String? ?? '');
     _notesCtrl     = TextEditingController(text: _formData['Notes'] as String? ?? '');
 
-    // V8.7 FIX Item 3: inputmode injection on web.
-    // Flutter web b2p() removes inputmode for all non-email/password types.
-    // We re-set it on focus so the UX gate DOM shows inputmode="numeric" /
-    // inputmode="decimal" immediately when the user taps a field.
+    // V8.9 FIX 3: Static inputmode assignment per field.
+    // FocusNode listeners removed to eliminate dropped first characters (FIX 2)
+    // and inverted keypad states (FIX 3).
     _yearFocus = FocusNode();
     _costFocus = FocusNode();
     _qtyFocus  = FocusNode();
-    if (kIsWeb) {
-      _yearFocus.addListener(() {
-        if (_yearFocus.hasFocus) WebInputHelper.setActiveInputMode('numeric');
-      });
-      _costFocus.addListener(() {
-        if (_costFocus.hasFocus) WebInputHelper.setActiveInputMode('decimal');
-      });
-      _qtyFocus.addListener(() {
-        if (_qtyFocus.hasFocus) WebInputHelper.setActiveInputMode('numeric');
-      });
-    }
   }
+
 
 
   @override
@@ -151,6 +138,11 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 isRequired: true,
                 keyboardType: const TextInputType.numberWithOptions(decimal: false),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (val) {
+                  if (RegExp(r'^\d{4}$').hasMatch(val.trim())) {
+                    _formKey.currentState?.validate();
+                  }
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -282,7 +274,26 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
       };
 
       widget.onSubmit(formData);
+      _resetForm();
     }
+  }
+
+  void _resetForm() {
+    _formKey.currentState?.reset();
+    _yearCtrl.clear();
+    _mintCtrl.clear();
+    _denomCtrl.clear();
+    _programCtrl.clear();
+    _themeCtrl.clear();
+    _varietyCtrl.clear();
+    _conditionCtrl.clear();
+    _costCtrl.clear();
+    _qtyCtrl.text = '1';
+    _retailerCtrl.clear();
+    _invoiceCtrl.clear();
+    _storageCtrl.clear();
+    _notesCtrl.clear();
+    _formData.clear();
   }
 
   Widget _sectionHeader(String title, IconData icon) {
@@ -340,6 +351,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     List<TextInputFormatter>? inputFormatters,
     String? prefixText,
     int maxLines = 1,
+    ValueChanged<String>? onChanged,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final labelColor = isDark ? Colors.white : const Color(0xFF0F172A);
@@ -385,6 +397,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             decoration: _inputDeco(context, hint, prefixText: prefixText),
             validator: isRequired ? (val) => _validatorFor(key, val) : null,
             onSaved: (val) => _formData[key] = val ?? '',
+            onChanged: onChanged,
           ),
         ],
       ),

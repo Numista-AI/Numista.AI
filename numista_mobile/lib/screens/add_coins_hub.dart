@@ -23,8 +23,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../theme/numista_theme.dart';
 import '../services/http_auth_client.dart';
+import '../services/guest_seed_service.dart';
 import '../utils/numista_error_helper.dart';
-import '../utils/web_input_helper.dart';  // V8.7: inputmode injection on web
 
 
 class AddCoinsHub extends StatefulWidget {
@@ -292,6 +292,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        behavior: SnackBarBehavior.floating,
+        width: 400,
         content: const Row(children: [
           Icon(Icons.check_circle, color: Colors.white, size: 20),
           SizedBox(width: 10),
@@ -299,11 +301,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               style: TextStyle(fontWeight: FontWeight.w600)),
         ]),
         backgroundColor: const Color(0xFF22C55E),
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'View Collection',
           textColor: Colors.white,
           onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
             if (widget.onNavigate != null) widget.onNavigate!('My Collection');
           },
         ),
@@ -552,13 +555,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       setState(() => _isProcessing = false);
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        behavior: SnackBarBehavior.floating,
+        width: 400,
+        duration: const Duration(seconds: 3),
         content: const Text('✅ Coin added to your collection!'),
         backgroundColor: const Color(0xFF10B981),
         action: widget.onNavigate != null
             ? SnackBarAction(
                 label: 'View',
                 textColor: Colors.white,
-                onPressed: () => widget.onNavigate!('My Collection'),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  widget.onNavigate!('My Collection');
+                },
               )
             : null,
       ));
@@ -1826,9 +1835,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       controller: ctrl,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
-      onTap: (webInputMode != null && kIsWeb)
-          ? () => WebInputHelper.setActiveInputMode(webInputMode)
-          : null,
       style: const TextStyle(color: Color(0xFF1E293B)),
       onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
@@ -2006,6 +2012,18 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               AddCoinManualForm(
                 isProcessing: _isProcessing,
                 onSubmit: (data) async {
+                  if (GuestSeedService.isBrowseDemoMode) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        behavior: SnackBarBehavior.floating,
+                        width: 400,
+                        content: Text('Demo mode — create a free account to save coins.'),
+                        backgroundColor: Color(0xFFF59E0B),
+                      ),
+                    );
+                    return;
+                  }
+
                   setState(() => _isProcessing = true);
 
                   try {
@@ -3355,9 +3373,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         maxLines: maxLines,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
-        onTap: (webInputMode != null && kIsWeb)
-            ? () => WebInputHelper.setActiveInputMode(webInputMode)
-            : null,
         style: TextStyle(
             fontSize: 18,
             color: readOnly ? const Color(0xFF64748B) : const Color(0xFF1E293B)),
@@ -5074,8 +5089,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Widget _camInputField(String label, TextEditingController ctrl,
-      {int maxLines = 1, TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters,
-       String? webInputMode}) {   // V8.7: 'numeric' or 'decimal' for web inputmode
+      {int maxLines = 1, TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -5086,9 +5100,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           maxLines: maxLines,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
-          onTap: (webInputMode != null && kIsWeb)
-              ? () => WebInputHelper.setActiveInputMode(webInputMode)
-              : null,
           style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B)),
           decoration: InputDecoration(
             isDense: true,
