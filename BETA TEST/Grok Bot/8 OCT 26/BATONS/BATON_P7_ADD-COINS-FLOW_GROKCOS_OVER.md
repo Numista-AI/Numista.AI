@@ -1,5 +1,5 @@
-﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: AG CoS (OVER — V8.10 build per NET-278; UX V8.9 FAIL).
+# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
+Holder: Grok CoS (OVER — V8.10 build complete on 747f7051; awaiting preview deploy + UX/FT re-gate).
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -361,3 +361,17 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-16 13:27 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 (~108 min since NET-278 handoff; ~87 min since NET-281; AG on 25-min self-wake timer). Under 2h, no stall yet, no Eric ping (2h mark ~13:39). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK (numista.ai 200). Rule 9.5: no board-unchanged NET. OVER.
 
 - 2026-10-16 13:40 ET GROKCOS WATCH: STALL FLAG. P7 (critical path) with AGCOS for V8.10 unmoved 2h since NET-278 handoff (11:39). Last AG radio NET-281 (12:00); last AG activity ~12:22 (code reads only); no V8.10 code edits, branch or commits found; 25-min self-wake timer not firing. Eric pinged ONCE to type "check radio" to AG (marker _ERIC_PINGED_AG_IDLE_P7_V810_2026-10-16.md). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. See NET-282. OVER.
+
+- 2026-10-16 13:54 ET GROKCOS WATCH: No GROKCOS score owed. P7 still with AGCOS for V8.10 (~2h15m since NET-278). Stall already flagged 13:40 (NET-282) and Eric pinged once; no re-flag inside the hour, no re-ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live checked. Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 14:06 ET GROKCOS WATCH: ACK NET-283 (V8.10 stall cause: Opus quota 429 at 12:22, no code lost, worktree clean at 731ab7ac; AG relaunched V8.10 ~14:04 with all 14 items, 25-min self-wake re-armed). Stall resolved; stall clock restarts from 14:04. No GROKCOS score owed. No re-ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live checked. Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 14:24 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 relaunch (~20 min since NET-283 at 14:04; AG on 25-min self-wake). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK (numista.ai 200). Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 14:46 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 relaunch (~42 min since NET-283 at 14:04; AG on 25-min self-wake). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK (numista.ai 200). Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 14:59 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 relaunch (~55 min since NET-283 at 14:04; baton touched 14:46; AG on 25-min self-wake). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live checked. Rule 9.5: no board-unchanged NET. OVER.
+
+
+- 2026-10-16 15:11 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 relaunch (~67 min since NET-283 at 14:04; AG on 25-min self-wake). Under 2h, no stall, no Eric ping (2h mark ~16:04). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK (numista.ai 200). Rule 9.5: no board-unchanged NET. OVER.
+- 2026-10-16 ~15:15 ET — AG CoS: V8.10 build complete on 747f7051 (p7-v8.9). 0 analyze issues, 566/566 tests pass. All 14 NET-278 UX + NET-280 FT findings addressed with strict verbatim citations in GEMINI38_REVIEW_P7_V8_10_BUILD.md. Grokbot coin audit: 312 physical coins confirmed across 314 Firestore docs (310 qty=1, 1 qty=2; 3 Set parents excluded; zero test coins). Passing baton to Grok CoS for V8.10 preview deploy & re-gate. OVER.
