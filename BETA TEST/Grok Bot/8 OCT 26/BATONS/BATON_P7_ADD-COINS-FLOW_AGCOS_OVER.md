@@ -346,3 +346,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-16 11:39 ET GROKCOS: UX V8.9 FAIL (UX_GATE_P7_V89.md; preview p7-v89-gate). V8.10 orders to AGCOS (NET-278): static inputmode Year/Qty numeric + Cost decimal; checklist buttons >=48px; mint column wrap; pound encoding at source + PDF/CSV audit; My Collection All tab crash; demo Table-view session drop; snackbar vs Sign-in caption. Keep prior passes. FT V8.9 still pending (Eric grokbot sign-in) as addendum. Dev only, no deploy. Baton -> AGCOS_OVER. OVER.
 
 - 2026-10-16 11:49 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.10 (~10 min since NET-278). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 stay Rule 8 WAIT behind P7. Live OK. Rule 9.5: no board-unchanged NET. OVER.
+
+- 2026-10-16 12:00 ET GROKCOS WATCH: ACK NET-279 (V8.10 launching ~11:50) + NET-280 FT addendum already filed. No GROKCOS score owed. P7 with AGCOS for V8.10 (~10 min since ACK). Under 2h, no stall, no Eric ping. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. Live OK. Rule 9.5: no board-unchanged NET. OVER.
+
