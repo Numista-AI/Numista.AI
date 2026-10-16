@@ -1,221 +1,167 @@
-# SCAN REPORT: Numista.AI System Audit (v4.403)
+# SCAN_REPORT.md — Numista.AI 360° System Audit
+
+**Date:** 2026-10-16 09:07 ET  
+**Branch:** `dev` (clean, synced with `origin/dev`)  
+**Scanner:** Antigravity project-scanner skill  
+**Session:** Docs-only scan (Rule 9 — no source code modifications)
+
+---
 
 ## Executive Summary
-* **Status:** 🟢 **PASS** (System audit completed with a 100% backend unit pass rate [558 passed, 0 failed in 30.04s], 0 Dart compilation errors and 0 warnings [clean analyzer: `dart analyze lib` exit 0 with "No issues found!"], 510/510 Flutter unit tests passed [100% pass rate in 25.0s], live Cloud Run backend probes 100% operational across all routes [8/8 healthy; default-deny auth sentinels validated], and Playwright smoke tests 100% operational [8/8 passed in 40.9s; master suite: NOT RUN this session]. Test Isolation: E2E tests target `grokbot@numista.ai` [QC bot account] with zero production Firestore mutation. Gemini model policy: 100% compliant with 2026 GA models including primary flash workhorse `gemini-3.8-flash` and `gemini-embedding-2`).
-* **Scan Date:** 2026-10-15
-* **Target Environment:** `dev` branch (`studio-9101802118-8c9a8` GCP project / `numista-vault` Firebase project)
-* **Versions Scanned:** Backend v4.403, Mobile/Web Frontend v4.403 (Beta 1 AUG 26 / Launch 1 NOV 26 alignment)
+
+### 🟢 PASS WITH WARNINGS
+
+All test suites exit 0. Two non-fatal `dart analyze` warnings in a test file.
+No compilation errors, no security alerts, no backend failures.
 
 ---
 
-## Critical Errors & Warnings Summary
-* **Fatal Backend Errors:** 0
-* **Dart / Flutter Compilation Errors & Warnings:** 0 errors, 0 warnings (`dart analyze lib` exit 0; "No issues found!")
-* **Active Deprecated Gemini Models in Production:** 0 (0 occurrences of `gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*` across all production and maintenance code paths; 100% 2026 GA compliance)
-* **Live Probes Health:** 100% operational on `https://numista-backend-568985927038.us-central1.run.app` and `https://numista.ai` (8/8 endpoints healthy)
-* **Backend Pytest Suite:** 558 passed, 0 failed in 30.04s (100% pass rate; matches `numista_tests/reports/pytest-output.txt`)
-* **Frontend Playwright Smoke Suite:** 8 passed, 0 failed in 40.9s (`auth.setup.js`, `01-homepage.spec.js`; master suite: NOT RUN this session)
-* **Flutter Unit Suite:** 510 passed, 0 failed in 25.0s (100% pass rate; 0 failures)
-* **P2 Coin Count Single Source of Truth (commit b3b7c30f):** Verified active (311 canonical count across Flutter header stats bar, my collection screen, home dashboard, and backend snapshot/daily via `expand_collection_inventory` and `count_coins_and_lots`).
-* **P7 Add-Coins Flow & Unified Cert Lookup (commits caa3c93f, ec34ab69):** Verified active (PCGS, NGC, CAC barcode and cert lookup with verification links, full-screen cert entry, auto-detection, slab OCR, and duplicate-add confirm).
-* **Live Auth Headers & Perimeter Hardening (PR #264, commit f55a11de):** Verified active (All backend calls utilize authenticated client with Bearer token injection, route-level identity validation across 21 Category-2 routes).
-* **T4 Security & Protection Hardening (PR #262, commit c80f4122 / eee06487):** Verified active (Portfolio snapshot IDOR ownership verification, estate rules & document size limits, AI valuation rate capping [20/hr] and anonymous user block with 403, CSV formula injection sanitization, admin navigation role check, and dependency upgrades reducing open Dependabot alerts from 64 to 47).
-* **Morgan Gate 0 V2 Verification (commit 9769dac5):** Verified active (Coin proposal update and undo logic, currency string sanitization/stripping, custom delimiters for batches >50, transactional confirmation, and action-log verified undo).
-* **Older User Onboarding & UX Polish (REQ-032 V2, commit 9fc13333):** Verified active (Hardware keyboard listener, 14px typography floor, login form token alignment, enlarged forgot-PIN tap targets, numeric keypad cap, and textBodySm banner styling).
-* **Alternate Site & Dynamic Variant Switcher (REQ-032B V2, commit 9fc13333):** Verified active (Firestore wildcard rule exclusions, fail-safe degradation to classic layout on API error or unlisted user, and `ui_variant` admin endpoints).
-* **Security & Lateral Transfer Hardening (v4.401–v4.403):** Verified active (Client auth headers, recipient-before-PIN DoS prevention, atomic attempt counters, passwordMode wiring, Firebase token enforcement on transfer, grade_review, admin/grade_flags, and greysheet/deals routes [REQ-027 / REQ-027B / REQ-027C / REQ-031 / REQ-031B]).
-* **PIN Authentication & Lockout Security (v4.401–v4.402):** Verified active (PIN-first sign-in UX, softened lockout messages to "a few minutes", anti-enumeration protection, and removal of PINs and coin counts from email notifications [REQ-025 / REQ-025B]).
-* **Marketing & Sourcing Accuracy (v4.403):** Verified active (Removed unverified eBay/arbitrage claims and ensured clean sign-in redirects across public entrypoints [REQ_028]).
-* **Front Door & Session Reliability (v4.399):** Verified active (Resolved sign-in dead ends across public entrypoints, zero-read Firestore isolation in demo mode, XML sitemap validation, and CORS/Bearer auth on `/generate_estate_report` [REQ-023D / REQ-020]).
-* **Paper Trail Receipt Scanning & Streaming (v4.397–v4.398):** Verified active (Resolved blank page on View Scan by dynamic detection and streaming of PDF, JPG, and PNG scans; support for gs://, HTTPS, and relative receipt paths [REQ-019]).
-* **Lateral Transfer & Record Sale Bounds (v4.395–v4.398):** Verified active (Sell-direct validation, Mode 3 payload alignment, and public front-door zero-write vault [REQ-018 / REQ-018A / REQ-023C]).
-* **Pre-Deploy Security & Data Loss Prevention (v4.392–v4.393):** Verified active (Blob retention when coins link to receipts [MF-1], owner-folder path validation on receipt deletions, catalog 26SQRD removal [MF-2], and cost override orig_i indexing).
-* **Security & Auth Token Hardening (v4.390–v4.391):** Verified active (Bearer auth on receipt list/view/stream, identify_coin_photo, appraisal-pdf export, and pre-validation of cost split overrides [REQ_015 / REQ_016]).
-* **Sets Management & Owner Photos (v4.375–v4.376):** Verified active (Owner photos on sets and atomic group/ungroup capability via `SetGroupingService`).
-* **Hosting Hardening & Route Allowlist (v4.376):** Verified active (Strict route allowlist and standalone custom `404.html` fallback).
-* **Upcoming US Mint Releases & Valuation Fallback (v4.361–v4.370):** Verified active (Automated test suites, migration seed hardening, and official US Mint Issue Price fallback with `ai_value_status` field).
-* **26RJ Catalog & Ghost Repair Status:** Verified active (26RJ 20-coin count, 8 Firestore `coin_image_index` URLs aligned, ghost children eliminated, anti-hallucination guardrail active in `main.py`).
-* **Checklist Stale PDF Hotfix Status:** Verified active (`HOTFIX PDF_STALE` and `PDF_STALE_AFTER_CHECKOFF` enforce server-side cache bypass and atomic FutureBuilder invalidation).
-* **Security & Vulnerability Triage:** CodeQL Alert #69 resolved, Phase 1 & T4 security hardening active. **Dependabot:** 47 open alerts on default branch (1 critical, 25 high, 20 medium, 1 low npm/pub dependencies; triage recommended before launch).
+## 1. Frontend — Flutter
+
+### `flutter analyze`
+- **Exit code:** 1 (warnings only, no errors)
+- **Issues:** 2 warnings, 0 errors, 0 info
+  1. `warning` — Unused import: `package:firebase_auth/firebase_auth.dart`  
+     → `test/p7_v8_ux_safety_test.dart:1:8` (`unused_import`)
+  2. `warning` — Dead code  
+     → `test/p7_v8_ux_safety_test.dart:1253:14` (`dead_code`)
+- **Note:** Both warnings are in a test file, not production code. No production lint issues.
+
+### `flutter test`
+- **Exit code:** 0
+- **Result:** **559 passed / 0 failed**
+- **Non-fatal runtime note:** `test/ux_fixes_test.dart:202` — `tap()` on `PinBoxRow` widget derived offset off-screen (cosmetic, test still passed)
+- **Version:** 4.403.0+403
+- **Dart SDK:** ^3.11.3
 
 ---
 
-## Dev Environment & Credential Notes
-1. ✅ **Greysheet API Dev Fallback (Phase 1 Security Hardening):** Local `.env` intentionally unpopulated for `GREYSHEET_API_KEY` / `GREYSHEET_API_TOKEN` per Phase 1 security policy. Dev environment defaults to Tier 0 Firestore `config/greysheet` cache with live fallback. Production credentials are securely managed in GCP Secret Manager and Cloud Run environment variables.
-2. ✅ **Live Greysheet Probing:** Direct live probe to `https://numista-backend-568985927038.us-central1.run.app/api/greysheet/config` returned HTTP 401 Unauthorized as expected without Bearer authentication under default-deny security enforcement.
+## 2. Backend — Python / FastAPI
+
+### Backend Pytest
+- **Exit code:** 0
+- **Result:** **566 passed / 0 failed / 0 errors** in 26.42s
+- **Python:** 3.14.2, pytest 9.1.1
+- **Artifact:** `numista_tests/reports/pytest-output.txt` matches (last line: `566 passed in 26.42s`)
+
+### Dependencies
+- **Total packages:** 115 (via `requirements.txt`)
+- **Core:** FastAPI 0.141.1, Uvicorn 0.44.0, Pydantic 2.12.5
+- **Google Cloud / GenAI:** google-genai 1.75.0, firebase_admin 7.3.0, google-cloud-firestore 2.26.0
+- **Auth & Payments:** PyJWT 2.14.0, cryptography 50.0.1, stripe 15.2.1
+
+### CORS Configuration
+- Explicit allowlist: `numista.ai`, `numista-vault.web.app`, `numista-vault.firebaseapp.com`, localhost variants
+- Regex: `^https://numista-vault--[a-z0-9-]+\.web\.app$` (preview channels)
+- Explicit OPTIONS preflight handler for `identify_coin_photo` (prevents 405 on mobile)
+- **Status:** ✅ Properly configured
 
 ---
 
-## Model Binding & LLM Health (Rule 6 Compliance)
-* **Model ID Verification:** Verified clean. Exactly 0 occurrences of deprecated or retired model IDs (`gemini-1.5-*`, `gemini-2.0-*`, `gemini-2.5-*`) across active production paths and maintenance scripts.
-* **Centralized Declarations (`numista_backend/config/__init__.py` & `routes/deps.py`):**
-  * `GEMINI_FLASH_MODEL` / `MODEL_FLASH`: `gemini-3.8-flash` 🟢 PASS (Primary workhorse / Active GA / 2026 GA Policy)
-  * `GEMINI_PRO_MODEL` / `MODEL_PRO`: `gemini-3.1-pro-preview` 🟢 PASS (Active GA / 2026 GA Policy)
-  * `GEMINI_LITE_MODEL`: `gemini-3.5-flash-lite` 🟢 PASS (Active GA / 2026 GA Policy)
-  * `GEMINI_IMAGE_MODEL`: `gemini-3.1-flash-image` 🟢 PASS (Active GA / 2026 GA Policy)
-* **Ingestion & Classification Models (`numista_backend/config/ingestion_config.py`):**
-  * `CLASSIFIER_MODEL`: `gemini-3.8-flash` 🟢 PASS
-  * `EXTRACTION_MODEL`: `gemini-3.1-pro-preview` 🟢 PASS
-  * `FALLBACK_FLASH_MODEL`: `gemini-3.8-flash` 🟢 PASS
-  * `FALLBACK_PRO_MODEL`: `gemini-3.5-pro` 🟢 PASS
-* **Frontend Multimodal Analysis Models:**
-  * `numista_mobile/lib/screens/coin_detail_screen.dart`: `gemini-3.8-flash` 🟢 PASS
-  * `numista_mobile/lib/services/coin_normalizer_service.dart`: `gemini-3.8-flash` 🟢 PASS
-* **Certification Slab OCR (`numista_backend/routes/cert_routes.py`):**
-  * OCR Model: `gemini-3.8-flash` (Vertex AI + ADC) 🟢 PASS
-* **Vector Embeddings (`numista_backend/services/vector_rag_service.py`):**
-  * Embedding Model: `gemini-embedding-2` (1536 dimensions, Vertex AI `location="global"`) 🟢 PASS
-  * Dual-Path Retrieval: `cosine_all` (exact Cosine Distance scan) & `find_nearest` (Vector Search Index) with fallback 🟢 PASS
-  * Safe Embedding Guard: `SKIP_DIM` string-length check preventing API overflow on oversized payloads 🟢 PASS
-* **Offline Tooling Health:** `numista_qc/layer_4_self_update/test_synthesizer.py` and `feedback_miner.py` verified aligned with `gemini-3.8-flash` 🟢 PASS.
-* **AGENTS.md Rule 6 Compliance:** 100% compliant across production serving stack, offline tooling, and maintenance scripts.
+## 3. End-to-End / Playwright
+
+### Playwright Smoke: NOT RUN this session
+### Master suite: NOT RUN this session
+
+No E2E tests were executed during this scan session.
 
 ---
 
-## Greysheet API & Tier 0 Image Waterfall Health
-* **Live Backend Probes (`https://numista-backend-568985927038.us-central1.run.app`):**
-  * `/` ➔ `200 OK` (Status: ok, Service: Numista.AI Backend)
-  * `/api/greysheet/config` ➔ `401 Unauthorized` (Default-deny auth sentinel validated; admin Bearer token required)
-  * `/api/greysheet/pricing/1001` ➔ `401 Unauthorized` (Default-deny auth sentinel validated; verified Bearer token required)
-  * `/api/spot_prices` ➔ `200 OK` (Gold: $4,176.20, Silver: $56.88, Platinum: $1,623.90, Palladium: $1,128.50)
-  * `/api/template` ➔ `401 Unauthorized` (Default-deny auth sentinel validated; authenticated access required)
-  * `/api/transfer/passport-pdf/dummy` ➔ `401 Unauthorized` (Token authentication required per REQ-027D, dummy ID unauthenticated rejected as expected)
-  * `/api/transfer/initiate` ➔ `401 Unauthorized` (Token authentication required per REQ-027, unauthenticated POST rejected as expected)
-* **Production Web App (`https://numista.ai`):** ➔ `200 OK` (HTML shell rendered, Flutter canvas bootstrapped)
-* **Proxy Configuration (`numista_backend/numista_scraper/config.py`):** Verified. `NUMISTA_SCRAPE_HTTP_PROXY` / `NUMISTA_SCRAPE_HTTPS_PROXY` properly handled with Firestore fallback.
-* **Proxy Bandwidth Circuit Breaker:** Verified. Webshare 2.7GB circuit-breaker shutoff active.
-* **Brain Watcher Inbox (`numista_backend/brain_watcher.py`):** Verified. `INBOX_DIR` configured to `Numista_Brain_Inbox`.
+## 4. Git & Version Control
+
+| Metric | Value |
+|--------|-------|
+| Branch | `dev` |
+| Working tree | Clean |
+| Ahead of `origin/dev` | 0 commits |
+| Ahead of `origin/main` | 354 commits |
+| Last commit | `51c3f57d` — Rule 9 Gemini quota saver + NET-271 to AGCOS |
+
+### Recent Commits (last 10)
+```
+51c3f57d Rule 9 Gemini quota saver + NET-271 to AGCOS
+2f8ec229 docs(radio): P7 V8.8 UX gate FAIL; NET-270 V8.9 orders
+35d35cc9 docs(radio): NET-268 day watch; NET-269 P7 V8.8 preview up
+32821a49 docs(radio): NET-267 day watch hourly re-flag
+e104ee0f docs(radio): NET-264..266 day watch stand-down
+d609bda1 docs(radio): NET-262/263 day watch stand-down
+ff4c4213 docs(radio): NET-261 day watch board unchanged
+1ff5e421 docs(radio): NET-260 day watch board unchanged
+96c1767b docs(radio): NET-259 day watch board unchanged
+feff22a5 docs(radio): NET-258 eve watch stand-down hourly re-flag
+```
+
+**⚠️ Note:** 354 commits on `dev` ahead of `main`. A merge/PR to `main` is pending Eric's review.
 
 ---
 
-## Core Features & Pipeline Audit
-* **P2 Single Source of Truth for Coin Counts (commit b3b7c30f):**
-  * Canonical Physical Coin Count: 311 coins (280 loose + 31 set children across 4 sets).
-  * Exclusions: 4 set parent docs, 2 paper currency docs, and 1 supply doc properly excluded from coin count.
-  * Flutter Header Stats Bar: Renders `${widget.totalCoinsCount} coins` (311) when unfiltered, and `'$filteredCount of ${widget.totalCoinsCount}'` when filtered.
-  * Home Dashboard & Metrics: Decoupled `totalCoins` from `totalItems`; wired to metric cards, greeting widgets, and portfolio snapshot service.
-  * Backend Synchronization: Aligned `/api/portfolio/snapshot/daily` and `/api/collection/count` with `expand_collection_inventory`.
-* **P7 Add-Coins Flow & Unified Cert Lookup (commits caa3c93f, ec34ab69):**
-  * Grader Auto-Detection: 8 digits -> PCGS, 7 digits (with dash) -> NGC, 'CAC' prefix -> CAC.
-  * PCGS Direct API Lookup: Real-time coin details fetched via PCGS API with direct verification link.
-  * NGC & CAC Manual Fallback: Documented fallback with prefilled certification number and grader type.
-  * Slab OCR Scanner: Camera slab scan with `gemini-3.8-flash` extracting cert number and grading company.
-  * Duplicate-Add Confirmation: Confirmation dialog when user adds an existing collection coin.
-* **Live Auth Headers & Perimeter Hardening (PR #264):**
-  * `HttpAuthClient`: Replaces raw `http` calls with Bearer token injection across all backend routes.
-  * Category-2 Route Ownership: IDOR protection and identity matching enforced across 21 Category-2 routes.
-  * Default-Deny Middleware: Rejects unauthorized requests at edge while supporting public discovery routes.
-* **T4 Security & Protection Hardening (PR #262):**
-  * Portfolio Snapshot IDOR Protection: `/api/portfolio/snapshot` verifies caller UID/email against target `user_id` or requires admin status.
-  * Estate Rules & Document Size Protection: Hardened Firestore security rules and capped payload thresholds preventing estate document tampering.
-  * Valuation Rate Limiting: 20 requests per hour per user on `/api/estimate_value_text` and `/api/estimate_value_general`, with anonymous access blocked via HTTP 403.
-  * CSV Formula Injection Sanitization: `BackupExportService` automatically prefixes cells starting with `=`, `+`, `-`, or `@` with `'` to neutralize spreadsheet execution.
-  * Admin Navigation Role Guard: `base_layout.dart` verifies `canManageAdmins` permission before exposing privileged administration routes.
-* **Morgan Gate 0 V2 Pipeline:**
-  * Propose update and undo support for coin specifications.
-  * Money formatting sanitization (strips `$` and commas prior to numerical cast).
-  * Safe pipe delimiter encoding for batch collections exceeding 50 entries.
-  * Transactional confirmation and verified audit trail with rollback capabilities.
-* **Older User Onboarding & Mobile UX (REQ-032 V2):**
-  * Hardware and software keyboard event listeners for assistive peripherals.
-  * Enforced 14px font size baseline for legibility across small viewports.
-  * Unified color tokens on login/PIN forms with 48px min tap-targets for PIN recovery.
-  * Numeric-only keypad restriction on 6-digit credential entries.
-* **Dynamic UI Variant Delivery (REQ-032B V2):**
-  * Firestore wildcard security rule exclusions for multi-tenant variant states.
-  * Graceful fallback degradation to classic UI variant whenever network or permissions fail.
-* **Security & Lateral Transfer Hardening (v4.401–v4.403):**
-  * Auth token enforcement: Requires verified Firebase bearer token on transfer routes (`/api/transfer/initiate`, `/api/transfer/complete`, `/api/transfer/cancel`, `/api/transfer/sold-items`).
-  * Transfer attack mitigations: Enforces recipient lock before PIN validation to prevent enumeration/DoS, atomic attempt counters, and PIN brute-force lockout.
-  * Route protection: Enforces Firebase auth token checks on `grade_review`, `admin/grade_flags`, and `greysheet/deals` routes (REQ_027B).
-  * Sensitive data hygiene: Removed PIN numbers and raw coin counts from outgoing automated email notifications.
-* **PIN Authentication UX & Security (v4.401–v4.402):**
-  * PIN-first login experience with generic error messaging on incorrect PINs to prevent email/account enumeration.
-  * Softened lockout duration messaging ("a few minutes") to maintain consumer trust while enforcing rate-limiting.
-* **Front Door & Session Reliability (v4.399):**
-  * Resolved sign-in dead ends across `/pricing`, `/features`, `/roadmap`, demo mode, and account creation.
-  * Demo Mode Isolation: Enforced zero Firestore network reads in guest demo mode (`vault_service.dart`).
-  * SEO & Discovery: Restored and validated canonical XML sitemap (`/sitemap.xml`) referencing clean URLs.
-  * Estate Reporting: Enforced Bearer auth and CORS options preflight headers on `/generate_estate_report`.
-* **Paper Trail Receipt Scanning & Streaming (v4.397–v4.398):**
-  * Fixed blank white screen bug on View Scan by dynamic detection and streaming of PDF, JPG, and PNG scans (REQ-019).
-  * Backend multi-candidate file resolver handles gs:// URIs, HTTPS URLs, and relative storage paths.
-* **Sell & Lateral Transfer System (v4.395–v4.398):**
-  * Validated Mode 3 Record Sale payload parameters (`sale_price`, `buyer_email`, `notes`) and bounds checks (REQ-018 / REQ-018A).
-  * Direct sale and undo sale endpoints hardened with auth token verification.
-* **Pre-Deploy Security & Data Loss Prevention (v4.392–v4.393):**
-  * Receipt blob retention: Prevents storage orphan leaks and premature deletion when active coin records still link to `receipt_id` (MF-1).
-  * Storage path security: Strict owner-folder verification on GCS blob deletions (`receipts/{user_id}/...`) preventing cross-user path traversal.
-  * Catalog cleanup: Removed nonexistent product code `26SQRD` and corrected `26SQRP` mint mark attribute (MF-2).
-  * Index consistency: Indexed cost split overrides by `orig_i` in `commit_group_photo` to prevent price shift bugs on partial batch errors.
-* **Auth & Endpoint Security Hardening (v4.390–v4.391):**
-  * Bearer token enforcement on receipt viewing, receipt streaming, and `/api/identify_coin_photo`.
-  * Authentication enforcement on `/api/export/appraisal-pdf`.
-  * Pre-validation of cost split overrides with atomic commit transactions.
-* **Hosting Hardening & Route Allowlist (v4.376):**
-  * `numista_mobile/firebase.json`: Strict rewrites allowlist for API routes and valid frontend routes (`/`, `/wishlist`, `/collection`, etc.); eliminated catchall `**` rewrite.
-  * `numista_mobile/web/404.html`: Custom branded static 404 page for direct URL misses.
-  * `numista_mobile/lib/screens/not_found_screen.dart`: Branded in-app 404 fallback with quick navigation buttons.
-* **Sets Management & Grouping Service (v4.375–v4.376):**
-  * `numista_mobile/lib/services/set_grouping_service.dart`: Support for grouping loose coins into coin sets and atomic ungrouping with owner photo cleanup.
-  * Set owner photo uploads and interactive image viewers integrated in `my_collection_screen.dart`.
-* **Upcoming US Mint Releases & Valuation Fallback System (v4.361–v4.370):**
-  * `services/usmint_releases_scraper.py`: Dual-source scraper with delta detection, changelog tracking, and official `get_mint_issue_price()` fallback.
-  * `screens/upcoming_releases_screen.dart`: Release catalog with hero card, filters, sorting, and status badges.
-  * `services/upcoming_releases_service.dart`: API fetch + SharedPreferences caching + fallback data.
-  * Valuation Fallback Hardening: Removed .50 hardcoded valuation fallback from `main.py`; replaced with US Mint Issue Price and `ai_value_status` field.
-* **Vector RAG (Phase 4 Semantic Search):** Active. Wired into `/api/deep_dive` and `/api/ai/chat` for high-precision numismatic retrieval against canonical catalogs.
-* **Asset Transfer & Secure Passport System:** Verified. Lateral Transfer API routes (`/api/transfer/...`) and Secure Passport schema endpoints active in `main.py` and `services/transfer_service.py`.
-* **Estate Management System:** Verified. Tokenized attorney portal (`/api/v1/estate/...`), dynamic snapshot generation, token revocation, and 256 KB chunked streaming active in `routes/estate_routes.py` and `routes/attorney_routes.py`.
-* **Vertex AI & Search Grounding:** Verified. Morgan Chat Google Search grounding and Vertex AI endpoints active.
-* **US Mint & Treasury Programs Registry:** Verified. Master registry of all 35 official programs active in `numista_backend/master_coin_programs.json` (including 2026 Semiquincentennial Series with Item 26RJ, 2026 U.S. Circulating Coins, Sacagawea & Native American Dollars, and American Innovation $1 Coin Program); ground-truth checklist counts confirmed without wildcard inflation.
-* **26RJ Catalog & Ghost Repair Status:** Verified active (26RJ 20-coin count, 8 Firestore `coin_image_index` URLs aligned, ghost children eliminated, anti-hallucination guardrail active in `main.py`).
-* **Checklist Ownership & PDF Fixes (v4.329–v4.330):**
-  * `HOTFIX PDF_STALE`: Server-side `.get(GetOptions(source: Source.server))` bypasses stale Flutter widget closures.
-  * `PDF_STALE_AFTER_CHECKOFF`: Shared `_invalidateAndRefetchCoins()` helper invalidates local cache and triggers atomic FutureBuilder refetch.
-* **Goals & Proof-Sets Enhancements (v4.307+):** Filter progress counter by goal dropdown (`PROGRAM_GOAL_PROGRESS`) and set children expansion in checklist with strike_type/metal_content pass-through (`STATE_Q_PROOFSET_S_PROOF`).
-* **Checklists Plain-English PDF Notes/QTY (v4.316):** Verified. Grid card uses `expandCollection` with saved goal (`GRID_CARD_PCT_LAG`) and plain-English PDF notes/quantities.
-* **Authentication Enhancements:** Dual login support with PIN + password active; sovereign test account support via 6-digit PIN.
-* **Brain Watcher Pipeline:** Hash-idempotent absorb, on_modified handler, file_bytes passing, and deny-list enforcement active.
-* **Phase 2 Desktop Shell:** Verified. Responsive navigation rail (1920x1080 desktop layout), max-width containers, and web hotkeys active.
-* **Morgan AI Session Persistence v2:** Verified. Context engine v2 with session continuity and multi-turn numismatic advisory active.
-* **Hardware Capture v2 & WebRTC Fallback:** Verified. `CameraCaptureService.capturePhoto` API active; WebRTC fallback path confirmed.
+## 5. Security & Configuration
+
+### Firestore Rules
+| File | Size | Last Modified (UTC) |
+|------|------|---------------------|
+| `numista_mobile/firestore.rules` | 17,573 B | 2026-10-15 15:08:22 |
+| `numista_backend/firestore.rules` | 12,166 B | 2026-10-14 15:41:16 |
+
+**⚠️ HOLD — Firestore Rules Divergence:** The two `firestore.rules` files differ by **217 lines**. The `numista_mobile/` copy (deployed) is canonical; the `numista_backend/` copy is stale and behind. This is a known issue — the backend copy should be synced or removed to avoid confusion.
+
+### Environment Files
+| File | Status |
+|------|--------|
+| `numista_backend/.env` | ✅ Present (2,824 B, last modified 2026-07-25) |
+| Root `.env` | Not present |
+| `numista_mobile/.env` | Not present |
+| `numista_admin/.env.local` | Present |
+| `numista_hardware/.env` | Present |
+| `numista_tests/.env` | Present |
+
+### `.gitignore` Coverage
+- `.env` files, `*.db`, `scratch/`, `output/`, `*.cache` — expected to be in `.gitignore`
 
 ---
 
-## Architecture & Code Quality Health
-* **Backend Monolith Deconstruction:** ✅ **COMPLETE.** All backend routes modularized into 17+ dedicated `APIRouter` modules under `numista_backend/routes/`:
-  * Core scan, AI, and collection routes (`scan_routes.py`, `ai_routes.py`, `collection_routes.py`)
-  * Unified certification lookup routes (`cert_routes.py`)
-  * Market valuation and Greysheet pricing (`greysheet_routes.py`, `valuation_routes.py`, `greysheet_admin_routes.py`, `greysheet_error_routes.py`)
-  * Estate and Lateral Transfer systems (`estate_routes.py`, `attorney_routes.py`, `main.py`)
-  * PCGS, news, payment, support, and admin routes (`pcgs_routes.py`, `news_routes.py`, `payment_routes.py`, `support_routes.py`, `affiliate_routes.py`, `grade_review_routes.py`, `import_routes.py`, `subaccount_routes.py`, `telemetry_routes.py`, `sandbox_routes.py`, `morgan_routes.py`)
-* **Route Parity Baseline:** `route_snapshot_baseline.json` maintained for automated regression detection.
-* **Frontend Dart Analysis:** `dart analyze lib` executed with 0 compilation errors and 0 warnings ("No issues found!").
+## 6. Model & Program Registry
+
+### Gemini Models in Use
+| Model | Role | Shutdown Status |
+|-------|------|-----------------|
+| `gemini-3.8-flash` | Primary workhorse | No shutdown announced |
+| `gemini-3.1-pro-preview` | Pro tasks | No shutdown announced |
+| `gemini-3.5-flash-lite` | Lite tasks | No shutdown announced |
+| `gemini-3.1-flash-image` | Image editing | No shutdown announced |
+| `gemini-embedding-2` | RAG / vector embeddings (1536-dim) | No shutdown announced |
+
+**Note:** `littleton_sku_helper.py:330` mentions `gemini-3.5-flash` in a docstring example only — not an active model call.
+
+### Program Count
+- **35 official programs** in `master_coin_programs.json` (563,938 B)
+- Covers: Lincoln Cents, Morgan Dollars, American Silver Eagles, Presidential Dollars, America250, and 30 more series
 
 ---
 
-## Security Audit
-* **CodeQL Alert #69:** ✅ **RESOLVED.** Incomplete URL substring sanitization for Smithsonian domain check replaced with `urlparse` netloc comparison.
-* **Phase 1 Security Hardening:** ✅ Complete. Auth interceptors, subaccount persistence, and secret hygiene enforced.
-* **T4 Security Hotfix:** ✅ Deployed & verified (PR #262, commit c80f4122 / eee06487). Portfolio IDOR, estate permissions, rate limiting, and CSV injection hardening active.
-* **PCGS Bearer Token:** ✅ Confirmed via `PCGS_BEARER_TOKEN` environment variable.
-* **Dependabot Vulnerability Management:** ⚠️ 47 open alerts flagged on default branch (1 critical, 25 high, 20 medium, 1 low npm/pub dependencies; remediated down from 64 in prior audit).
+## 7. Test Isolation
+
+No E2E tests were executed this session. Default test account: `grokbot@numista.ai` (QC bot account).
+No forbidden accounts (`ericdcman@gmail.com`, `eric.seaman@yahoo.com`, `jseaman1204@gmail.com`) were used.
 
 ---
 
-## Test Logs & Isolation Summary
-* **Backend Pytest Suite:** `558 passed, 0 failed in 30.04s` (100% pass rate; matches `numista_tests/reports/pytest-output.txt`).
-* **Frontend Dart Analyzer:** `Analyzing lib... No issues found!` (Exit code 0, 0 errors, 0 warnings).
-* **Frontend Playwright Smoke Suite:** `8/8 passed in 40.9s (auth.setup + 01-homepage only)` (`Master suite: NOT RUN this session`).
-* **Frontend Flutter Unit Suite:** `510 passed, 0 failed in 25.0s` (100% pass rate; 0 failures).
-* **Layer 3 Data Health Probes:** `8/8 endpoints healthy` (Homepage: 200 OK, Backend Root: 200 OK, Spot Prices: 200 OK; Greysheet Config: 401 auth sentinel, Pricing: 401 auth sentinel, Template: 401 auth sentinel, Passport PDF: 401 auth sentinel, Transfer Initiate: 401 auth sentinel).
-* **Test Isolation Policy & Confirmation:** ✅ Test Isolation: E2E tests target `grokbot@numista.ai` (QC bot account). Authenticated successfully with `uid=eIGZgYb49eeCR4Bsa5ABtHr94L63`. Zero forbidden accounts used (`ericdcman@gmail.com`, `eric.seaman@yahoo.com`, `jseaman1204@gmail.com`). Zero production Firestore mutation.
+## 8. Holds & Action Items
+
+| # | Severity | Item | Owner |
+|---|----------|------|-------|
+| 1 | ⚠️ Warning | `flutter analyze` — 2 warnings in `test/p7_v8_ux_safety_test.dart` (unused import L1, dead code L1253) | Next P7 baton |
+| 2 | ⚠️ Warning | `numista_backend/firestore.rules` is stale — 217-line divergence from canonical `numista_mobile/firestore.rules` | Dedicated baton |
+| 3 | ℹ️ Info | 354 commits on `dev` ahead of `main` — PR/merge pending Eric's review | Eric |
 
 ---
 
-## Recommended Pre-Launch Action Items
-1. **Dart Hygiene:** Maintain 0 issues baseline achieved on `lib` across future PRs and feature merges.
-2. **Pytest Deprecation Cleanups:** Address upstream FastAPI/asyncio deprecation warnings in test environments (`asyncio.iscoroutinefunction` slated for removal in Python 3.16).
-3. **Dependabot Remediation:** Continue triaging and resolving the remaining 47 open GitHub security alerts before launch, prioritizing the 1 critical and 25 high items.
-4. **Skill Maintenance:** Keep `.agents/skills/project-scanner/SKILL.md` aligned with current backend Cloud Run endpoints and newly registered coin programs.
+## 9. Scanner Safety Compliance
+
+- [x] Scanner ran on `dev` branch only
+- [x] No push to `main`
+- [x] No production Firestore mutations
+- [x] No source code files modified (Rule 9 — docs-only)
+- [x] Explicit file paths used for staging (no `git add .` or `git add -A`)
+- [x] `SUITE_MANIFEST.json` forbidden accounts respected
+- [x] Pytest artifact (`pytest-output.txt`) matches claimed count (566 passed)
