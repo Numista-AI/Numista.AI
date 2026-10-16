@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/http_auth_client.dart';
@@ -590,7 +590,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 Text(
                   'Loading collection data \u2014 first visit may take 3\u20135 seconds',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 18,
                     color: Color(0xFF64748B),
                   ),
                 ),
@@ -1182,7 +1182,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                             const Expanded(
                               child: Text(
                                 'Set Collection Goal & Completion',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                               ),
                             ),
                           ],
@@ -1190,7 +1190,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         const SizedBox(height: 6),
                         const Text(
                           'Choose what type of collection you are building to customize completion stats.',
-                          style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                          style: TextStyle(fontSize: 18, color: Color(0xFF64748B)),
                         ),
                         const SizedBox(height: 14),
                         dropdownWidget,
@@ -1208,12 +1208,12 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                             children: [
                               const Text(
                                 'Set Collection Goal & Completion',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                               ),
                               const SizedBox(height: 2),
                               const Text(
                                 'Choose what type of collection you are building to customize completion stats.',
-                                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                style: TextStyle(fontSize: 18, color: Color(0xFF64748B)),
                               ),
                             ],
                           ),
@@ -1315,7 +1315,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                     _selectedFinishFilter = 'ALL';
                   }),
                   icon: const Icon(Icons.clear_all, size: 16),
-                  label: const Text('Reset Filters', style: TextStyle(fontSize: 12)),
+                  label: const Text('Reset Filters', style: TextStyle(fontSize: 16)),
                 ),
             ],
           ),
