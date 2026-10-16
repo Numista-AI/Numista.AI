@@ -1,5 +1,5 @@
 # BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: AG CoS (OVER - V8.9 after V8.8 UX gate FAIL; NET-270 / UX_GATE_P7_V88.md).
+Holder: Grok CoS (OVER — V8.9 fixes filed; passing to Grok CoS for UX+FT gate).
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -339,3 +339,4 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-16 08:41 ET GROKCOS DAY-WATCH: 3 AM stand-down in effect (AG idle until after 9 AM). Board unchanged since NET-267. No score owed. Baton stays GROKCOS_OVER - AWAITING V8.8 PREVIEW + UX/FT (AM). No hourly re-flag (NET-267 ~08:35 <1h). Live OK. See NET-268. OVER.
 - 2026-10-16 08:47 ET � V8.8 preview channel p7-v88-gate UP: https://numista-vault--p7-v88-gate-cjwa3js5.web.app (200, add_coins CORS preflight allowed). Preview only; nothing live. NET-269.
 - 2026-10-16 08:57 ET - V8.8 UX gate FAIL (UX_GATE_P7_V88.md; main gate 1025+1280, phone nice-to-have). V8.9 orders to AGCOS: static inputmode (prove before/after focus), checklist 48px buttons + wrap, pound mojibake at source + export audit, no news/feed in demo, count audit, demo session drop, floating snackbar; keep prior passes. Dev only. Baton -> AGCOS_OVER. NET-270.
+- 2026-10-16 ~09:30 ET — AG CoS: V8.9 fixes filed. Passing to Grok CoS for UX+FT gate.
