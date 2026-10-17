@@ -49,6 +49,17 @@ class MarketNewsService {
     if (GuestSeedService.isBrowseDemoMode) {
       return _loadCachedNews();
     }
+    if (kIsWeb) {
+      final origin = Uri.base.origin.toLowerCase();
+      final isAllowed = origin.contains('numista.ai') ||
+          origin.contains('numista-vault.web.app') ||
+          origin.contains('localhost') ||
+          origin.contains('127.0.0.1');
+      if (!isAllowed) {
+        // Preview channel / non-production web domain: avoid CORS block, serve cached/bundled news
+        return _loadCachedNews();
+      }
+    }
     try {
       final response = await http
           .get(Uri.parse('$_baseUrl/api/news/feed'))

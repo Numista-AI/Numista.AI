@@ -113,7 +113,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Future<void> _loadEverything() async {
     // Load user name and collection context in parallel with session history
     final nameF = MorganPrefs.getDisplayName();
-    final ctxF  = MorganChatContextService.load();
+    final ctxF  = MorganChatContextService.load(forceRefresh: true);
 
     _displayName = await nameF;
     _ctx = await ctxF;
@@ -153,6 +153,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   'content': m['content']?.toString() ?? '',
                 })
             .toList();
+        if (loaded.isNotEmpty &&
+            _ctx != null &&
+            loaded.first['role'] == 'assistant' &&
+            (loaded.first['content']?.contains('coins in your collection') ?? false)) {
+          loaded.first['content'] = _ctx!.openingMessage;
+        }
         if (mounted) {
           setState(() {
             _messages.addAll(loaded.cast<Map<String, dynamic>>());

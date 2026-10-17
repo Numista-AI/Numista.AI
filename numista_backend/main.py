@@ -57,7 +57,7 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 
-ALLOWED_ORIGIN_REGEX = r"^https://numista-vault--[a-z0-9-]+\.web\.app$"
+ALLOWED_ORIGIN_REGEX = r"^https://numista-vault--[a-z0-9-]+\.(web\.app|firebaseapp\.com)$"
 _allowed_origin_re = re.compile(ALLOWED_ORIGIN_REGEX)
 
 def _is_allowed_origin(origin: str) -> bool:

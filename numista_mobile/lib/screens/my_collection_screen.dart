@@ -1401,7 +1401,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           stream: _coinsStream,
           initialData: _cachedCoinsDocs.isNotEmpty
               ? DemoQuerySnapshot(_cachedCoinsDocs)
-              : null,
+              : (GuestSeedService.isBrowseDemoMode ? GuestSeedService.cachedDemoSnapshot : null),
           builder: (context, coinsSnap) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: (!isUnauthOrDemo && email.isNotEmpty)
@@ -1409,9 +1409,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   : const Stream.empty(),
               builder: (context, currencySnap) {
                 return StreamBuilder<List<WorldItem>>(
-                  stream: isUnauthOrDemo
+                  stream: (email.isEmpty && !GuestSeedService.isBrowseDemoMode)
                       ? const Stream.empty()
                       : WorldItemService.worldItemsStream(),
+                  initialData: GuestSeedService.isBrowseDemoMode
+                      ? WorldItemService.cachedDemoWorldItems
+                      : null,
                   builder: (context, worldSnap) {
                     return FutureBuilder<bool>(
                       future: ValuationModeService.isAdvancedMode(),
@@ -6065,7 +6068,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
         state: state,
         includePhotos: true,
       ).timeout(
-        const Duration(seconds: 45),
+        const Duration(seconds: 60),
         onTimeout: () => throw Exception('Report generation timed out. Please try again.'),
       );
 

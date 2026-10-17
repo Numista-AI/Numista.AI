@@ -18,14 +18,28 @@ class GuestSeedService {
   // ─── Demo mode flag ───────────────────────────────────────────────────────
   static bool _browseDemoActive = false;
   static List<Map<String, dynamic>> _demoCoinCache = [];
+  static DemoQuerySnapshot? _cachedDemoSnapshot;
 
   static bool get isBrowseDemoMode => _browseDemoActive;
 
   static const _prefDemoActiveKey = 'browse_demo_active';
 
+  /// Returns the cached DemoQuerySnapshot, rebuilding from _demoCoinCache if needed.
+  static DemoQuerySnapshot get cachedDemoSnapshot {
+    if (_cachedDemoSnapshot != null && _cachedDemoSnapshot!.docs.length == _demoCoinCache.length) {
+      return _cachedDemoSnapshot!;
+    }
+    final snapshots = _demoCoinCache.asMap().entries.map((e) {
+      return DemoDocumentSnapshot('demo_${e.key}', Map<String, dynamic>.from(e.value));
+    }).toList();
+    _cachedDemoSnapshot = DemoQuerySnapshot(snapshots);
+    return _cachedDemoSnapshot!;
+  }
+
   /// Activate Browse Demo: load JSON into memory, no Firestore.
   static Future<void> activateBrowseDemo() async {
     _browseDemoActive = true;
+    _cachedDemoSnapshot = null;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefDemoActiveKey, true);
@@ -41,6 +55,7 @@ class GuestSeedService {
   static void deactivateBrowseDemo() {
     _browseDemoActive = false;
     _demoCoinCache = [];
+    _cachedDemoSnapshot = null;
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool(_prefDemoActiveKey, false);
     }).catchError((_) {});
@@ -51,7 +66,15 @@ class GuestSeedService {
   @visibleForTesting
   static void setDemoActiveForTest(bool value) {
     _browseDemoActive = value;
+    _cachedDemoSnapshot = null;
     if (!value) _demoCoinCache = [];
+  }
+
+  /// FOR TESTS ONLY. Sets _demoCoinCache directly without rootBundle.
+  @visibleForTesting
+  static void setDemoCoinCacheForTest(List<Map<String, dynamic>> coins) {
+    _demoCoinCache = coins;
+    _cachedDemoSnapshot = null;
   }
 
   /// Returns the in-memory demo coin list (Browse Demo mode only).
@@ -108,22 +131,18 @@ class GuestSeedService {
     return byteData.buffer.asUint8List();
   }
 
-  /// Returns a stream that emits a single `DemoQuerySnapshot` containing the
-  /// in-memory cached demo coins.
+  /// Returns a broadcast replay stream that re-emits cached demo coins to EVERY
+  /// listener upon subscription, preventing late-listener and tab-switch data loss.
   static Stream<QuerySnapshot<Map<String, dynamic>>> getDemoCoinsStream() {
-    final snapshots = _demoCoinCache.asMap().entries.map((e) {
-      return DemoDocumentSnapshot('demo_${e.key}', Map<String, dynamic>.from(e.value));
-    }).toList();
-    return Stream.value(DemoQuerySnapshot(snapshots)).asBroadcastStream();
+    return Stream.multi((controller) {
+      controller.add(cachedDemoSnapshot);
+    }, isBroadcast: true);
   }
 
   /// Returns a future that resolves to a `DemoQuerySnapshot` containing the
   /// in-memory cached demo coins.
   static Future<QuerySnapshot<Map<String, dynamic>>> getDemoCoinsFuture() async {
-    final snapshots = _demoCoinCache.asMap().entries.map((e) {
-      return DemoDocumentSnapshot('demo_${e.key}', Map<String, dynamic>.from(e.value));
-    }).toList();
-    return Future.value(DemoQuerySnapshot(snapshots));
+    return Future.value(cachedDemoSnapshot);
   }
 }
 

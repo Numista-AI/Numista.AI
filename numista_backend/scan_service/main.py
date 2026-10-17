@@ -75,6 +75,18 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 
+ALLOWED_ORIGIN_REGEX = r"^https://numista-vault--[a-z0-9-]+\.(web\.app|firebaseapp\.com)$"
+_allowed_origin_re = re.compile(ALLOWED_ORIGIN_REGEX)
+
+def _is_allowed_origin(origin: str) -> bool:
+    if not origin:
+        return False
+    if origin in ALLOWED_ORIGINS:
+        return True
+    if _allowed_origin_re.fullmatch(origin):
+        return True
+    return False
+
 
 @app.before_request
 def handle_preflight():
@@ -82,7 +94,7 @@ def handle_preflight():
     if request.method == "OPTIONS":
         response = make_response()
         origin = request.headers.get("Origin", "")
-        if origin in ALLOWED_ORIGINS:
+        if _is_allowed_origin(origin):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
@@ -105,7 +117,7 @@ def handle_preflight():
 def add_cors_headers(response):
     """Add CORS response headers to all outgoing responses."""
     origin = request.headers.get("Origin", "")
-    if origin in ALLOWED_ORIGINS:
+    if _is_allowed_origin(origin):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"

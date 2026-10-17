@@ -21,6 +21,9 @@ import 'package:numista_ai/services/checklist_generator_service.dart';
 import 'package:numista_ai/services/coin_normalizer_service.dart';
 import 'package:numista_ai/services/world_item_service.dart';
 import 'package:numista_ai/screens/program_manager_screen.dart';
+import 'package:numista_ai/services/backup_export_service.dart';
+import 'package:numista_ai/services/morgan_chat_context.dart';
+import 'package:numista_ai/services/market_news_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -1556,6 +1559,179 @@ void main() {
       expect(content, contains("el.inputMode = 'numeric'"));
       expect(content, contains("el.inputMode = 'decimal'"));
       expect(content, contains('setInterval(applyInputModes, 300)'));
+    });
+  });
+
+  group('P7 V8.12 Tests: Morgan Metrics, PDF CORS/mojibake, CSV fields, Stream Replay', () {
+    test('p7_v812_morgan_context_metrics_aligned_with_dashboard', () async {
+      GuestSeedService.setDemoActiveForTest(true);
+      GuestSeedService.setDemoCoinCacheForTest([
+        {
+          'Year': 1921,
+          'Denomination': 'Morgan Dollar',
+          'greysheetBid': '50.00',
+          'cpgRetail': '65.00',
+          'quantity': 2,
+        },
+        {
+          'Year': 2021,
+          'Denomination': 'Silver Eagle',
+          'greysheetBid': '35.00',
+          'quantity': 1,
+        },
+        {
+          'Year': 1976,
+          'Denomination': 'Bicentennial Proof Set',
+          'item_type': 'set',
+          'set_contents': [
+            {'Denomination': 'Quarter', 'Year': '1976'},
+            {'Denomination': 'Half Dollar', 'Year': '1976'},
+            {'Denomination': 'Dollar', 'Year': '1976'},
+          ],
+          'greysheetBid': '25.00',
+        },
+      ]);
+
+      final ctx = await MorganChatContextService.load(forceRefresh: true);
+
+      // Verify totalCoins expanded: 2 + 1 + 3 = 6 coins
+      expect(ctx.totalCoins, equals(6));
+
+      // Verify portfolio valuation: 50.0 + 35.0 + 25.0 = 110.0 (estate bid default)
+      expect(ctx.portfolioValue, equals(110.0));
+
+      // Verify opening message aligns with count and formatted value
+      expect(ctx.openingMessage, contains('6 coins in your collection'));
+      expect(ctx.openingMessage, contains('\$110'));
+    });
+
+    test('p7_v812_csv_export_formatting_and_missing_columns', () {
+      final payload = {
+        'coins': [
+          {
+            'Year': '2017.0',
+            'Mint Mark': 'D',
+            'Denomination': 'Quarter',
+            'Program/Series': 'America the Beautiful',
+            'Theme/Subject': 'Ellis Island',
+            'Condition': 'MS65',
+            'quantity': 3,
+            'cost': 15.5,
+            'AI Estimated Value': '\$45.00',
+            'Certification Number': '12345678',
+            'Retailer': 'APMEX',
+            'Invoice': 'INV-9981',
+            'Storage Location': 'Safe Box A',
+            'Notes': 'Gift from grandpa',
+            'Added': 'Timestamp(seconds=1729166400, nanoseconds=0)',
+          },
+          {
+            'year': 1921,
+            'mint_mark': 'S',
+            'denomination': 'Morgan Dollar',
+            'program_series': 'Morgan Dollars',
+            'theme_subject': 'Liberty Head',
+            'condition': 'AU55',
+            'quantity': null,
+            'cost': 0,
+            'ai_estimated_value': '\$38.00',
+            'cert_number': '87654321',
+            'Retailer/Website': 'Heritage Auctions',
+            'Retailer Invoice #': 'HA-4421',
+            'Location': 'Binder 1',
+            'Personal Notes': 'Toned obverse',
+            'timestamp': '2024-10-16T12:00:00Z',
+          },
+        ],
+      };
+
+      final csv = BackupExportService.generateCsvStringFromPayload(payload);
+      final lines = csv.trim().split('\n').map((l) => l.trim()).toList();
+
+      // Check Header: has Qty, Cost, Retailer, Invoice, Notes, Added
+      final header = lines[0];
+      expect(header, contains('Qty'));
+      expect(header, contains('Cost'));
+      expect(header, contains('Retailer'));
+      expect(header, contains('Invoice'));
+      expect(header, contains('Notes'));
+      expect(header, contains('Added'));
+
+      // Check Row 1: 2017.0 -> "2017" (no .0), Qty -> "3", Cost -> "$15.50", Date -> "2024-10-17"
+      final row1 = lines[1];
+      expect(row1, contains('"2017"'));
+      expect(row1, isNot(contains('"2017.0"')));
+      expect(row1, contains('"3"'));
+      expect(row1, contains('"\$15.50"'));
+      expect(row1, contains('"APMEX"'));
+      expect(row1, contains('"INV-9981"'));
+      expect(row1, contains('"Gift from grandpa"'));
+      expect(row1, contains('"2024-10-17"'));
+
+      // Check Row 2: Qty null -> "1", Cost 0 -> "$0.00", Date ISO -> "2024-10-16"
+      final row2 = lines[2];
+      expect(row2, contains('"1921"'));
+      expect(row2, contains('"1"'));
+      expect(row2, contains('"\$0.00"'));
+      expect(row2, contains('"Heritage Auctions"'));
+      expect(row2, contains('"HA-4421"'));
+      expect(row2, contains('"Toned obverse"'));
+      expect(row2, contains('"2024-10-16"'));
+    });
+
+    test('p7_v812_guest_demo_stream_multi_listener_replay', () async {
+      GuestSeedService.setDemoActiveForTest(true);
+      GuestSeedService.setDemoCoinCacheForTest([
+        {
+          'Year': 2022,
+          'Denomination': '£2 Silver',
+          'Country': 'United Kingdom',
+          'Category': 'World',
+          'Condition': 'Proof',
+          'AI Estimated Value': '45.00',
+        },
+        {
+          'Year': 1921,
+          'Denomination': 'Morgan Dollar',
+          'Country': 'USA',
+          'Category': 'US',
+          'Condition': 'MS63',
+          'AI Estimated Value': '55.00',
+        },
+      ]);
+
+      // Test 1: getDemoCoinsStream() replays to multiple consecutive listeners
+      final stream1 = GuestSeedService.getDemoCoinsStream();
+      final snap1 = await stream1.first;
+      expect(snap1.docs.length, equals(2));
+
+      // Second listener subscribes later (simulates tab switch back to All tab)
+      final stream2 = GuestSeedService.getDemoCoinsStream();
+      final snap2 = await stream2.first;
+      expect(snap2.docs.length, equals(2));
+
+      // Test 2: WorldItemService.worldItemsStream() replays to multiple listeners
+      final worldStream1 = WorldItemService.worldItemsStream();
+      final items1 = await worldStream1.first;
+      expect(items1.length, equals(1));
+      expect(items1.first.country, equals('United Kingdom'));
+
+      final worldStream2 = WorldItemService.worldItemsStream();
+      final items2 = await worldStream2.first;
+      expect(items2.length, equals(1));
+      expect(items2.first.denomination, equals('£2 Silver'));
+
+      // Test 3: initialData accessors are non-null and match caches
+      expect(GuestSeedService.cachedDemoSnapshot.docs.length, equals(2));
+      expect(WorldItemService.cachedDemoWorldItems.length, equals(1));
+    });
+
+    test('p7_v812_market_news_service_preview_origin_guard', () async {
+      GuestSeedService.setDemoActiveForTest(true);
+      // In demo mode or on non-production web origins, fetchNewsFeed falls back to cached news
+      final news = await MarketNewsService.fetchNewsFeed();
+      expect(news, isNotEmpty);
+      expect(news.first.title, isNotEmpty);
     });
   });
 }

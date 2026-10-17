@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'backup_export_stub.dart'
     if (dart.library.js_interop) 'backup_export_web.dart' as dl_impl;
 import 'auth_service.dart';
+import 'package:intl/intl.dart';
 import '../utils/text_sanitizer.dart';
 
 /// Handles exporting the user's Firestore collection into a schemaVersion: 1 JSON bundle
@@ -81,8 +82,38 @@ class BackupExportService {
     final estateProfile = await fetchSingleDoc('estate_profile', 'data');
     final betaChecklist = await fetchSingleDoc('settings', 'beta_checklist');
 
+    // Sanitize coins for export (no .0 integers, uniform $0.00 cost, readable Added date, full fields)
+    final sanitizedCoins = coins.map((c) {
+      final m = Map<String, dynamic>.from(c);
+      final y = m['Year'] ?? m['year'];
+      if (y != null) {
+        final yNum = (y is num) ? y.toInt() : (double.tryParse(y.toString())?.toInt() ?? int.tryParse(y.toString()));
+        if (yNum != null && yNum > 0) {
+          m['Year'] = yNum;
+          m['year'] = yNum;
+        }
+      }
+      final q = m['Quantity'] ?? m['quantity'] ?? m['qty'];
+      final qInt = _formatQuantity(q);
+      m['Quantity'] = qInt;
+      m['quantity'] = qInt;
+
+      final costVal = m['Cost'] ?? m['cost'] ?? m['purchase_cost'];
+      m['Cost'] = _formatCost(costVal);
+      m['cost'] = m['Cost'];
+
+      m['Retailer/Website'] = (m['Retailer/Website'] ?? m['Retailer'] ?? m['retailer'] ?? m['Dealer'] ?? m['dealer'] ?? '').toString();
+      m['Retailer Invoice #'] = (m['Retailer Invoice #'] ?? m['Invoice #'] ?? m['Invoice'] ?? m['invoice'] ?? '').toString();
+      m['Notes'] = (m['Notes'] ?? m['notes'] ?? m['Personal Notes'] ?? '').toString();
+
+      final addedVal = m['Added'] ?? m['timestamp'] ?? m['created_at'];
+      m['Added'] = _formatDate(addedVal);
+
+      return m;
+    }).toList();
+
     // Count sets for metadata
-    final setCount = coins.where((c) => c['is_set'] == true || c['Denomination'] == 'Set').length;
+    final setCount = sanitizedCoins.where((c) => c['is_set'] == true || c['Denomination'] == 'Set').length;
 
     final payload = {
       'schemaVersion': 2,
@@ -90,7 +121,7 @@ class BackupExportService {
       'user_email': email,
       'app_version': '4.339',
       'collections': {
-        'coins': coins,
+        'coins': sanitizedCoins,
         'currency': currency,
         'world_items': worldItems,
         'transferred_coins': transferredCoins,
@@ -105,7 +136,7 @@ class BackupExportService {
         'beta_checklist': betaChecklist,
       },
       'metadata': {
-        'coin_count': coins.length,
+        'coin_count': sanitizedCoins.length,
         'currency_count': currency.length,
         'world_item_count': worldItems.length,
         'transferred_coin_count': transferredCoins.length,
@@ -115,19 +146,73 @@ class BackupExportService {
         'program_preference_count': programPrefs.length,
       },
       // Legacy compat: flat 'coins' key for schemaVersion: 1 consumers
-      'coins': coins,
-      'item_count': coins.length,
+      'coins': sanitizedCoins,
+      'item_count': sanitizedCoins.length,
     };
 
     return payload;
+  }
+
+  static String _formatDate(dynamic val) {
+    if (val == null) return '';
+    if (val is Timestamp) return DateFormat('yyyy-MM-dd').format(val.toDate());
+    if (val is DateTime) return DateFormat('yyyy-MM-dd').format(val);
+    final str = val.toString().trim();
+    if (str.isEmpty) return '';
+    if (str.contains('Timestamp(seconds=')) {
+      final match = RegExp(r'seconds=(\d+)').firstMatch(str);
+      if (match != null) {
+        final sec = int.tryParse(match.group(1)!) ?? 0;
+        return DateFormat('yyyy-MM-dd').format(DateTime.fromMillisecondsSinceEpoch(sec * 1000));
+      }
+    }
+    if (str.contains('T')) {
+      final parsed = DateTime.tryParse(str);
+      if (parsed != null) return DateFormat('yyyy-MM-dd').format(parsed);
+    }
+    return str;
+  }
+
+  static String _formatYear(dynamic val) {
+    if (val == null) return '';
+    if (val is num) {
+      final intVal = val.toInt();
+      return intVal > 0 ? intVal.toString() : '';
+    }
+    final s = val.toString().trim();
+    final parsed = double.tryParse(s)?.toInt() ?? int.tryParse(s);
+    if (parsed != null && parsed > 0) return parsed.toString();
+    return s.replaceAll(RegExp(r'\.0$'), '');
+  }
+
+  static String _formatCost(dynamic val) {
+    if (val == null) return '\$0.00';
+    if (val is num) {
+      return '\$${val.toDouble().toStringAsFixed(2)}';
+    }
+    final raw = val.toString().replaceAll(r'$', '').replaceAll(',', '').trim();
+    final d = double.tryParse(raw);
+    if (d == null) return '\$0.00';
+    return '\$${d.toStringAsFixed(2)}';
+  }
+
+  static int _formatQuantity(dynamic val) {
+    if (val == null) return 1;
+    if (val is num) {
+      final i = val.toInt();
+      return i > 0 ? i : 1;
+    }
+    final s = val.toString().trim();
+    final i = int.tryParse(s) ?? double.tryParse(s)?.toInt() ?? 1;
+    return i > 0 ? i : 1;
   }
 
   /// Triggers JSON file download in browser or web target.
   static Future<void> exportJsonDownload() async {
     final payload = await generateExportPayload();
     final jsonEncoder = JsonEncoder.withIndent('  ', (object) {
-      if (object is Timestamp) return object.toDate().toIso8601String();
-      if (object is DateTime) return object.toIso8601String();
+      if (object is Timestamp) return DateFormat('yyyy-MM-dd').format(object.toDate());
+      if (object is DateTime) return DateFormat('yyyy-MM-dd').format(object);
       return object.toString();
     });
     final jsonStr = jsonEncoder.convert(payload);
@@ -140,38 +225,47 @@ class BackupExportService {
     }
   }
 
-  /// Triggers CSV file download in browser or web target.
-  static Future<void> exportCsvDownload() async {
-    final payload = await generateExportPayload();
-    final List coins = payload['coins'] as List;
+  /// Generates the CSV string from an export payload map.
+  static String generateCsvStringFromPayload(Map<String, dynamic> payload) {
+    final List coins = payload['coins'] as List? ?? [];
 
     final StringBuffer csv = StringBuffer();
-    csv.writeln('Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Condition,Cost,AI Estimated Value,Certification Number,Storage Location,Owner Photo URLs,Added');
+    csv.writeln('Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Condition,Qty,Cost,AI Estimated Value,Certification Number,Retailer,Invoice,Storage Location,Notes,Owner Photo URLs,Added');
 
     for (final c in coins) {
       final map = c as Map<String, dynamic>;
       csv.writeln([
-        _cleanCsvCell(map['Year']),
-        _cleanCsvCell(map['Mint Mark']),
-        _cleanCsvCell(map['Denomination']),
-        _cleanCsvCell(map['Program/Series']),
-        _cleanCsvCell(map['Theme/Subject']),
-        _cleanCsvCell(map['Condition']),
-        _cleanCsvCell(map['Cost']),
-        _cleanCsvCell(map['AI Estimated Value']),
-        _cleanCsvCell(map['Certification Number']),
-        _cleanCsvCell(map['Storage Location']),
+        _cleanCsvCell(_formatYear(map['Year'] ?? map['year'])),
+        _cleanCsvCell(map['Mint Mark'] ?? map['mint_mark']),
+        _cleanCsvCell(map['Denomination'] ?? map['denomination']),
+        _cleanCsvCell(map['Program/Series'] ?? map['program_series']),
+        _cleanCsvCell(map['Theme/Subject'] ?? map['theme_subject']),
+        _cleanCsvCell(map['Condition'] ?? map['condition']),
+        _cleanCsvCell(_formatQuantity(map['Quantity'] ?? map['quantity'] ?? map['qty'])),
+        _cleanCsvCell(_formatCost(map['Cost'] ?? map['cost'] ?? map['purchase_cost'])),
+        _cleanCsvCell(map['AI Estimated Value'] ?? map['ai_estimated_value']),
+        _cleanCsvCell(map['Certification Number'] ?? map['cert_number']),
+        _cleanCsvCell(map['Retailer/Website'] ?? map['Retailer'] ?? map['retailer'] ?? map['Dealer'] ?? map['dealer']),
+        _cleanCsvCell(map['Retailer Invoice #'] ?? map['Invoice #'] ?? map['Invoice'] ?? map['invoice']),
+        _cleanCsvCell(map['Storage Location'] ?? map['storage_location'] ?? map['Location'] ?? map['location']),
+        _cleanCsvCell(map['Notes'] ?? map['notes'] ?? map['Personal Notes']),
         _cleanCsvCell(_extractOwnerPhotoUrls(map)),
-        _cleanCsvCell(map['Added']),
+        _cleanCsvCell(_formatDate(map['Added'] ?? map['timestamp'] ?? map['created_at'])),
       ].join(','));
     }
+    return csv.toString();
+  }
 
+  /// Triggers CSV file download in browser or web target.
+  static Future<void> exportCsvDownload() async {
+    final payload = await generateExportPayload();
+    final csvStr = generateCsvStringFromPayload(payload);
     final filename = 'numista_collection_${DateTime.now().millisecondsSinceEpoch}.csv';
 
     if (kIsWeb) {
-      _triggerWebDownload(csv.toString(), filename, 'text/csv');
+      _triggerWebDownload(csvStr, filename, 'text/csv');
     } else {
-      debugPrint('[BackupExportService] CSV non-web export length: ${csv.length}');
+      debugPrint('[BackupExportService] CSV non-web export length: ${csvStr.length}');
     }
   }
 

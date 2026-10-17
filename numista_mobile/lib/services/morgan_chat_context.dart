@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import '../services/auth_service.dart';
+import '../services/guest_seed_service.dart';
 import '../services/set_expansion_helper.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -169,27 +170,44 @@ class MorganChatContextService {
   static Future<MorganCollectionContext> load({bool forceRefresh = false}) async {
     if (_cache != null && !forceRefresh) return _cache!;
 
-    final user = FirebaseAuth.instance.currentUser;
+    User? user;
+    try {
+      user = FirebaseAuth.instance.currentUser;
+    } catch (_) {}
     final userName = user?.displayName?.split(' ').first ??
         user?.email?.split('@').first ??
         'there';
 
-    if (AuthService.isGuest) {
+    final isRealUser = user != null && !user.isAnonymous;
+    List<Map<String, dynamic>> docDataList = [];
+    List<String> docIdList = [];
+
+    if (!isRealUser && GuestSeedService.isBrowseDemoMode && GuestSeedService.demoCoinCache.isNotEmpty) {
+      docDataList = GuestSeedService.demoCoinCache.map((d) => Map<String, dynamic>.from(d)).toList();
+      docIdList = docDataList.asMap().entries.map((e) => 'demo_${e.key}').toList();
+    } else if (user?.isAnonymous == true) {
       _cache = _empty(userName);
       return _cache!;
-    }
+    } else {
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection(AuthService.coinsPath)
+            .get();
 
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection(AuthService.coinsPath)
-          .get();
-
-      final docs = snap.docs;
-      if (docs.isEmpty) {
+        if (snap.docs.isEmpty) {
+          _cache = _empty(userName);
+          return _cache!;
+        }
+        docDataList = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+        docIdList = snap.docs.map((d) => d.id).toList();
+      } catch (e) {
+        debugPrint('[MorganChatContext] Error loading coins: $e');
         _cache = _empty(userName);
         return _cache!;
       }
+    }
 
+    try {
       double portfolioValue = 0;
       double acquisitionCost = 0;
       int gradeCount = 0;
@@ -203,13 +221,19 @@ class MorganChatContextService {
       // Collect all docs with their parsed value for ranking
       final ranked = <Map<String, dynamic>>[];
 
+      for (int i = 0; i < docDataList.length; i++) {
+        final data = docDataList[i];
+        final docId = docIdList[i];
 
-      for (final doc in docs) {
-        final data = doc.data();
+        final aiVal = _parseCurrency(data['AI Estimated Value'] ?? data['ai_estimated_value'] ?? data['ai_value']);
+        final cpg   = _parseCurrency(data['cpgRetail'] ?? data['cpg_retail']);
+        final bid   = _parseCurrency(data['greysheetBid'] ?? data['greysheet_bid']);
+        final cost  = _parseCurrency(data['Cost'] ?? data['cost'] ?? data['purchase_cost'] ?? data['purchase_price']);
 
-        final value = _parseCurrency(data['AI Estimated Value'] ?? data['ai_estimated_value']);
-        final cost  = _parseCurrency(data['Cost'] ?? data['cost'] ?? data['purchase_cost']);
-        portfolioValue  += value;
+        final baseVal  = cpg > 0 ? cpg : (bid > 0 ? bid : aiVal);
+        final finalBid = bid > 0 ? bid : (baseVal * 0.80);
+
+        portfolioValue  += finalBid;
         acquisitionCost += cost;
 
         final rawItemType = data['item_type']?.toString().trim();
@@ -228,7 +252,6 @@ class MorganChatContextService {
         final isSet = itemType == 'set' || setContentsList.isNotEmpty;
 
         if (isSet) {
-
           for (final child in setContentsList) {
             if (child is! Map) continue;
             
@@ -283,7 +306,7 @@ class MorganChatContextService {
           unverifiedCount++;
         }
 
-        ranked.add({...data, '_parsedValue': value, '_docId': doc.id});
+        ranked.add({...data, '_parsedValue': baseVal > 0 ? baseVal : finalBid, '_docId': docId});
       }
 
       // Sort by value descending
@@ -317,20 +340,17 @@ class MorganChatContextService {
       }).toList();
 
       // Sort by timestamp to get recently added
-      final sorted = List.from(docs);
+      final sorted = List<Map<String, dynamic>>.from(docDataList);
       sorted.sort((a, b) {
-        final ad = a.data() as Map<String, dynamic>;
-        final bd = b.data() as Map<String, dynamic>;
-        final aTs = ad['Added'] ?? ad['timestamp'] ?? ad['created_at'];
-        final bTs = bd['Added'] ?? bd['timestamp'] ?? bd['created_at'];
+        final aTs = a['Added'] ?? a['timestamp'] ?? a['created_at'];
+        final bTs = b['Added'] ?? b['timestamp'] ?? b['created_at'];
         if (aTs is Timestamp && bTs is Timestamp) return bTs.compareTo(aTs);
         if (aTs is Timestamp) return -1;
         if (bTs is Timestamp) return 1;
-        return b.id.compareTo(a.id);
+        return (b['id']?.toString() ?? '').compareTo(a['id']?.toString() ?? '');
       });
 
-      final recentlyAdded = sorted.take(5).map((doc) {
-        final item = doc.data() as Map<String, dynamic>;
+      final recentlyAdded = sorted.take(5).map((item) {
         final year   = item['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
         final series = item['Program/Series']?.toString() ?? '';
         final denom  = item['Denomination']?.toString() ?? '';
@@ -339,8 +359,6 @@ class MorganChatContextService {
       }).where((s) => s.trim().isNotEmpty).toList();
 
       // Use shared expansion helper for accurate totalCoins (Dimes Bug v2.2)
-      final docDataList = docs.map((d) => d.data()).toList();
-      final docIdList = docs.map((d) => d.id).toList();
       final expansion = expandCollection(docDataList, docIdList);
 
       _cache = MorganCollectionContext(
