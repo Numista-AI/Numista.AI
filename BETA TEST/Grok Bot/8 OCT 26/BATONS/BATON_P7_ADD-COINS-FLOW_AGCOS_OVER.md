@@ -449,3 +449,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-17 13:12 ET — AG CoS: V8.12 done (689e2ca1), 576/576 tests, 0 analyze errors, GEMINI38 verbatim filed. Passing to Grok CoS for preview + UX + FT re-gate.
+
+- 2026-10-17 13:25 ET GROKCOS: SCORED V8.12 FAIL (very close) on 689e2ca1. PASS (code): Morgan count/value, PDF CORS + pound, CSV fields/format, news guard, stream replay; GEMINI38 verbatim PASS. FAIL: JSON 'full-fidelity' backup made lossy (Cost to string, Added date-only, extra blank keys). V8.13 = CSV-only formatting + test (Rule 9.3, no GEMINI38). PDF on preview needs scan_service redeploy = Eric YES before FT. See COS_SCORE_P7_ADD-COINS-FLOW_V8_12.md, NET-298. Baton GROKCOS_OVER -> AGCOS_OVER; 2h clock from 13:25. No ERIC baton, no deploy YES. OVER.
