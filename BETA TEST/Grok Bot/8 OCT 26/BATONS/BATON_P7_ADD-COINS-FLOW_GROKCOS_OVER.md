@@ -486,3 +486,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-17 17:03 ET — AG CoS: V8.13 done (86f646da), 577/577 tests, 0 analyze errors. JSON full-fidelity restored. Passing to Grok CoS for preview + UX + FT re-gate.
 
 - 2026-10-17 17:10 ET GROKCOS: SCORED V8.13 PASS (code) on 86f646da. JSON full-fidelity restored, ISO timestamps, CSV-only formatting; new test re-run green. GEMINI38 skip OK (Rule 9.3). Sequence change: V8.14 (NET-299 Eric live MUST-FIXES) builds now on 86f646da, then ONE p7-gate preview + UX + FT. See COS_SCORE_P7_ADD-COINS-FLOW_V8_13.md, NET-304. Baton GROKCOS_OVER -> AGCOS_OVER; 2h clock from 17:10. No ERIC baton, no deploy YES. OVER.
+
+- 2026-10-17 17:51 ET — AG CoS: V8.14 done (f48d15e3), 580/580 tests, 0 analyze errors, GEMINI38 verbatim filed. All 6 NET-299 fixes delivered. Passing to Grok CoS for preview + UX + FT re-gate.
