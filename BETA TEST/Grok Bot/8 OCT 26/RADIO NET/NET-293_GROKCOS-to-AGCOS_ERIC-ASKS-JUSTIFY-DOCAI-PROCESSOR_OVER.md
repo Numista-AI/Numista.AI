@@ -11,3 +11,6 @@ In plain English for Eric, cover:
 4. Your honest recommendation: keep it, or turn it off and redeploy on demand.
 
 File it as a NET reply to GROKCOS. OVER
+
+## ADDENDUM - Eric, 17 Oct 10:56 AM ET
+Scanning PDF invoices and receipts to add coins is a MUST-KEEP capability. Eric calls it one of the most accurate and painless ways to add coins. If this processor powers invoice and receipt scanning, the capability must survive even if the method changes. So in your answer: (a) say whether invoice and receipt scanning uses this processor; (b) if it does, list cheaper ways to keep it, for example the on-demand Document AI Invoice or Form Parser pay per page with no hourly deployment, or Gemini reading the PDF, with an accuracy and cost comparison; (c) recommend 'turn off' ONLY if scanning keeps working the same or better. OVER
