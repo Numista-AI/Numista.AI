@@ -15,7 +15,48 @@ class BackupExportService {
 
   /// Generates schemaVersion: 2 full-fidelity JSON export bundle.
   /// Includes coins, currency, world items, transfers, estate, and preferences.
-  static Future<Map<String, dynamic>> generateExportPayload() async {
+  static Future<Map<String, dynamic>> generateExportPayload({
+    List<Map<String, dynamic>>? mockCoins,
+  }) async {
+    if (mockCoins != null) {
+      final coins = mockCoins;
+      final setCount = coins.where((c) => c['is_set'] == true || c['Denomination'] == 'Set').length;
+      return {
+        'schemaVersion': 2,
+        'exported_at': DateTime.now().toUtc().toIso8601String(),
+        'user_email': 'test@numista.ai',
+        'app_version': '4.339',
+        'collections': {
+          'coins': coins,
+          'currency': <Map<String, dynamic>>[],
+          'world_items': <Map<String, dynamic>>[],
+          'transferred_coins': <Map<String, dynamic>>[],
+          'transferred_currency': <Map<String, dynamic>>[],
+        },
+        'estate': {
+          'profile': null,
+          'coin_data': <Map<String, dynamic>>[],
+        },
+        'preferences': {
+          'program_preferences': <Map<String, dynamic>>[],
+          'beta_checklist': null,
+        },
+        'metadata': {
+          'coin_count': coins.length,
+          'currency_count': 0,
+          'world_item_count': 0,
+          'transferred_coin_count': 0,
+          'transferred_currency_count': 0,
+          'set_count': setCount,
+          'estate_data_count': 0,
+          'program_preference_count': 0,
+        },
+        // Legacy compat: flat 'coins' key for schemaVersion: 1 consumers
+        'coins': coins,
+        'item_count': coins.length,
+      };
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     final email = user?.email ?? 'guest@numista.ai';
     final fs = FirebaseFirestore.instance;
@@ -82,38 +123,8 @@ class BackupExportService {
     final estateProfile = await fetchSingleDoc('estate_profile', 'data');
     final betaChecklist = await fetchSingleDoc('settings', 'beta_checklist');
 
-    // Sanitize coins for export (no .0 integers, uniform $0.00 cost, readable Added date, full fields)
-    final sanitizedCoins = coins.map((c) {
-      final m = Map<String, dynamic>.from(c);
-      final y = m['Year'] ?? m['year'];
-      if (y != null) {
-        final yNum = (y is num) ? y.toInt() : (double.tryParse(y.toString())?.toInt() ?? int.tryParse(y.toString()));
-        if (yNum != null && yNum > 0) {
-          m['Year'] = yNum;
-          m['year'] = yNum;
-        }
-      }
-      final q = m['Quantity'] ?? m['quantity'] ?? m['qty'];
-      final qInt = _formatQuantity(q);
-      m['Quantity'] = qInt;
-      m['quantity'] = qInt;
-
-      final costVal = m['Cost'] ?? m['cost'] ?? m['purchase_cost'];
-      m['Cost'] = _formatCost(costVal);
-      m['cost'] = m['Cost'];
-
-      m['Retailer/Website'] = (m['Retailer/Website'] ?? m['Retailer'] ?? m['retailer'] ?? m['Dealer'] ?? m['dealer'] ?? '').toString();
-      m['Retailer Invoice #'] = (m['Retailer Invoice #'] ?? m['Invoice #'] ?? m['Invoice'] ?? m['invoice'] ?? '').toString();
-      m['Notes'] = (m['Notes'] ?? m['notes'] ?? m['Personal Notes'] ?? '').toString();
-
-      final addedVal = m['Added'] ?? m['timestamp'] ?? m['created_at'];
-      m['Added'] = _formatDate(addedVal);
-
-      return m;
-    }).toList();
-
     // Count sets for metadata
-    final setCount = sanitizedCoins.where((c) => c['is_set'] == true || c['Denomination'] == 'Set').length;
+    final setCount = coins.where((c) => c['is_set'] == true || c['Denomination'] == 'Set').length;
 
     final payload = {
       'schemaVersion': 2,
@@ -121,7 +132,7 @@ class BackupExportService {
       'user_email': email,
       'app_version': '4.339',
       'collections': {
-        'coins': sanitizedCoins,
+        'coins': coins,
         'currency': currency,
         'world_items': worldItems,
         'transferred_coins': transferredCoins,
@@ -136,7 +147,7 @@ class BackupExportService {
         'beta_checklist': betaChecklist,
       },
       'metadata': {
-        'coin_count': sanitizedCoins.length,
+        'coin_count': coins.length,
         'currency_count': currency.length,
         'world_item_count': worldItems.length,
         'transferred_coin_count': transferredCoins.length,
@@ -146,8 +157,8 @@ class BackupExportService {
         'program_preference_count': programPrefs.length,
       },
       // Legacy compat: flat 'coins' key for schemaVersion: 1 consumers
-      'coins': sanitizedCoins,
-      'item_count': sanitizedCoins.length,
+      'coins': coins,
+      'item_count': coins.length,
     };
 
     return payload;
@@ -207,15 +218,20 @@ class BackupExportService {
     return i > 0 ? i : 1;
   }
 
+  /// Generates full-fidelity JSON string from an export payload map.
+  static String generateJsonStringFromPayload(Map<String, dynamic> payload) {
+    final jsonEncoder = JsonEncoder.withIndent('  ', (object) {
+      if (object is Timestamp) return object.toDate().toIso8601String();
+      if (object is DateTime) return object.toIso8601String();
+      return object.toString();
+    });
+    return jsonEncoder.convert(payload);
+  }
+
   /// Triggers JSON file download in browser or web target.
   static Future<void> exportJsonDownload() async {
     final payload = await generateExportPayload();
-    final jsonEncoder = JsonEncoder.withIndent('  ', (object) {
-      if (object is Timestamp) return DateFormat('yyyy-MM-dd').format(object.toDate());
-      if (object is DateTime) return DateFormat('yyyy-MM-dd').format(object);
-      return object.toString();
-    });
-    final jsonStr = jsonEncoder.convert(payload);
+    final jsonStr = generateJsonStringFromPayload(payload);
     final filename = 'numista_collection_backup_${DateTime.now().millisecondsSinceEpoch}.json';
 
     if (kIsWeb) {
@@ -227,7 +243,7 @@ class BackupExportService {
 
   /// Generates the CSV string from an export payload map.
   static String generateCsvStringFromPayload(Map<String, dynamic> payload) {
-    final List coins = payload['coins'] as List? ?? [];
+    final List coins = payload['coins'] as List? ?? (payload['collections'] as Map?)?['coins'] as List? ?? [];
 
     final StringBuffer csv = StringBuffer();
     csv.writeln('Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Condition,Qty,Cost,AI Estimated Value,Certification Number,Retailer,Invoice,Storage Location,Notes,Owner Photo URLs,Added');

@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1732,6 +1734,50 @@ void main() {
       final news = await MarketNewsService.fetchNewsFeed();
       expect(news, isNotEmpty);
       expect(news.first.title, isNotEmpty);
+    });
+
+    test('p7_v813_json_export_full_fidelity_and_csv_formatting', () async {
+      final sampleAdded = DateTime.utc(2024, 10, 17, 14, 30, 0);
+      final rawCoins = [
+        {
+          'Year': '2024',
+          'Mint Mark': 'W',
+          'Denomination': 'American Silver Eagle',
+          'Cost': 15.5,
+          'Added': Timestamp.fromDate(sampleAdded),
+        },
+      ];
+
+      // Test A: generateExportPayload produces full-fidelity JSON
+      final payload = await BackupExportService.generateExportPayload(mockCoins: rawCoins);
+
+      // Raw map checks
+      final rawCoin = (payload['coins'] as List).first as Map<String, dynamic>;
+      expect(rawCoin['Cost'], equals(15.5));
+      expect(rawCoin['Cost'], isA<num>());
+      expect(rawCoin['Cost'], isNot(startsWith(r'$')));
+      expect(rawCoin.containsKey('Retailer/Website'), isFalse);
+      expect(rawCoin.containsKey('Retailer Invoice #'), isFalse);
+      expect(rawCoin.containsKey('Notes'), isFalse);
+
+      // JSON string checks (full ISO timestamp, numeric cost)
+      final jsonStr = BackupExportService.generateJsonStringFromPayload(payload);
+      final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final jsonCoin = (decoded['coins'] as List).first as Map<String, dynamic>;
+      expect(jsonCoin['Cost'], equals(15.5));
+      expect(jsonCoin['Cost'], isA<num>());
+      expect(jsonCoin['Added'].toString(), contains('2024-10-17T'));
+      expect(jsonCoin['Added'].toString().length, greaterThan(10));
+      expect(jsonCoin['Year'], equals('2024'));
+
+      // Test B: generateCsvStringFromPayload applies display formatting
+      final csv = BackupExportService.generateCsvStringFromPayload(payload);
+      final lines = csv.trim().split('\n').map((l) => l.trim()).toList();
+      expect(lines.length, equals(2));
+      final row = lines[1];
+      expect(row, contains(r'"$15.50"'));
+      expect(row, contains('"2024-10-17"'));
+      expect(row, contains('"2024"'));
     });
   });
 }
