@@ -32,6 +32,7 @@ class AddCoinsHub extends StatefulWidget {
   final String? initialTabName;
   final bool showCertFullScreen;
   final bool showManualFullScreen;
+  final bool showCameraFullScreen;
   final bool showAddAnotherConfirm;
   final Map<String, dynamic>? initialCoinPreset;
 
@@ -41,6 +42,7 @@ class AddCoinsHub extends StatefulWidget {
     this.initialTabName,
     this.showCertFullScreen = false,
     this.showManualFullScreen = false,
+    this.showCameraFullScreen = false,
     this.showAddAnotherConfirm = false,
     this.initialCoinPreset,
   });
@@ -124,6 +126,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   final _picCost    = TextEditingController();
   final _picStorage = TextEditingController();
   final _picNotes   = TextEditingController();
+  final _picGradingService = TextEditingController();
+  final _picCertNum = TextEditingController();
 
   // ─── Quick Camera Scanner State ───────────────────────────────────────────
   Uint8List? _camObverseBytes;
@@ -225,6 +229,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     _picTheme.dispose();  _picMint.dispose();    _picGrade.dispose();
     _picMetal.dispose();  _picVariety.dispose(); _picCost.dispose();
     _picStorage.dispose(); _picNotes.dispose();
+    _picGradingService.dispose(); _picCertNum.dispose();
     // NGC/CAC manual-entry controllers
     _certManualCoinName.dispose();
     _certManualYear.dispose();
@@ -625,6 +630,16 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       );
     }
 
+    if (widget.showCameraFullScreen) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('AI Photo Identification'),
+          leading: const BackButton(),
+        ),
+        body: _buildCameraScannerTab(),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -649,12 +664,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           icon: Icons.camera_alt_outlined,
           label: 'Take a photo',
           onTap: () {
-            if (widget.onNavigate != null) {
-              widget.onNavigate!('Microscope Scanner');
-            } else {
-              setState(() => _showMoreWays = true);
-              _tabController.animateTo(1);
-            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AddCoinsHub(
+                  showCameraFullScreen: true,
+                  initialCoinPreset: widget.initialCoinPreset,
+                ),
+              ),
+            );
           },
         ),
         _QuickAddCard(
@@ -2757,6 +2775,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   /// Auto-detects grader from cert number text entered by user.
   String _autoDetectGrader(String raw) {
     final upper = raw.trim().toUpperCase();
+    if (upper.startsWith('CACG')) return 'CACG';
     if (upper.startsWith('CAC')) return 'CAC';
     // Extract digits (handle slash format and NGC dash format)
     String digits;
@@ -2825,7 +2844,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        for (final g in ['Not sure', 'PCGS', 'NGC', 'CAC'])
+                        for (final g in ['Not sure', 'PCGS', 'NGC', 'CACG', 'CAC'])
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: FilterChip(
@@ -2858,12 +2877,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     const SizedBox(height: 6),
                     Text(
                       _certGrader == null
-                          ? "We'll figure out which service (PCGS, NGC, or CAC) from the number"
+                          ? "We'll figure out which service (PCGS, NGC, CACG, or CAC) from the number"
                           : _certGrader == 'PCGS'
                               ? 'PCGS: Look up cert details from PCGS'
                               : _certGrader == 'NGC'
                                   ? 'NGC: Enter slab details with cert # pre-filled'
-                                  : 'CAC: Enter slab details with cert # pre-filled',
+                                  : _certGrader == 'CACG'
+                                      ? 'CACG: Enter slab details with cert # pre-filled'
+                                      : 'CAC: Enter slab details with cert # pre-filled',
                       style: const TextStyle(fontSize: 18, color: Color(0xFF334155)),
                     ),
                   ],
@@ -2907,7 +2928,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         ? 'Enter the number after the "/" on your PCGS slab (e.g. 53652580)'
                         : effectiveGrader == 'NGC'
                             ? 'Enter your 7-digit NGC cert number (e.g. 1234567 or 1234567-001)'
-                            : 'Enter your CAC cert number (e.g. CAC12345 or CACG12345)',
+                            : 'Enter your CAC / CACG cert number (e.g. CAC12345, CACG12345, or digits after "/" on CACG slab)',
                     style: const TextStyle(fontSize: 18, color: Color(0xFF334155)),
                   ),
                   const SizedBox(height: 14),
@@ -2985,7 +3006,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                               ? 'e.g.  53652580'
                               : effectiveGrader == 'NGC'
                                   ? 'e.g.  1234567'
-                                  : 'e.g.  CAC12345',
+                                  : 'e.g.  CACG12345',
                           hintStyle: const TextStyle(fontSize: 16, color: Color(0xFF334155)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
@@ -3024,10 +3045,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 _buildLookupResultCard(_pcgsLookupResult!),
               ],
 
-              // ── NGC / CAC manual entry fallback card ─────────────────────
+              // ── NGC / CAC / CACG manual entry fallback card ─────────────────
               if (_certPendingConfirm != null &&
                   (_certPendingConfirm!['_grader'] == 'NGC' ||
-                   _certPendingConfirm!['_grader'] == 'CAC')) ...[
+                   _certPendingConfirm!['_grader'] == 'CAC' ||
+                   _certPendingConfirm!['_grader'] == 'CACG')) ...[
                 const SizedBox(height: 16),
                 _buildManualCertEntryCard(_certPendingConfirm!),
               ],
@@ -3105,7 +3127,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         if (certNum.isNotEmpty) {
           setState(() {
             _pcgsSingleCtrl.text = certNum;
-            if (grader == 'NGC' || grader == 'CAC' || grader == 'PCGS') {
+            if (grader == 'NGC' || grader == 'CAC' || grader == 'CACG' || grader == 'PCGS') {
               _certGrader = grader;
             }
             _scanResultText = certNum;
@@ -3226,7 +3248,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           Expanded(child: Text(
             grader == 'NGC'
                 ? 'Enter NGC slab details below'
-                : 'Enter CAC slab details below',
+                : (grader == 'CACG' ? 'Enter CACG slab details below' : 'Enter CAC slab details below'),
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFF1E293B)),
           )),
         ]),
@@ -3281,7 +3303,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             final isNgc = grader.toUpperCase() == 'NGC';
             final labelText = switch (grader.toUpperCase()) {
               'NGC' => 'Check this slab on ngccoin.com',
-              'CAC' => 'Check this slab on cacgrading.com',
+              'CAC' || 'CACG' => 'Check this slab on cacgrading.com',
               _     => 'Check this slab on pcgs.com',
             };
 
@@ -3305,6 +3327,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       verifyUrl = 'https://www.ngccoin.com/certlookup/$certNo/$gradeSegment/';
                       break;
                     case 'CAC':
+                    case 'CACG':
                       verifyUrl = 'https://www.cacgrading.com/cert-verify/$certNo';
                       break;
                     default:
@@ -3456,6 +3479,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           verifyLink = 'https://www.ngccoin.com/certlookup/$certNo/$gradeSegment/';
           break;
         case 'CAC':
+        case 'CACG':
           verifyLink = 'https://www.cacgrading.com/cert-verify/$certNo';
           break;
         case 'PCGS':
@@ -4614,6 +4638,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           _picGrade.text = coin['Condition']?.toString() ?? '';
           _picMetal.text = coin['Metal Content']?.toString() ?? '';
           _picVariety.text = coin['Variety']?.toString() ?? '';
+          _picGradingService.text = coin['Grading Service']?.toString() ?? coin['grading_service']?.toString() ?? '';
+          _picCertNum.text = coin['Certification Number']?.toString() ?? coin['cert_number']?.toString() ?? '';
           _picCost.text = coin['Cost']?.toString() ?? '\$0.00';
           _picStorage.text = coin['Storage Location']?.toString() ?? '';
           _picNotes.text = coin['Personal Notes']?.toString() ?? '';
@@ -4689,6 +4715,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'override_cost': _picCost.text.trim(),
         'override_storage': _picStorage.text.trim(),
         'override_notes': _picNotes.text.trim(),
+        'override_grading_service': _picGradingService.text.trim(),
+        'override_cert_number': _picCertNum.text.trim(),
       };
 
       final streamedResponse = await HttpAuthClient.multipartPost(
@@ -4742,6 +4770,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       _picGrade.clear();
       _picMetal.clear();
       _picVariety.clear();
+      _picGradingService.clear();
+      _picCertNum.clear();
       _picCost.text = '\$0.00';
       _picStorage.clear();
       _picNotes.clear();
@@ -4754,11 +4784,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         GestureDetector(
           onTap: () => _showImageSourcePicker(isObverse),
           child: Container(
-            height: 160,
-            width: 160,
+            constraints: const BoxConstraints(
+              minHeight: 200,
+              maxHeight: 280,
+              minWidth: double.infinity,
+            ),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: bytes != null ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
                 width: bytes != null ? 3 : 2,
@@ -4771,47 +4804,49 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 )
               ],
             ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (bytes != null)
-                  ClipOval(
-                    child: Image.memory(
-                      bytes,
-                      width: 160,
-                      height: 160,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                else
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.add_a_photo_outlined, color: Color(0xFF64748B), size: 30),
-                      const SizedBox(height: 8),
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          color: Color(0xFF334155),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (bytes != null)
+                    Center(
+                      child: Image.memory(
+                        bytes,
+                        fit: BoxFit.contain,
                       ),
-                    ],
-                  ),
-                // Circular Framing Guide overlay
-                Container(
-                  width: 154,
-                  height: 154,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      width: 1.5,
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.add_a_photo_outlined, color: Color(0xFF64748B), size: 36),
+                          const SizedBox(height: 12),
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              color: Color(0xFF334155),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Tap to take a photo or choose from your library',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -4911,10 +4946,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
               // ── Camera Photo Capture Boxes ──────────────────────────────────
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _imageCamPickerBox('Obverse (Front)', _camObverseBytes, true),
-                  _imageCamPickerBox('Reverse (Back)', _camReverseBytes, false),
+                  Expanded(child: _imageCamPickerBox('Obverse (Front)', _camObverseBytes, true)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _imageCamPickerBox('Reverse (Back)', _camReverseBytes, false)),
                 ],
               ),
               const SizedBox(height: 24),
@@ -5057,6 +5093,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 Expanded(child: _camInputField('Mint Mark', _picMint)),
                 const SizedBox(width: 12),
                 Expanded(child: _camInputField('Condition / Grade', _picGrade)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _camInputField('Grading Service', _picGradingService)),
+                const SizedBox(width: 12),
+                Expanded(child: _camInputField('Certification Number', _picCertNum)),
               ],
             ),
             const SizedBox(height: 12),

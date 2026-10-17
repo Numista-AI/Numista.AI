@@ -2215,7 +2215,7 @@ async def process_invoice(
             "Condition": "e.g. MS-65, Average Circ, Ch Proof-63",
             "Strike Type": "e.g. Business, Proof, Special Mint Set, Uncirculated",
             "Holder Type": "e.g. Raw, Slabs, Folder",
-            "Grading Service": "e.g. PCGS, NGC, PMG, None",
+            "Grading Service": "e.g. PCGS, NGC, CACG, CAC, ANACS, ICG, PMG, None",
             "Certification Number": "if present",
             "Metal Content": "e.g. 90% Silver, Cupro-Nickel, 35% Silver Wartime",
             "Cost": "formatted price like $10.00",
@@ -2338,7 +2338,7 @@ async def process_invoice(
               "Year": "year from description",
               "Denomination": "coin type (e.g. Liberty Seated Quarter, Morgan Dollar)",
               "Condition": "grade -- complete any truncated words",
-              "Grading Service": "PCGS / NGC / ANACS / ICG / or empty",
+              "Grading Service": "PCGS / NGC / CACG / CAC / ANACS / ICG / or empty",
               "Cost": "dollar amount formatted like $432.00",
               "Retailer/Website": "seller name",
               "Retailer Item No.": "item or stock number if present",
@@ -5460,11 +5460,23 @@ def _normalize_country_metadata(raw_country: str) -> tuple:
 # +==============================================================================+
 
 PHOTO_ID_PASS1_PROMPT = """
-You are a professional numismatist examining two coin images uploaded by a collector.
+You are a professional numismatist examining coin images uploaded by a collector.
 Image A and Image B are provided -- the collector may have uploaded them in any order.
 
+SLAB / CERTIFIED HOLDER DETECTION (CRITICAL FIRST STEP):
+Check immediately whether either image shows a third-party grading service slab/holder (PCGS, NGC, CAC, or CACG).
+If a certified slab label is visible:
+1. THE SLAB LABEL WINS over any visual coin design impression. Read Year, Denomination, Grade, Grading Service, and Certification Number directly from the label!
+2. Grading Service MUST be one of: "PCGS", "NGC", "CACG", "CAC", or "None".
+3. Certification Number format:
+   - NGC: Typically 7 digits with a 3-digit line item, e.g. "8321797-003" or "1234567-001" or 7 digits.
+   - PCGS: 8 digits, or the digits after the slash on the barcode (e.g. "986403.70/53652580" -> "53652580").
+   - CACG: Format is <type>.<grade> / <cert>, where cert number is the digits after the slash.
+4. Dealer stickers or inventory labels (such as "Witter Coin WC110080" or barcode stickers) are NOT certification numbers — ignore them.
+5. NEVER flag "counterfeit", "fake", "holder mismatch", or "mislabeled holder" from a single photo or inverted coin orientation. If there is genuine ambiguity, note it softly in variety_notes as "Please confirm year: label indicates XXXX" without accusing the coin or slab of being counterfeit or mislabeled.
+
 YOUR TASKS:
-1. SIDE DETECTION: Determine which image is the OBVERSE (portrait/date side) and which is the REVERSE.
+1. SIDE DETECTION: Determine which image is the OBVERSE (portrait/date side) and which is the REVERSE. Note: images may be rotated or inverted.
 2. IDENTIFICATION: Identify the coin precisely -- Year, Country, Denomination, Program/Series, Theme/Subject.
    - For Presidential $1 Coins:
      - "program_series" MUST be exactly "Presidential $1 Coin Program".
@@ -5473,7 +5485,7 @@ YOUR TASKS:
    Common locations: below the date, near the portrait neck, near "IN GOD WE TRUST", along the lower rim.
    US Mint codes: P=Philadelphia, D=Denver, S=San Francisco, W=West Point, CC=Carson City, O=New Orleans.
    Report any visible letter, even faint. If genuinely absent, return "None (P)".
-4. GRADE: Estimate the Sheldon scale grade (e.g. "G-4", "VF-30", "XF-45", "AU-55", "MS-63", "PR-65").
+4. GRADE & SERVICE: If a slab is present, use the exact grade from the slab (e.g. "PF 67", "MS 65"). Otherwise estimate the Sheldon scale grade (e.g. "G-4", "VF-30", "XF-45", "AU-55", "MS-63", "PR-65").
 5. METAL COMPOSITION (apply these rules exactly):
    - Pre-1965 US dimes, quarters, halves = 90% Silver, 10% Copper
    - Half dollars 1965-1970 = 40% Silver, 60% Copper
@@ -5484,7 +5496,7 @@ YOUR TASKS:
    - Modern clad (post-1964 quarters, post-1970 halves) = NO silver, cupro-nickel
    - Set is_silver=true/false and is_gold=true/false accordingly.
 6. NUMISMATIC REPORT: Write 2-4 sentences on the coin's historical significance and collectibility.
-7. VARIETY NOTES: Note any obvious doubled dies, RPMs, off-center strikes, or other mint anomalies.
+7. VARIETY NOTES: Note any obvious doubled dies, RPMs, off-center strikes, or other mint anomalies. Never accuse certified slabs of being counterfeit.
 
 Return ONLY valid JSON -- no markdown fences, no commentary:
 {
@@ -5496,6 +5508,8 @@ Return ONLY valid JSON -- no markdown fences, no commentary:
   "theme_subject": string,
   "mint_mark": string,
   "grade": string,
+  "grading_service": "PCGS" | "NGC" | "CACG" | "CAC" | "None",
+  "cert_number": string,
   "is_silver": boolean,
   "is_gold": boolean,
   "metal_content": string,
@@ -5510,14 +5524,15 @@ You are a senior grading expert performing a VERIFICATION PASS on a coin already
   Year: {year} | Country: {country} | Denomination: {denomination}
   Program/Series: {program_series} | Mint Mark: {mint_mark}
   Initial Grade: {grade} | Metal: {metal_content}
+  Grading Service: {grading_service} | Cert Number: {cert_number}
 
 You are looking at the same two images (A and B) again.
 
 YOUR TASKS:
-1. VERIFY the identification -- correct year, denomination, or series if wrong.
-2. REFINE the grade to a precise Sheldon number (e.g. "VF-30", "MS-63", "PR-65").
-3. CHECK for mint errors: doubled dies, repunched mint marks (RPM), off-center strikes,
-   die cracks, cuds, lamination errors, rotated dies, or any other varieties.
+1. VERIFY the identification -- if a slab label is visible, the slab label MUST govern over coin design. Confirm or correct year, denomination, or series.
+2. REFINE the grade -- if certified in a slab, retain the certified grade. Otherwise refine to a precise Sheldon number (e.g. "VF-30", "MS-63", "PR-65").
+3. CHECK for genuine mint errors: doubled dies, repunched mint marks (RPM), off-center strikes, die cracks, cuds, lamination errors.
+   IMPORTANT: NEVER classify a coin as a counterfeit slab, fantasy marriage, or holder mismatch simply because an image is rotated or upside down.
 4. ESTIMATE retail value in USD based on current market for this grade.
 5. Write a brief condition note describing the coin's surfaces and strike quality.
 
@@ -5528,6 +5543,8 @@ Return ONLY valid JSON:
   "corrected_denomination": string or null,
   "corrected_series": string or null,
   "refined_grade": string,
+  "grading_service": string or null,
+  "cert_number": string or null,
   "errors_detected": [string],
   "estimated_value_usd": string,
   "condition_notes": string,
@@ -6120,6 +6137,8 @@ async def identify_coin_photo(
     override_cost:    Optional[str] = Form(None),
     override_storage: Optional[str] = Form(None),
     override_notes:   Optional[str] = Form(None),
+    override_grading_service: Optional[str] = Form(None),
+    override_cert_number:     Optional[str] = Form(None),
     authorization:    Optional[str] = Header(None),
     _user:            dict = Depends(get_current_user),
 ):
@@ -6210,6 +6229,8 @@ async def identify_coin_photo(
             mint_mark     = pass1.get("mint_mark", ""),
             grade         = pass1.get("grade", ""),
             metal_content = pass1.get("metal_content", ""),
+            grading_service = pass1.get("grading_service", "None"),
+            cert_number   = pass1.get("cert_number", ""),
         )
         if single_image_mode:
             pass2_contents = [
@@ -6288,6 +6309,11 @@ async def identify_coin_photo(
     if single_image_mode:
         notes = (notes + " [Single photo scan - reverse unobserved]").strip()
 
+    final_service = pass2.get("grading_service") or pass1.get("grading_service") or ""
+    final_cert    = pass2.get("cert_number") or pass1.get("cert_number") or ""
+    if str(final_service).strip().lower() == "none":
+        final_service = ""
+
     ai_coin = {
         "Year":           override_year    or final_year,
         "Country":        norm_c or "United States",
@@ -6302,6 +6328,8 @@ async def identify_coin_photo(
         "Theme/Subject":  resolved_theme,
         "Mint Mark":      override_mint    or pass1.get("mint_mark", ""),
         "Condition":      override_grade   or final_grade,
+        "Grading Service": override_grading_service or final_service,
+        "Certification Number": override_cert_number or final_cert,
         "Metal Content":  override_metal   or pass1.get("metal_content", ""),
         "Variety":        variety_str,
         "AI Estimated Value": est_value,
@@ -6954,6 +6982,12 @@ def _save_to_gcs(user_email: str, session_id: str, filename: str,
 
 
 # ── POST /api/import/upload ───────────────────────────────────────────────────
+
+@app.options("/api/import/upload")
+async def import_upload_preflight():
+    """Explicit CORS preflight handler for multipart batch import file uploads."""
+    from fastapi.responses import Response as FastAPIResponse
+    return FastAPIResponse(status_code=200)
 
 @app.post("/api/import/upload")
 async def import_upload(

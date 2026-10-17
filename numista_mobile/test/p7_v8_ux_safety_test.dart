@@ -1780,4 +1780,87 @@ void main() {
       expect(row, contains('"2024"'));
     });
   });
+
+  group('P7 V8.14: AI Photo ID, Camera Routing, and CAC/CACG Support', () {
+    testWidgets('p7_v814_take_photo_full_screen_routing_and_prompt', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 1200);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCameraFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify full screen camera scaffold
+      expect(find.widgetWithText(AppBar, 'AI Photo Identification'), findsOneWidget);
+      expect(find.byType(BackButton), findsOneWidget);
+      expect(find.text('Quick Camera Scanner'), findsOneWidget);
+
+      // Verify uncropped camera picker boxes with prompt text
+      final promptFinder = find.text('Tap to take a photo or choose from your library');
+      expect(promptFinder, findsNWidgets(2)); // Obverse and Reverse boxes
+
+      // Verify picker box container minHeight >= 200
+      final containers = tester.widgetList<Container>(find.byType(Container));
+      final minHeightBoxes = containers.where((c) => (c.constraints?.minHeight ?? 0) >= 200).toList();
+      expect(minHeightBoxes, isNotEmpty);
+    });
+
+    testWidgets('p7_v814_quick_add_card_take_photo_and_cert_labels', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 1200);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify quick add card labels
+      expect(find.text('Take a photo'), findsOneWidget);
+      expect(find.text('Add by Cert # (PCGS / NGC / CAC)'), findsOneWidget);
+
+      // Tap 'Take a photo' card and verify navigation to camera full screen
+      await tester.tap(find.text('Take a photo'));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(AppBar, 'AI Photo Identification'), findsOneWidget);
+    });
+
+    testWidgets('p7_v814_cacg_cert_chips_and_auto_detection', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 1200);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify header mentions cert lookup
+      expect(find.text('Add by Cert # — PCGS / NGC / CAC'), findsOneWidget);
+
+      // Verify CACG and CAC chips exist
+      expect(find.widgetWithText(FilterChip, 'CACG'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, 'CAC'), findsOneWidget);
+
+      // Tap CACG chip and verify helper text
+      await tester.tap(find.widgetWithText(FilterChip, 'CACG'));
+      await tester.pumpAndSettle();
+      expect(find.text('CACG: Enter slab details with cert # pre-filled'), findsOneWidget);
+
+      // Type cert # and trigger lookup
+      final certField = find.byType(TextField);
+      await tester.enterText(certField, 'CACG123456');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Look Up'));
+      await tester.pumpAndSettle();
+
+      // Verify manual entry card for CACG
+      expect(find.text('Enter CACG slab details below'), findsOneWidget);
+      expect(find.text('Check this slab on cacgrading.com'), findsOneWidget);
+    });
+  });
 }

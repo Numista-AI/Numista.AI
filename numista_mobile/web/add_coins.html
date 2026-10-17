@@ -550,12 +550,12 @@ async function getAuthHeader() {
   }
 }
 
-function showError(msg) {
+function showError(msg, showRetry = false) {
   let errBox = document.getElementById('error-banner');
   if (!errBox) {
     errBox = document.createElement('div');
     errBox.id = 'error-banner';
-    errBox.style.cssText = 'background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #f87171; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;';
+    errBox.style.cssText = 'background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #f87171; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;';
     const progressPanel = document.getElementById('progress-panel');
     if (progressPanel) {
       progressPanel.insertBefore(errBox, progressPanel.firstChild);
@@ -563,8 +563,17 @@ function showError(msg) {
       document.body.insertBefore(errBox, document.body.firstChild);
     }
   }
-  errBox.innerHTML = '<span>&#9888;&#65039; ' + escHtml(msg) + '</span><button style="background:none;border:none;color:#f87171;cursor:pointer;font-weight:bold;" onclick="this.parentElement.remove()">✕</button>';
+  const retryBtnHtml = showRetry
+    ? '<button type="button" id="retry-btn" onclick="retryImport()" style="background:#ef4444;color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.8rem;">Retry Upload</button>'
+    : '';
+  errBox.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><span>&#9888;&#65039; ' + escHtml(msg) + '</span>' + retryBtnHtml + '</div><button style="background:none;border:none;color:#f87171;cursor:pointer;font-weight:bold;font-size:1.1rem;" onclick="this.parentElement.remove()">✕</button>';
   errBox.style.display = 'flex';
+}
+
+function retryImport() {
+  const errBox = document.getElementById('error-banner');
+  if (errBox) errBox.remove();
+  startImport();
 }
 
 function resetImportUIState() {
@@ -594,25 +603,107 @@ const TYPE_LABEL = { spreadsheet:'Spreadsheet', invoice:'Invoice / Receipt', ima
 const dropZone = document.getElementById('drop-zone');
 ['dragenter','dragover'].forEach(ev =>
   dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('drag-over'); }));
-['dragleave','drop'].forEach(ev =>
+['dragleave'].forEach(ev =>
   dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); }));
-dropZone.addEventListener('drop', e => { e.preventDefault(); handleFileList(e.dataTransfer.files); });
+
+dropZone.addEventListener('drop', async e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const files = await extractFilesFromDataTransfer(e.dataTransfer);
+  handleFileList(files, true);
+});
+
 dropZone.addEventListener('click', e => {
   if (!e.target.closest('button')) document.getElementById('file-input').click();
 });
-document.getElementById('file-input').addEventListener('change',   e => handleFileList(e.target.files));
+document.getElementById('file-input').addEventListener('change', e => {
+  handleFileList(e.target.files, true);
+});
 
-function handleFileList(fileList) {
+async function extractFilesFromDataTransfer(dataTransfer) {
+  if (!dataTransfer) return [];
+  const results = [];
+  const items = dataTransfer.items;
+  if (items && items.length > 0) {
+    const entries = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.webkitGetAsEntry) {
+        const entry = item.webkitGetAsEntry();
+        if (entry) entries.push(entry);
+      }
+    }
+    if (entries.length > 0) {
+      async function traverseEntry(entry) {
+        if (entry.isFile) {
+          return new Promise(resolve => {
+            entry.file(f => resolve([f]), () => resolve([]));
+          });
+        } else if (entry.isDirectory) {
+          const dirReader = entry.createReader();
+          return new Promise(resolve => {
+            dirReader.readEntries(async subEntries => {
+              const subFiles = [];
+              for (const sub of subEntries) {
+                const fList = await traverseEntry(sub);
+                subFiles.push(...fList);
+              }
+              resolve(subFiles);
+            }, () => resolve([]));
+          });
+        }
+        return [];
+      }
+      for (const entry of entries) {
+        const subFiles = await traverseEntry(entry);
+        results.push(...subFiles);
+      }
+    }
+  }
+  if (!results.length && dataTransfer.files && dataTransfer.files.length > 0) {
+    results.push(...Array.from(dataTransfer.files));
+  }
+  return results;
+}
+
+function clearSelectedFiles(e) {
+  if (e) e.stopPropagation();
+  selectedFiles = [];
+  const badge = document.getElementById('file-count-badge');
+  badge.textContent = '';
+  badge.classList.remove('show');
+  dropZone.classList.remove('has-files');
+  document.getElementById('mode-row').classList.remove('show');
+  document.getElementById('start-btn').classList.remove('show');
+  document.getElementById('file-input').value = '';
+}
+
+function handleFileList(fileList, append = true) {
   const allowed = ['pdf','xlsx','xls','csv','ods','jpg','jpeg','png','webp','heic','bmp','tiff','tif'];
-  selectedFiles = Array.from(fileList).filter(f => {
+  const incoming = Array.from(fileList || []).filter(f => {
     const ext = f.name.split('.').pop().toLowerCase();
     return allowed.includes(ext);
   });
+  if (!incoming.length && !selectedFiles.length) return;
+
+  if (append && selectedFiles.length > 0) {
+    const existingKeys = new Set(selectedFiles.map(f => f.name + '_' + f.size));
+    for (const f of incoming) {
+      const key = f.name + '_' + f.size;
+      if (!existingKeys.has(key)) {
+        selectedFiles.push(f);
+        existingKeys.add(key);
+      }
+    }
+  } else {
+    selectedFiles = incoming;
+  }
   if (!selectedFiles.length) return;
 
   const n = selectedFiles.length;
   const badge = document.getElementById('file-count-badge');
-  badge.textContent = n + ' file' + (n !== 1 ? 's' : '') + ' selected and ready';
+  badge.innerHTML = n + ' file' + (n !== 1 ? 's' : '') + ' selected and ready ' +
+    '<button type="button" onclick="clearSelectedFiles(event)" style="background:none;border:none;color:#94a3b8;cursor:pointer;text-decoration:underline;margin-left:8px;font-size:0.75rem;">Clear</button>';
   badge.classList.add('show');
   dropZone.classList.add('has-files');
 
@@ -672,6 +763,8 @@ async function startImport() {
 
     buildFileListUI(filesToUpload);
 
+    const authHeaders = await getAuthHeader();
+
     for (let i = 0; i < filesToUpload.length; i++) {
       const f = filesToUpload[i];
       updateFileRow(i, 'active', 'Uploading...');
@@ -682,10 +775,26 @@ async function startImport() {
       formData.append('user_email', USER_EMAIL);
       formData.append('session_id', sessionId);
 
-      const resp = await fetch(API_BASE + '/api/import/upload', {
-        method: 'POST',
-        body: formData
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
+
+      let resp;
+      try {
+        resp = await fetch(API_BASE + '/api/import/upload', {
+          method: 'POST',
+          headers: authHeaders,
+          body: formData,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        updateFileRow(i, 'error', 'Upload failed');
+        if (fetchErr.name === 'AbortError') {
+          throw new Error('Upload timed out. Try fewer files or a smaller PDF.');
+        }
+        throw new Error('Upload blocked or network connection lost. Please ensure you are signed in and try again.');
+      }
 
       if (!resp.ok) {
         let errMsg = 'Upload failed';
@@ -694,6 +803,9 @@ async function startImport() {
           errMsg = errData.detail || errMsg;
         } catch(e) {}
         updateFileRow(i, 'error', 'Upload failed');
+        if (resp.status === 413) {
+          throw new Error('File too large: "' + f.name + '" exceeds the 32 MB limit.');
+        }
         throw new Error(errMsg);
       }
 
@@ -704,7 +816,8 @@ async function startImport() {
     startPolling();
 
     const procResp = await fetch(API_BASE + '/api/import/process', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST',
+      headers: {'Content-Type':'application/json', ...authHeaders},
       body: JSON.stringify({ user_email: USER_EMAIL, session_id: sessionId, mask_pii: maskPiiEnabled }),
     });
 
@@ -714,10 +827,10 @@ async function startImport() {
     }
   } catch(err) {
     console.error('Import failure:', err);
-    showError('Import Error: ' + err.message);
+    showError(err.message, true);
+    document.getElementById('progress-label').textContent = 'Upload halted — see error above.';
   } finally {
     resetImportUIState();
-  }
 }
 
 function buildFileListUI(files = selectedFiles) {
@@ -764,8 +877,10 @@ function startPolling() {
   document.getElementById('progress-label').innerHTML = '<span class="pulse-dot"></span> AI processing...';
   pollInterval = setInterval(async () => {
     try {
+      const authHeaders = await getAuthHeader();
       const r = await fetch(
-        API_BASE + '/api/import/status/' + sessionId + '?user_email=' + encodeURIComponent(USER_EMAIL)
+        API_BASE + '/api/import/status/' + sessionId + '?user_email=' + encodeURIComponent(USER_EMAIL),
+        { headers: authHeaders }
       );
       if (!r.ok) return;
       const data = await r.json();

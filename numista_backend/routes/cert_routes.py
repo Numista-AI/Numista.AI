@@ -75,6 +75,8 @@ def _get_pcgs_token() -> Optional[str]:
 def auto_detect_grader(cert_num: str) -> str:
     """Auto-detects grader from cert number format."""
     clean = cert_num.strip().upper()
+    if clean.startswith("CACG"):
+        return "CACG"
     if clean.startswith("CAC"):
         return "CAC"
     # Extract digits
@@ -144,6 +146,8 @@ async def cert_lookup(
             detected_grader = "PCGS"
         elif "NGC" in g_upper:
             detected_grader = "NGC"
+        elif "CACG" in g_upper:
+            detected_grader = "CACG"
         elif "CAC" in g_upper:
             detected_grader = "CAC"
         else:
@@ -212,10 +216,10 @@ async def cert_lookup(
             source="manual_fallback",
         )
 
-    # 3. CAC Lookup (CAC has no public cert lookup API; fall back to manual entry with cert # prefilled)
-    if detected_grader == "CAC":
+    # 3. CAC / CACG Lookup (No public cert lookup API; fall back to manual entry with cert # prefilled)
+    if detected_grader in ("CAC", "CACG"):
         return CertLookupResponse(
-            grader="CAC",
+            grader=detected_grader,
             cert_num=clean_cert,
             coin_name=None,
             year=None,

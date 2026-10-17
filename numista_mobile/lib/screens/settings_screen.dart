@@ -1947,7 +1947,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'MS-60', 'MS-61', 'MS-62', 'MS-63', 'MS-64', 'MS-65', 'MS-66', 'MS-67', 'MS-68', 'MS-69', 'MS-70',
       'PR-65', 'PR-67', 'PR-70'
     ];
-    final allServices = ['PCGS', 'NGC', 'ANACS', 'CAC', 'ICG'];
+    final allServices = ['PCGS', 'NGC', 'CACG', 'CAC', 'ANACS', 'ICG'];
     final goalOptions = [
       {'value': 'numismatic_study', 'label': 'Numismatic Study'},
       {'value': 'estate_planning', 'label': 'Estate Planning'},
