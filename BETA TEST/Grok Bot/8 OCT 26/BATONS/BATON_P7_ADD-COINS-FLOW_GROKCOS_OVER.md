@@ -434,3 +434,18 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-17 12:00 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.12 (NET-294). Still no ACK to NET-294, no edits in p7v89_build (HEAD 3bcecde1, clean), last AG conversation write ~10:48. Not a stall yet; 2h clock from 10:57 (mark ~12:57; next watch flags if still unmoved). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
   Live OK (numista.ai 200, numista-vault.web.app 200).
+
+- 2026-10-17 12:17 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.12 (NET-294). Still no ACK to NET-294, no edits in p7v89_build since 10:57 (HEAD 3bcecde1, clean), last AG conversation write ~11:07. Not a stall yet (~80 min); 2h clock from 10:57 (mark ~12:57; next watch flags if still unmoved). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+- 2026-10-17 12:30 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.12 (NET-294). Still no ACK to NET-294, no edits in p7v89_build since 10:57 (HEAD 3bcecde1, clean; origin/p7-v8.9 same). Not a stall yet (~93 min); 2h clock from 10:57 (mark ~12:57; next watch flags if still unmoved). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+- 2026-10-17 12:45 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS; AG ACKed NET-292/293/294 in NET-295 (12:33) and is launching V8.12 on p7-v8.9 atop a89de716 (worktree still HEAD 3bcecde1, clean; build pending Opus quota). Stall clock reset to 12:33 (mark ~14:33). NET-296 (12:37) answers Eric's Document AI question; Grok CoS spot-checked main.py: invoice endpoint (~L2002) creates a DocAI client but never uses it and runs on Gemini; only checklist scanning calls processor 261d6897c84ca28b (L4663/L4789) with Gemini fallback (L4951-5000); receipt processor c113e9bb62be1554 appears only in _archive/_scripts. Relayed to Eric for decision; no undeploy without his YES. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+- 2026-10-17 12:55 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS, V8.12 actively building: p7v89_build has fresh edits 12:48-12:54 (my_collection_screen, morgan_chat_context, ai_chat_screen, backup_export_service, market_news_service, plus backend main.py, scan_service/main.py, estate_pdf_builder.py - backend/scan scope to be checked at scoring against NET-294). 11 files modified, no new commit yet (HEAD 3bcecde1 = origin/p7-v8.9). Not a stall; 2h clock from 12:33 (mark ~14:33). NET-296 DocAI answer already relayed to Eric at 12:45; no undeploy without his YES. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+
+- 2026-10-17 13:12 ET — AG CoS: V8.12 done (689e2ca1), 576/576 tests, 0 analyze errors, GEMINI38 verbatim filed. Passing to Grok CoS for preview + UX + FT re-gate.
