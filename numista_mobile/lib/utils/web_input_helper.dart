@@ -9,10 +9,6 @@
 // - Cost field: inputmode="decimal"
 // - All text fields: no inputmode set (null)
 
-import 'package:flutter/foundation.dart' show kIsWeb;
-
-import 'web_input_helper_stub.dart'
-    if (dart.library.js_interop) 'web_input_helper_web.dart' as impl;
 
 class WebInputHelper {
   /// Instantiable for unit tests and attribute inspection.
@@ -43,8 +39,7 @@ class WebInputHelper {
 
   /// Sets static inputmode attributes on DOM elements per field type.
   static void applyStaticInputModes() {
-    if (!kIsWeb) return;
-    impl.applyStaticInputModes(staticFieldInputModes);
+    // Disabled in V8.11 in favor of index.html JavaScript injection
   }
 
   /// Deprecated focus-based hook, now a safe no-op to prevent focus loss / character dropping.

@@ -425,7 +425,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     final isRealUser = authUser != null && !authUser.isAnonymous;
 
     if (!isRealUser && GuestSeedService.isBrowseDemoMode) {
-      return GuestSeedService.getDemoCoinsStream();
+      return GuestSeedService.getDemoCoinsStream().asBroadcastStream();
     }
     if (AuthService.coinsPath.contains('unknown')) {
       return const Stream.empty();
@@ -437,7 +437,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     } else if (_limitMode == CollectionLimitMode.last100) {
       q = q.limit(100);
     }
-    return q.snapshots();
+    return q.snapshots().asBroadcastStream();
   }
 
   void _subscribeCoinsStream() {
@@ -464,7 +464,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
 
     try {
-      final stream = _buildCoinsStream();
+      final stream = _buildCoinsStream().asBroadcastStream();
       _coinsStream = stream;
 
       // 6-second fallback timer if no first event arrives
@@ -1399,6 +1399,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       builder: (context, statsSnap) {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: _coinsStream,
+          initialData: _cachedCoinsDocs.isNotEmpty
+              ? DemoQuerySnapshot(_cachedCoinsDocs)
+              : null,
           builder: (context, coinsSnap) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: (!isUnauthOrDemo && email.isNotEmpty)

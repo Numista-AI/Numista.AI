@@ -482,7 +482,10 @@ class WorldItemService {
     // Auth-primary gate: a real non-anonymous Firebase user always reads from
     // Firestore, regardless of the in-memory demo flag. The demo branch is only
     // reached when there is no authenticated user (Browse Demo path, State B).
-    final authUser = FirebaseAuth.instance.currentUser;
+    User? authUser;
+    try {
+      authUser = FirebaseAuth.instance.currentUser;
+    } catch (_) {}
     final isRealUser = authUser != null && !authUser.isAnonymous;
 
     if (!isRealUser && GuestSeedService.isBrowseDemoMode) {
@@ -500,14 +503,15 @@ class WorldItemService {
                 era: item['Year']?.toString() ?? '',
               ))
           .toList();
-      return Stream.value(demoWorld);
+      return Stream.value(demoWorld).asBroadcastStream();
     }
     return _col
         .orderBy('created_at', descending: true)
         .snapshots()
         .map((snap) => snap.docs
             .map((doc) => WorldItem.fromFirestore(doc))
-            .toList());
+            .toList())
+        .asBroadcastStream();
   }
 
   /// Fetches live spot prices from the backend's existing endpoint.

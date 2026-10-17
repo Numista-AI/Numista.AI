@@ -26,6 +26,9 @@ class ProgramManagerScreen extends StatefulWidget {
   final String? initialProgramId;
   const ProgramManagerScreen({super.key, this.initialProgramId});
 
+  @visibleForTesting
+  static EdgeInsets floatingSnackBarMargin(BuildContext context) => _ProgramManagerScreenState._floatingSnackBarMargin(context);
+
   @override
   State<ProgramManagerScreen> createState() => _ProgramManagerScreenState();
 }
@@ -1951,7 +1954,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
   static EdgeInsets _floatingSnackBarMargin(BuildContext context) {
     final sw = MediaQuery.of(context).size.width;
-    return EdgeInsets.only(bottom: 24, right: 16, left: sw > 440 ? sw - 416 : 16);
+    return EdgeInsets.only(top: 80, bottom: 120, right: 16, left: sw > 440 ? sw - 416 : 16);
   }
 
   Future<void> _confirmAddSelectedCoins() async {

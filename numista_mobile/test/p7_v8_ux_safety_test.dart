@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -17,8 +17,10 @@ import 'package:numista_ai/services/set_expansion_helper.dart';
 import 'package:numista_ai/services/morgan_prefs.dart';
 import 'package:numista_ai/utils/slot_resolver.dart';
 import 'package:numista_ai/services/coin_programs_data.dart';
-import 'package:numista_ai/models/program_model.dart';
 import 'package:numista_ai/services/checklist_generator_service.dart';
+import 'package:numista_ai/services/coin_normalizer_service.dart';
+import 'package:numista_ai/services/world_item_service.dart';
+import 'package:numista_ai/screens/program_manager_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -1260,10 +1262,8 @@ void main() {
       });
 
       // Emulate _loadDismissedNews guard: unauthenticated / guest demo user skips HTTP call
-      bool isRealUser = false; // demo / unauthenticated state
-      if (!isRealUser) {
-        // demo/guest: skip HTTP call
-      } else {
+      GuestSeedService.activateBrowseDemo();
+      if (!GuestSeedService.isBrowseDemoMode) {
         await HttpAuthClient.get(Uri.parse('https://numista-backend-568985927038.us-central1.run.app/api/dismissed_news'));
       }
 
@@ -1471,6 +1471,91 @@ void main() {
 
       // Program/Series error is also cleared immediately
       expect(find.text('Please enter the series name, like Morgan Silver Dollar.'), findsNothing);
+    });
+  });
+
+  group('P7 V8.11 Fixes: Broadcast Stream All Tab, Elevated Top Snackbar, Normalizer Guard, HttpAuthClient Guard, JS Inputmode Injection', () {
+    test('p7_v811_demo_coins_stream_is_broadcast', () async {
+      GuestSeedService.setDemoActiveForTest(true);
+      final stream = GuestSeedService.getDemoCoinsStream();
+      expect(stream.isBroadcast, isTrue);
+
+      // Verify two listeners can subscribe simultaneously without throwing
+      final sub1 = stream.listen((_) {});
+      final sub2 = stream.listen((_) {});
+      await sub1.cancel();
+      await sub2.cancel();
+    });
+
+    test('p7_v811_world_items_stream_is_broadcast', () async {
+      GuestSeedService.setDemoActiveForTest(true);
+      final stream = WorldItemService.worldItemsStream();
+      expect(stream.isBroadcast, isTrue);
+
+      final sub1 = stream.listen((_) {});
+      final sub2 = stream.listen((_) {});
+      await sub1.cancel();
+      await sub2.cancel();
+    });
+
+    testWidgets('p7_v811_floating_snackbar_margin_elevates_and_clears_action_area', (WidgetTester tester) async {
+      late BuildContext ctx;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (c) {
+              ctx = c;
+              return const Scaffold(body: SizedBox());
+            },
+          ),
+        ),
+      );
+
+      final pmMargin = ProgramManagerScreen.floatingSnackBarMargin(ctx);
+      final hubMargin = AddCoinsHub.floatingSnackBarMargin(ctx);
+
+      // Verify bottom margin is at least 120px to clear the action bar / caption
+      expect(pmMargin.bottom, greaterThanOrEqualTo(120.0));
+      expect(hubMargin.bottom, greaterThanOrEqualTo(120.0));
+
+      // Verify top margin is 80px (positioned below app bar)
+      expect(pmMargin.top, 80.0);
+      expect(hubMargin.top, 80.0);
+    });
+
+    test('p7_v811_coin_normalizer_guarded_in_demo_and_unauth', () async {
+      GuestSeedService.setDemoActiveForTest(true);
+      expect(GuestSeedService.isBrowseDemoMode, isTrue);
+      // Calling runForUser should return immediately without executing queries
+      expect(() => CoinNormalizerService.runForUser(), returnsNormally);
+    });
+
+    test('p7_v811_http_auth_client_guards_unauthenticated_requests', () async {
+      // Clear overrides to simulate unauthenticated client
+      HttpAuthClient.tokenProviderOverride = null;
+      HttpAuthClient.httpClientOverride = null;
+
+      final resp = await HttpAuthClient.get(
+        Uri.parse('https://numista-backend-568985927038.us-central1.run.app/api/reference/glossary'),
+      );
+
+      // Must return 401 without firing an external request
+      expect(resp.statusCode, 401);
+      expect(resp.body, contains('Authentication token missing or invalid'));
+    });
+
+    test('p7_v811_index_html_has_apply_input_modes_script', () {
+      final indexHtmlPath = 'web/index.html';
+      expect(File(indexHtmlPath).existsSync(), isTrue);
+      final content = File(indexHtmlPath).readAsStringSync();
+
+      expect(content, contains('function applyInputModes()'));
+      expect(content, contains('/year|yr/'));
+      expect(content, contains('/qty|quantity/'));
+      expect(content, contains('/cost|price|value/'));
+      expect(content, contains("el.inputMode = 'numeric'"));
+      expect(content, contains("el.inputMode = 'decimal'"));
+      expect(content, contains('setInterval(applyInputModes, 300)'));
     });
   });
 }

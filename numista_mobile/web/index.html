@@ -146,29 +146,46 @@
     };
   </script>
   <script>
-    // Systemic static inputmode observer for Flutter Web
     (function() {
-      function tagInputModes() {
-        var inputs = document.querySelectorAll('input');
-        for (var i = 0; i < inputs.length; i++) {
-          var el = inputs[i];
-          var label = (el.getAttribute('aria-label') || el.getAttribute('name') || el.getAttribute('placeholder') || '').toLowerCase();
-          var parentLabel = (el.parentElement ? (el.parentElement.getAttribute('aria-label') || '') : '').toLowerCase();
-          var full = label + ' ' + parentLabel;
-          if (full.indexOf('year') !== -1 || full.indexOf('qty') !== -1 || full.indexOf('quantity') !== -1) {
-            if (el.getAttribute('inputmode') !== 'numeric') el.setAttribute('inputmode', 'numeric');
-          } else if (full.indexOf('cost') !== -1 || full.indexOf('price') !== -1) {
-            if (el.getAttribute('inputmode') !== 'decimal') el.setAttribute('inputmode', 'decimal');
+      function applyInputModes() {
+        var inputs = Array.prototype.slice.call(document.querySelectorAll('input'));
+        var hosts = document.querySelectorAll('flt-glass-pane, flutter-view');
+        hosts.forEach(function(host) {
+          if (host.shadowRoot) {
+            var shadowInputs = host.shadowRoot.querySelectorAll('input');
+            shadowInputs.forEach(function(inp) { inputs.push(inp); });
           }
-        }
-      }
-      if (typeof MutationObserver !== 'undefined') {
-        var observer = new MutationObserver(function() { tagInputModes(); });
-        document.addEventListener('DOMContentLoaded', function() {
-          observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-label', 'placeholder'] });
-          setInterval(tagInputModes, 500);
+        });
+
+        inputs.forEach(function(el) {
+          var label = (el.getAttribute('aria-label') || el.getAttribute('placeholder') || '').toLowerCase();
+          var name  = (el.getAttribute('name') || '').toLowerCase();
+          var parent = el.parentElement;
+          var parentLabel = (parent ? (parent.getAttribute('aria-label') || parent.innerText || parent.textContent || '') : '').toLowerCase();
+          var full = label + ' ' + name + ' ' + parentLabel;
+
+          if (/year|yr|1921/.test(label) || /year|yr/.test(name) || /year|yr|1921/.test(full)) {
+            el.inputMode = 'numeric';
+            el.setAttribute('inputmode', 'numeric');
+          } else if (/qty|quantity|^1$/.test(label) || /qty|quantity/.test(name) || /qty|quantity/.test(full)) {
+            el.inputMode = 'numeric';
+            el.setAttribute('inputmode', 'numeric');
+          } else if (/cost|price|value|\.00|25\.00/.test(label) || /cost|price|value/.test(name) || /cost|price|value|\.00/.test(full)) {
+            el.inputMode = 'decimal';
+            el.setAttribute('inputmode', 'decimal');
+          }
         });
       }
+      window.applyInputModes = applyInputModes;
+      // Run on DOM changes and on a 300ms interval as fallback
+      if (window.MutationObserver) {
+        new MutationObserver(applyInputModes).observe(document.body, {childList: true, subtree: true, attributes: false});
+        var host = document.querySelector('flt-glass-pane, flutter-view');
+        if (host && host.shadowRoot) {
+          new MutationObserver(applyInputModes).observe(host.shadowRoot, {childList: true, subtree: true, attributes: false});
+        }
+      }
+      setInterval(applyInputModes, 300);
     })();
   </script>
   <script src="flutter_bootstrap.js" async></script>

@@ -45,6 +45,9 @@ class AddCoinsHub extends StatefulWidget {
     this.initialCoinPreset,
   });
 
+  @visibleForTesting
+  static EdgeInsets floatingSnackBarMargin(BuildContext context) => _AddCoinsHubState._floatingSnackBarMargin(context);
+
   @override
   State<AddCoinsHub> createState() => _AddCoinsHubState();
 }
@@ -1998,6 +2001,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     );
   }
 
+  static EdgeInsets _floatingSnackBarMargin(BuildContext context) {
+    final sw = MediaQuery.of(context).size.width;
+    return EdgeInsets.only(top: 80, bottom: 120, right: 16, left: sw > 440 ? sw - 416 : 16);
+  }
+
   Widget _buildManualEntryTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
@@ -2015,11 +2023,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 isProcessing: _isProcessing,
                 onSubmit: (data) async {
                   if (GuestSeedService.isBrowseDemoMode) {
-                    final sw = MediaQuery.of(context).size.width;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         behavior: SnackBarBehavior.floating,
-                        margin: EdgeInsets.only(bottom: 24, right: 16, left: sw > 440 ? sw - 416 : 16),
+                        margin: _floatingSnackBarMargin(context),
                         duration: const Duration(seconds: 4),
                         content: const Text('Demo mode — create a free account to save coins.'),
                         backgroundColor: const Color(0xFFF59E0B),

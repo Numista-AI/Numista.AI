@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'guest_seed_service.dart';
 import 'http_auth_client.dart';
 import '../constants.dart';
 
@@ -22,6 +24,10 @@ class CollectorProfileService {
 
   /// Fetch collector profile for the current user
   static Future<Map<String, dynamic>> getProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || GuestSeedService.isBrowseDemoMode) {
+      return defaultProfile;
+    }
     try {
       final response = await HttpAuthClient.get(
         Uri.parse('$_baseUrl/api/ai/profile'),

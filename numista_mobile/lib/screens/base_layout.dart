@@ -215,7 +215,7 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
     // Run US Mint data normalization silently in background for all accounts.
     // Only processes coins that haven't been normalized yet.
-    if (!AuthService.isGuest) {
+    if (!AuthService.isGuest && !widget.isDemoMode && !GuestSeedService.isBrowseDemoMode && AuthService.isSignedIn) {
       CoinNormalizerService.runForUser();
     }
     // Auto-start the guided wizard for first-time Guest users.

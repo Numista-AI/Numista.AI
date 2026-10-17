@@ -12,6 +12,7 @@ class AuthService {
   static User? get currentUser => _auth.currentUser;
 
   static bool get isGuest => _auth.currentUser?.isAnonymous == true;
+  static bool get isSignedIn => _auth.currentUser != null && !_auth.currentUser!.isAnonymous;
 
   /// Pure helper — testable without Firebase. Used by isBetaTester getter.
   static bool isBetaFor({required DateTime? creationUtc, required bool isAnonymous}) {

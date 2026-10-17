@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/guest_seed_service.dart';
 import '../services/http_auth_client.dart';
 import '../constants.dart';
 
@@ -42,6 +44,17 @@ class _GlossaryTooltipWrapperState extends State<GlossaryTooltipWrapper> {
 
   void _loadGlossaryData() async {
     if (_cachedGlossary != null) {
+      if (mounted) {
+        setState(() {
+          _isInitLoaded = true;
+        });
+      }
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || GuestSeedService.isBrowseDemoMode) {
+      _cachedGlossary = [];
       if (mounted) {
         setState(() {
           _isInitLoaded = true;

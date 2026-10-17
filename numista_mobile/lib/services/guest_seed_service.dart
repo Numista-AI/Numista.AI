@@ -114,7 +114,7 @@ class GuestSeedService {
     final snapshots = _demoCoinCache.asMap().entries.map((e) {
       return DemoDocumentSnapshot('demo_${e.key}', Map<String, dynamic>.from(e.value));
     }).toList();
-    return Stream.value(DemoQuerySnapshot(snapshots));
+    return Stream.value(DemoQuerySnapshot(snapshots)).asBroadcastStream();
   }
 
   /// Returns a future that resolves to a `DemoQuerySnapshot` containing the

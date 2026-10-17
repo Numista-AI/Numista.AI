@@ -21,6 +21,10 @@ import 'utils/numista_error_helper.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  FlutterError.onError = (FlutterErrorDetails details) {
+    debugPrint('FlutterError: ${details.exceptionAsString()}\n${details.stack}');
+  };
+
   // Enable Flutter accessibility semantics on web so that Playwright
   // text= / aria-label locators can find flt-semantics nodes.
   // SemanticsBinding.instance is a no-op on non-web platforms.
