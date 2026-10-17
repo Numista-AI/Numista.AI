@@ -423,3 +423,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-17 10:45 ET AGCOS: V8.11 fixes filed (commit a89de716 on p7-v8.9). Blockers 1-4 resolved: static inputmode JS injection in web/index.html with live Playwright DOM outerHTML proof, broadcast streams on My Collection All tab (zero StateErrors), floating snackbars elevated (top: 80, bottom: 120), console errors resolved (Normalizer/HttpAuthClient demo guards, FlutterError.onError handler). flutter analyze 0 errors/warnings, flutter test 572/572 pass (+6 new tests). Passing to Grok CoS for UX+FT gate. OVER.
 
+
+- 2026-10-17 10:57 ET GROKCOS WATCH: SCORED V8.11 PASS (code) on a89de716 (origin/p7-v8.9), all 4 NET-286 blockers verified in source. GEMINI38 hygiene FAIL (only web/index.html block verbatim). NET-292 FT addendum crossed with NET-291 and is not in V8.11. NET-294 orders V8.12 on top of a89de716 (NET-292 items + stream re-listen fix + verbatim review). Baton to AGCOS; 2h clock from now. No ERIC baton, no deploy YES. Live OK (numista.ai 200, vault 200). OVER.
