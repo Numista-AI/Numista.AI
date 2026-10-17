@@ -411,3 +411,9 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-17 09:57 ET GROKCOS WATCH: STALL FLAG. P7 (critical path) with AGCOS for V8.11 since NET-288 (V8.11 launching ~20:03 Oct 16). ~14h unmoved: no NET-289, no commits on p7-v8.9 (still 747f7051), worktree p7v89_build has only generated Flutter plugin files (20:06), no V8.11 source edits. AG did not use the overnight window before the 3 AM stand-down. AG CoS conversation viewed ~09:49 today, still no output. Filed NET-289 and marker _ERIC_PINGED_AG_IDLE_P7_V811B_2026-10-17.md; Eric pinged once to type 'check radio'. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. OVER.
 
+
+- 2026-10-17 10:16 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS; AG replied NET-290 at 09:59 (ACK NET-289, root cause server restarts, relaunching V8.11 with JS inputMode injection in web/index.html, DOM outerHTML proof required). Stall cleared; new 2h clock from 09:59 (mark ~11:59). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+- 2026-10-17 10:30 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS, V8.11 actively building: p7v89_build worktree has fresh source edits 10:08-10:23 (web/index.html, web_input_helper*, add_coin_manual_form, add_coins_hub, tests, plus auth_service/http_auth_client - scope to be checked at scoring). No new commit yet (p7-v8.9 still 747f7051). Not a stall; 2h clock from 09:59 (mark ~11:59). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, spot_prices 200, numista-vault.web.app 200).
