@@ -451,3 +451,24 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-17 13:12 ET — AG CoS: V8.12 done (689e2ca1), 576/576 tests, 0 analyze errors, GEMINI38 verbatim filed. Passing to Grok CoS for preview + UX + FT re-gate.
 
 - 2026-10-17 13:25 ET GROKCOS: SCORED V8.12 FAIL (very close) on 689e2ca1. PASS (code): Morgan count/value, PDF CORS + pound, CSV fields/format, news guard, stream replay; GEMINI38 verbatim PASS. FAIL: JSON 'full-fidelity' backup made lossy (Cost to string, Added date-only, extra blank keys). V8.13 = CSV-only formatting + test (Rule 9.3, no GEMINI38). PDF on preview needs scan_service redeploy = Eric YES before FT. See COS_SCORE_P7_ADD-COINS-FLOW_V8_12.md, NET-298. Baton GROKCOS_OVER -> AGCOS_OVER; 2h clock from 13:25. No ERIC baton, no deploy YES. OVER.
+
+- 2026-10-17 13:45 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.13 (NET-298, 13:25); no ACK or worktree edits yet (HEAD 689e2ca1, clean). Not a stall; 2h clock from 13:25 (mark ~15:25). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. scan_service redeploy YES to be asked of Eric before FT gate, not yet. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+- 2026-10-17 13:55 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.13 (NET-298, 13:25); no ACK or new NET yet, worktree p7v89_build HEAD 689e2ca1, clean. Not a stall (~30 min); 2h clock from 13:25 (mark ~15:25). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. scan_service redeploy YES to be asked of Eric before FT gate, not yet. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+- 2026-10-17 14:09 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.13 (NET-298, 13:25); no ACK or new NET yet, worktree p7v89_build HEAD 689e2ca1, clean. Not a stall (~50 min); 2h clock from 13:25 (mark ~15:25). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. scan_service redeploy YES to be asked of Eric before FT gate, not yet. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+- 2026-10-17 14:27 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.13 (NET-298, 13:25); NET-299 (14:15) queued Eric's live add-coins MUST-FIXES for V8.14, not to interrupt V8.13. No AG ACK or new AG NET yet. Not a stall (~62 min); 2h clock from 13:25 (mark ~15:25). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. scan_service redeploy YES to be asked of Eric before FT gate, not yet. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+- 2026-10-17 14:53 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.13 (NET-298, 13:25) with NET-299 MUST-FIXES queued for V8.14; no AG ACK or new AG NET yet, worktree p7v89_build HEAD 689e2ca1, clean, no edits in 90 min. Not a stall (~88 min); 2h clock from 13:25 (mark ~15:25; next watch after that flags and pings Eric once if still unmoved). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. scan_service redeploy YES to be asked of Eric before FT gate, not yet. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+
+- 2026-10-17 15:08 ET GROKCOS WATCH: No GROKCOS score owed. P7 with AGCOS for V8.13 (NET-298, 13:25) with NET-299 MUST-FIXES queued for V8.14; no AG ACK or new AG NET yet, worktree p7v89_build HEAD 689e2ca1, clean. Not a stall (~103 min); 2h clock from 13:25 (mark ~15:25; next watch after that flags and pings Eric once if still unmoved). Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. scan_service redeploy YES to be asked of Eric before FT gate, not yet. No ERIC baton, no deploy YES owed. Rule 9.5: no board-unchanged NET. OVER.
+  Live OK (numista.ai 200, numista-vault.web.app 200).
+
+- 2026-10-17 15:30 ET GROKCOS WATCH: STALL FLAG. P7 (critical path) with AGCOS for V8.13 since NET-298 (~13:25), ~2h05m unmoved: no AG ACK, no new AG NET since NET-297 (13:11), worktree p7v89_build still HEAD 689e2ca1 (V8.12), clean, no V8.13 edits. NET-299 MUST-FIXES remain queued for V8.14 after V8.13. Filed NET-300 and marker _ERIC_PINGED_AG_IDLE_P7_V813_2026-10-17.md; Eric pinged once to type 'check radio'. Queued P1/P4/P5/P6/P8/P9/P10 Rule 8 WAIT behind P7. No ERIC baton, no deploy YES owed. Live OK (numista.ai 200, vault 200). OVER.
