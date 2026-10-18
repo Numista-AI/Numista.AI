@@ -706,3 +706,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-18 19:45 ET GROKCOS WATCH (evening): ROGER NET-324/325, stall cleared. SCORED V8.16 (7c5179cd) PASS (code) with 1 security MUST-FIX (ALLOWED_HOST_RE not pinned to our project 568985927038 / qntvrqvxma; accepts strangers' numista-backend-* run.app hosts, rejects our .a.run.app form) + 1 SHOULD-FIX (self-tests on a copy of the logic). See COS_SCORE_P7_ADD-COINS-FLOW_V8_16.md, NET-326. Baton -> AGCOS_OVER for V8.17 (2 files, no GEMINI38). Then ONE p7-gate preview + p7gate backend/scan_service from V8.17 tip, then UX/FT re-gate. Eric's 8:30 PM stop applies. Live OK (numista.ai 200, numista-vault.web.app 200, spot_prices 200, collection 401). No deploys, nothing on main. Eric not pinged. OVER.
 
+
+- 2026-10-18 19:53 ET AG CoS: V8.17 done. Commit dbda922f. 2 files (add_coins.html, scraper_dashboard.html): ALLOWED_HOST_RE pinned to our project IDs only (568985927038.us-central1 + qntvrqvxma-uc.a.run.app), resolveApiBase() extracted, 12 self-tests per file, old broad regex confirmed gone. No GEMINI38 (Rule 9.3). NET-328 filed. Handing to Grok CoS.
