@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!--
+  Backend API URL Strategy:
+  Dart --dart-define values are not available in standalone HTML files.
+  A '?api=<url>' query parameter override is honored ONLY when the current origin
+  matches *.run.app or is a recognized Firebase preview channel (numista-vault--*.web.app / *.firebaseapp.com).
+  The override is NEVER allowed on production origins (numista.ai or numista-vault.web.app without preview prefix).
+  On production origins, always use the hard-coded live URL.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -516,11 +524,19 @@
 </script>
 
 <script>
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? ''
-  : (window.location.origin.includes('numista.ai') || window.location.origin.includes('web.app')
-      ? 'https://numista-backend-568985927038.us-central1.run.app'
-      : '');
+function getApiBaseUrl() {
+  const origin = window.location.origin;
+  const isPreview = /\.run\.app$/.test(origin) || /numista-vault--[^.]+\.(web\.app|firebaseapp\.com)$/.test(origin);
+  if (isPreview) {
+    const params = new URLSearchParams(window.location.search);
+    const apiOverride = params.get('api');
+    if (apiOverride && /^https:\/\/[^\s]+\.run\.app/.test(apiOverride)) {
+      return apiOverride;
+    }
+  }
+  return 'https://numista-backend-568985927038.us-central1.run.app';  // production default
+}
+const API_BASE = getApiBaseUrl();
 const _urlEmail = new URLSearchParams(window.location.search).get('email') || '';
 function getUserEmail() { return _urlEmail; }
 

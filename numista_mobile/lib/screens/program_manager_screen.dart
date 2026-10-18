@@ -19,6 +19,7 @@ import '../utils/slot_resolver.dart';
 import '../services/set_expansion_helper.dart';
 import 'add_coins_hub.dart';
 import '../utils/numista_error_helper.dart';
+import '../constants.dart';
 
 
 
@@ -2136,7 +2137,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     final selectedCount = _selectedToAdd.length;
 
     try {
-      const baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+      const baseUrl = kApiBaseUrl;
       // HttpAuthClient.post injects the Firebase Bearer token — bare http.post returned 401
       final response = await HttpAuthClient.post(
         Uri.parse('$baseUrl/api/checklist/add_coins'),

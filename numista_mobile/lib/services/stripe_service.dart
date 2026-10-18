@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
+import '../constants.dart';
 import 'http_auth_client.dart';
 
 class StripeService {
-  static const String _baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+  static const String _baseUrl = kApiBaseUrl;
 
   /// Launches Stripe Checkout for Pro ($4.99/mo) or Estate ($29/yr) subscription tiers.
   /// Sends the Firebase Bearer token — the server reads user identity from the token.

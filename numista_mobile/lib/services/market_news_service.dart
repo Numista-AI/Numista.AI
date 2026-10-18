@@ -41,7 +41,7 @@ class MarketNewsArticle {
 }
 
 class MarketNewsService {
-  static const String _baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+  static const String _baseUrl = kApiBaseUrl;
   static const String _cacheKey = 'cached_numismatic_news_v1';
 
   /// Fetches news articles from backend /api/news/feed proxy with local SharedPreferences fallback.

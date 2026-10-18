@@ -26,6 +26,7 @@ import 'package:numista_ai/screens/program_manager_screen.dart';
 import 'package:numista_ai/services/backup_export_service.dart';
 import 'package:numista_ai/services/morgan_chat_context.dart';
 import 'package:numista_ai/services/market_news_service.dart';
+import 'package:numista_ai/constants.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -1861,6 +1862,12 @@ void main() {
       // Verify manual entry card for CACG
       expect(find.text('Enter CACG slab details below'), findsOneWidget);
       expect(find.text('Check this slab on cacgrading.com'), findsOneWidget);
+    });
+
+    test('URL constants default to live URLs', () {
+      // These must match byte-for-byte with the live deployed values
+      expect(kApiBaseUrl, equals('https://numista-backend-568985927038.us-central1.run.app'));
+      expect(kScanServiceUrl, equals('https://numista-scan-service-568985927038.us-central1.run.app'));
     });
   });
 }
