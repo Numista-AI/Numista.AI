@@ -524,52 +524,31 @@
 </script>
 
 <script>
-function getApiBaseUrl() {
-  // Production origins always use the live URL — no overrides allowed.
-  var origin = window.location.origin;
-  var LIVE_URL = 'https://numista-backend-568985927038.us-central1.run.app';
-
-  // Local dev: return empty string so relative /api/ paths work.
+function resolveApiBase(origin, search, liveUrl) {
   if (origin === 'http://localhost' || origin === 'http://127.0.0.1' ||
       origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
     return '';
   }
-
-  // Determine if this is a recognised preview origin.
-  // Preview origins: *.run.app  OR  numista-vault--<hash>.web.app  OR  numista-vault--<hash>.firebaseapp.com
   var PREVIEW_ORIGIN_RE = /^https:\/\/(([^.]+\.run\.app)|(numista-vault--[^.]+\.(?:web\.app|firebaseapp\.com)))$/;
   var isPreview = PREVIEW_ORIGIN_RE.test(origin);
-
-  if (!isPreview) {
-    // Production — never honour ?api= override.
-    return LIVE_URL;
-  }
-
-  // Preview origin — check for an ?api= query parameter override.
+  if (!isPreview) { return liveUrl; }
   try {
-    var params = new URLSearchParams(window.location.search);
+    var params = new URLSearchParams(search);
     var apiParam = params.get('api');
     if (apiParam) {
-      var u = new URL(apiParam);  // throws if not a valid URL
-      // Must be https.
-      if (u.protocol !== 'https:') return LIVE_URL;
-      // Must be one of our own Cloud Run services (optional <tag>--- prefix, then our service name).
-      // Allowed hostnames:
-      //   numista-backend-<project-hash>.us-central1.run.app
-      //   numista-scan-service-<project-hash>.us-central1.run.app
-      //   p7gate---numista-backend-<hash>.a.run.app
-      //   p7gate---numista-scan-service-<hash>.a.run.app
-      //   (and any other <tag>--- prefix variant of our own services)
-      var ALLOWED_HOST_RE = /^((?:[a-z0-9-]+---)?numista-(?:backend|scan-service)-[a-z0-9]+\.(?:us-central1|[a-z0-9-]+)\.run\.app)$/;
-      if (!ALLOWED_HOST_RE.test(u.hostname)) return LIVE_URL;
-      // Return origin only (strip any path/query that might have been appended).
+      var u = new URL(apiParam);
+      if (u.protocol !== 'https:') return liveUrl;
+      var ALLOWED_HOST_RE = /^(?:[a-z0-9-]+---)?numista-(?:backend|scan-service)-(?:568985927038\.us-central1\.run\.app|qntvrqvxma-uc\.a\.run\.app)$/;
+      if (!ALLOWED_HOST_RE.test(u.hostname)) return liveUrl;
       return u.origin;
     }
-  } catch (e) {
-    // Invalid URL — fall through to live.
-  }
+  } catch (e) {}
+  return liveUrl;
+}
 
-  return LIVE_URL;
+function getApiBaseUrl() {
+  var LIVE_URL = 'https://numista-backend-568985927038.us-central1.run.app';
+  return resolveApiBase(window.location.origin, window.location.search, LIVE_URL);
 }
 const API_BASE = getApiBaseUrl();
 const _urlEmail = new URLSearchParams(window.location.search).get('email') || '';
@@ -1173,46 +1152,24 @@ function toggleDealerHelp() {
 if (typeof initDangerZone === 'function') initDangerZone();
 </script>
 <script>
-// V8.16 self-test: getApiBaseUrl() security checks.
+// V8.17 self-test: resolveApiBase() security checks.
 // These run silently in prod; any failure throws to the browser console.
 (function selfTest() {
-  // Save real location, mock it for tests.
-  var realHref = window.location.href;
-  function mockOrigin(origin, search) {
-    // We can't actually change window.location in a script, so we inline the
-    // logic here as a white-box test of the URL-parsing rules.
-    var LIVE_URL = 'https://numista-backend-568985927038.us-central1.run.app';
-    var PREVIEW_ORIGIN_RE = /^https:\/\/(([^.]+\.run\.app)|(numista-vault--[^.]+\.(?:web\.app|firebaseapp\.com)))$/;
-    var isPreview = PREVIEW_ORIGIN_RE.test(origin);
-    var isLocal = (origin === 'http://localhost' || origin === 'http://127.0.0.1' ||
-                   origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'));
-    if (isLocal) return '';
-    if (!isPreview) return LIVE_URL;
-    try {
-      var params = new URLSearchParams(search);
-      var apiParam = params.get('api');
-      if (apiParam) {
-        var u = new URL(apiParam);
-        if (u.protocol !== 'https:') return LIVE_URL;
-        var ALLOWED_HOST_RE = /^((?:[a-z0-9-]+---)?numista-(?:backend|scan-service)-[a-z0-9]+\.(?:us-central1|[a-z0-9-]+)\.run\.app)$/;
-        if (!ALLOWED_HOST_RE.test(u.hostname)) return LIVE_URL;
-        return u.origin;
-      }
-    } catch(e) {}
-    return LIVE_URL;
-  }
   var LIVE = 'https://numista-backend-568985927038.us-central1.run.app';
-  var ACCEPT = 'https://p7gate---numista-backend-568985927038.us-central1.run.app';
-  // ACCEPT cases
-  console.assert(mockOrigin('https://p7gate---numista-backend-qntvrqvxma-uc.a.run.app','') === LIVE, 'a1: preview origin no ?api= -> live');
-  console.assert(mockOrigin('https://numista-vault--abc123.web.app', '?api=' + encodeURIComponent(ACCEPT)) === ACCEPT, 'a2: preview + valid ?api= -> accepted');
-  console.assert(mockOrigin('http://localhost:8080','') === '', 'a3: localhost -> empty');
-  // REJECT cases
-  console.assert(mockOrigin('https://numista.ai', '?api=' + encodeURIComponent(ACCEPT)) === LIVE, 'r1: prod origin -> override rejected');
-  console.assert(mockOrigin('https://numista-vault--abc.web.app', '?api=https://evil.example/x.run.app') === LIVE, 'r2: evil path .run.app rejected');
-  console.assert(mockOrigin('https://numista-vault--abc.web.app', '?api=https://attacker.run.app') === LIVE, 'r3: foreign run.app hostname rejected');
-  console.assert(mockOrigin('https://numista-vault--abc.web.app', '?api=http://p7gate---numista-backend-568985927038.us-central1.run.app') === LIVE, 'r4: http (non-https) rejected');
-  console.assert(mockOrigin('https://numista-vault.web.app', '?api=' + encodeURIComponent(ACCEPT)) === LIVE, 'r5: prod firebase hosting without preview prefix rejected');
+  // Accept
+  console.assert(resolveApiBase('https://p7gate---numista-backend-qntvrqvxma-uc.a.run.app', '', LIVE) === LIVE, 'a1: preview origin no ?api= -> live');
+  console.assert(resolveApiBase('https://numista-vault--abc123.web.app', '?api=' + encodeURIComponent('https://p7gate---numista-backend-568985927038.us-central1.run.app'), LIVE) === 'https://p7gate---numista-backend-568985927038.us-central1.run.app', 'a2: us-central1 form accepted');
+  console.assert(resolveApiBase('https://numista-vault--abc123.web.app', '?api=' + encodeURIComponent('https://p7gate---numista-backend-qntvrqvxma-uc.a.run.app'), LIVE) === 'https://p7gate---numista-backend-qntvrqvxma-uc.a.run.app', 'a3: uc.a form accepted');
+  console.assert(resolveApiBase('http://localhost:8080', '', LIVE) === '', 'a4: localhost -> empty');
+  // Reject
+  console.assert(resolveApiBase('https://numista.ai', '?api=' + encodeURIComponent('https://p7gate---numista-backend-568985927038.us-central1.run.app'), LIVE) === LIVE, 'r1: prod origin rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://evil.example/x.run.app', LIVE) === LIVE, 'r2: evil path rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://attacker.run.app', LIVE) === LIVE, 'r3: foreign run.app rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=http://p7gate---numista-backend-568985927038.us-central1.run.app', LIVE) === LIVE, 'r4: http rejected');
+  console.assert(resolveApiBase('https://numista-vault.web.app', '?api=' + encodeURIComponent('https://p7gate---numista-backend-568985927038.us-central1.run.app'), LIVE) === LIVE, 'r5: prod firebase rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://numista-backend-123456789012.us-central1.run.app', LIVE) === LIVE, 'r6: wrong project number rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://numista-backend-568985927038.europe-west1.run.app', LIVE) === LIVE, 'r7: wrong region rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://numista-backend-attackerxyz-uc.a.run.app', LIVE) === LIVE, 'r8: wrong hash rejected');
 })();
 </script>
 </body>
