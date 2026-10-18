@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:numista_ai/constants.dart';
 import 'package:numista_ai/services/http_auth_client.dart';
@@ -61,7 +60,7 @@ class MarketNewsService {
       }
     }
     try {
-      final response = await http
+      final response = await HttpAuthClient
           .get(Uri.parse('$_baseUrl/api/news/feed'))
           .timeout(const Duration(seconds: 8));
 

@@ -69,15 +69,6 @@ def _is_allowed_origin(origin: str) -> bool:
         return True
     return False
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 from routes.subaccount_routes import router as subaccount_router
 from routes.pcgs_routes import router as pcgs_router
@@ -267,6 +258,22 @@ async def observability_middleware(request: Request, call_next):
                "user_email": user_email, "request_id": rid}
     )
     return response
+ 
+# --- CORS MIDDLEWARE (outermost) ----------------------------------------------
+# In Starlette / FastAPI, middlewares are built in reverse order: the LAST middleware
+# added via add_middleware becomes the OUTERMOST middleware in the stack (runs first on
+# incoming requests, runs last on outgoing responses).
+# Placing CORSMiddleware here (after default_deny_auth_middleware and observability_middleware)
+# ensures it is outermost and attaches Access-Control-Allow-* headers to ALL responses,
+# including 401 unauthenticated errors returned by default_deny_auth_middleware.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- VERTEX AI SEARCH -- Coin Reference Library -------------------------------
 # Registers GET /api/coin_search -- open endpoint, no auth required.
@@ -7093,7 +7100,14 @@ class ImportStartRequest(BaseModel):
     file_manifest: list[dict]   # [{name, size, mime}]
 
 @app.post("/api/import/start")
-def import_start(req: ImportStartRequest):
+def import_start(req: ImportStartRequest, _user: dict = Depends(get_current_user)):
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if req.user_email.strip().lower() != caller_email and req.user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     session_ref = db.collection("users").document(req.user_email)\
                     .collection("import_sessions").document(req.session_id)
     session_ref.set({
@@ -7161,18 +7175,39 @@ def import_status(
 
 class ImportProcessRequest(BaseModel):
     user_email: str
-    session_id: str
+    session_id: Optional[str] = None
+    import_id:  Optional[str] = None
     mask_pii:   bool = False
+
+    @model_validator(mode="before")
+    def populate_session_or_import_id(cls, data):
+        if isinstance(data, dict):
+            if not data.get("session_id") and data.get("import_id"):
+                data["session_id"] = data["import_id"]
+            elif not data.get("import_id") and data.get("session_id"):
+                data["import_id"] = data["session_id"]
+        return data
 
 # ── POST /api/import/process ───────────────────────────────────────────────────
 @app.post("/api/import/process", status_code=202)
-async def import_process(req: ImportProcessRequest, background_tasks: BackgroundTasks):
+async def import_process(
+    req: ImportProcessRequest,
+    background_tasks: BackgroundTasks,
+    _user: dict = Depends(get_current_user),
+):
     """
     Orchestrates AI processing of every file in the session asynchronously.
     Returns 202 Accepted immediately so frontend polling tracks status without event-loop blocking.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if req.user_email.strip().lower() != caller_email and req.user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     user_email = req.user_email
-    session_id = req.session_id
+    session_id = req.session_id or req.import_id or ""
     mask_pii   = req.mask_pii
 
     session_ref = db.collection("users").document(user_email)\
@@ -9487,6 +9522,13 @@ async def littleton_sync(request: Request, payload: LittletonSyncRequest, curren
     user_email = current_user.get("email", "").strip()
     if not user_email:
         raise HTTPException(status_code=401, detail="User email not present in authentication token.")
+
+    caller_uid = current_user.get("uid") or current_user.get("user_id") or ""
+    caller_email = (current_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not current_user.get("admin") and not is_dev_guest:
+        if payload.user_email.strip().lower() != caller_email and payload.user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
 
     orders = payload.orders or []
     if not orders:
