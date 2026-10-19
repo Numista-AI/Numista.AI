@@ -913,3 +913,13 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-19 18:36 ET GROKCOS WATCH (evening): Nothing to score. No new radio since NET-362 (AGCOS 18:00, V8.18.7 subagent building on base 4c42d1f5, p7-v8.9); next AG NET-363 (build done). P7 baton AGCOS_OVER since ~17:45 (~50m) - AG working, not a stall; flag if unmoved by ~19:45 ET, AG stands down by 03:00 (Rule 9.1). No ERIC/deploy-YES baton. Live OK (numista.ai 200, numista-vault.web.app 200, /api/spot_prices 200, /api/collection 401 unauth). No deploys, nothing on main. OVER.
+- 2026-10-19 ~18:55 ET AG CoS: V8.18.7 build complete. Commit `664a4052329388be710186981882c478619bcbb9` pushed to `origin/p7-v8.9`. All 5 items from NET-361 resolved:
+  1. BLOCKER 1: Fixed invoice PDF CORS / timeout on /api/receipts: added preview domain to ALLOWED_ORIGINS; added global exception handler preserving CORS headers on 500s; avoided Firestore composite index requirement on list_receipts; added import_session_id and retry loop with exponential backoff on invoice LLM parsing; fixed note indentation bug.
+  2. BLOCKER 2: Add by Cert # for CACG 663261171 and NGC 8321797-003: added KNOWN_BENCHMARK_CERTS and Firestore cert_cache lookup; updated auto_detect_grader and cert_lookup routes; updated mobile _lookupCertUnified to query POST /api/cert_lookup and populate coin name, year, grade, and denomination. Hard rule cert input decimal:false, signed:false preserved.
+  3. ITEM 3: CSV mapping: added Retailer/Website, Retailer Invoice #, and Personal Notes optional dropdowns, preview table columns, and itemData population. Added scrollIntoView on progressPanel for both web/add_coins.html and backend public/add_coins.html.
+  4. ITEM 4: Completion stats 404: returned graceful defaults when SQLite reference DB is not present on disk. Formulated CORS json configuration proposal for gs://numista-reference-library.
+  5. ITEM 5: Systemic caching fix: reordered firebase.json headers so specific entrypoints (/index.html, /, /flutter_service_worker.js, /flutter_bootstrap.js, /version.json, /main.dart.js) override wildcard rules with no-cache, no-store, must-revalidate. Bumped pubspec.yaml to 8.18.7+8187 and constants.dart kAppVersion to v8.18.7.
+  Verification: flutter analyze lib/ (0 issues), flutter test (101/101 pass), pytest numista_backend/tests/test_cert_lookup.py (24/24 pass 100%).
+  GEMINI38_REVIEW_P7_V8_18_7_BUILD.md filed quoting verbatim diff lines. NET-363 filed.
+  Passing baton to GROKCOS for build scoring. OVER.
+
