@@ -6127,6 +6127,28 @@ async def commit_group_photo(
     })
 
 
+GEMINI_IDENTIFY_TIMEOUT = float(os.environ.get("GEMINI_IDENTIFY_TIMEOUT", "25.0"))
+
+
+async def call_gemini_identify(contents, model=PRIMARY_MODEL):
+    """
+    Executes Gemini generate_content call in a worker thread to keep the asyncio event loop unblocked.
+    """
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None,
+        lambda: genai_client.models.generate_content(
+            model=model,
+            contents=contents,
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.1,
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            ),
+        ),
+    )
+
+
 @app.post("/api/identify_coin_photo")
 async def identify_coin_photo(
     user_email:    str        = Form(...),
@@ -6207,20 +6229,23 @@ async def identify_coin_photo(
                 label_b, part_b_img,
                 genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT),
             ]
-        resp1 = genai_client.models.generate_content(
-            model=PRIMARY_MODEL,
-            contents=pass1_contents,
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
-            ),
-        )
-        raw1 = resp1.text.strip()
-        if raw1.startswith("```"):
-            raw1 = raw1.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        pass1: dict = json.loads(raw1)
+        call_res = call_gemini_identify(pass1_contents, PRIMARY_MODEL)
+        if asyncio.iscoroutine(call_res) or isinstance(call_res, asyncio.Future):
+            resp1 = await asyncio.wait_for(call_res, timeout=GEMINI_IDENTIFY_TIMEOUT)
+        else:
+            resp1 = call_res
+        if isinstance(resp1, dict):
+            pass1 = resp1
+        else:
+            raw1 = resp1.text.strip()
+            if raw1.startswith("```"):
+                raw1 = raw1.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            pass1 = json.loads(raw1)
         logger.info(f"Coin ID pass 1: {pass1.get('year')} {pass1.get('denomination')} conf={pass1.get('confidence')}")
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=408, detail="Image identification timed out. Please try again.")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Coin ID pass 1 error")
         raise HTTPException(status_code=500, detail=f"AI identification failed: {e}")
@@ -6250,20 +6275,21 @@ async def identify_coin_photo(
                 label_b, part_b_img,
                 genai_types.Part.from_text(text=pass2_prompt),
             ]
-        resp2 = genai_client.models.generate_content(
-            model=PRIMARY_MODEL,
-            contents=pass2_contents,
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
-            ),
-        )
-        raw2 = resp2.text.strip()
-        if raw2.startswith("```"):
-            raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        pass2 = json.loads(raw2)
+        call_res2 = call_gemini_identify(pass2_contents, PRIMARY_MODEL)
+        if asyncio.iscoroutine(call_res2) or isinstance(call_res2, asyncio.Future):
+            resp2 = await asyncio.wait_for(call_res2, timeout=min(10.0, GEMINI_IDENTIFY_TIMEOUT))
+        else:
+            resp2 = call_res2
+        if isinstance(resp2, dict):
+            pass2 = resp2
+        else:
+            raw2 = resp2.text.strip()
+            if raw2.startswith("```"):
+                raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            pass2 = json.loads(raw2)
         logger.info(f"Coin ID pass 2: grade={pass2.get('refined_grade')} val={pass2.get('estimated_value_usd')}")
+    except asyncio.TimeoutError:
+        logger.warning("Coin ID pass 2 timed out (non-fatal)")
     except Exception as e:
         # Non-fatal -- continue with Pass 1 results only
         logger.warning(f"Coin ID pass 2 error (non-fatal): {e}")

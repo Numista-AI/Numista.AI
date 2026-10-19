@@ -1366,6 +1366,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       ),
     );
     if (confirm == true) {
+      AuthGate.resetWelcome();
       if (isDemo) {
         GuestSeedService.deactivateBrowseDemo();
         UiVariantService.reset();

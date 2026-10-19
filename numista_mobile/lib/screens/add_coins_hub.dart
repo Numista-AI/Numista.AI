@@ -69,11 +69,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   // ignore: prefer_final_fields
   String _statusMessage = '';
 
-  // ─── Parallel Batch Ingestion state ──────────────────────────────────────
-  bool _isBatchProcessing = false;
-  double _batchProgress = 0.0;
-  String _batchStatusMsg = '';
-  List<Map<String, String>> _batchItems = [];
 
 
   // PCGS Import state
@@ -1147,63 +1142,22 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       'Processes multi-page PDFs and photo batches asynchronously in parallel chunks via Gemini 3.8 Flash.',
                       style: TextStyle(color: _isDark ? const Color(0xFF94A3B8) : const Color(0xFF5A5C69), fontSize: 12),
                     ),
-                    if (_isBatchProcessing) ...[
-                      const SizedBox(height: 16),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: _batchProgress,
-                          backgroundColor: const Color(0xFF334155),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF0C040)),
-                          minHeight: 8,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _batchStatusMsg,
-                        style: TextStyle(color: _isDark ? const Color(0xFFE2E8F0) : const Color(0xFF5A5C69), fontSize: 12, fontStyle: FontStyle.italic),
-                      ),
-                      const SizedBox(height: 12),
-                      ..._batchItems.map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          children: [
-                            Icon(
-                              item['status'] == 'Verified' ? Icons.check_circle : Icons.hourglass_top,
-                              color: item['status'] == 'Verified' ? const Color(0xFF22C55E) : const Color(0xFFF0C040),
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                item['title'] ?? '',
-                                style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: item['status'] == 'Verified' ? const Color(0xFF22C55E).withValues(alpha: 0.2) : const Color(0xFFF0C040).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                item['status'] ?? '',
-                                style: TextStyle(
-                                  color: item['status'] == 'Verified' ? const Color(0xFF22C55E) : const Color(0xFFF0C040),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )),
-                    ],
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
-                      onPressed: _isBatchProcessing ? null : _runParallelBatchSim,
-                      icon: Icon(_isBatchProcessing ? Icons.hourglass_bottom : Icons.speed, size: 18),
-                      label: Text(_isBatchProcessing ? 'Processing in Parallel...' : 'Run High-Speed Parallel Batch'),
+                      onPressed: () async {
+                        final email = AuthService.userEmail;
+                        final path  = buildAddCoinsHtmlPath(email);
+                        final uri   = kIsWeb
+                            ? Uri.base.resolve(path)
+                            : Uri.parse('https://$kAppPublicDomain$path');
+                        if (kIsWeb) {
+                          await launchUrl(uri, webOnlyWindowName: '_self');
+                        } else {
+                          await launchUrl(uri, mode: LaunchMode.platformDefault);
+                        }
+                      },
+                      icon: const Icon(Icons.open_in_new, size: 18),
+                      label: const Text('Open Invoice Importer →'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF0C040),
                         foregroundColor: const Color(0xFF1E293B),
@@ -1218,39 +1172,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         ),
       ),
     );
-  }
-
-  void _runParallelBatchSim() async {
-    setState(() {
-      _isBatchProcessing = true;
-      _batchProgress = 0.1;
-      _batchStatusMsg = 'Spawning 4 concurrent Gemini 3.8 Flash worker coroutines...';
-      _batchItems = [
-        {'title': 'Page 1: 1909-S VDB Lincoln Cent', 'status': 'Processing'},
-        {'title': 'Page 2: 1881-S Morgan Silver Dollar', 'status': 'Processing'},
-        {'title': 'Page 3: 1921 Peace Dollar High Relief', 'status': 'Processing'},
-        {'title': 'Page 4: 1937-D 3-Legged Buffalo Nickel', 'status': 'Processing'},
-      ];
-    });
-
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() {
-      _batchProgress = 0.5;
-      _batchStatusMsg = 'Extracted 2/4 specimens in parallel (Latency: 580ms)...';
-      _batchItems[0]['status'] = 'Verified';
-      _batchItems[1]['status'] = 'Verified';
-    });
-
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() {
-      _batchProgress = 1.0;
-      _batchStatusMsg = 'Batch Ingestion Complete: All 4 specimens verified (99.2% confidence).';
-      _batchItems[2]['status'] = 'Verified';
-      _batchItems[3]['status'] = 'Verified';
-      _isBatchProcessing = false;
-    });
   }
 
   Widget _buildRollEntryTab() {
@@ -4216,7 +4137,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   Icon(Icons.nfc_rounded, size: 14, color: Color(0xFF2563EB)),
                   SizedBox(width: 4),
                   Text('NFC Secured — tap slab label to verify authenticity',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), fontWeight: FontWeight.w500)),
+                      style: TextStyle(fontSize: 16, color: Color(0xFF1E40AF), fontWeight: FontWeight.w500)),
                 ]),
               ),
             ],

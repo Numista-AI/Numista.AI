@@ -53,6 +53,11 @@ class AuthGate extends StatefulWidget {
     );
   }
 
+  /// Resets the welcome screen completion state (e.g. upon user sign-out).
+  static void resetWelcome() => _AuthGateState.resetWelcome();
+  static bool get welcomeDone => _AuthGateState._welcomeDone;
+  static set welcomeDone(bool val) => _AuthGateState._welcomeDone = val;
+
   @override
   State<AuthGate> createState() => _AuthGateState();
 }
@@ -60,6 +65,9 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> {
   static bool _cachedDemoActive = false;
   static bool _welcomeDone = false;
+  static void resetWelcome() {
+    _welcomeDone = false;
+  }
   Future<bool>? _shouldShowWelcome;
 
   @override

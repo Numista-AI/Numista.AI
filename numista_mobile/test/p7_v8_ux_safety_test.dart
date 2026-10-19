@@ -27,6 +27,7 @@ import 'package:numista_ai/services/backup_export_service.dart';
 import 'package:numista_ai/services/morgan_chat_context.dart';
 import 'package:numista_ai/services/market_news_service.dart';
 import 'package:numista_ai/services/hardware_service.dart';
+import 'package:numista_ai/widgets/auth_gate.dart';
 import 'package:numista_ai/constants.dart';
 
 void main() {
@@ -1918,6 +1919,28 @@ void main() {
       await HardwareService.setMicroscopeConfigured(true);
       final configuredNow = await HardwareService.isMicroscopeConfigured();
       expect(configuredNow, isTrue);
+    });
+
+    test('p7_v818_1_auth_gate_reset_welcome', () {
+      AuthGate.welcomeDone = true;
+      expect(AuthGate.welcomeDone, isTrue);
+
+      AuthGate.resetWelcome();
+      expect(AuthGate.welcomeDone, isFalse);
+    });
+
+    test('p7_v818_1_settings_microscope_and_hub_nfc_font_sizes', () {
+      final settingsSrc = File('lib/screens/settings_screen.dart').readAsStringSync();
+      expect(settingsSrc.contains('Connect a USB microscope to identify coins up close.'), isTrue);
+      expect(settingsSrc.contains('fontSize: 16, color: descColor'), isTrue);
+      expect(settingsSrc.contains("'Connects digital USB microscopes via the Numista Desktop Agent"), isFalse);
+
+      final hubSrc = File('lib/screens/add_coins_hub.dart').readAsStringSync();
+      expect(hubSrc.contains('NFC Secured — tap slab label to verify authenticity'), isTrue);
+      expect(hubSrc.contains('fontSize: 16, color: Color(0xFF1E40AF)'), isTrue);
+      expect(hubSrc.contains('fontSize: 12, color: Color(0xFF1E40AF)'), isFalse);
+      expect(hubSrc.contains("'Open Invoice Importer →'"), isTrue);
+      expect(hubSrc.contains("'Run High-Speed Parallel Batch'"), isFalse);
     });
   });
 }

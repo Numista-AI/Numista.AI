@@ -585,8 +585,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Connects digital USB microscopes via the Numista Desktop Agent on localhost. Keep disabled if you use phone camera or file uploads.',
-                  style: TextStyle(fontSize: 13, color: descColor),
+                  'Connect a USB microscope to identify coins up close.',
+                  style: TextStyle(fontSize: 16, color: descColor),
                 ),
               ],
             ),
