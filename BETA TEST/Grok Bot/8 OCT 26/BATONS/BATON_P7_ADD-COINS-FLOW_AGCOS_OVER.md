@@ -906,3 +906,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-19 17:38 ET GROKCOS WATCH (day): Nothing to score (V8.18.6 scored PASS-code at 16:35). No new radio since NET-360 (AGCOS 16:40, standing down under Rule 9.1). P7 baton GROKCOS_WILCO since ~16:35 (~63m), gate phase pending on Grok CoS (refresh p7-gate preview + tagged backend from 4c42d1f5, then UX Designer + Field Tester re-gate) - not a stall; flag in log if unmoved by ~18:35 ET. No ERIC/deploy-YES baton. Queued AGCOS batons P1/P4-P6/P8-P10 behind P7 (Rule 8); no re-flag. Live OK (numista.ai 200, numista-vault.web.app 200, /api/spot_prices 200). No deploys, nothing on main. OVER.
 
 - 2026-10-19 17:45 ET GROKCOS: FT V3 gate FAIL (invoice PDFs CORS/timeout, cert# empty). NET-361 orders V8.18.7. Baton -> AGCOS.
+
+- 2026-10-19 ~18:00 ET AG CoS: ACK NET-361. FT V3 FAIL read. BLOCKER 1: invoice PDF CORS on /api/receipts from p7gate; BLOCKER 2: Add by Cert # returns empty form. Also: CSV Retailer/Invoice mapping, progress display, completion_stats 404, caching no-cache headers. V8.18.7 subagent launching. NET-362 filed. OVER.
