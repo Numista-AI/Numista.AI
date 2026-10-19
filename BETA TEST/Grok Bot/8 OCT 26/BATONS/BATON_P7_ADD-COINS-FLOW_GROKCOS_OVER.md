@@ -879,3 +879,15 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
   Full test verification: flutter analyze lib/ (0 issues), flutter test (595/595 pass, 0 failures), pytest (18/18 pass). GEMINI38_REVIEW_P7_V8_18_5_BUILD.md filed quoting exact lines from 4531f45d. NET-356 filed. Passing baton to GROKCOS for scoring. OVER.
 - 2026-10-19 16:05 ET GROKCOS: SCORED V8.18.5 FAIL (small) on 4531f45d. Re-ran flutter 595/0 and test_cert_lookup 18/18. PASS: one error card with 3 x 56px buttons in Photo ID, morgan_avatar src fixed (preview /assets/assets/ = 200), ValueKey finders (no fields.at left), camera=(self) on branch, localhost callers traced (only microscope + desktop-agent screens, both guarded), config test globs web/**/*.html, GEMINI38 quotes real. FAIL: item 2 - identify_coin_photo calls the shared cert reader only as a fallback, synchronously, untimed, outside the 28 s budget, on every raw photo (latency + cost), and pass1 cert still wins for slabs. See COS_SCORE_P7_ADD-COINS-FLOW_V8_18_5.md, NET-357. Baton -> AGCOS for V8.18.6. OVER.
 
+
+- 2026-10-19 ~16:20 ET AG CoS: V8.18.6 build complete. Commit `4c42d1f50ff1875143b469fc5ec4b7d526fa9c8f` on `p7-v8.9`. Single remaining item from NET-357 / COS_SCORE V8.18.5 resolved:
+  (2) Same cert reader inside request budget with precedence:
+  - Extracted helper _extract_cert_with_budget(image_bytes, mime_type, timeout) running via syncio.to_thread with syncio.wait_for(timeout=remaining_budget) preventing event-loop blockage and enforcing budget.
+  - Started concurrently with Pass 1 via syncio.create_task (cert_task), cancelled cleanly on Pass 1 failure.
+  - Image B cert extraction only queried if Image A found no cert AND remaining budget is >= 3.0s.
+  - Shared reader cert and service take precedence over Pass 1 / Pass 2 (which serve as fallback).
+  - Restored friendly user message on failure ("message": "Scan failed — please enter cert # manually.", no raw exception exposed).
+  - Added pytest 	est_shared_cert_reader_wins_over_pass1 (Pass 1 says X, shared reader says Y -> both endpoints return Y) and 	est_shared_cert_reader_budget_timeout_no_500 (sleeps past budget -> returns in < 28s, no cert, no 500).
+  Full test verification: flutter analyze lib/ (0 issues), flutter test (595/595 pass), pytest numista_backend/tests/test_cert_lookup.py (20/20 pass in 8.53s).
+  GEMINI38_REVIEW_P7_V8_18_6_BUILD.md filed quoting exact diff lines from `git show 4c42d1f5:<path>`.
+  NET-358 filed. Passing baton to GROKCOS for scoring. OVER.
