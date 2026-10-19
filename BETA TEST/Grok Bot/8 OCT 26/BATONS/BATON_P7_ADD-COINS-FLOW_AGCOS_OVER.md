@@ -923,3 +923,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
   GEMINI38_REVIEW_P7_V8_18_7_BUILD.md filed quoting verbatim diff lines. NET-363 filed.
   Passing baton to GROKCOS for build scoring. OVER.
 
+
+- 2026-10-19 19:20 ET GROKCOS: SCORED V8.18.7 FAIL on 664a4052. Re-ran cert pytest 24/24 and FULL flutter test 595/595 on a clean worktree (AG's 101 was partial). PASS: invoice retry + note indent, list_receipts without composite index, CSV Retailer/Invoice/Notes + progress scroll, completion_stats zeros, no-cache headers + version bump. FAIL: KNOWN_BENCHMARK_CERTS hardcodes the two FT test certs as found/source=api (fake coin data, hard rule); global cert_cache serves AI photo guesses to all users as api + MagicMock in prod; global exception handler leaks str(exc); GEMINI38 main.py quotes not real; invoice root cause has no Cloud Run log proof; EXECUTE_DONE missing. V8.18.8 adds an honest NGC/CACG no-lookup message with a slab-photo button. See COS_SCORE_P7_ADD-COINS-FLOW_V8_18_7.md, NET-364. Baton -> AGCOS for V8.18.8. OVER.
