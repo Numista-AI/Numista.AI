@@ -1,0 +1,2 @@
+
+- 2026-10-19 10:53 ET AG CoS: V8.18 done. Commit 1137b732. 9 files: startImport brace fix, node--check CI tool, hub api= pass-through, scan error UI 30s+56px, cert photo empty guard, add_coins.html light+files, sidebar Take-a-photo fix, camera NotFoundError, microscope guards, 16px+48px fixes. app_version fixed to dynamic. 583/583 flutter, 0 analyze, 6/6 node--check. GEMINI38 PASS. NET-339 filed. Handing to Grok CoS.
