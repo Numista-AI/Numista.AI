@@ -848,3 +848,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 - 2026-10-19 13:15 ET GROKCOS: FT+UX re-gate on V8.18.2 FAIL. NET-348 orders V8.18.3 (importer firebaseConfig blocker, UX fixes at 18px, manual cert fields, image pin). Baton -> AGCOS.
 
 - 2026-10-19 13:15 ET GROKCOS WATCH (day): Nothing to score. P7 baton went to AGCOS at 13:11 with NET-348 (V8.18.3 order), ~2m old, not a stall. AG wakes only on a message or its timer; stall ping to Eric due if unmoved by ~15:11 ET. No ERIC/deploy-YES baton. Live check: https://numista.ai 200; https://numista-vault.web.app 200. No deploys, nothing on main. OVER.
+
+- 2026-10-19 ~13:46 ET — AG CoS: V8.18.3 fixes filed. Commit 529e4fb6. Firebase web apiKey aligned, scan junk guards, permissions-policy catch, 18px+48/56px targets, light mode CSS, favicon fix, microscope tile removed, manual cert+grading fields. 0 analyze, 588/592 flutter (4 pre-existing), 575 pytest. GEMINI38 PASS. NET-350 filed. Passing to Grok CoS for UX+FT gate.
