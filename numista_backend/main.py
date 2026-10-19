@@ -6153,6 +6153,30 @@ async def call_gemini_identify(contents, model=PRIMARY_MODEL):
     )
 
 
+async def _extract_cert_with_budget(
+    image_bytes: bytes,
+    mime_type: str = "image/jpeg",
+    timeout: float = 10.0,
+) -> Dict[str, Any]:
+    """
+    Executes extract_cert_from_image in a worker thread with timeout,
+    keeping the event loop unblocked and respecting the request budget.
+    """
+    if timeout <= 0.1 or not image_bytes:
+        return {}
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(extract_cert_from_image, image_bytes, mime_type=mime_type),
+            timeout=timeout,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(f"Shared cert extractor timed out after {timeout:.1f}s")
+        return {}
+    except Exception as exc:
+        logger.warning(f"Shared cert extractor error: {exc}")
+        return {}
+
+
 @app.post("/api/identify_coin_photo")
 async def identify_coin_photo(
     user_email:    str        = Form(...),
@@ -6220,6 +6244,15 @@ async def identify_coin_photo(
         part_b_img = None
         label_b = None
 
+    # -- 2. Start shared cert reader concurrently with Pass 1 (NET-357 / Item 2)
+    _elapsed_so_far = time.monotonic() - _req_start
+    _cert_budget_a = max(0.0, GEMINI_IDENTIFY_BUDGET - _elapsed_so_far)
+    cert_task: Optional[asyncio.Task] = None
+    if _cert_budget_a > 0.5:
+        cert_task = asyncio.create_task(
+            _extract_cert_with_budget(bytes_a, mime_type=mime_a, timeout=_cert_budget_a)
+        )
+
     # -- 2. PASS 1 -- Identification --------------------------------------------
     try:
         if single_image_mode:
@@ -6248,12 +6281,18 @@ async def identify_coin_photo(
             pass1 = json.loads(raw1)
         logger.info(f"Coin ID pass 1: {pass1.get('year')} {pass1.get('denomination')} conf={pass1.get('confidence')}")
     except asyncio.TimeoutError:
+        if cert_task and not cert_task.done():
+            cert_task.cancel()
         raise HTTPException(status_code=408, detail="Image identification timed out. Please try again.")
     except HTTPException:
+        if cert_task and not cert_task.done():
+            cert_task.cancel()
         raise
     except Exception as e:
+        if cert_task and not cert_task.done():
+            cert_task.cancel()
         logger.exception("Coin ID pass 1 error")
-        raise HTTPException(status_code=500, detail=f"AI identification failed: {e}")
+        raise HTTPException(status_code=500, detail="AI identification failed. Please try again.")
 
     # -- 3. PASS 2 -- Verification ----------------------------------------------
     pass2: dict = {}
@@ -6353,24 +6392,47 @@ async def identify_coin_photo(
     if single_image_mode:
         notes = (notes + " [Single photo scan - reverse unobserved]").strip()
 
-    final_service = pass2.get("grading_service") or pass1.get("grading_service") or ""
-    final_cert    = pass2.get("cert_number") or pass1.get("cert_number") or ""
+    # Shared cert reader integration (NET-357 / Item 2):
+    # Await concurrent cert reader (Image A), query Image B only if no cert and budget >= 3s.
+    # Shared reader cert wins over Pass 1/Pass 2 cert (pass 1/2 is fallback only).
+    cert_read: Dict[str, Any] = {}
+    if cert_task:
+        _elapsed_now = time.monotonic() - _req_start
+        _rem_cert_budget = max(0.0, GEMINI_IDENTIFY_BUDGET - _elapsed_now)
+        try:
+            if not cert_task.done():
+                cert_read = await asyncio.wait_for(cert_task, timeout=_rem_cert_budget)
+            else:
+                cert_read = await cert_task
+        except (asyncio.TimeoutError, Exception) as _e:
+            logger.warning(f"Shared cert reader await non-fatal error: {_e}")
+            cert_read = {}
+
+    # Image B only if Image A found no cert and >= 3.0s budget remains
+    if not cert_read.get("cert_number") and not single_image_mode and bytes_b:
+        _rem_b = GEMINI_IDENTIFY_BUDGET - (time.monotonic() - _req_start)
+        if _rem_b >= 3.0:
+            logger.info(f"Image A had no cert; running shared cert reader on Image B ({_rem_b:.1f}s budget left)")
+            cert_read = await _extract_cert_with_budget(bytes_b, mime_type=mime_b, timeout=_rem_b)
+        else:
+            logger.info(f"Skipping Image B cert extraction: only {_rem_b:.1f}s left of {GEMINI_IDENTIFY_BUDGET}s budget")
+
+    pass_cert = pass2.get("cert_number") or pass1.get("cert_number") or ""
+    pass_service = pass2.get("grading_service") or pass1.get("grading_service") or ""
+
+    shared_cert = (cert_read.get("cert_number") or "").strip()
+    shared_service = (cert_read.get("grader") or "").strip()
+
+    if shared_cert:
+        final_cert = shared_cert
+        final_service = shared_service or pass_service
+    else:
+        # Fallback to Pass 1 / Pass 2 if shared reader returned no cert
+        final_cert = pass_cert
+        final_service = pass_service
+
     if str(final_service).strip().lower() == "none":
         final_service = ""
-
-    # Shared cert reader integration (NET-354 / Item 2):
-    # Use shared extract_cert_from_image to read slab cert numbers consistently across endpoints
-    if not final_cert:
-        try:
-            cert_read = extract_cert_from_image(bytes_a, mime_type=mime_a)
-            if not cert_read.get("cert_number") and not single_image_mode and bytes_b:
-                cert_read = extract_cert_from_image(bytes_b, mime_type=mime_b)
-            if cert_read.get("cert_number"):
-                final_cert = cert_read["cert_number"]
-                if not final_service:
-                    final_service = cert_read.get("grader") or ""
-        except Exception as _e:
-            logger.warning(f"Shared cert extractor in identify_coin_photo non-fatal error: {_e}")
 
     ai_coin = {
         "Year":           override_year    or final_year,

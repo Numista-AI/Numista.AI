@@ -451,7 +451,7 @@ def extract_cert_from_image(
             "cert_number": None,
             "grader": None,
             "confidence": "LOW",
-            "message": f"Scan failed: {e}",
+            "message": "Scan failed — please enter cert # manually.",
         }
 
 

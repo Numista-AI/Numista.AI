@@ -455,3 +455,145 @@ def test_same_cert_reader_both_paths_match(monkeypatch):
         # Both paths must match!
         assert cert_from_path1 == cert_from_path2 == expected_cert
 
+
+def test_shared_cert_reader_wins_over_pass1(monkeypatch):
+    """
+    NET-357 Item 2 (a):
+    Pass 1 mock returns cert X ("PASS1-CERT-11111"),
+    Shared reader mock returns cert Y ("53652580").
+    Both /api/scan_cert_number_upload and /api/identify_coin_photo must return Y.
+    """
+    import io
+    import json
+
+    fixture_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xdb\x00C\x00" + b"\x00" * 80
+    expected_cert = "53652580"
+    expected_grader = "PCGS"
+    pass1_old_cert = "PASS1-CERT-11111"
+
+    # Shared cert reader mock: returns expected_cert Y
+    mock_genai_resp = MagicMock()
+    mock_genai_resp.text = json.dumps({
+        "cert_number": expected_cert,
+        "grader": expected_grader,
+        "confidence": "HIGH"
+    })
+
+    with patch("routes.cert_routes._genai") as mock_genai_mod:
+        mock_client = MagicMock()
+        mock_genai_mod.Client.return_value = mock_client
+        mock_client.models.generate_content.return_value = mock_genai_resp
+
+        # Path 1: /api/scan_cert_number_upload -> must return Y
+        resp1 = client.post(
+            "/api/scan_cert_number_upload",
+            files={"file": ("slab.jpg", io.BytesIO(fixture_bytes), "image/jpeg")},
+        )
+        assert resp1.status_code == 200, f"Path 1 failed: {resp1.status_code} {resp1.text}"
+        data1 = resp1.json()
+        assert data1.get("cert_number") == expected_cert
+
+        # Pass 1 returns cert X ("PASS1-CERT-11111")
+        mock_id_resp1 = MagicMock()
+        mock_id_resp1.text = json.dumps({
+            "year": "1921",
+            "denomination": "Dollar",
+            "country": "United States",
+            "program_series": "Morgan Dollars",
+            "mint_mark": "S",
+            "grade": "MS-65",
+            "cert_number": pass1_old_cert,
+            "grading_service": "NGC",
+            "confidence": "HIGH",
+            "obverse_image": "A"
+        })
+        mock_id_resp2 = MagicMock()
+        mock_id_resp2.text = json.dumps({
+            "refined_grade": "MS-65",
+            "estimated_value_usd": "$150.00",
+            "confidence": "HIGH"
+        })
+        mock_models = MagicMock()
+        mock_models.generate_content.side_effect = [mock_id_resp1, mock_id_resp2]
+        mock_id_client = MagicMock()
+        mock_id_client.models = mock_models
+        monkeypatch.setattr(app_main, "genai_client", mock_id_client)
+        monkeypatch.setattr(app_main, "_authenticate_request", lambda auth, email=None, **kw: "test_user@numista.ai")
+
+        # Path 2: /api/identify_coin_photo -> shared reader Y must win over pass 1 X
+        resp2 = client.post(
+            "/api/identify_coin_photo",
+            data={"user_email": "test_user@numista.ai"},
+            files={"image_a": ("slab.jpg", io.BytesIO(fixture_bytes), "image/jpeg")},
+        )
+        assert resp2.status_code == 200, f"Path 2 failed: {resp2.status_code} {resp2.text}"
+        data2 = resp2.json()
+        coin2 = data2.get("coin", {})
+        assert coin2.get("cert_number") == expected_cert
+        assert coin2.get("Certification Number") == expected_cert
+        assert coin2.get("Grading Service") == expected_grader
+
+        # Both endpoints return Y
+        assert data1.get("cert_number") == coin2.get("cert_number") == expected_cert
+
+
+def test_shared_cert_reader_budget_timeout_no_500(monkeypatch):
+    """
+    NET-357 Item 2 (b):
+    Shared reader sleeps past budget -> identify returns < 28 s, no cert, no 500.
+    """
+    import io
+    import json
+    import time
+
+    fixture_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xdb\x00C\x00" + b"\x00" * 80
+
+    def slow_extract(*args, **kwargs):
+        # Sleeps longer than the configured budget
+        time.sleep(1.5)
+        return {
+            "cert_number": "LATE-CERT",
+            "grader": "PCGS",
+            "confidence": "HIGH",
+            "message": "OK",
+        }
+
+    # Set budget to 0.4s so the timeout triggers quickly and cleanly
+    monkeypatch.setattr(app_main, "GEMINI_IDENTIFY_BUDGET", 0.4)
+    monkeypatch.setattr(app_main, "extract_cert_from_image", slow_extract)
+
+    mock_id_resp1 = MagicMock()
+    mock_id_resp1.text = json.dumps({
+        "year": "1881",
+        "denomination": "Dollar",
+        "country": "United States",
+        "program_series": "Morgan Dollars",
+        "mint_mark": "S",
+        "grade": "MS-65",
+        "confidence": "HIGH",
+        "obverse_image": "A"
+    })
+    mock_models = MagicMock()
+    mock_models.generate_content.return_value = mock_id_resp1
+    mock_id_client = MagicMock()
+    mock_id_client.models = mock_models
+    monkeypatch.setattr(app_main, "genai_client", mock_id_client)
+    monkeypatch.setattr(app_main, "_authenticate_request", lambda auth, email=None, **kw: "test_user@numista.ai")
+
+    t0 = time.monotonic()
+    resp = client.post(
+        "/api/identify_coin_photo",
+        data={"user_email": "test_user@numista.ai"},
+        files={"image_a": ("slab.jpg", io.BytesIO(fixture_bytes), "image/jpeg")},
+    )
+    elapsed = time.monotonic() - t0
+
+    # Must return cleanly in < 28 s without 500
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+    assert elapsed < 28.0, f"Took too long: {elapsed}s >= 28s"
+    coin = resp.json().get("coin", {})
+    # No cert extracted (timed out)
+    assert not coin.get("cert_number")
+    assert not coin.get("Certification Number")
+
+
