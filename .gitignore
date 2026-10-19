@@ -23,7 +23,7 @@
 **/*.g.dart
 **/*.freezed.dart
 **/*.mocks.dart
-**/pubspec.lock
+# pubspec.lock is committed for numista_mobile to pin image@4.9.2 + archive@4.0.9 (Fix 4 V8.18.4)
 **/.fvm/
 
 # ============================================================

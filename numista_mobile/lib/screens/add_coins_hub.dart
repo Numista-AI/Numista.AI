@@ -4982,8 +4982,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           ),
         ),
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // Use Wrap to prevent overflow at narrow column widths (e.g. 360px per column at 800px viewport)
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 4,
           children: [
             TextButton.icon(
               onPressed: () => _pickCamImage(isObverse, ImageSource.camera),
@@ -4994,7 +4996,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 padding: const EdgeInsets.symmetric(horizontal: 8),
               ),
             ),
-            const SizedBox(width: 4),
             TextButton.icon(
               onPressed: () => _pickCamImage(isObverse, ImageSource.gallery),
               icon: const Icon(Icons.upload, size: 18, color: Color(0xFF64748B)),
@@ -5093,23 +5094,94 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               ),
               const SizedBox(height: 24),
 
-              // ── Error Display ──────────────────────────────────────────────
+              // ── Error Display — 56px action buttons (Fix 2) ───────────────
               if (_camError != null) ...[
                 Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                    color: _isDark ? const Color(0xFF332024) : const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _isDark ? const Color(0xFF991B1B) : const Color(0xFFF87171),
+                    ),
                   ),
-                  child: Text(
-                    _camError!,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-                    textAlign: TextAlign.center,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: _isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                            size: 22,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _camError!,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: _isDark ? const Color(0xFFFECACA) : const Color(0xFF991B1B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 10,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              setState(() => _camError = null);
+                            },
+                            icon: const Icon(Icons.refresh, size: 20),
+                            label: const Text('Try again',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(140, 56),
+                              backgroundColor: const Color(0xFF2563EB),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              // Navigate to manual entry tab
+                              if (widget.onNavigate != null) {
+                                widget.onNavigate!('Type it in');
+                              } else {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => AddCoinsHub(
+                                      showManualFullScreen: true,
+                                      initialCoinPreset: widget.initialCoinPreset,
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.keyboard_outlined, size: 20),
+                            label: const Text('Enter manually',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(140, 56),
+                              foregroundColor: _isDark ? Colors.white : const Color(0xFF1E293B),
+                              side: BorderSide(
+                                color: _isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
               ],
 
               // ── Actions: Scan Button or Loader ─────────────────────────────

@@ -72,6 +72,12 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+dependency_overrides:
+  # Pin image to 4.9.2 (the currently working version with archive 4.0.9).
+  # image >=4.11.0 uses decodeLazy which requires archive >=4.1.0. Using an
+  # exact pin prevents pub upgrade from accidentally pulling an incompatible version.
+  image: "4.9.2"
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

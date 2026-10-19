@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -708,12 +708,12 @@ void main() {
       // Fill optional fields
       await tester.enterText(fields.at(4), 'Liberty Head'); // Theme
       await tester.enterText(fields.at(5), 'DDO');          // Variety
-      await tester.enterText(fields.at(7), '25.00');        // Cost
-      await tester.enterText(fields.at(8), '2');            // Quantity
-      await tester.enterText(fields.at(9), 'APMEX');        // Retailer
-      await tester.enterText(fields.at(10), 'INV-001');     // Invoice
-      await tester.enterText(fields.at(11), 'Box A');       // Storage
-      await tester.enterText(fields.at(12), 'Nice coin');   // Notes
+      await tester.enterText(fields.at(8), '25.00');        // Cost (index 8 — Cert # now at 7)
+      await tester.enterText(fields.at(9), '2');            // Quantity (index 9)
+      await tester.enterText(fields.at(10), 'APMEX');       // Retailer (index 10)
+      await tester.enterText(fields.at(11), 'INV-001');     // Invoice (index 11)
+      await tester.enterText(fields.at(12), 'Box A');       // Storage (index 12)
+      await tester.enterText(fields.at(13), 'Nice coin');   // Notes (index 13)
 
       await tester.ensureVisible(find.text('Save to My Collection'));
       await tester.tap(find.text('Save to My Collection'));
@@ -724,11 +724,12 @@ void main() {
       expect(payload!['Retailer/Website'], equals('APMEX'));
       expect(payload!['Retailer Invoice #'], equals('INV-001'));
       expect(payload!['Notes'], equals('Nice coin'));
-      // All 13 keys present
+      // All 15 keys present (13 original + Grading Service + Cert # added by Fix 10)
       for (final key in [
         'Year', 'Mint Mark', 'Denomination', 'Program/Series', 'Theme/Subject',
         'Variety', 'Condition', 'Cost', 'Quantity', 'Retailer/Website',
         'Retailer Invoice #', 'Storage Location', 'Notes',
+        'Grading Service', 'Cert #',
       ]) {
         expect(payload!.containsKey(key), isTrue,
             reason: 'payload must contain key: $key');
@@ -849,16 +850,18 @@ void main() {
       );
       await tester.pumpAndSettle();
       final fields = find.byType(TextFormField);
+      // Field order after Fix 10: 0=Year, 1=MintMark, 2=Denomination, 3=Program/Series,
+      // 4=Theme, 5=Variety, 6=Condition, 7=Cert #, 8=Cost, 9=Quantity
       expect(
-        tester.widget<TextFormField>(fields.at(8)).controller?.text ?? '',
+        tester.widget<TextFormField>(fields.at(9)).controller?.text ?? '',
         equals(''),
         reason: 'Quantity starts empty',
       );
       await tester.enterText(fields.at(0), '1921');
       await tester.enterText(fields.at(2), 'Quarter Dollar');
       await tester.enterText(fields.at(3), 'Washington Quarter');
-      // Type '3' into Quantity field
-      await tester.enterText(fields.at(8), '3');
+      // Type '3' into Quantity field (index 9 after Cert # added at 7)
+      await tester.enterText(fields.at(9), '3');
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Save to My Collection'));
       await tester.pumpAndSettle();
@@ -1797,7 +1800,8 @@ void main() {
 
       // Verify full screen camera scaffold
       expect(find.widgetWithText(AppBar, 'AI Photo Identification'), findsOneWidget);
-      expect(find.byType(BackButton), findsOneWidget);
+      // Back button is an IconButton (tooltip 'Back to Add hub') — Fix 8D replaced BackButton with IconButton
+      expect(find.byTooltip('Back to Add hub'), findsOneWidget);
       expect(find.text('Quick Camera Scanner'), findsOneWidget);
 
       // Verify uncropped camera picker boxes with prompt text
@@ -1943,14 +1947,33 @@ void main() {
       expect(hubSrc.contains("'Run High-Speed Parallel Batch'"), isFalse);
     });
 
-    // ── Fix 1E: Firebase config alignment test ────────────────────────────
+    // ── Fix 7: Firebase config alignment test (dynamic — reads from firebase_options.dart) ──
     test('add_coins_html_uses_web_firebase_config', () {
+      // Read expected web config values dynamically from firebase_options.dart
+      final optionsContent = File('lib/firebase_options.dart').readAsStringSync();
+      final webApiKeyMatch = RegExp(
+        r"static const FirebaseOptions web = FirebaseOptions\([^)]*?apiKey: '([^']+)'",
+        dotAll: true,
+      ).firstMatch(optionsContent);
+      final webAppIdMatch = RegExp(
+        r"static const FirebaseOptions web = FirebaseOptions\([^)]*?appId: '([^']+)'",
+        dotAll: true,
+      ).firstMatch(optionsContent);
+      expect(webApiKeyMatch, isNotNull,
+          reason: 'Could not parse web apiKey from firebase_options.dart');
+      expect(webAppIdMatch, isNotNull,
+          reason: 'Could not parse web appId from firebase_options.dart');
+
+      final expectedApiKey = webApiKeyMatch!.group(1)!;
+      final expectedAppId = webAppIdMatch!.group(1)!;
+
       final htmlContent = File('web/add_coins.html').readAsStringSync();
-      // Must use the Flutter web app's apiKey, not the Android key
-      expect(htmlContent, contains('AIzaSyCPGC879Tl1FaGucQmlw7qKL25b8v4ACF8'));
+      expect(htmlContent, contains(expectedApiKey),
+          reason: 'add_coins.html apiKey does not match firebase_options.dart web config');
+      expect(htmlContent, contains(expectedAppId),
+          reason: 'add_coins.html appId does not match firebase_options.dart web config');
+      // Must NOT contain the Android key
       expect(htmlContent, isNot(contains('AIzaSyDSM3pQl0oWdZgOw2vXCvhyRH899l-ZvcM')));
-      // Must use the web appId
-      expect(htmlContent, contains('9ea56548eed27d5a8b072f'));
       expect(htmlContent, isNot(contains('bf2a6f690b59e2148b072f')));
       // Must have no-user guard
       expect(htmlContent, contains('auth-required-banner'));
