@@ -7,6 +7,7 @@ import 'backup_export_stub.dart'
 import 'auth_service.dart';
 import 'package:intl/intl.dart';
 import '../utils/text_sanitizer.dart';
+import '../constants.dart' show kAppVersion;
 
 /// Handles exporting the user's Firestore collection into a schemaVersion: 1 JSON bundle
 /// or a companion CSV spreadsheet for legal estate planning and offline backup.
@@ -25,7 +26,7 @@ class BackupExportService {
         'schemaVersion': 2,
         'exported_at': DateTime.now().toUtc().toIso8601String(),
         'user_email': 'test@numista.ai',
-        'app_version': '4.339',
+        'app_version': kAppVersion.replaceFirst('v', ''),
         'collections': {
           'coins': coins,
           'currency': <Map<String, dynamic>>[],
@@ -130,7 +131,7 @@ class BackupExportService {
       'schemaVersion': 2,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'user_email': email,
-      'app_version': '4.339',
+      'app_version': kAppVersion.replaceFirst('v', ''),
       'collections': {
         'coins': coins,
         'currency': currency,

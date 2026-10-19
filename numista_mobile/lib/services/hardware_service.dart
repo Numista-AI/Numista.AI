@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'auth_service.dart';
 
@@ -24,9 +25,24 @@ class HardwareService {
   factory HardwareService() => _instance;
   HardwareService._internal();
 
+  static const String prefMicroscopeEnabled = 'microscope_enabled';
+
+  static Future<bool> isMicroscopeConfigured() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(prefMicroscopeEnabled) ?? false;
+  }
+
+  static Future<void> setMicroscopeConfigured(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(prefMicroscopeEnabled, enabled);
+  }
+
   // ─── Pair Agent ───────────────────────────────────────────────────────────
   /// Posts to /pair on the local hardware server to auto-pair the agent.
   Future<bool> pairAgent(String userEmail) async {
+    if (!(await isMicroscopeConfigured())) {
+      return false;
+    }
     for (final base in _baseUrls) {
       try {
         final response = await http
@@ -101,6 +117,9 @@ class HardwareService {
   /// Polls the local Flask server for real-time capture progress.
   /// Returns null if the agent is not reachable (server offline).
   Future<HardwareStatus?> getStatus() async {
+    if (!(await isMicroscopeConfigured())) {
+      return null;
+    }
     for (final base in _baseUrls) {
       try {
         final response = await http
@@ -121,6 +140,9 @@ class HardwareService {
 
   // ─── Server Health Check ──────────────────────────────────────────────────
   Future<bool> isServerRunning() async {
+    if (!(await isMicroscopeConfigured())) {
+      return false;
+    }
     for (final base in _baseUrls) {
       try {
         final resp = await http
@@ -141,6 +163,9 @@ class HardwareService {
   /// Fetches the latest annotated camera frame as raw JPEG bytes.
   /// Returns null if the agent is not scanning (204) or unreachable.
   Future<Uint8List?> fetchFrame() async {
+    if (!(await isMicroscopeConfigured())) {
+      return null;
+    }
     try {
       final resp = await http
           .get(Uri.parse('$_baseUrl/frame'))
@@ -175,6 +200,9 @@ class HardwareService {
 
   // ─── List Cameras ─────────────────────────────────────────────────────────
   Future<Map<String, dynamic>> listCameras() async {
+    if (!(await isMicroscopeConfigured())) {
+      return {'cameras': <int>[], 'active': -1};
+    }
     try {
       final response = await http
           .get(Uri.parse('$_baseUrl/list-cameras'))

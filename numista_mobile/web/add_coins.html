@@ -37,6 +37,36 @@
       --shadow:      0 8px 32px rgba(0,0,0,0.45);
     }
 
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:          #f8fafc;
+        --surface:     #ffffff;
+        --surface2:    #f1f5f9;
+        --border:      #cbd5e1;
+        --accent:      #2563eb;
+        --accent-glow: rgba(37,99,235,0.12);
+        --gold:        #d97706;
+        --gold-glow:   rgba(217,119,6,0.15);
+        --green:       #059669;
+        --amber:       #d97706;
+        --red:         #dc2626;
+        --muted:       #64748b;
+        --text:        #0f172a;
+        --text-dim:    #475569;
+        --shadow:      0 8px 32px rgba(0,0,0,0.08);
+      }
+      #morgan-guide-card {
+        background: linear-gradient(135deg, #f0fdfa, #e0f2fe) !important;
+        border-color: rgba(13,148,136,0.3) !important;
+      }
+      #morgan-guide-card h3 {
+        color: #0f172a !important;
+      }
+      #morgan-guide-card p, #morgan-guide-card strong {
+        color: #1e293b !important;
+      }
+    }
+
 
 
     /* ── Confirmation modal ────────────────────────────────── */
@@ -310,7 +340,7 @@
     <div id="morgan-guide-card" style="background: linear-gradient(135deg, #101c2e, #16253b); border: 1px solid rgba(45,212,191,0.35); border-radius: 14px; padding: 20px 22px; margin-bottom: 24px; box-shadow: 0 6px 20px rgba(0,0,0,0.35);">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
         <div style="display: flex; align-items: center; gap: 14px;">
-          <img src="assets/morgan_avatar.png" alt="Morgan the Owl" style="width: 46px; height: 46px; border-radius: 50%; border: 2px solid #D4A843; object-fit: cover; box-shadow: 0 0 16px rgba(212,168,67,0.4); flex-shrink: 0;">
+          <div style="width: 46px; height: 46px; border-radius: 50%; border: 2px solid #D4A843; background: linear-gradient(135deg, #1e293b, #0f172a); display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 0 16px rgba(212,168,67,0.4); flex-shrink: 0;" aria-label="Morgan the Owl">🦉</div>
           <div>
             <div style="display: flex; align-items: center; gap: 8px;">
               <h3 style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin: 0;">Morgan AI Assistant</h3>
@@ -398,6 +428,14 @@
             <input type="file" id="file-input" multiple
              accept=".pdf,.xlsx,.xls,.csv,.ods,.jpg,.jpeg,.png,.webp,.heic,.bmp,.tiff" />
       <div class="file-count-badge" id="file-count-badge"></div>
+    </div>
+
+    <!-- Staged Files Preview (shown when files are dropped or selected) -->
+    <div id="staged-files-container" style="display: none; margin-top: 18px;">
+      <div style="font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">
+        Selected Files (<span id="staged-files-count">0</span>):
+      </div>
+      <div class="file-list" id="staged-file-list" style="max-height: 220px; overflow-y: auto;"></div>
     </div>
 
     <div id="mode-row">
@@ -550,6 +588,8 @@ function getApiBaseUrl() {
   var LIVE_URL = 'https://numista-backend-568985927038.us-central1.run.app';
   return resolveApiBase(window.location.origin, window.location.search, LIVE_URL);
 }
+window.resolveApiBase = resolveApiBase;
+window.getApiBaseUrl = getApiBaseUrl;
 const API_BASE = getApiBaseUrl();
 const _urlEmail = new URLSearchParams(window.location.search).get('email') || '';
 function getUserEmail() { return _urlEmail; }
@@ -696,6 +736,32 @@ async function extractFilesFromDataTransfer(dataTransfer) {
   return results;
 }
 
+function renderStagedFiles(files) {
+  const container = document.getElementById('staged-files-container');
+  const list = document.getElementById('staged-file-list');
+  const countEl = document.getElementById('staged-files-count');
+  if (!container || !list) return;
+  if (!files || !files.length) {
+    container.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+  if (countEl) countEl.textContent = files.length;
+  list.innerHTML = '';
+  files.forEach((f, i) => {
+    const ftype = classifyFile(f.name);
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    row.innerHTML =
+      '<span class="file-type-icon">' + TYPE_ICON[ftype] + '</span>' +
+      '<div style="overflow:hidden;"><div class="file-name">' + escHtml(f.name) + '</div>' +
+      '<div class="file-name-sub">' + TYPE_LABEL[ftype] + ' &middot; ' + formatBytes(f.size) + '</div></div>' +
+      '<span class="file-status-chip chip-pending">Ready</span>';
+    list.appendChild(row);
+  });
+  container.style.display = 'block';
+}
+
 function clearSelectedFiles(e) {
   if (e) e.stopPropagation();
   selectedFiles = [];
@@ -706,6 +772,7 @@ function clearSelectedFiles(e) {
   document.getElementById('mode-row').classList.remove('show');
   document.getElementById('start-btn').classList.remove('show');
   document.getElementById('file-input').value = '';
+  renderStagedFiles([]);
 }
 
 function handleFileList(fileList, append = true) {
@@ -751,6 +818,7 @@ function handleFileList(fileList, append = true) {
     modeDesc.textContent = n + ' files — live progress bar will appear';
   }
   document.getElementById('start-btn').classList.add('show');
+  renderStagedFiles(selectedFiles);
 }
 
 async function startImport() {
@@ -861,6 +929,7 @@ async function startImport() {
     document.getElementById('progress-label').textContent = 'Upload halted — see error above.';
   } finally {
     resetImportUIState();
+  }
 }
 
 function buildFileListUI(files = selectedFiles) {
@@ -1038,6 +1107,7 @@ function showPaperTrail() {
 function goToReviewQueue() { window.location.href = '/?route=Review%20Hub&email=' + encodeURIComponent(getUserEmail()); }
 function resetImport() {
   selectedFiles = []; sessionId = null; clearInterval(pollInterval);
+  renderStagedFiles([]);
   ['upload-card','progress-panel','summary-panel','paper-trail-panel'].forEach(id => {
     const el = document.getElementById(id);
     el.style.opacity=''; el.style.pointerEvents=''; el.classList.remove('show');

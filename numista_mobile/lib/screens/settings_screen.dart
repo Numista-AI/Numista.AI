@@ -18,6 +18,7 @@ import '../services/epn_service.dart';
 import '../services/theme_provider.dart';
 import '../services/backup_export_service.dart';
 import '../services/collector_profile_service.dart';
+import '../services/hardware_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -48,6 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _inspectorMode = false;
   bool _advancedValuationMode = false;
   bool _desktopHotkeysEnabled = true;
+  bool _microscopeEnabled = false;
   String _defaultCollectionView = 'All';
 
   @override
@@ -59,8 +61,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadValuationModePref();
     _loadDefaultCollectionView();
     _loadDesktopHotkeysPref();
+    _loadMicroscopePref();
     // Pre-fetch the coin count for the Danger Zone card.
     _fetchCoinCount(AuthService.userEmail);
+  }
+
+  void _loadMicroscopePref() async {
+    final enabled = await HardwareService.isMicroscopeConfigured();
+    if (mounted) {
+      setState(() {
+        _microscopeEnabled = enabled;
+      });
+    }
   }
 
   void _loadDesktopHotkeysPref() async {
@@ -184,8 +196,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Divider(color: borderColor),
           const SizedBox(height: 24),
 
-          // ── Desktop Hotkeys Configuration ─────────────────────────────
           _buildDesktopHotkeysCard(context),
+          const SizedBox(height: 24),
+          Divider(color: borderColor),
+          const SizedBox(height: 24),
+
+          // ── USB Microscope Scanner Configuration ──────────────────────
+          _buildMicroscopeCard(context),
           const SizedBox(height: 24),
           Divider(color: borderColor),
           const SizedBox(height: 24),
@@ -530,6 +547,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
               setState(() => _desktopHotkeysEnabled = val);
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('desktop_hotkeys_enabled', val);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMicroscopeCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    return Container(
+      padding: const EdgeInsets.all(20.0),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.biotech_outlined, color: Color(0xFF2DD4BF), size: 28),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enable USB Microscope Scanner (Local Agent)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Connects digital USB microscopes via the Numista Desktop Agent on localhost. Keep disabled if you use phone camera or file uploads.',
+                  style: TextStyle(fontSize: 13, color: descColor),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _microscopeEnabled,
+            activeThumbColor: const Color(0xFF2DD4BF),
+            onChanged: (val) async {
+              setState(() => _microscopeEnabled = val);
+              await HardwareService.setMicroscopeConfigured(val);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(val
+                        ? 'USB Microscope enabled — agent can connect.'
+                        : 'USB Microscope disabled — localhost polling stopped.'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
             },
           ),
         ],

@@ -26,6 +26,7 @@ import 'package:numista_ai/screens/program_manager_screen.dart';
 import 'package:numista_ai/services/backup_export_service.dart';
 import 'package:numista_ai/services/morgan_chat_context.dart';
 import 'package:numista_ai/services/market_news_service.dart';
+import 'package:numista_ai/services/hardware_service.dart';
 import 'package:numista_ai/constants.dart';
 
 void main() {
@@ -1868,6 +1869,55 @@ void main() {
       // These must match byte-for-byte with the live deployed values
       expect(kApiBaseUrl, equals('https://numista-backend-568985927038.us-central1.run.app'));
       expect(kScanServiceUrl, equals('https://numista-scan-service-568985927038.us-central1.run.app'));
+    });
+
+    test('p7_v818_buildAddCoinsHtmlPath_live_and_custom_api', () {
+      const email = 'user@example.com';
+      // Default / live backend -> no &api= param
+      final livePath = buildAddCoinsHtmlPath(email);
+      expect(livePath, equals('/add_coins.html?email=user%40example.com'));
+
+      // Explicit live backend -> no &api= param
+      final explicitLivePath = buildAddCoinsHtmlPath(
+        email,
+        apiBase: 'https://numista-backend-568985927038.us-central1.run.app',
+      );
+      expect(explicitLivePath, equals('/add_coins.html?email=user%40example.com'));
+
+      // Preview / custom backend -> &api= param included
+      const customApi = 'https://numista-backend-preview-568985927038.us-central1.run.app';
+      final customPath = buildAddCoinsHtmlPath(email, apiBase: customApi);
+      expect(
+        customPath,
+        equals('/add_coins.html?email=user%40example.com&api=https%3A%2F%2Fnumista-backend-preview-568985927038.us-central1.run.app'),
+      );
+    });
+
+    test('p7_v818_microscope_guard_no_localhost_when_disabled', () async {
+      SharedPreferences.setMockInitialValues({'microscope_enabled': false});
+
+      final configured = await HardwareService.isMicroscopeConfigured();
+      expect(configured, isFalse);
+
+      final hw = HardwareService();
+
+      // Guarded methods must return null / false / empty without making network calls
+      final status = await hw.getStatus();
+      expect(status, isNull);
+
+      final running = await hw.isServerRunning();
+      expect(running, isFalse);
+
+      final cameras = await hw.listCameras();
+      expect(cameras['cameras'], isEmpty);
+
+      final frame = await hw.fetchFrame();
+      expect(frame, isNull);
+
+      // Now enable and verify
+      await HardwareService.setMicroscopeConfigured(true);
+      final configuredNow = await HardwareService.isMicroscopeConfigured();
+      expect(configuredNow, isTrue);
     });
   });
 }

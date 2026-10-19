@@ -59,7 +59,7 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   static bool _cachedDemoActive = false;
-  bool _welcomeDone = false;
+  static bool _welcomeDone = false;
   Future<bool>? _shouldShowWelcome;
 
   @override

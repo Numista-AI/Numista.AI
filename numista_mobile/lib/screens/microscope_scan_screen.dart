@@ -54,6 +54,8 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   int _activeCameraIdx = -1;
   bool _loadingCameras = false;
 
+  bool _microscopeConfigured = false;
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +76,13 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
 
   // ─── Server Ping ────────────────────────────────────────────────────────────
   Future<void> _checkServer() async {
+    final configured = await HardwareService.isMicroscopeConfigured();
+    if (!mounted) return;
+    setState(() => _microscopeConfigured = configured);
+    if (!configured) {
+      setState(() => _serverOnline = false);
+      return;
+    }
     final online = await _hw.isServerRunning();
     if (mounted) {
       setState(() => _serverOnline = online);
@@ -282,6 +291,9 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
 
   // ─── Server Status Banner ────────────────────────────────────────────────────
   Widget _buildServerStatus() {
+    if (!_microscopeConfigured) {
+      return const SizedBox.shrink();
+    }
     if (_serverOnline) {
       // ── Online state: compact green pill ────────────────────────────────────
       return Container(
