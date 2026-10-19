@@ -370,8 +370,13 @@ from fastapi import UploadFile, File as FastAPIFile
 import base64, os, json
 
 
-# Vertex AI backend — uses ADC, no API key. Match pattern from main.py.
-_SCAN_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "numista-qc")
+# Vertex AI backend — uses ADC, no API key. Match resolution chain from main.py:312.
+# Never default to "numista-qc" — that project does not have the service account.
+_SCAN_PROJECT_ID = (
+    os.environ.get("FIREBASE_PROJECT_ID")
+    or os.environ.get("GOOGLE_CLOUD_PROJECT")
+    or "studio-9101802118-8c9a8"
+)
 _SCAN_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
 
 

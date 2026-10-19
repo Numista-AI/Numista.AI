@@ -6128,6 +6128,10 @@ async def commit_group_photo(
 
 
 GEMINI_IDENTIFY_TIMEOUT = float(os.environ.get("GEMINI_IDENTIFY_TIMEOUT", "25.0"))
+# Pass-1 cap: 20 s leaves 8 s for pass 2 within a 28 s request budget.
+GEMINI_IDENTIFY_PASS1_TIMEOUT = float(os.environ.get("GEMINI_IDENTIFY_PASS1_TIMEOUT", "20.0"))
+# Whole-request budget: pass 1 + pass 2 + overhead must stay under 30 s.
+GEMINI_IDENTIFY_BUDGET = float(os.environ.get("GEMINI_IDENTIFY_BUDGET", "28.0"))
 
 
 async def call_gemini_identify(contents, model=PRIMARY_MODEL):
@@ -6187,6 +6191,7 @@ async def identify_coin_photo(
     """
     owner_key = _authenticate_request(authorization, user_email, current_user=_user)
     user_email = owner_key
+    _req_start = time.monotonic()  # whole-request budget clock (FIX: 28s cap)
 
     logger.info(f"Identify coin photo: save={save_to_collection}", extra={"user_email": user_email})
 
@@ -6231,7 +6236,7 @@ async def identify_coin_photo(
             ]
         call_res = call_gemini_identify(pass1_contents, PRIMARY_MODEL)
         if asyncio.iscoroutine(call_res) or isinstance(call_res, asyncio.Future):
-            resp1 = await asyncio.wait_for(call_res, timeout=GEMINI_IDENTIFY_TIMEOUT)
+            resp1 = await asyncio.wait_for(call_res, timeout=GEMINI_IDENTIFY_PASS1_TIMEOUT)
         else:
             resp1 = call_res
         if isinstance(resp1, dict):
@@ -6252,47 +6257,53 @@ async def identify_coin_photo(
 
     # -- 3. PASS 2 -- Verification ----------------------------------------------
     pass2: dict = {}
-    try:
-        pass2_prompt = PHOTO_ID_PASS2_PROMPT_TEMPLATE.format(
-            year          = pass1.get("year", ""),
-            country       = pass1.get("country", ""),
-            denomination  = pass1.get("denomination", ""),
-            program_series= pass1.get("program_series", ""),
-            mint_mark     = pass1.get("mint_mark", ""),
-            grade         = pass1.get("grade", ""),
-            metal_content = pass1.get("metal_content", ""),
-            grading_service = pass1.get("grading_service", "None"),
-            cert_number   = pass1.get("cert_number", ""),
-        )
-        if single_image_mode:
-            pass2_contents = [
-                label_a, part_a_img,
-                genai_types.Part.from_text(text=pass2_prompt + "\nNOTE: Single photo provided ([Image A]). Reverse unobserved."),
-            ]
-        else:
-            pass2_contents = [
-                label_a, part_a_img,
-                label_b, part_b_img,
-                genai_types.Part.from_text(text=pass2_prompt),
-            ]
-        call_res2 = call_gemini_identify(pass2_contents, PRIMARY_MODEL)
-        if asyncio.iscoroutine(call_res2) or isinstance(call_res2, asyncio.Future):
-            resp2 = await asyncio.wait_for(call_res2, timeout=min(10.0, GEMINI_IDENTIFY_TIMEOUT))
-        else:
-            resp2 = call_res2
-        if isinstance(resp2, dict):
-            pass2 = resp2
-        else:
-            raw2 = resp2.text.strip()
-            if raw2.startswith("```"):
-                raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-            pass2 = json.loads(raw2)
-        logger.info(f"Coin ID pass 2: grade={pass2.get('refined_grade')} val={pass2.get('estimated_value_usd')}")
-    except asyncio.TimeoutError:
-        logger.warning("Coin ID pass 2 timed out (non-fatal)")
-    except Exception as e:
-        # Non-fatal -- continue with Pass 1 results only
-        logger.warning(f"Coin ID pass 2 error (non-fatal): {e}")
+    _elapsed = time.monotonic() - _req_start
+    _pass2_budget = GEMINI_IDENTIFY_BUDGET - _elapsed
+    if _pass2_budget < 3.0:
+        logger.info(f"Skipping pass 2: only {_pass2_budget:.1f}s left of {GEMINI_IDENTIFY_BUDGET}s budget")
+    else:
+        try:
+            pass2_prompt = PHOTO_ID_PASS2_PROMPT_TEMPLATE.format(
+                year          = pass1.get("year", ""),
+                country       = pass1.get("country", ""),
+                denomination  = pass1.get("denomination", ""),
+                program_series= pass1.get("program_series", ""),
+                mint_mark     = pass1.get("mint_mark", ""),
+                grade         = pass1.get("grade", ""),
+                metal_content = pass1.get("metal_content", ""),
+                grading_service = pass1.get("grading_service", "None"),
+                cert_number   = pass1.get("cert_number", ""),
+            )
+            if single_image_mode:
+                pass2_contents = [
+                    label_a, part_a_img,
+                    genai_types.Part.from_text(text=pass2_prompt + "\nNOTE: Single photo provided ([Image A]). Reverse unobserved."),
+                ]
+            else:
+                pass2_contents = [
+                    label_a, part_a_img,
+                    label_b, part_b_img,
+                    genai_types.Part.from_text(text=pass2_prompt),
+                ]
+            call_res2 = call_gemini_identify(pass2_contents, PRIMARY_MODEL)
+            if asyncio.iscoroutine(call_res2) or isinstance(call_res2, asyncio.Future):
+                resp2 = await asyncio.wait_for(call_res2, timeout=min(_pass2_budget, 10.0))
+            else:
+                resp2 = call_res2
+            if isinstance(resp2, dict):
+                pass2 = resp2
+            else:
+                raw2 = resp2.text.strip()
+                if raw2.startswith("```"):
+                    raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                pass2 = json.loads(raw2)
+            logger.info(f"Coin ID pass 2: grade={pass2.get('refined_grade')} val={pass2.get('estimated_value_usd')}")
+        except asyncio.TimeoutError:
+            logger.warning("Coin ID pass 2 timed out (non-fatal)")
+        except Exception as e:
+            # Non-fatal -- continue with Pass 1 results only
+            logger.warning(f"Coin ID pass 2 error (non-fatal): {e}")
+
 
     # -- 4. Merge Pass 1 + Pass 2 results -------------------------------------
     final_year   = str(pass2.get("corrected_year")  or pass1.get("year",  ""))
