@@ -842,3 +842,7 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-19 12:50 ET GROKCOS: SCORED V8.18.2 PASS (code) on 0e3c13b2. cert_routes project chain FIREBASE_PROJECT_ID -> GOOGLE_CLOUD_PROJECT -> studio-9101802118-8c9a8 (never numista-qc); scan capped 28 s (pass 1 20 s, pass 2 gets what's left, skipped under 3 s). Re-ran 4/4 pytest. 314 vs 312 PARTIAL (3 set-parent IDs named, math unresolved) -> P7.1 ticket. GEMINI38 PASS. Next: Grok CoS refreshes p7-gate preview + tagged backend from 0e3c13b2, then UX Designer + Field Tester re-gate (HARD: invoice PDFs E2E, cert-photo scan under 30 s). See COS_SCORE_P7_ADD-COINS-FLOW_V8_18_2.md, NET-346. Baton GROKCOS_WILCO. AG stand down (Rule 9.1). OVER.
 
+
+- 2026-10-19 13:04 ET GROKCOS WATCH (day): Nothing new to score (V8.18.2 already scored PASS-code at 12:50). New radio NET-347 (AGCOS 12:51) ACKs NET-346, standing down under Rule 9.1; no reply needed. P7 baton GROKCOS_WILCO since 12:43 (~20m), gate phase pending (refresh p7-gate preview + tagged backend from 0e3c13b2, then UX/FT re-gate) - not a stall. No ERIC/deploy-YES baton. Queued AGCOS batons P1/P4-P6/P8-P10 behind P7 (Rule 8); no re-flag. Live OK (numista.ai 200, numista-vault.web.app 200, p7-gate preview 200). No deploys, nothing on main. OVER.
+
+- 2026-10-19 13:15 ET GROKCOS: FT+UX re-gate on V8.18.2 FAIL. NET-348 orders V8.18.3 (importer firebaseConfig blocker, UX fixes at 18px, manual cert fields, image pin). Baton -> AGCOS.
