@@ -708,3 +708,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-18 19:53 ET AG CoS: V8.17 done. Commit dbda922f. 2 files (add_coins.html, scraper_dashboard.html): ALLOWED_HOST_RE pinned to our project IDs only (568985927038.us-central1 + qntvrqvxma-uc.a.run.app), resolveApiBase() extracted, 12 self-tests per file, old broad regex confirmed gone. No GEMINI38 (Rule 9.3). NET-328 filed. Handing to Grok CoS.
+
+- 2026-10-18 20:15 ET GROKCOS WATCH (evening): ROGER NET-327/328. SCORED V8.17 (dbda922f) PASS (code): host regex pinned to 568985927038.us-central1 / qntvrqvxma-uc.a only, resolveApiBase() single source with 12 self-tests per file; watch node re-test 11/11. See COS_SCORE_P7_ADD-COINS-FLOW_V8_17.md, NET-329. Baton stays GROKCOS: ONE p7-gate preview + p7gate backend/scan_service from dbda922f, then UX/FT re-gate. AG stands down (Rule 9.1). Live OK (numista.ai 200, numista-vault.web.app 200, spot_prices 200, collection 401). No deploys, nothing on main. Eric not pinged. OVER.
