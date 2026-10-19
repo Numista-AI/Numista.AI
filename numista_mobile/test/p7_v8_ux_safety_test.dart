@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1941,6 +1941,84 @@ void main() {
       expect(hubSrc.contains('fontSize: 12, color: Color(0xFF1E40AF)'), isFalse);
       expect(hubSrc.contains("'Open Invoice Importer →'"), isTrue);
       expect(hubSrc.contains("'Run High-Speed Parallel Batch'"), isFalse);
+    });
+
+    // ── Fix 1E: Firebase config alignment test ────────────────────────────
+    test('add_coins_html_uses_web_firebase_config', () {
+      final htmlContent = File('web/add_coins.html').readAsStringSync();
+      // Must use the Flutter web app's apiKey, not the Android key
+      expect(htmlContent, contains('AIzaSyCPGC879Tl1FaGucQmlw7qKL25b8v4ACF8'));
+      expect(htmlContent, isNot(contains('AIzaSyDSM3pQl0oWdZgOw2vXCvhyRH899l-ZvcM')));
+      // Must use the web appId
+      expect(htmlContent, contains('9ea56548eed27d5a8b072f'));
+      expect(htmlContent, isNot(contains('bf2a6f690b59e2148b072f')));
+      // Must have no-user guard
+      expect(htmlContent, contains('auth-required-banner'));
+    });
+
+    // ── Fix 2A: Cert guard test ────────────────────────────────────────────
+    test('cert_scan_guard_rejects_blurred_artifacts', () {
+      final hubSrc = File('lib/screens/add_coins_hub.dart').readAsStringSync();
+      expect(hubSrc, contains("rawCert.toLowerCase() == 'blurred'"));
+      expect(hubSrc, contains("rawCert.toLowerCase() == 'unknown'"));
+      expect(hubSrc, contains("rawCert.toLowerCase() == 'none'"));
+      expect(hubSrc, contains(r"RegExp(r'^[0-9A-Za-z\-]+$')"));
+    });
+
+    // ── Fix 5: Camera error guard includes permissions-policy ─────────────
+    test('camera_error_guard_includes_permissions_policy', () {
+      final hubSrc = File('lib/screens/add_coins_hub.dart').readAsStringSync();
+      expect(hubSrc, contains("permissions-policy"));
+      expect(hubSrc, contains("not allowed"));
+    });
+
+    // ── Fix 8A: Microscope tile removed from morgan_greeter ───────────────
+    test('microscope_tile_removed_from_morgan_greeter', () {
+      final greeterSrc = File('lib/widgets/morgan_greeter.dart').readAsStringSync();
+      expect(greeterSrc, isNot(contains('Identify with Microscope')));
+      expect(greeterSrc, isNot(contains("route: 'Microscope Scanner'")));
+    });
+
+    // ── Fix 8B: Microscope Station text removed from camera tab ──────────
+    test('microscope_station_text_removed_from_camera_tab', () {
+      final hubSrc = File('lib/screens/add_coins_hub.dart').readAsStringSync();
+      expect(hubSrc, isNot(contains('please use the Microscope Station')));
+    });
+  });
+
+  // ── Fix 10D: Manual form grading service + cert # fields ─────────────────
+  group('P7 V8.18.3 Fix 10: Manual Entry Grading Service + Cert #', () {
+    testWidgets('manual_form_has_grading_service_and_cert', (WidgetTester tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: AddCoinManualForm(
+              onSubmit: (_) {},
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Grading Service'), findsOneWidget);
+      // _buildField uses RichText not Text, so use ValueKey on the TextFormField instead.
+      expect(find.byKey(const ValueKey('manual_field_Cert #')), findsOneWidget);
+    });
+
+    test('manual_form_submit_includes_grading_service_and_cert', () {
+      final formSrc = File('lib/widgets/add_coin_manual_form.dart').readAsStringSync();
+      expect(formSrc, contains("'Grading Service'"));
+      expect(formSrc, contains("'grading_service'"));
+      expect(formSrc, contains("'Cert #'"));
+      expect(formSrc, contains("'cert_number'"));
+      expect(formSrc, contains('DropdownButtonFormField'));
+      expect(formSrc, contains("'NGC', 'PCGS', 'CAC', 'CACG', 'ANACS', 'ICG'"));
+    });
+
+    test('manual_hub_coinDoc_includes_grading_cert', () {
+      final hubSrc = File('lib/screens/add_coins_hub.dart').readAsStringSync();
+      expect(hubSrc, contains("'grading_service'"));
+      expect(hubSrc, contains("'cert_number'"));
+      expect(hubSrc, contains("data['grading_service'] ?? data['Grading Service']"));
     });
   });
 }

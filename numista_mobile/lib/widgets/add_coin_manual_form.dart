@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/denomination_canon.dart';
 import '../utils/web_input_helper.dart';
@@ -34,6 +34,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
   late final TextEditingController _invoiceCtrl;
   late final TextEditingController _storageCtrl;
   late final TextEditingController _notesCtrl;
+  late final TextEditingController _certCtrl;
 
   // ── Dedicated persistent FocusNodes for all fields to prevent focus detach
   // and dropped first character during rebuilds.
@@ -50,6 +51,9 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
   late final FocusNode _invoiceFocus;
   late final FocusNode _storageFocus;
   late final FocusNode _notesFocus;
+  late final FocusNode _certFocus;
+
+  String _gradingService = 'None';
 
   static const _accent = Color(0xFF3B82F6);
   Color get _border => Theme.of(context).brightness == Brightness.dark
@@ -80,6 +84,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _invoiceCtrl   = TextEditingController(text: _formData['Retailer Invoice #'] as String? ?? '');
     _storageCtrl   = TextEditingController(text: _formData['Storage Location'] as String? ?? '');
     _notesCtrl     = TextEditingController(text: _formData['Notes'] as String? ?? '');
+    _certCtrl      = TextEditingController(text: _formData['Cert #'] as String? ?? '');
 
     _yearFocus      = FocusNode();
     _mintFocus      = FocusNode();
@@ -94,6 +99,8 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _invoiceFocus   = FocusNode();
     _storageFocus   = FocusNode();
     _notesFocus     = FocusNode();
+    _certFocus      = FocusNode();
+
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       WebInputHelper.applyStaticInputModes();
@@ -115,6 +122,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _invoiceCtrl.dispose();
     _storageCtrl.dispose();
     _notesCtrl.dispose();
+    _certCtrl.dispose();
 
     _yearFocus.dispose();
     _mintFocus.dispose();
@@ -129,6 +137,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _invoiceFocus.dispose();
     _storageFocus.dispose();
     _notesFocus.dispose();
+    _certFocus.dispose();
 
     super.dispose();
   }
@@ -207,8 +216,62 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
           _buildField(context, 'Condition', 'e.g. MS65, AU58, Ungraded',
               controller: _conditionCtrl, focusNode: _conditionFocus),
 
+          // ── Grading Service + Cert # (Fix 10) ────────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Grading Service',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  initialValue: _gradingService,
+                  decoration: InputDecoration(
+                    hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
+                    filled: true,
+                    fillColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: _border)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: _border)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: _accent, width: 1.5)),
+                  ),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white : const Color(0xFF1E293B),
+                    fontSize: 16,
+                  ),
+                  dropdownColor: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E293B) : Colors.white,
+                  items: ['None', 'NGC', 'PCGS', 'CAC', 'CACG', 'ANACS', 'ICG']
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
+                  onChanged: (val) => setState(() => _gradingService = val ?? 'None'),
+                  onSaved: (val) => _formData['Grading Service'] = val ?? 'None',
+                ),
+              ],
+            ),
+          ),
+          _buildField(context, 'Cert #', 'e.g. 8321797-003',
+              controller: _certCtrl, focusNode: _certFocus),
+
           const SizedBox(height: 8),
           // ── Section: Purchase ─────────────────────────────────────────────
+
           _sectionHeader('Purchase Details', Icons.receipt_long),
           const SizedBox(height: 12),
           Row(children: [
@@ -299,7 +362,13 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
         'Retailer Invoice #': _invoiceCtrl.text.trim(),
         'Storage Location':   _storageCtrl.text.trim(),
         'Notes':              _notesCtrl.text.trim(),
+        // Fix 10: Grading service + cert # — same field names as scan path
+        'Grading Service':    _gradingService,
+        'grading_service':    _gradingService,
+        'Cert #':             _certCtrl.text.trim(),
+        'cert_number':        _certCtrl.text.trim(),
       };
+
 
       widget.onSubmit(formData);
       _resetForm();
@@ -321,9 +390,11 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _invoiceCtrl.clear();
     _storageCtrl.clear();
     _notesCtrl.clear();
+    _certCtrl.clear();
     _formData.clear();
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _gradingService = 'None');
   }
+
 
   Widget _sectionHeader(String title, IconData icon) {
     return Padding(

@@ -639,7 +639,17 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       return Scaffold(
         appBar: AppBar(
           title: const Text('AI Photo Identification'),
-          leading: const BackButton(),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Back to Add hub',
+            onPressed: () {
+              if (widget.onNavigate != null) {
+                widget.onNavigate!('Add New Coins');
+              } else {
+                Navigator.pop(context);
+              }
+            },
+          ),
         ),
         body: _buildCameraScannerTab(),
       );
@@ -2059,7 +2069,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       // ITEM 6: stamp is_demo: false so real coins remain visible after display filter ships
                       'is_demo':             false,
                       'is_demo_cleared':     false,
+                      // Fix 10: Grading service + cert # from manual form
+                      'grading_service':     data['grading_service'] ?? data['Grading Service'] ?? 'None',
+                      'cert_number':         data['cert_number'] ?? data['Cert #'] ?? '',
+                      'Grading Service':     data['Grading Service'] ?? data['grading_service'] ?? 'None',
+                      'certNo':              data['cert_number'] ?? data['Cert #'] ?? '',
                     };
+
 
                     // ── Save to Firestore ────────────────────────────────────
                     await FirebaseFirestore.instance
@@ -3162,7 +3178,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         rethrow;
       } catch (e) {
         final msg = e.toString().toLowerCase();
-        if (msg.contains('notfounderror') || msg.contains('not found') || msg.contains('camera') || msg.contains('devices not found')) {
+        if (msg.contains('notfounderror') || msg.contains('not found') ||
+            msg.contains('camera') || msg.contains('devices not found') ||
+            msg.contains('permissions-policy') || msg.contains('not allowed') ||
+            msg.contains('permission denied')) {
           if (mounted) {
             setState(() {
               _scanErrorType = 'no_camera';
@@ -3173,6 +3192,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         }
         rethrow;
       }
+
       if (picked == null) return;
 
       final bytes = await picked.readAsBytes();
@@ -3200,7 +3220,16 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
       if (streamed.statusCode == 200) {
         final data = jsonDecode(body) as Map<String, dynamic>;
-        final certNum = (data['cert_number'] as String? ?? '').trim();
+        final rawCert = (data['cert_number'] as String? ?? '').trim();
+        // Guard: reject scan artifacts — must be non-empty, clean alphanumeric,
+        // and not a known bad placeholder value.
+        final certNum = (rawCert.isEmpty ||
+            rawCert.toLowerCase() == 'blurred' ||
+            rawCert.toLowerCase() == 'unknown' ||
+            rawCert.toLowerCase() == 'none' ||
+            rawCert.toLowerCase().contains('blurred') ||
+            !RegExp(r'^[0-9A-Za-z\-]+$').hasMatch(rawCert))
+            ? '' : rawCert;
         final grader  = (data['grader'] as String? ?? '').trim().toUpperCase();
         if (certNum.isNotEmpty) {
           setState(() {
@@ -3219,6 +3248,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             _scanErrorMsg = "Couldn't read a cert number from that photo";
           });
         }
+
       } else {
         setState(() {
           _scanErrorType = 'error';
@@ -3898,10 +3928,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Bulk Import from PCGS Registry CSV',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF1E293B))),
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFF1E293B))),
         const SizedBox(height: 4),
         const Text('Enter multiple cert numbers (one per line) or upload a PCGS registry CSV export to import your full graded collection.',
-            style: TextStyle(fontSize: 16, color: Color(0xFF64748B))),
+            style: TextStyle(fontSize: 18, color: Color(0xFF64748B))),
+
         const SizedBox(height: 10),
         TextField(
           controller: _pcgsCertCtrl,
@@ -4709,6 +4740,21 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       if (streamedResponse.statusCode == 200) {
         final data = jsonDecode(responseBody);
         final coin = data['coin'] as Map<String, dynamic>? ?? {};
+        final confidence = (data['confidence'] as num?)?.toDouble() ?? 1.0;
+        final resYear  = coin['Year']?.toString().trim() ?? '';
+        final resDenom = coin['Denomination']?.toString().trim() ?? '';
+        // Guard: if confidence is very low OR both year and denomination are
+        // blank/None/Unknown, treat result as junk and show error card.
+        final isJunk = confidence < 0.4 ||
+            ((resYear.isEmpty || resYear == 'None') &&
+             (resDenom.isEmpty || resDenom == 'Unknown'));
+        if (isJunk) {
+          setState(() {
+            _camError = 'Could not identify this coin. Please try a clearer photo, or make sure the coin fills the frame.';
+            _camLoading = false;
+          });
+          return;
+        }
         setState(() {
           _camResult = data as Map<String, dynamic>;
           _camLoading = false;
@@ -4728,6 +4774,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           _picStorage.text = coin['Storage Location']?.toString() ?? '';
           _picNotes.text = coin['Personal Notes']?.toString() ?? '';
         });
+
       } else {
         setState(() {
           _camError = 'AI scan failed: Server returned ${streamedResponse.statusCode}';
@@ -4940,16 +4987,22 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           children: [
             TextButton.icon(
               onPressed: () => _pickCamImage(isObverse, ImageSource.camera),
-              icon: const Icon(Icons.photo_camera, size: 14, color: Color(0xFF4C8CDA)),
-              label: const Text('Take Photo', style: TextStyle(fontSize: 11, color: Color(0xFF4C8CDA))),
-              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)),
+              icon: const Icon(Icons.photo_camera, size: 18, color: Color(0xFF4C8CDA)),
+              label: const Text('Take Photo', style: TextStyle(fontSize: 18, color: Color(0xFF4C8CDA))),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
             ),
             const SizedBox(width: 4),
             TextButton.icon(
               onPressed: () => _pickCamImage(isObverse, ImageSource.gallery),
-              icon: const Icon(Icons.upload, size: 14, color: Color(0xFF64748B)),
-              label: const Text('Upload', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)),
+              icon: const Icon(Icons.upload, size: 18, color: Color(0xFF64748B)),
+              label: const Text('Upload', style: TextStyle(fontSize: 18, color: Color(0xFF64748B))),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
             ),
           ],
         )
@@ -4985,11 +5038,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                       children: [
                         Text('Quick Camera Scanner',
                             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                         Text('Identify and catalog specimens directly via webcam or phone camera',
-                            style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                            style: TextStyle(color: Color(0xFF64748B), fontSize: 18)),
                       ],
                     ),
                   ),
@@ -5014,11 +5067,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     Expanded(
                       child: Text(
                         'Quick Camera Scan provides rapid identification and fast cataloging. '
-                        'For high-resolution error analysis, surface wear grading, and estate-grade verification, '
-                        'please use the Microscope Station.',
+                        'For high-resolution error analysis and estate-grade verification, '
+                        'use the Desktop Agent with a high-res camera.',
                         style: TextStyle(
                           color: const Color(0xFF1E3A8A),
-                          fontSize: 12.5,
+                          fontSize: 18,
                           height: 1.5,
                         ),
                       ),
@@ -5026,6 +5079,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   ],
                 ),
               ),
+
               const SizedBox(height: 32),
 
               // ── Camera Photo Capture Boxes ──────────────────────────────────
@@ -5094,6 +5148,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: Colors.black12,
                       disabledForegroundColor: Colors.black26,
+                      minimumSize: const Size(200, 56),
                       padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 18),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 4,

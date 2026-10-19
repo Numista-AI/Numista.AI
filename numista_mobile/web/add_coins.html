@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
   Backend API URL Strategy:
   Dart --dart-define values are not available in standalone HTML files.
@@ -12,6 +12,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Add Coins — Numista.AI</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <meta name="robots" content="noindex, nofollow" />
   <meta name="description" content="Upload invoices, spreadsheets, and coin images to Numista.AI. Drop a single file or an entire folder — the AI does the rest." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -64,6 +65,19 @@
       }
       #morgan-guide-card p, #morgan-guide-card strong {
         color: #1e293b !important;
+      }
+      /* Fix inner dark boxes inside morgan card in light mode */
+      #morgan-guide-card > div > div[style*='rgba(11'] {
+        background: rgba(13,148,136,0.06) !important;
+        border-color: rgba(13,148,136,0.2) !important;
+      }
+      #morgan-guide-card div[style*='background: rgba(11'] {
+        background: #F0F9FF !important;
+        border-color: #BAE6FD !important;
+      }
+      #dealer-help-box {
+        background: #F8FAFC !important;
+        border-color: #CBD5E1 !important;
       }
     }
 
@@ -543,12 +557,12 @@
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
   const firebaseConfig = {
-    apiKey: "AIzaSyDSM3pQl0oWdZgOw2vXCvhyRH899l-ZvcM",
+    apiKey: "AIzaSyCPGC879Tl1FaGucQmlw7qKL25b8v4ACF8",
     authDomain: "studio-9101802118-8c9a8.firebaseapp.com",
     projectId: "studio-9101802118-8c9a8",
     storageBucket: "studio-9101802118-8c9a8.firebasestorage.app",
     messagingSenderId: "568985927038",
-    appId: "1:568985927038:web:bf2a6f690b59e2148b072f"
+    appId: "1:568985927038:web:9ea56548eed27d5a8b072f"
   };
 
   const app = initializeApp(firebaseConfig);
@@ -557,7 +571,23 @@
   // Expose a promise that resolves to the current user (or null).
   // Non-module scripts below await window._fbUserReady to get the user.
   window._fbUserReady = new Promise(resolve => {
-    onAuthStateChanged(auth, user => resolve(user));
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        const injectBanner = () => {
+          if (document.getElementById('auth-required-banner')) return;
+          const banner = document.createElement('div');
+          banner.id = 'auth-required-banner';
+          banner.style.cssText = 'background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.4);color:#f87171;padding:14px 18px;border-radius:8px;margin:0 auto 16px;max-width:860px;font-size:0.95rem;font-weight:500;text-align:center;';
+          banner.textContent = 'Please sign in to Numista.AI before using the importer. Return to the app and sign in, then re-open this page.';
+          const firstCard = document.querySelector('.card') || document.body.firstChild;
+          if (firstCard && firstCard.parentNode) { firstCard.parentNode.insertBefore(banner, firstCard); } else { document.body.insertBefore(banner, document.body.firstChild); }
+          const startBtn = document.getElementById('start-btn');
+          if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.4'; }
+        };
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', injectBanner); } else { injectBanner(); }
+      }
+      resolve(user);
+    });
   });
 </script>
 

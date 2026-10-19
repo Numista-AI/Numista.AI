@@ -191,15 +191,6 @@ class _MorganGreeterState extends State<MorganGreeter>
       tabName: 'upload',
     ),
     _ActionTile(
-      tileId: 'microscope',
-      emoji: '🔬',
-      icon: Icons.biotech_rounded,
-      color: _teal, // teal
-      title: 'Identify with Microscope',
-      subtitle: 'Place your coin — I\'ll tell you what it is',
-      route: 'Microscope Scanner',
-    ),
-    _ActionTile(
       tileId: 'camera_scanner',
       emoji: '📷',
       icon: Icons.photo_camera_rounded,
