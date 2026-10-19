@@ -380,6 +380,81 @@ _SCAN_PROJECT_ID = (
 _SCAN_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
 
 
+def extract_cert_from_image(
+    image_bytes: bytes,
+    mime_type: str = "image/jpeg",
+    model: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Shared OCR function for grading slab photos to extract cert number and grader.
+    Used by both /api/scan_cert_number_upload and /api/identify_coin_photo.
+    Returns a dict with keys: cert_number, grader, confidence, message.
+    """
+    model_name = model or MODEL_FLASH
+    try:
+        _scan_client = _genai.Client(
+            vertexai=True,
+            project=_SCAN_PROJECT_ID,
+            location=_SCAN_LOCATION,
+        )
+
+        prompt = (
+            "You are examining an image of a certified coin grading slab label. "
+            "Your ONLY job is to extract the certification number and identify the grading company.\n\n"
+            "Grading companies and their cert # formats:\n"
+            "- PCGS: 8-digit number (e.g. 53652580). Label says 'PCGS' or 'Professional Coin Grading Service'.\n"
+            "- NGC: 7-digit number, optionally with a dash suffix (e.g. 8321797 or 8321797-003). "
+            "  Label says 'NGC' or 'Numismatic Guaranty Company'.\n"
+            "- CAC: starts with 'CAC' (e.g. CAC12345 or CACG12345). "
+            "  Label says 'CAC' or 'Certified Acceptance Corporation'.\n\n"
+            "Return ONLY valid JSON, no markdown:\n"
+            '{"cert_number": "<number or null>", "grader": "<PCGS|NGC|CAC|null>", '
+            '"confidence": "<HIGH|MEDIUM|LOW>"}'
+        )
+
+        image_part = _genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+        response = _scan_client.models.generate_content(
+            model=model_name,
+            contents=[prompt, image_part],
+            config=_genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                max_output_tokens=128,
+            ),
+        )
+        text = response.text.strip()
+        data = json.loads(text)
+        cert_num = (data.get("cert_number") or "").strip() or None
+        grader = (data.get("grader") or "").strip().upper() or None
+        if grader not in ("PCGS", "NGC", "CAC", "CACG"):
+            grader = None
+        confidence = data.get("confidence", "LOW").upper()
+        if confidence not in ("HIGH", "MEDIUM", "LOW"):
+            confidence = "LOW"
+
+        if not cert_num:
+            return {
+                "cert_number": None,
+                "grader": None,
+                "confidence": "LOW",
+                "message": "No cert number found in image.",
+            }
+
+        return {
+            "cert_number": cert_num,
+            "grader": grader,
+            "confidence": confidence,
+            "message": "OK",
+        }
+    except Exception as e:
+        logger.warning(f"extract_cert_from_image failed: {e}")
+        return {
+            "cert_number": None,
+            "grader": None,
+            "confidence": "LOW",
+            "message": f"Scan failed: {e}",
+        }
+
+
 @router.post("/scan_cert_number_upload", response_model=ScanCertResponse)
 async def scan_cert_number_upload(
     file: UploadFile = FastAPIFile(...),
@@ -405,64 +480,6 @@ async def scan_cert_number_upload(
     # Detect MIME type
     mime = file.content_type or "image/jpeg"
 
-    try:
-        _scan_client = _genai.Client(
-            vertexai=True,
-            project=_SCAN_PROJECT_ID,
-            location=_SCAN_LOCATION,
-        )
+    res = extract_cert_from_image(raw, mime_type=mime)
+    return ScanCertResponse(**res)
 
-        prompt = (
-            "You are examining an image of a certified coin grading slab label. "
-            "Your ONLY job is to extract the certification number and identify the grading company.\n\n"
-            "Grading companies and their cert # formats:\n"
-            "- PCGS: 8-digit number (e.g. 53652580). Label says 'PCGS' or 'Professional Coin Grading Service'.\n"
-            "- NGC: 7-digit number, optionally with a dash suffix (e.g. 8321797 or 8321797-003). "
-            "  Label says 'NGC' or 'Numismatic Guaranty Company'.\n"
-            "- CAC: starts with 'CAC' (e.g. CAC12345 or CACG12345). "
-            "  Label says 'CAC' or 'Certified Acceptance Corporation'.\n\n"
-            "Return ONLY valid JSON, no markdown:\n"
-            '{"cert_number": "<number or null>", "grader": "<PCGS|NGC|CAC|null>", '
-            '"confidence": "<HIGH|MEDIUM|LOW>"}'
-        )
-
-        image_part = _genai_types.Part.from_bytes(data=raw, mime_type=mime)
-        response = _scan_client.models.generate_content(
-            model=MODEL_FLASH,
-            contents=[prompt, image_part],
-            config=_genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                max_output_tokens=128,
-            ),
-        )
-        text = response.text.strip()
-        data = json.loads(text)
-        cert_num = (data.get("cert_number") or "").strip() or None
-        grader = (data.get("grader") or "").strip().upper() or None
-        if grader not in ("PCGS", "NGC", "CAC"):
-            grader = None
-        confidence = data.get("confidence", "LOW").upper()
-        if confidence not in ("HIGH", "MEDIUM", "LOW"):
-            confidence = "LOW"
-
-        if not cert_num:
-            return ScanCertResponse(
-                cert_number=None, grader=None, confidence="LOW",
-                message="No cert number found in image."
-            )
-
-        return ScanCertResponse(
-            cert_number=cert_num,
-            grader=grader,
-            confidence=confidence,
-            message="OK",
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.warning(f"scan_cert_number failed: {e}")
-        return ScanCertResponse(
-            cert_number=None, grader=None, confidence="LOW",
-            message="Scan failed — please enter cert # manually."
-        )

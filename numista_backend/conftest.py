@@ -2,6 +2,10 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
+_backend_dir = os.path.dirname(os.path.abspath(__file__))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
 os.environ["DISABLE_PROXIES"] = "true"
 # Allow monkeypatch-based legacy tests to bypass the default-deny auth middleware.
 # ONLY active when K_SERVICE and ENVIRONMENT!=production are unset (i.e., local/CI only).

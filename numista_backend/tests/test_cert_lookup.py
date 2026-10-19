@@ -375,3 +375,83 @@ def test_ngc_verify_url_numeric_grade():
     assert _ngc_url("8321797-003", "PR65") == "https://www.ngccoin.com/certlookup/8321797-003/65/"
     # Edge: plain numeric grade passed as-is
     assert _ngc_url("1234567", "67") == "https://www.ngccoin.com/certlookup/1234567/67/"
+
+
+def test_same_cert_reader_both_paths_match(monkeypatch):
+    """
+    NET-354 Item 2: Same cert reader for both endpoints.
+    Verifies that the same slab image fixture passed through:
+      1) POST /api/scan_cert_number_upload
+      2) POST /api/identify_coin_photo
+    uses the shared extract_cert_from_image function and extracts the exact same cert number.
+    """
+    import io
+    import json
+
+    fixture_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xdb\x00C\x00" + b"\x00" * 80
+    expected_cert = "53652580"
+    expected_grader = "PCGS"
+
+    # Mock extract_cert_from_image / genai Client for cert_routes
+    mock_genai_resp = MagicMock()
+    mock_genai_resp.text = json.dumps({
+        "cert_number": expected_cert,
+        "grader": expected_grader,
+        "confidence": "HIGH"
+    })
+
+    with patch("routes.cert_routes._genai") as mock_genai_mod:
+        mock_client = MagicMock()
+        mock_genai_mod.Client.return_value = mock_client
+        mock_client.models.generate_content.return_value = mock_genai_resp
+
+        # Path 1: /api/scan_cert_number_upload
+        resp1 = client.post(
+            "/api/scan_cert_number_upload",
+            files={"file": ("slab.jpg", io.BytesIO(fixture_bytes), "image/jpeg")},
+        )
+        assert resp1.status_code == 200, f"Path 1 failed: {resp1.status_code} {resp1.text}"
+        data1 = resp1.json()
+        cert_from_path1 = data1.get("cert_number")
+        assert cert_from_path1 == expected_cert
+
+        # Mock Gemini call in identify_coin_photo for pass1/pass2
+        mock_id_resp1 = MagicMock()
+        mock_id_resp1.text = json.dumps({
+            "year": "1881",
+            "denomination": "Dollar",
+            "country": "United States",
+            "program_series": "Morgan Dollars",
+            "mint_mark": "S",
+            "grade": "MS-65",
+            "confidence": "HIGH",
+            "obverse_image": "A"
+        })
+        mock_id_resp2 = MagicMock()
+        mock_id_resp2.text = json.dumps({
+            "refined_grade": "MS-65",
+            "estimated_value_usd": "$150.00",
+            "confidence": "HIGH"
+        })
+        mock_models = MagicMock()
+        mock_models.generate_content.side_effect = [mock_id_resp1, mock_id_resp2]
+        mock_id_client = MagicMock()
+        mock_id_client.models = mock_models
+        monkeypatch.setattr(app_main, "genai_client", mock_id_client)
+        monkeypatch.setattr(app_main, "_authenticate_request", lambda auth, email=None, **kw: "test_user@numista.ai")
+
+        # Path 2: /api/identify_coin_photo
+        resp2 = client.post(
+            "/api/identify_coin_photo",
+            data={"user_email": "test_user@numista.ai"},
+            files={"image_a": ("slab.jpg", io.BytesIO(fixture_bytes), "image/jpeg")},
+        )
+        assert resp2.status_code == 200, f"Path 2 failed: {resp2.status_code} {resp2.text}"
+        data2 = resp2.json()
+        coin2 = data2.get("coin", {})
+        cert_from_path2 = coin2.get("Certification Number") or coin2.get("cert_number")
+        assert cert_from_path2 == expected_cert
+
+        # Both paths must match!
+        assert cert_from_path1 == cert_from_path2 == expected_cert
+

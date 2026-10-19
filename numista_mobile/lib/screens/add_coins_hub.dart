@@ -41,6 +41,7 @@ class AddCoinsHub extends StatefulWidget {
   final bool showCameraFullScreen;
   final bool showAddAnotherConfirm;
   final Map<String, dynamic>? initialCoinPreset;
+  final String? initialCamError;
 
   const AddCoinsHub({
     super.key,
@@ -51,6 +52,7 @@ class AddCoinsHub extends StatefulWidget {
     this.showCameraFullScreen = false,
     this.showAddAnotherConfirm = false,
     this.initialCoinPreset,
+    this.initialCamError,
   });
 
   @visibleForTesting
@@ -149,6 +151,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
+    if (widget.initialCamError != null) {
+      _camError = widget.initialCamError;
+    }
     int initialIdx = 0;
     // ITEM 9: Tab order — upload (spreadsheet/invoice) is tab 0 (first/default).
     // Priority: batch import → AI photo → manual → cert (PCGS/NGC/CAC) → SKU → roll → world → set.
@@ -3033,11 +3038,21 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   /// Scan error card showing friendly retry and fallback options.
-  Widget _buildScanErrorCard() {
-    if (_scanErrorType == null) return const SizedBox.shrink();
+  Widget _buildScanErrorCard({
+    String? errorMessage,
+    VoidCallback? onRetry,
+    VoidCallback? onChoosePhoto,
+    VoidCallback? onManual,
+  }) {
+    final msg = errorMessage ?? _scanErrorMsg;
+    if (msg == null && _scanErrorType == null) return const SizedBox.shrink();
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isNoCamera = _scanErrorType == 'no_camera';
+    final retryAction = onRetry ?? () => _scanSlabPhoto();
+    final choosePhotoAction = onChoosePhoto ?? () => _scanSlabPhoto(directSource: ImageSource.gallery);
+    final manualAction = onManual ?? () {
+      _pcgsSingleFocusNode.requestFocus();
+    };
 
     return Container(
       margin: const EdgeInsets.only(top: 12),
@@ -3053,14 +3068,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           Row(
             children: [
               Icon(
-                isNoCamera ? Icons.no_photography_outlined : Icons.warning_amber_rounded,
+                Icons.warning_amber_rounded,
                 color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
                 size: 22,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  _scanErrorMsg ?? 'Scan error',
+                  msg ?? 'Scan error',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -3071,53 +3086,48 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             ],
           ),
           const SizedBox(height: 12),
-          if (isNoCamera) ...[
-            ElevatedButton.icon(
-              onPressed: () => _scanSlabPhoto(directSource: ImageSource.gallery),
-              icon: const Icon(Icons.photo_library_outlined, size: 20),
-              label: const Text('Choose a photo instead',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 56),
-                backgroundColor: const Color(0xFF2563EB),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              ElevatedButton.icon(
+                onPressed: retryAction,
+                icon: const Icon(Icons.refresh, size: 20),
+                label: const Text('Try again',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(140, 56),
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
-            ),
-          ] else ...[
-            Wrap(
-              spacing: 12,
-              runSpacing: 10,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => _scanSlabPhoto(),
-                  icon: const Icon(Icons.refresh, size: 20),
-                  label: const Text('Try again',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(140, 56),
-                    backgroundColor: const Color(0xFF2563EB),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
+              OutlinedButton.icon(
+                onPressed: choosePhotoAction,
+                icon: const Icon(Icons.photo_library_outlined, size: 20),
+                label: const Text('Choose a photo instead',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(140, 56),
+                  foregroundColor: isDark ? Colors.white : const Color(0xFF1E293B),
+                  side: BorderSide(color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    _pcgsSingleFocusNode.requestFocus();
-                  },
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  label: const Text('Type it in',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(140, 56),
-                    foregroundColor: isDark ? Colors.white : const Color(0xFF1E293B),
-                    side: BorderSide(color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
+              ),
+              OutlinedButton.icon(
+                onPressed: manualAction,
+                icon: const Icon(Icons.keyboard_outlined, size: 20),
+                label: const Text('Enter manually',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(140, 56),
+                  foregroundColor: isDark ? Colors.white : const Color(0xFF1E293B),
+                  side: BorderSide(color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -5094,94 +5104,33 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               ),
               const SizedBox(height: 24),
 
-              // ── Error Display — 56px action buttons (Fix 2) ───────────────
+              // ── Error Display — 56px action buttons (NET-354 Item 1) ─────
               if (_camError != null) ...[
-                Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _isDark ? const Color(0xFF332024) : const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: _isDark ? const Color(0xFF991B1B) : const Color(0xFFF87171),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.warning_amber_rounded,
-                            color: _isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
-                            size: 22,
+                _buildScanErrorCard(
+                  errorMessage: _camError,
+                  onRetry: () {
+                    setState(() => _camError = null);
+                  },
+                  onChoosePhoto: () {
+                    _pickCamImage(true, ImageSource.gallery);
+                  },
+                  onManual: () {
+                    if (widget.onNavigate != null) {
+                      widget.onNavigate!('Type it in');
+                    } else {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AddCoinsHub(
+                            showManualFullScreen: true,
+                            initialCoinPreset: widget.initialCoinPreset,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _camError!,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: _isDark ? const Color(0xFFFECACA) : const Color(0xFF991B1B),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 10,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              setState(() => _camError = null);
-                            },
-                            icon: const Icon(Icons.refresh, size: 20),
-                            label: const Text('Try again',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(140, 56),
-                              backgroundColor: const Color(0xFF2563EB),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              // Navigate to manual entry tab
-                              if (widget.onNavigate != null) {
-                                widget.onNavigate!('Type it in');
-                              } else {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => AddCoinsHub(
-                                      showManualFullScreen: true,
-                                      initialCoinPreset: widget.initialCoinPreset,
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.keyboard_outlined, size: 20),
-                            label: const Text('Enter manually',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(140, 56),
-                              foregroundColor: _isDark ? Colors.white : const Color(0xFF1E293B),
-                              side: BorderSide(
-                                color: _isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                              ),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      );
+                    }
+                  },
                 ),
+                const SizedBox(height: 16),
               ],
 
               // ── Actions: Scan Button or Loader ─────────────────────────────

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/denomination_canon.dart';
 import '../utils/web_input_helper.dart';
@@ -432,7 +432,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             label: 'Mint Mark',
             textField: true,
             child: TextFormField(
-              key: const ValueKey('manual_field_mint_mark'),
+              key: const ValueKey('manual_field_Mint Mark'),
               controller: _mintCtrl,
               focusNode: _mintFocus,
               textCapitalization: TextCapitalization.characters,

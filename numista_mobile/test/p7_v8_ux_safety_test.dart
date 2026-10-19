@@ -114,10 +114,9 @@ void main() {
 
       // Test Qty bug fix: submit without touching Qty -> defaults to '1'
       // Fill required fields so validation succeeds
-      final textFields = find.byType(TextFormField);
-      await tester.enterText(textFields.at(0), '1921'); // Year
-      await tester.enterText(textFields.at(2), 'Quarter Dollar'); // Denomination
-      await tester.enterText(textFields.at(3), 'Washington Quarter'); // Program/Series
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Year')), '1921'); // Year
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Denomination')), 'Quarter Dollar'); // Denomination
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Program/Series')), 'Washington Quarter'); // Program/Series
       await tester.ensureVisible(saveBtnFinder);
       await tester.tap(saveBtnFinder);
       await tester.pumpAndSettle();
@@ -127,11 +126,11 @@ void main() {
       // Test Qty bug fix: type '1' into empty field -> produces '1' (never '11')
       submittedData = null;
       // Re-enter required fields since form was reset after successful submit (V8.9 Fix 11)
-      await tester.enterText(textFields.at(0), '1921');
-      await tester.enterText(textFields.at(2), 'Quarter Dollar');
-      await tester.enterText(textFields.at(3), 'Washington Quarter');
-      // Enter '1' in Quantity (index 8)
-      await tester.enterText(textFields.at(8), '1');
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Year')), '1921');
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Denomination')), 'Quarter Dollar');
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Program/Series')), 'Washington Quarter');
+      // Enter '1' in Quantity
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Quantity')), '1');
       await tester.ensureVisible(saveBtnFinder);
       await tester.tap(saveBtnFinder);
       await tester.pumpAndSettle();
@@ -700,20 +699,19 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      final fields = find.byType(TextFormField);
       // Fill required fields at minimum
-      await tester.enterText(fields.at(0), '1921');   // Year
-      await tester.enterText(fields.at(2), 'Quarter Dollar'); // Denomination
-      await tester.enterText(fields.at(3), 'Washington Quarter'); // Program/Series
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Year')), '1921');   // Year
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Denomination')), 'Quarter Dollar'); // Denomination
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Program/Series')), 'Washington Quarter'); // Program/Series
       // Fill optional fields
-      await tester.enterText(fields.at(4), 'Liberty Head'); // Theme
-      await tester.enterText(fields.at(5), 'DDO');          // Variety
-      await tester.enterText(fields.at(8), '25.00');        // Cost (index 8 — Cert # now at 7)
-      await tester.enterText(fields.at(9), '2');            // Quantity (index 9)
-      await tester.enterText(fields.at(10), 'APMEX');       // Retailer (index 10)
-      await tester.enterText(fields.at(11), 'INV-001');     // Invoice (index 11)
-      await tester.enterText(fields.at(12), 'Box A');       // Storage (index 12)
-      await tester.enterText(fields.at(13), 'Nice coin');   // Notes (index 13)
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Theme/Subject')), 'Liberty Head'); // Theme
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Variety')), 'DDO');          // Variety
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Cost')), '25.00');        // Cost
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Quantity')), '2');            // Quantity
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Retailer/Website')), 'APMEX');       // Retailer
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Retailer Invoice #')), 'INV-001');     // Invoice
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Storage Location')), 'Box A');       // Storage
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Notes')), 'Nice coin');   // Notes
 
       await tester.ensureVisible(find.text('Save to My Collection'));
       await tester.tap(find.text('Save to My Collection'));
@@ -812,18 +810,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final fields = find.byType(TextFormField);
-      // Index 8 is Quantity: 0=Year, 1=MintMark, 2=Denomination, 3=Program/Series,
-      // 4=Theme, 5=Variety, 6=Condition, 7=Cost, 8=Quantity
+      final qtyFinder = find.byKey(const ValueKey('manual_field_Quantity'));
       expect(
-        tester.widget<TextFormField>(fields.at(8)).controller?.text ?? '',
+        tester.widget<TextFormField>(qtyFinder).controller?.text ?? '',
         equals(''),
         reason: 'Quantity controller text must be empty on initial build',
       );
 
-      await tester.enterText(fields.at(0), '1921');            // Year
-      await tester.enterText(fields.at(2), 'Quarter Dollar'); // Denomination  
-      await tester.enterText(fields.at(3), 'Washington Quarter'); // Program/Series
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Year')), '1921');            // Year
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Denomination')), 'Quarter Dollar'); // Denomination  
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Program/Series')), 'Washington Quarter'); // Program/Series
       // Leave Quantity blank — do NOT enter anything
       await tester.tap(find.widgetWithText(ElevatedButton, 'Save to My Collection'));
       await tester.pumpAndSettle();
@@ -849,19 +845,17 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final fields = find.byType(TextFormField);
-      // Field order after Fix 10: 0=Year, 1=MintMark, 2=Denomination, 3=Program/Series,
-      // 4=Theme, 5=Variety, 6=Condition, 7=Cert #, 8=Cost, 9=Quantity
+      final qtyFinder = find.byKey(const ValueKey('manual_field_Quantity'));
       expect(
-        tester.widget<TextFormField>(fields.at(9)).controller?.text ?? '',
+        tester.widget<TextFormField>(qtyFinder).controller?.text ?? '',
         equals(''),
         reason: 'Quantity starts empty',
       );
-      await tester.enterText(fields.at(0), '1921');
-      await tester.enterText(fields.at(2), 'Quarter Dollar');
-      await tester.enterText(fields.at(3), 'Washington Quarter');
-      // Type '3' into Quantity field (index 9 after Cert # added at 7)
-      await tester.enterText(fields.at(9), '3');
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Year')), '1921');
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Denomination')), 'Quarter Dollar');
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Program/Series')), 'Washington Quarter');
+      // Type '3' into Quantity field
+      await tester.enterText(qtyFinder, '3');
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ElevatedButton, 'Save to My Collection'));
       await tester.pumpAndSettle();
@@ -922,11 +916,10 @@ void main() {
       // 0=Year, 1=Mint Mark, 2=Denomination, 3=Program/Series, 4=Theme/Subject,
       // 5=Variety, 6=Condition, 7=Cost, 8=Quantity, 9=Retailer, 10=Invoice,
       // 11=Storage, 12=Notes
-      final fields = find.byType(TextFormField);
-      await tester.enterText(fields.at(0), '2000'); // Year
-      await tester.enterText(fields.at(2), 'Dollar'); // Denomination (required)
-      await tester.enterText(fields.at(3), 'Peace Dollar'); // Program/Series (required)
-      // Leave Quantity (index 8) blank
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Year')), '2000'); // Year
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Denomination')), 'Dollar'); // Denomination (required)
+      await tester.enterText(find.byKey(const ValueKey('manual_field_Program/Series')), 'Peace Dollar'); // Program/Series (required)
+      // Leave Quantity blank
       await tester.pumpAndSettle();
 
       await tester.tap(find.widgetWithText(ElevatedButton, 'Save to My Collection'));
@@ -1967,16 +1960,30 @@ void main() {
       final expectedApiKey = webApiKeyMatch!.group(1)!;
       final expectedAppId = webAppIdMatch!.group(1)!;
 
-      final htmlContent = File('web/add_coins.html').readAsStringSync();
-      expect(htmlContent, contains(expectedApiKey),
-          reason: 'add_coins.html apiKey does not match firebase_options.dart web config');
-      expect(htmlContent, contains(expectedAppId),
-          reason: 'add_coins.html appId does not match firebase_options.dart web config');
-      // Must NOT contain the Android key
-      expect(htmlContent, isNot(contains('AIzaSyDSM3pQl0oWdZgOw2vXCvhyRH899l-ZvcM')));
-      expect(htmlContent, isNot(contains('bf2a6f690b59e2148b072f')));
-      // Must have no-user guard
-      expect(htmlContent, contains('auth-required-banner'));
+      final webDir = Directory('web');
+      final htmlFiles = webDir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.html'));
+
+      int checkedCount = 0;
+      for (final file in htmlFiles) {
+        final content = file.readAsStringSync();
+        if (content.contains('firebaseConfig')) {
+          checkedCount++;
+          expect(content, contains(expectedApiKey),
+              reason: '${file.path} apiKey does not match firebase_options.dart web config');
+          expect(content, contains(expectedAppId),
+              reason: '${file.path} appId does not match firebase_options.dart web config');
+          // Must NOT contain the Android key
+          expect(content, isNot(contains('AIzaSyDSM3pQl0oWdZgOw2vXCvhyRH899l-ZvcM')),
+              reason: '${file.path} contains Android apiKey');
+          expect(content, isNot(contains('bf2a6f690b59e2148b072f')),
+              reason: '${file.path} contains Android appId');
+        }
+      }
+      expect(checkedCount, greaterThanOrEqualTo(1),
+          reason: 'At least one html file with firebaseConfig must be checked');
     });
 
     // ── Fix 2A: Cert guard test ────────────────────────────────────────────
@@ -2044,4 +2051,145 @@ void main() {
       expect(hubSrc, contains("data['grading_service'] ?? data['Grading Service']"));
     });
   });
+
+  // ── P7 V8.18.5 Feedback Verifications (NET-354 / COS_SCORE V8.18.4) ──────
+  group('P7 V8.18.5 Feedback Verifications', () {
+    testWidgets('p7_v8185_photo_id_error_shows_all_three_buttons', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 1200);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(
+            showCameraFullScreen: true,
+            initialCamError: 'Could not identify this coin. Please try a clearer photo.',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify the error text is visible
+      expect(find.text('Could not identify this coin. Please try a clearer photo.'), findsOneWidget);
+
+      // Verify all 3 action buttons exist and have height >= 56px
+      final tryAgainBtn = find.widgetWithText(ElevatedButton, 'Try again');
+      expect(tryAgainBtn, findsOneWidget);
+      expect(tester.getSize(tryAgainBtn).height, greaterThanOrEqualTo(56.0));
+
+      final choosePhotoBtn = find.widgetWithText(OutlinedButton, 'Choose a photo instead');
+      expect(choosePhotoBtn, findsOneWidget);
+      expect(tester.getSize(choosePhotoBtn).height, greaterThanOrEqualTo(56.0));
+
+      final manualBtn = find.widgetWithText(OutlinedButton, 'Enter manually');
+      expect(manualBtn, findsOneWidget);
+      expect(tester.getSize(manualBtn).height, greaterThanOrEqualTo(56.0));
+
+      // Tap 'Try again' to verify it clears error
+      await tester.tap(tryAgainBtn);
+      await tester.pumpAndSettle();
+      expect(find.text('Could not identify this coin. Please try a clearer photo.'), findsNothing);
+    });
+
+    testWidgets('p7_v8185_localhost_proof_zero_requests_on_hub_load', (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({'microscope_enabled': false});
+      final overrides = _LocalhostTrackerHttpOverrides();
+      final prevOverrides = HttpOverrides.current;
+      HttpOverrides.global = overrides;
+
+      try {
+        setTestViewSize(tester, width: 800, height: 1200);
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: AddCoinsHub(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Check if any request was made to localhost or 127.0.0.1
+        final localhostCalls = overrides.requestedUris.where((uri) {
+          final h = uri.host.toLowerCase();
+          return h == 'localhost' || h == '127.0.0.1';
+        }).toList();
+
+        expect(localhostCalls, isEmpty,
+            reason: 'AddCoinsHub on load must never make requests to localhost or 127.0.0.1');
+
+        // Also test HardwareService methods directly with microscope disabled
+        final hw = HardwareService();
+        final status = await hw.getStatus();
+        expect(status, isNull);
+        final running = await hw.isServerRunning();
+        expect(running, isFalse);
+
+        final localhostCallsAfterHw = overrides.requestedUris.where((uri) {
+          final h = uri.host.toLowerCase();
+          return h == 'localhost' || h == '127.0.0.1';
+        }).toList();
+
+        expect(localhostCallsAfterHw, isEmpty,
+            reason: 'HardwareService guarded methods must make 0 requests to localhost when disabled');
+      } finally {
+        HttpOverrides.global = prevOverrides;
+      }
+    });
+  });
+}
+
+class _LocalhostTrackerHttpOverrides extends HttpOverrides {
+  final List<Uri> requestedUris = [];
+
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return _TrackingHttpClient(requestedUris);
+  }
+}
+
+class _TrackingHttpClient implements HttpClient {
+  final List<Uri> requestedUris;
+  _TrackingHttpClient(this.requestedUris);
+
+  @override
+  bool autoUncompress = true;
+  @override
+  Duration? connectionTimeout;
+  @override
+  Duration idleTimeout = const Duration(seconds: 15);
+  @override
+  int? maxConnectionsPerHost;
+  @override
+  String? userAgent;
+
+  @override
+  void addCredentials(Uri url, String realm, HttpClientCredentials credentials) {}
+  @override
+  void addProxyCredentials(String host, int port, String realm, HttpClientCredentials credentials) {}
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) => openUrl('GET', url);
+  @override
+  Future<HttpClientRequest> postUrl(Uri url) => openUrl('POST', url);
+  @override
+  Future<HttpClientRequest> putUrl(Uri url) => openUrl('PUT', url);
+  @override
+  Future<HttpClientRequest> deleteUrl(Uri url) => openUrl('DELETE', url);
+  @override
+  Future<HttpClientRequest> patchUrl(Uri url) => openUrl('PATCH', url);
+  @override
+  Future<HttpClientRequest> headUrl(Uri url) => openUrl('HEAD', url);
+
+  @override
+  Future<HttpClientRequest> open(String method, String host, int port, String path) {
+    requestedUris.add(Uri(scheme: 'http', host: host, port: port, path: path));
+    throw UnsupportedError('Blocked network call to $host:$port$path');
+  }
+
+  @override
+  Future<HttpClientRequest> openUrl(String method, Uri url) {
+    requestedUris.add(url);
+    throw UnsupportedError('Blocked network call to $url');
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

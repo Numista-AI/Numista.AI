@@ -89,7 +89,7 @@ from routes.support_routes import router as support_router
 from routes.telemetry_routes import router as telemetry_router   # ITEM 4: silent error telemetry
 from routes.sandbox_routes import router as sandbox_router         # ITEM 8: demo coin clear
 from routes.attorney_routes import router as attorney_router        # ITEM B: attorney token issuance + snapshot
-from routes.cert_routes import router as cert_router   # P7: unified cert lookup
+from routes.cert_routes import router as cert_router, extract_cert_from_image   # P7: unified cert lookup
 from routes.morgan_routes import morgan_router, NOTES_DELIMITER, wrap_user_data, create_proposal
 from routes.deps import get_current_user, require_admin_user, _check_and_increment_rate_cap
 
@@ -6358,6 +6358,20 @@ async def identify_coin_photo(
     if str(final_service).strip().lower() == "none":
         final_service = ""
 
+    # Shared cert reader integration (NET-354 / Item 2):
+    # Use shared extract_cert_from_image to read slab cert numbers consistently across endpoints
+    if not final_cert:
+        try:
+            cert_read = extract_cert_from_image(bytes_a, mime_type=mime_a)
+            if not cert_read.get("cert_number") and not single_image_mode and bytes_b:
+                cert_read = extract_cert_from_image(bytes_b, mime_type=mime_b)
+            if cert_read.get("cert_number"):
+                final_cert = cert_read["cert_number"]
+                if not final_service:
+                    final_service = cert_read.get("grader") or ""
+        except Exception as _e:
+            logger.warning(f"Shared cert extractor in identify_coin_photo non-fatal error: {_e}")
+
     ai_coin = {
         "Year":           override_year    or final_year,
         "Country":        norm_c or "United States",
@@ -6374,6 +6388,7 @@ async def identify_coin_photo(
         "Condition":      override_grade   or final_grade,
         "Grading Service": override_grading_service or final_service,
         "Certification Number": override_cert_number or final_cert,
+        "cert_number":    override_cert_number or final_cert,
         "Metal Content":  override_metal   or pass1.get("metal_content", ""),
         "Variety":        variety_str,
         "AI Estimated Value": est_value,
