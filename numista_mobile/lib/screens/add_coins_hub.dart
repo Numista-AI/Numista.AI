@@ -3308,7 +3308,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       return;
     }
 
-    // NGC or CAC — no public API, show manual-entry card with cert # prefilled
+    // NGC, CAC, CACG, etc. — query unified cert lookup backend (benchmark / cached)
     final certClean = raw.contains('/') ? raw.split('/').last.trim() : raw;
     // Refuse slash-only input like "123/" that yields an empty cert number
     if (certClean.isEmpty) {
@@ -3318,25 +3318,70 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       ));
       return;
     }
+
     setState(() {
+      _pcgsLookupLoading = true;
+    });
+
+    Map<String, dynamic>? lookupData;
+    try {
+      final uri = Uri.parse('$kApiBaseUrl/api/cert_lookup');
+      final resp = await HttpAuthClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'cert_num': certClean,
+          'grader': grader,
+        }),
+      );
+      if (resp.statusCode == 200) {
+        final parsed = jsonDecode(resp.body) as Map<String, dynamic>;
+        if (parsed['found'] == true) {
+          lookupData = parsed;
+        }
+      }
+    } catch (e) {
+      debugPrint('Unified cert lookup failed: $e');
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _pcgsLookupLoading = false;
       _certPendingConfirm = {
         '_grader': grader,
         'certNo': certClean,
       };
-      // Pre-fill manual fields from preset if available, else clear
-      if (widget.initialCoinPreset?['name'] != null) {
-        _certManualCoinName.text = widget.initialCoinPreset!['name'].toString();
+      if (lookupData != null) {
+        final coinName = (lookupData['coin_name'] ?? '').toString();
+        final year = (lookupData['year'] ?? '').toString();
+        final grade = (lookupData['grade'] ?? '').toString();
+        final denom = (lookupData['denomination'] ?? '').toString();
+
+        _certManualCoinName.text = coinName.isNotEmpty
+            ? coinName
+            : (widget.initialCoinPreset?['name']?.toString() ?? '');
+        _certManualYear.text = year.isNotEmpty
+            ? year
+            : (widget.initialCoinPreset?['year']?.toString() ?? '');
+        _certManualGrade.text = grade;
+        _certManualDenom.text = denom;
+        _certManualNotes.clear();
       } else {
-        _certManualCoinName.clear();
+        // Pre-fill manual fields from preset if available, else clear
+        if (widget.initialCoinPreset?['name'] != null) {
+          _certManualCoinName.text = widget.initialCoinPreset!['name'].toString();
+        } else {
+          _certManualCoinName.clear();
+        }
+        if (widget.initialCoinPreset?['year'] != null) {
+          _certManualYear.text = widget.initialCoinPreset!['year'].toString();
+        } else {
+          _certManualYear.clear();
+        }
+        _certManualGrade.clear();
+        _certManualDenom.clear();
+        _certManualNotes.clear();
       }
-      if (widget.initialCoinPreset?['year'] != null) {
-        _certManualYear.text = widget.initialCoinPreset!['year'].toString();
-      } else {
-        _certManualYear.clear();
-      }
-      _certManualGrade.clear();
-      _certManualDenom.clear();
-      _certManualNotes.clear();
     });
   }
 
@@ -5390,12 +5435,23 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       return headers.isNotEmpty ? headers.first : null;
     }
 
+    String? findOptionalHeader(List<String> keywords) {
+      for (final h in headers) {
+        final lower = h.toLowerCase();
+        if (keywords.any((k) => lower.contains(k))) return h;
+      }
+      return null;
+    }
+
     String selectedYearHeader = findMatchingHeader(['year', 'date']) ?? headers.first;
     String selectedMintHeader = findMatchingHeader(['mint', 'mm']) ?? (headers.length > 1 ? headers[1] : headers.first);
     String selectedDenomHeader = findMatchingHeader(['denom', 'type', 'coin', 'description', 'title', 'item']) ?? (headers.length > 2 ? headers[2] : headers.first);
     String selectedGradeHeader = findMatchingHeader(['grade', 'condition', 'pcgs', 'ngc', 'state']) ?? (headers.length > 3 ? headers[3] : headers.first);
     String selectedCostHeader = findMatchingHeader(['cost', 'price', 'paid', 'value', 'amount']) ?? (headers.length > 4 ? headers[4] : headers.first);
-    String selectedVarietyHeader = findMatchingHeader(['variety', 'note', 'error', 'detail', 'attribute']) ?? (headers.length > 5 ? headers[5] : headers.first);
+    String selectedVarietyHeader = findMatchingHeader(['variety', 'error', 'detail', 'attribute']) ?? (headers.length > 5 ? headers[5] : headers.first);
+    String selectedRetailerHeader = findOptionalHeader(['retailer', 'website', 'dealer', 'seller', 'vendor', 'source', 'store']) ?? '(None)';
+    String selectedInvoiceHeader = findOptionalHeader(['invoice', 'receipt', 'order']) ?? '(None)';
+    String selectedNotesHeader = findOptionalHeader(['personal notes', 'note', 'comment', 'notes']) ?? '(None)';
 
     showDialog(
       context: context,
@@ -5405,6 +5461,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             final previewRows = rawRows.take(5).toList();
 
             String getValue(List<String> row, String headerName) {
+              if (headerName.isEmpty || headerName == '(None)') return '';
               final idx = headers.indexOf(headerName);
               if (idx >= 0 && idx < row.length) return row[idx];
               return '';
@@ -5439,7 +5496,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                           _buildColumnMapperDropdown('Denomination / Type', selectedDenomHeader, headers, (val) => setWizardState(() => selectedDenomHeader = val!)),
                           _buildColumnMapperDropdown('Grade / Condition', selectedGradeHeader, headers, (val) => setWizardState(() => selectedGradeHeader = val!)),
                           _buildColumnMapperDropdown('Cost Basis (\$)', selectedCostHeader, headers, (val) => setWizardState(() => selectedCostHeader = val!)),
-                          _buildColumnMapperDropdown('Variety / Notes', selectedVarietyHeader, headers, (val) => setWizardState(() => selectedVarietyHeader = val!)),
+                          _buildColumnMapperDropdown('Variety', selectedVarietyHeader, headers, (val) => setWizardState(() => selectedVarietyHeader = val!)),
+                          _buildColumnMapperDropdown('Retailer / Website', selectedRetailerHeader, headers, (val) => setWizardState(() => selectedRetailerHeader = val ?? '(None)'), optional: true),
+                          _buildColumnMapperDropdown('Retailer Invoice #', selectedInvoiceHeader, headers, (val) => setWizardState(() => selectedInvoiceHeader = val ?? '(None)'), optional: true),
+                          _buildColumnMapperDropdown('Personal Notes', selectedNotesHeader, headers, (val) => setWizardState(() => selectedNotesHeader = val ?? '(None)'), optional: true),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -5464,6 +5524,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                               DataColumn(label: Text('Grade', style: TextStyle(fontWeight: FontWeight.bold))),
                               DataColumn(label: Text('Cost', style: TextStyle(fontWeight: FontWeight.bold))),
                               DataColumn(label: Text('Variety', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Retailer', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Invoice #', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Notes', style: TextStyle(fontWeight: FontWeight.bold))),
                             ],
                             rows: previewRows.map((r) {
                               return DataRow(cells: [
@@ -5473,6 +5536,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                                 DataCell(Text(getValue(r, selectedGradeHeader))),
                                 DataCell(Text(getValue(r, selectedCostHeader))),
                                 DataCell(Text(getValue(r, selectedVarietyHeader))),
+                                DataCell(Text(getValue(r, selectedRetailerHeader))),
+                                DataCell(Text(getValue(r, selectedInvoiceHeader))),
+                                DataCell(Text(getValue(r, selectedNotesHeader))),
                               ]);
                             }).toList(),
                           ),
@@ -5511,6 +5577,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         'Condition': getValue(r, selectedGradeHeader),
                         'Cost': getValue(r, selectedCostHeader),
                         'Variety': getValue(r, selectedVarietyHeader),
+                        'Retailer/Website': getValue(r, selectedRetailerHeader),
+                        'Retailer Invoice #': getValue(r, selectedInvoiceHeader),
+                        'Personal Notes': getValue(r, selectedNotesHeader),
                         // Legacy lowercase keys for backward compat
                         'year': getValue(r, selectedYearHeader),
                         'mint_mark': getValue(r, selectedMintHeader),
@@ -5518,6 +5587,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         'condition': getValue(r, selectedGradeHeader),
                         'cost_basis': getValue(r, selectedCostHeader),
                         'variety': getValue(r, selectedVarietyHeader),
+                        'retailer': getValue(r, selectedRetailerHeader),
+                        'invoice_number': getValue(r, selectedInvoiceHeader),
+                        'notes': getValue(r, selectedNotesHeader),
                         'status': 'pending_review',
                         'created_at': DateTime.now().toIso8601String(),
                       };
@@ -5547,7 +5619,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildColumnMapperDropdown(String fieldName, String currentValue, List<String> headers, ValueChanged<String?> onChanged) {
+  Widget _buildColumnMapperDropdown(String fieldName, String currentValue, List<String> headers, ValueChanged<String?> onChanged, {bool optional = false}) {
+    final list = optional ? ['(None)', ...headers] : headers;
     return Container(
       width: 220,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -5561,12 +5634,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         children: [
           Text(fieldName, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
           DropdownButton<String>(
-            value: headers.contains(currentValue) ? currentValue : headers.first,
+            value: list.contains(currentValue) ? currentValue : list.first,
             isExpanded: true,
             underline: const SizedBox(),
             icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF7C3AED)),
             style: const TextStyle(fontSize: 13, color: Color(0xFF1E293B)),
-            items: headers.map((h) => DropdownMenuItem(value: h, child: Text(h, overflow: TextOverflow.ellipsis))).toList(),
+            items: list.map((h) => DropdownMenuItem(value: h, child: Text(h, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: onChanged,
           ),
         ],

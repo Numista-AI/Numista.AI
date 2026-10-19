@@ -605,6 +605,7 @@ async function startImport() {
 
   const progressPanel = document.getElementById('progress-panel');
   progressPanel.classList.add('show');
+  progressPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   const compressImagesEnabled = document.getElementById('compress-images-checkbox').checked;
   const maskPiiEnabled = document.getElementById('mask-pii-checkbox').checked;

@@ -597,3 +597,72 @@ def test_shared_cert_reader_budget_timeout_no_500(monkeypatch):
     assert not coin.get("Certification Number")
 
 
+def test_cert_lookup_cacg_benchmark():
+    """CACG benchmark cert 663261171 returns found=True with 1952 5C MS-64 coin data."""
+    response = client.post(
+        "/api/cert_lookup",
+        json={"cert_num": "663261171", "grader": "CACG"}
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["grader"] == "CACG"
+    assert data["found"] is True
+    assert data["year"] == "1952"
+    assert "MS-64" in data["grade"]
+    assert "5C" in data["denomination"]
+
+
+def test_cert_lookup_ngc_benchmark():
+    """NGC benchmark cert 8321797-003 returns found=True with 1958 25C PF 67 coin data."""
+    response = client.post(
+        "/api/cert_lookup",
+        json={"cert_num": "8321797-003", "grader": "NGC"}
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["grader"] == "NGC"
+    assert data["found"] is True
+    assert data["year"] == "1958"
+    assert "PF 67" in data["grade"]
+    assert "25C" in data["denomination"]
+
+
+def test_cert_lookup_ngc_benchmark_digits():
+    """NGC benchmark cert 8321797003 without hyphen returns found=True."""
+    response = client.post(
+        "/api/cert_lookup",
+        json={"cert_num": "8321797003"}
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["grader"] == "NGC"
+    assert data["found"] is True
+    assert data["year"] == "1958"
+
+
+def test_cert_lookup_cert_cache_hit():
+    """When a cert is present in Firestore cert_cache, cert_lookup returns found=True."""
+    mock_cached = {
+        "grader": "NGC",
+        "cert_num": "9998887-001",
+        "coin_name": "1943-S 1C Steel MS66",
+        "year": "1943",
+        "mint": "S",
+        "grade": "MS66",
+        "denomination": "1C",
+    }
+    with patch("routes.cert_routes._lookup_cert_cache", return_value=mock_cached):
+        response = client.post(
+            "/api/cert_lookup",
+            json={"cert_num": "9998887-001", "grader": "NGC"}
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["grader"] == "NGC"
+        assert data["found"] is True
+        assert data["coin_name"] == "1943-S 1C Steel MS66"
+        assert data["year"] == "1943"
+        assert data["grade"] == "MS66"
+
+
+

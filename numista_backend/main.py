@@ -50,6 +50,7 @@ ALLOWED_ORIGINS = [
     "https://www.numista.ai",
     "https://numista-vault.web.app",      # Firebase Hosting (production)
     "https://numista-vault.firebaseapp.com",  # Firebase Hosting (alt URL)
+    "https://numista-vault--p7-gate-8avtpz22.web.app",  # P7 test channel
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "http://localhost:5000",
@@ -68,6 +69,24 @@ def _is_allowed_origin(origin: str) -> bool:
     if _allowed_origin_re.fullmatch(origin):
         return True
     return False
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin", "")
+    headers = {}
+    if _is_allowed_origin(origin):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+        headers["Access-Control-Allow-Methods"] = "*"
+        headers["Access-Control-Allow-Headers"] = "*"
+    logger.error(f"Global unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "error": str(exc)},
+        headers=headers,
+    )
+
 
 
 from routes.subaccount_routes import router as subaccount_router
@@ -718,6 +737,14 @@ LOCAL_HEADER_MAP: dict[str, str] = {
     "personal reference #": "Personal Reference #",
     # Storage Location
     "storage location": "Storage Location", "location": "Storage Location",
+    # Retailer / Dealer / Website
+    "retailer": "Retailer/Website", "retailer/website": "Retailer/Website", "website": "Retailer/Website",
+    "dealer": "Retailer/Website", "seller": "Retailer/Website", "vendor": "Retailer/Website", "source": "Retailer/Website",
+    "store": "Retailer/Website",
+    # Retailer Invoice #
+    "retailer invoice #": "Retailer Invoice #", "invoice #": "Retailer Invoice #", "invoice no": "Retailer Invoice #",
+    "invoice number": "Retailer Invoice #", "invoice": "Retailer Invoice #", "order #": "Retailer Invoice #",
+    "order number": "Retailer Invoice #", "receipt #": "Retailer Invoice #",
 }
 
 
@@ -758,7 +785,7 @@ def _fast_map_spreadsheet_headers(headers: list[str], is_currency: bool = False)
     try:
         mapping_prompt = f"""Map user spreadsheet headers to standard numismatic schema keys.
 Golden Schema keys: ["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series",
- "Theme/Subject", "Condition", "Cost", "Purchase Date", "Certification Number", "Personal Notes", "Storage Location", "item_type"]
+ "Theme/Subject", "Condition", "Cost", "Purchase Date", "Certification Number", "Personal Notes", "Storage Location", "item_type", "Retailer/Website", "Retailer Invoice #"]
 Headers to map: {unmapped}
 Output ONLY raw JSON object: {{"user_header": "schema_key"}}"""
 
@@ -6466,6 +6493,36 @@ async def identify_coin_photo(
         "deep_dive_status": "PENDING",
     }
 
+    if final_cert:
+        try:
+            from routes.cert_routes import clean_cert_number as _clean_cnum
+            cert_clean_id = _clean_cnum(str(final_cert))
+            coin_display = f"{ai_coin.get('Year', '')} {ai_coin.get('Denomination', '')} {ai_coin.get('Program/Series', '')}".strip()
+            db.collection("cert_cache").document(cert_clean_id).set({
+                "grader": final_service or "UNKNOWN",
+                "cert_num": cert_clean_id,
+                "coin_name": coin_display,
+                "year": str(ai_coin.get("Year") or ""),
+                "mint": ai_coin.get("Mint Mark") or "",
+                "grade": ai_coin.get("Condition") or "",
+                "denomination": ai_coin.get("Denomination") or "",
+                "updated_at": firestore.SERVER_TIMESTAMP,
+            }, merge=True)
+            digits_id = re.sub(r"\D", "", cert_clean_id)
+            if digits_id and digits_id != cert_clean_id:
+                db.collection("cert_cache").document(digits_id).set({
+                    "grader": final_service or "UNKNOWN",
+                    "cert_num": cert_clean_id,
+                    "coin_name": coin_display,
+                    "year": str(ai_coin.get("Year") or ""),
+                    "mint": ai_coin.get("Mint Mark") or "",
+                    "grade": ai_coin.get("Condition") or "",
+                    "denomination": ai_coin.get("Denomination") or "",
+                    "updated_at": firestore.SERVER_TIMESTAMP,
+                }, merge=True)
+        except Exception as _ce:
+            logger.warning(f"Could not cache identified cert {final_cert} into cert_cache: {_ce}")
+
     # -- 5. Optionally save to Firestore + GCS ---------------------------------
     coin_id      = str(uuid.uuid4())
     gcs_obv_uri  = ""
@@ -7427,6 +7484,8 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             "Cost":                 None,
                             "Purchase Cost":        None,
                             "Purchase Date":        "",
+                            "Retailer/Website":     "",
+                            "Retailer Invoice #":   "",
                             "Country":              "United States",
                             "deep_dive_status":     "PENDING",
                             "upload_method":        "spreadsheet_import",
@@ -7513,6 +7572,13 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             doc['Personal Notes'] = notes_val
                             doc['Personal Notes I'] = notes_val
 
+                        retailer_val = doc.get('Retailer/Website') or doc.get('Retailer') or doc.get('Dealer') or doc.get('Website') or doc.get('Vendor') or doc.get('Seller')
+                        if retailer_val is not None:
+                            doc['Retailer/Website'] = str(retailer_val).strip()
+                        invoice_val = doc.get('Retailer Invoice #') or doc.get('Invoice #') or doc.get('Invoice Number') or doc.get('Invoice') or doc.get('Order #')
+                        if invoice_val is not None:
+                            doc['Retailer Invoice #'] = str(invoice_val).strip()
+
                         if not is_currency:
                             doc['item_type'] = _classify_item_type(doc)
 
@@ -7587,9 +7653,11 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                                 "filename": fname,
                                 "gcs_path": gcs_path,
                                 "document_type": "checklist",
+                                "session_id": session_id,
                                 "import_session_id": session_id,
                                 "coins_extracted": added_this_file,
                                 "created_at": firestore.SERVER_TIMESTAMP,
+                                "uploaded_at": firestore.SERVER_TIMESTAMP,
                             }
                             db.collection("users").document(user_email).collection("receipts").document(receipt_id).set(rec_doc)
 
@@ -7644,12 +7712,25 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     Output ONLY valid JSON.
                     """
 
-                    resp = genai_client.models.generate_content(
-                        model=PRIMARY_MODEL,
-                        contents=[pdf_part, genai_types.Part.from_text(text=invoice_prompt)],
-                        config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
-                    )
-                    data = json.loads(resp.text)
+                    data = None
+                    last_gen_err = None
+                    for attempt in range(3):
+                        try:
+                            resp = genai_client.models.generate_content(
+                                model=PRIMARY_MODEL,
+                                contents=[pdf_part, genai_types.Part.from_text(text=invoice_prompt)],
+                                config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+                            )
+                            raw_text = resp.text.strip()
+                            if raw_text.startswith("```"):
+                                raw_text = raw_text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                            data = json.loads(raw_text)
+                            break
+                        except Exception as g_err:
+                            last_gen_err = g_err
+                            time.sleep(1.0 * (2 ** attempt))
+                    if data is None:
+                        raise last_gen_err or RuntimeError("Failed to parse invoice with AI")
                     items = data.get("line_items", [])
                     added_this_file = 0
                     total_val = 0.0
@@ -7781,6 +7862,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     receipt_doc = {
                         "receipt_id":          receipt_id,
                         "session_id":          session_id,
+                        "import_session_id":   session_id,
                         "original_filename":   fname,
                         "gcs_path":            gcs_path,
                         "retailer":            data.get("retailer", ""),
@@ -7969,7 +8051,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
 
             else:
                 per_file[idx]["status"] = "skipped"
-            per_file[idx]["note"]   = "File type not recognized"
+                per_file[idx]["note"]   = "File type not recognized"
 
         # Push progress after each file
         session_ref.update({
@@ -8014,9 +8096,28 @@ def list_receipts(
 
     col = db.collection("users").document(user_email).collection("receipts")
     if session_id:
-        col = col.where("session_id", "==", session_id)
-    docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
-              .limit(limit).stream()
+        # Avoid composite index requirement by not ordering by uploaded_at in Firestore when filtering by session_id
+        doc_map = {}
+        for d in col.where("session_id", "==", session_id).stream():
+            doc_map[d.id] = d
+        for d in col.where("import_session_id", "==", session_id).stream():
+            doc_map[d.id] = d
+        docs = list(doc_map.values())
+        def _get_sort_key(doc_snap):
+            data = doc_snap.to_dict() or {}
+            uat = data.get("uploaded_at")
+            if hasattr(uat, "timestamp"):
+                return uat.timestamp()
+            elif isinstance(uat, (int, float)):
+                return float(uat)
+            elif isinstance(uat, str):
+                return uat
+            return 0
+        docs.sort(key=_get_sort_key, reverse=True)
+        docs = docs[:limit]
+    else:
+        docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
+                  .limit(limit).stream()
 
     # Query active coin IDs and review_queue IDs to prune deleted coins
     active_ids = set()
@@ -8946,6 +9047,8 @@ def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
     # 3. Load reference catalog from SQLite
     if not os.path.exists(DB_PATH):
         logger.warning(f"get_user_owned_doc_ids: DB not found at {DB_PATH}")
+        if return_raw_counts:
+            return set(), len(user_coins) + len(user_notes)
         return set()
         
     try:
@@ -8957,6 +9060,8 @@ def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
         conn.close()
     except Exception as e:
         logger.error(f"get_user_owned_doc_ids: SQLite error: {e}")
+        if return_raw_counts:
+            return set(), len(user_coins) + len(user_notes)
         return set()
 
     ref_rows_dict = {r["doc_id"]: r for r in ref_rows}
@@ -9125,7 +9230,12 @@ def reference_stats():
     Returns counts of all active items in the reference catalog.
     """
     if not os.path.exists(DB_PATH):
-        raise HTTPException(status_code=404, detail="Reference database not found")
+        return {
+            "coins": 0,
+            "banknotes": 0,
+            "medals": 0,
+            "total": 0
+        }
         
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -9162,7 +9272,17 @@ def collection_completion_stats(request: Request, current_user: Dict[str, Any] =
     if not user_email:
         raise HTTPException(status_code=401, detail="User email not present in authentication token.")
     if not os.path.exists(DB_PATH):
-        raise HTTPException(status_code=404, detail="Reference database not found")
+        return {
+            "completion_percentage": 0.0,
+            "owned_count": 0,
+            "total_count": 0,
+            "user_collection_count": 0,
+            "breakdown": {
+                "coin": {"owned": 0, "total": 0, "percentage": 0.0},
+                "banknote": {"owned": 0, "total": 0, "percentage": 0.0},
+                "medal": {"owned": 0, "total": 0, "percentage": 0.0},
+            }
+        }
         
     try:
         owned_ids, raw_count = _get_user_owned_doc_ids(user_email, return_raw_counts=True)
@@ -9221,7 +9341,12 @@ def reference_search(request: Request, q: Optional[str] = "", page_size: int = 1
     if not user_email:
         raise HTTPException(status_code=401, detail="User email not present in authentication token.")
     if not os.path.exists(DB_PATH):
-        raise HTTPException(status_code=404, detail="Reference database not found")
+        return {
+            "query": q,
+            "total": 0,
+            "offset": offset,
+            "results": []
+        }
         
     q = q.strip() if q else ""
     try:
