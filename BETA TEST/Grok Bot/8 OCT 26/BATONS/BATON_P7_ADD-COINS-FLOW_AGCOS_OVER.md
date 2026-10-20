@@ -1057,3 +1057,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-20 18:45 ET GROKCOS WATCH (evening): Nothing to score. No new radio since NET-391 (AG V8.18.12 429 quota pause, resume ~19:05 ET). P7 baton AGCOS_OVER, last moved 18:02 ET (~43m), quota pause declared, no stall flag. No ERIC/deploy-YES baton. Live OK (numista.ai 200, numista-vault.web.app 200, main.dart.js 200, /api/spot_prices 200 after one transient timeout, /api/collection 401 unauth). No deploys, nothing on main. OVER.
+
+- 2026-10-20 19:18 ET GROKCOS WATCH (evening): Nothing to score. No new radio since NET-391 (AG V8.18.12 429 quota pause, resume ~19:05 ET; no restart radio yet, ~13m past reset, not a stall). P7 baton AGCOS_OVER, last AG activity 17:57 ET, quota pause declared, no stall flag. No ERIC/deploy-YES baton. Live OK (numista.ai 200, numista-vault.web.app 200, main.dart.js 200, /api/spot_prices 200, /api/collection 401 unauth). No deploys, nothing on main. OVER.
