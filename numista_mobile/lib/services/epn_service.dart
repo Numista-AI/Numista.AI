@@ -32,7 +32,7 @@ class EpnService {
           .collection('config')
           .doc('ebay')
           .get();
-      if (!doc.exists) return;
+      if (!doc.exists || doc.data() == null) return;
       final data = doc.data()!;
       final prefs = await SharedPreferences.getInstance();
       final appId  = data['app_id']  as String? ?? '';
@@ -44,8 +44,10 @@ class EpnService {
       // Ensure any legacy client-cached cert_id is purged
       await prefs.remove('ebay_cert_id');
       debugPrint('[EPN] Credentials loaded from Firestore');
+    } on FirebaseException catch (fe) {
+      debugPrint('[EPN] Notice: using default EPN config (${fe.code})');
     } catch (e) {
-      debugPrint('[EPN] Failed to load credentials from Firestore: $e');
+      debugPrint('[EPN] Notice: using default EPN config ($e)');
     }
   }
 

@@ -287,6 +287,15 @@ def extract_checklist_document(
         cleaned = re.sub(r"^```(?:json)?\s*", "", raw_text.strip(), flags=re.IGNORECASE)
         cleaned = re.sub(r"\s*```$", "", cleaned).strip()
         data = json.loads(cleaned)
+        if isinstance(data, list):
+            if data and isinstance(data[0], dict) and "coins" in data[0]:
+                data = data[0]
+            elif data and isinstance(data[0], dict):
+                data = {"coins": data}
+            else:
+                data = {"coins": []}
+        elif not isinstance(data, dict):
+            data = {"coins": []}
         
         raw_coins = data.get("coins", [])
         raw_location = data.get("storage_location", "").strip()

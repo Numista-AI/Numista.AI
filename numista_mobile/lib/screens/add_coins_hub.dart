@@ -2778,7 +2778,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   Widget _buildCertLookupTab() {
     // Determine effective grader for display
     final rawInput = _pcgsSingleCtrl.text;
-    final effectiveGrader = _certGrader ?? (rawInput.isNotEmpty ? _autoDetectGrader(rawInput) : 'PCGS');
+    final effectiveGrader = _certGrader ?? (rawInput.isNotEmpty ? _autoDetectGrader(rawInput) : null);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 64),
@@ -2824,11 +2824,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         fontSize: 18, fontWeight: FontWeight.bold,
                         color: Color(0xFF334155), letterSpacing: 0.8)),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         for (final g in ['Not sure', 'PCGS', 'NGC', 'CACG', 'CAC'])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
+                          SizedBox(
+                            height: 48,
                             child: FilterChip(
                               label: Text(g,
                                   style: TextStyle(
@@ -2838,7 +2840,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                                         ? Colors.white
                                         : const Color(0xFF334155),
                                   )),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               selected: (_certGrader == (g == 'Not sure' ? null : g)),
                               onSelected: (_) => setState(() {
                                 _certGrader = (g == 'Not sure') ? null : g;
@@ -2892,7 +2894,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   // Label row
                   Row(children: [
                     Text(
-                      '$effectiveGrader Certification Number',
+                      effectiveGrader == null
+                          ? 'Certification Number'
+                          : '$effectiveGrader Certification Number',
                       style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18,
                           color: Color(0xFF1E293B)),
                     ),
@@ -2912,7 +2916,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         ? 'Enter the number after the "/" on your PCGS slab (e.g. 53652580)'
                         : effectiveGrader == 'NGC'
                             ? 'Enter your 7-digit NGC cert number (e.g. 1234567 or 1234567-001)'
-                            : 'Enter your CAC / CACG cert number (e.g. CAC12345, CACG12345, or digits after "/" on CACG slab)',
+                            : effectiveGrader != null
+                                ? 'Enter your CAC / CACG cert number (e.g. CAC12345, CACG12345, or digits after "/" on CACG slab)'
+                                : 'Enter your certification number from PCGS, NGC, or CAC/CACG',
                     style: const TextStyle(fontSize: 18, color: Color(0xFF334155)),
                   ),
                   const SizedBox(height: 14),
@@ -2987,14 +2993,21 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                         focusNode: _pcgsSingleFocusNode,
                         keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
                         style: const TextStyle(fontSize: 18, color: Color(0xFF1E293B)),
-                        onChanged: (_) => setState(() {}),  // trigger auto-detect refresh
+                        onChanged: (val) {
+                          if (_certPendingConfirm != null) {
+                            _certPendingConfirm!['certNo'] = val.trim();
+                          }
+                          setState(() {});
+                        },  // trigger auto-detect refresh
                         onSubmitted: (_) => _lookupCertUnified(),
                         decoration: InputDecoration(
                           hintText: effectiveGrader == 'PCGS'
                               ? 'e.g.  53652580'
                               : effectiveGrader == 'NGC'
                                   ? 'e.g.  1234567'
-                                  : 'e.g.  CACG12345',
+                                  : effectiveGrader != null
+                                      ? 'e.g.  CACG12345'
+                                      : 'e.g.  53652580 or 1234567',
                           hintStyle: const TextStyle(fontSize: 16, color: Color(0xFF334155)),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
@@ -3372,9 +3385,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             }
           });
         } else {
+          final isBlurred = rawCert.toLowerCase().contains('blurred');
           setState(() {
-            _scanErrorType = 'no_cert';
-            _scanErrorMsg = "Couldn't read a cert number from that photo";
+            _scanErrorType = isBlurred ? 'blurred' : 'no_cert';
+            _scanErrorMsg = isBlurred
+                ? 'The photo is too blurry to read the certificate number. Please hold the camera steady or type the number in instead.'
+                : "Couldn't read a cert number from that photo";
           });
         }
 
@@ -3748,6 +3764,25 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () {
+              setState(() {
+                _certPendingConfirm = null;
+                _pcgsSingleCtrl.clear();
+              });
+            },
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+              foregroundColor: const Color(0xFF64748B),
+              side: const BorderSide(color: Color(0xFFCBD5E1)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Cancel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           ),
         ),
         const SizedBox(height: 8),
@@ -4276,10 +4311,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   // ─── Cert lookup fallback — shown when live lookup is unavailable ─────────
 
   Widget _buildCertLookupFallback(String errorMessage) {
-    // Extract the cert number so we can build a direct PCGS link
-    final cert = _parseCertNumber(_pcgsSingleCtrl.text.trim());
-    final hasCert = cert.length >= 6 && cert.length <= 9 && RegExp(r'^\d+$').hasMatch(cert);
-
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Container(
@@ -4290,7 +4321,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           border: Border.all(color: const Color(0xFFFBD38D)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Header
           Row(children: [
             const Icon(Icons.warning_amber_rounded, size: 20, color: Color(0xFFD97706)),
             const SizedBox(width: 6),
@@ -4303,34 +4333,48 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           ]),
           const SizedBox(height: 8),
           const Text(
-            'You can check the cert directly on PCGS.com instead:',
-            style: TextStyle(fontSize: 18, color: Color(0xFF78350F), height: 1.4),
+            "We couldn't verify this cert number automatically. You can try again or type the coin details in directly:",
+            style: TextStyle(fontSize: 16, color: Color(0xFF78350F), height: 1.4),
           ),
-          if (hasCert) ...[
-            const SizedBox(height: 10),
-            // "View on PCGS.com" button — opens the cert page in the user's browser
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final uri = Uri.parse('https://www.pcgs.com/cert/$cert');
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _pcgsLookupError = '';
+                  });
+                  _lookupCertUnified();
                 },
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: Text('View Cert #$cert on PCGS.com'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF1D4ED8),
-                  side: const BorderSide(color: Color(0xFF93C5FD)),
-                  backgroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Try again', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(140, 48),
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
-            ),
-          ],
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _pcgsLookupError = '';
+                    _tabController.animateTo(2); // Manual Entry tab
+                  });
+                },
+                icon: const Icon(Icons.edit_note, size: 20),
+                label: const Text('Type the coin in instead', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(180, 48),
+                  foregroundColor: const Color(0xFF1E293B),
+                  side: const BorderSide(color: Color(0xFF94A3B8)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
         ]),
       ),
     );
@@ -5026,7 +5070,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           _picDenom.text = coin['Denomination']?.toString() ?? '';
           _picSeries.text = coin['Program/Series']?.toString() ?? '';
           _picTheme.text = coin['Theme/Subject']?.toString() ?? '';
-          _picMint.text = coin['Mint Mark']?.toString() ?? '';
+          final rawMint = coin['Mint Mark']?.toString() ?? '';
+          _picMint.text = (rawMint.trim().toUpperCase() == 'W') ? 'W (West Point)' : rawMint;
           _picGrade.text = coin['Condition']?.toString() ?? '';
           _picMetal.text = coin['Metal Content']?.toString() ?? '';
           _picVariety.text = coin['Variety']?.toString() ?? '';
@@ -5034,7 +5079,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           _picCertNum.text = coin['Certification Number']?.toString() ?? coin['cert_number']?.toString() ?? '';
           _picCost.text = coin['Cost']?.toString() ?? '\$0.00';
           _picStorage.text = coin['Storage Location']?.toString() ?? '';
-          _picNotes.text = coin['Personal Notes']?.toString() ?? '';
+          var rawNotes = coin['Personal Notes']?.toString() ?? '';
+          rawNotes = rawNotes.replaceAll(RegExp(r'reverse unobserved', caseSensitive: false), 'Back of coin not photographed');
+          _picNotes.text = rawNotes;
         });
 
       } else {
@@ -5102,7 +5149,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'override_denom': _picDenom.text.trim(),
         'override_series': _picSeries.text.trim(),
         'override_theme': _picTheme.text.trim(),
-        'override_mint': _picMint.text.trim(),
+        'override_mint': (_picMint.text.trim().toUpperCase() == 'W' || _picMint.text.trim().toUpperCase() == 'W (WEST POINT)') ? 'W' : _picMint.text.trim(),
         'override_grade': _picGrade.text.trim(),
         'override_metal': _picMetal.text.trim(),
         'override_cost': _picCost.text.trim(),
@@ -5476,7 +5523,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 const Spacer(),
                 TextButton(
                   onPressed: _resetCameraScanner,
-                  child: const Text('Scan Another', style: TextStyle(color: Color(0xFFEC4899))),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child: const Text('Scan Another', style: TextStyle(color: Color(0xFFEC4899), fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -5518,7 +5569,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             const SizedBox(height: 12),
             _camInputField('Metal Content', _picMetal),
             const SizedBox(height: 12),
-            _camInputField('Variety / Errors', _picVariety),
+            _camInputField('Variety / Errors', _picVariety, maxLines: 2),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -5542,12 +5593,24 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               label: Text(_camSaving ? 'Saving to Collection...' : 'Confirm & Save to Collection',
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 56),
                 backgroundColor: const Color(0xFF10B981),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 2,
               ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: _camSaving ? null : _resetCameraScanner,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+                foregroundColor: const Color(0xFF64748B),
+                side: const BorderSide(color: Color(0xFFCBD5E1)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Cancel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -5567,7 +5630,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           maxLines: maxLines,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF1E293B)),
+          style: const TextStyle(fontSize: 16, color: Color(0xFF1E293B)),
           decoration: InputDecoration(
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

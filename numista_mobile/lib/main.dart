@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -20,6 +21,11 @@ import 'utils/numista_error_helper.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Uncaught platform error: $error\n$stack');
+    return true; // handled
+  };
 
   FlutterError.onError = (FlutterErrorDetails details) {
     debugPrint('FlutterError: ${details.exceptionAsString()}\n${details.stack}');

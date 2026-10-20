@@ -158,7 +158,7 @@ void main() {
     // Assert dialog appears with "Add another copy anyway?"
     expect(find.text('This cert # is already in your collection. Add another copy anyway?'), findsOneWidget);
     expect(find.text('Add anyway'), findsOneWidget);
-    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
   });
 
   testWidgets('certFlowNavFromTopLevel', (WidgetTester tester) async {

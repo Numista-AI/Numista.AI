@@ -6283,7 +6283,7 @@ async def identify_coin_photo(
     # -- 2. PASS 1 -- Identification --------------------------------------------
     try:
         if single_image_mode:
-            single_note = "\nNOTE: Only a single photo of the coin was provided ([Image A]). The reverse/obverse is unobserved. Identify the coin from this single face, estimate the grade based on visible details, set obverse_image to 'A', and note that the other side is unobserved."
+            single_note = "\nNOTE: Only a single photo of the coin was provided ([Image A]). The back of the coin was not photographed. Identify the coin from this single face, estimate the grade based on visible details, set obverse_image to 'A', and note that the other side was not photographed."
             pass1_contents = [
                 label_a, part_a_img,
                 genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT + single_note),
@@ -6343,7 +6343,7 @@ async def identify_coin_photo(
             if single_image_mode:
                 pass2_contents = [
                     label_a, part_a_img,
-                    genai_types.Part.from_text(text=pass2_prompt + "\nNOTE: Single photo provided ([Image A]). Reverse unobserved."),
+                    genai_types.Part.from_text(text=pass2_prompt + "\nNOTE: Single photo provided ([Image A]). Back of coin not photographed."),
                 ]
             else:
                 pass2_contents = [
@@ -6417,7 +6417,7 @@ async def identify_coin_photo(
 
     notes = override_notes or pass1.get("personal_notes", "") or ""
     if single_image_mode:
-        notes = (notes + " [Single photo scan - reverse unobserved]").strip()
+        notes = (notes + " [Single photo scan - back of coin not photographed]").strip()
 
     # Shared cert reader integration (NET-357 / Item 2):
     # Await concurrent cert reader (Image A), query Image B only if no cert and budget >= 3s.
@@ -7701,7 +7701,29 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             time.sleep(1.0 * (2 ** attempt))
                     if data is None:
                         raise last_gen_err or RuntimeError("Failed to parse invoice with AI")
-                    items = data.get("line_items", [])
+
+                    # Defensively normalize data if Gemini returns a list or non-dict
+                    if isinstance(data, list):
+                        if data and isinstance(data[0], dict) and ("line_items" in data[0] or "retailer" in data[0]):
+                            data = data[0]
+                        elif data and isinstance(data[0], dict):
+                            data = {"line_items": data}
+                        else:
+                            data = {"line_items": []}
+                    elif not isinstance(data, dict):
+                        data = {"line_items": []}
+
+                    items = data.get("line_items")
+                    if not isinstance(items, list):
+                        for fallback_key in ("items", "coins", "results", "data"):
+                            candidate = data.get(fallback_key)
+                            if isinstance(candidate, list):
+                                items = candidate
+                                break
+                    if not isinstance(items, list):
+                        items = []
+                    items = [it for it in items if isinstance(it, dict)]
+
                     added_this_file = 0
                     total_val = 0.0
                     col_ref = db.collection("users").document(user_email).collection("review_queue")
@@ -7711,10 +7733,10 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     receipt_id = f"rec_{safe_file_stem}"
                     line_items_out = []
 
-                    subtotal_val = float(data.get("subtotal") or 0.0)
-                    shipping_val = float(data.get("shipping_fee") or 0.0)
-                    tax_val      = float(data.get("tax_fee") or 0.0)
-                    grand_total  = float(data.get("total_amount") or 0.0)
+                    subtotal_val = clean_valuation_value(data.get("subtotal") or 0.0)
+                    shipping_val = clean_valuation_value(data.get("shipping_fee") or 0.0)
+                    tax_val      = clean_valuation_value(data.get("tax_fee") or 0.0)
+                    grand_total  = clean_valuation_value(data.get("total_amount") or 0.0)
 
                     # Compute aggregate item price if subtotal missing
                     raw_item_sum = sum(clean_valuation_value(it.get("Cost") or 0.0) for it in items)

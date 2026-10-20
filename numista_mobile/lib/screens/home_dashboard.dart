@@ -1665,10 +1665,25 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v8.18.12',
+    date: '2026-10-20',
+    description: 'P7-v8.18.12 Add-Coins Flow, Resilient Parser & Older-User Sizing',
+    isLatest: true,
+    changes: [
+      'P7-v8.18.12: invoice parser list/dict normalization, test fixtures & live alignment',
+      'P7-v8.18.12: add-coins cert fallback in-app dialogs, neutral cert headers, blurred photo error card',
+      'P7-v8.18.12: camera friendly error & photo file chooser fallback',
+      'P7-v8.18.12: older-user sizing (>=48px chips, >=56px confirm, >=16px text, multi-line variety)',
+      'P7-v8.18.12: manual form input debounce & selection-preserving uppercase formatter',
+      'P7-v8.18.12: importer auth header support in add_coins.html (NET-389)',
+      'P7-v8.18.12: EPN firestore permission-denied rule and client credential fallback',
+      'P7-v8.18.12: settings toggle rename to Estate / Liquidation View',
+    ],
+  ),
+  _Release(
     version: 'v8.18.11',
     date: '2026-10-20',
     description: 'P7-v8.18.11 Enhancements & Platform Updates',
-    isLatest: true,
     changes: [
       'P7-v8.18.11: \'Mint Mark\' save key (space), preserve preset mint, test, version bump',
       'P7-v8.18.10+: port greysheet bid display removal from hotfix branch',

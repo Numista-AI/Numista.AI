@@ -1526,7 +1526,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Shows CPG Retail, Greysheet Bid, and Ask values simultaneously. If disabled, simplifies dashboard and division totals to Estate/Liquidation View (Greysheet Bid).',
+                        'Shows CPG Retail, Wholesale, and Ask values simultaneously. If disabled, simplifies dashboard and division totals to Estate / Liquidation View.',
                         style: TextStyle(fontSize: 12, color: descColor),
                       ),
                     ],
@@ -1546,7 +1546,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         SnackBar(
                           content: Text(val
                               ? 'Advanced Numismatist View enabled! Showing Bid, Ask, and CPG.'
-                              : 'Estate/Liquidation View active (Greysheet Bid default).'),
+                              : 'Estate / Liquidation View active.'),
                           duration: const Duration(seconds: 2),
                         ),
                       );

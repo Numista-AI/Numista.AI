@@ -165,24 +165,40 @@
           var full = label + ' ' + name + ' ' + parentLabel;
 
           if (/year|yr|1921/.test(label) || /year|yr/.test(name) || /year|yr|1921/.test(full)) {
-            el.inputMode = 'numeric';
-            el.setAttribute('inputmode', 'numeric');
+            if (el.getAttribute('inputmode') !== 'numeric') {
+              el.inputMode = 'numeric';
+              el.setAttribute('inputmode', 'numeric');
+            }
           } else if (/qty|quantity|^1$/.test(label) || /qty|quantity/.test(name) || /qty|quantity/.test(full)) {
-            el.inputMode = 'numeric';
-            el.setAttribute('inputmode', 'numeric');
+            if (el.getAttribute('inputmode') !== 'numeric') {
+              el.inputMode = 'numeric';
+              el.setAttribute('inputmode', 'numeric');
+            }
           } else if (/cost|price|value|\.00|25\.00/.test(label) || /cost|price|value/.test(name) || /cost|price|value|\.00/.test(full)) {
-            el.inputMode = 'decimal';
-            el.setAttribute('inputmode', 'decimal');
+            if (el.getAttribute('inputmode') !== 'decimal') {
+              el.inputMode = 'decimal';
+              el.setAttribute('inputmode', 'decimal');
+            }
           }
         });
       }
       window.applyInputModes = applyInputModes;
-      // Run on DOM changes and on a 300ms interval as fallback
+
+      // Debounce DOM mutations to prevent keystroke lag and input re-rendering
+      var debounceTimer = null;
+      function debouncedApply() {
+        if (debounceTimer) return;
+        debounceTimer = setTimeout(function() {
+          debounceTimer = null;
+          applyInputModes();
+        }, 120);
+      }
+
       if (window.MutationObserver) {
-        new MutationObserver(applyInputModes).observe(document.body, {childList: true, subtree: true, attributes: false});
+        new MutationObserver(debouncedApply).observe(document.body, {childList: true, subtree: true, attributes: false});
         var host = document.querySelector('flt-glass-pane, flutter-view');
         if (host && host.shadowRoot) {
-          new MutationObserver(applyInputModes).observe(host.shadowRoot, {childList: true, subtree: true, attributes: false});
+          new MutationObserver(debouncedApply).observe(host.shadowRoot, {childList: true, subtree: true, attributes: false});
         }
       }
       setInterval(applyInputModes, 300);

@@ -413,8 +413,9 @@ def extract_cert_from_image(
             "- PCGS: 8-digit number (e.g. 53652580). Label says 'PCGS' or 'Professional Coin Grading Service'.\n"
             "- NGC: 7-digit number, optionally with a dash suffix (e.g. 8321797 or 8321797-003). "
             "  Label says 'NGC' or 'Numismatic Guaranty Company'.\n"
-            "- CAC: starts with 'CAC' (e.g. CAC12345 or CACG12345). "
-            "  Label says 'CAC' or 'Certified Acceptance Corporation'.\n\n"
+            "- CAC / CACG: label says 'CAC' or 'CACG' or 'Certified Acceptance Corporation'. "
+            "  The cert number may be a 7 to 10 digit number (e.g. 663261170 or 1001234567), or may start with CAC / CACG (e.g. CAC12345 or CACG12345). "
+            "  On clear-slab CACG holders, look closely at the white label strip or transparent label for the numeric cert number.\n\n"
             "Return ONLY valid JSON, no markdown:\n"
             '{"cert_number": "<number or null>", "grader": "<PCGS|NGC|CAC|CACG|null>", '
             '"confidence": "<HIGH|MEDIUM|LOW>", '

@@ -350,7 +350,9 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
       // Read values from controllers (controllers are the source of truth).
       final formData = <String, dynamic>{
         'Year':               _yearCtrl.text.trim(),
-        'Mint Mark':          _mintCtrl.text.toUpperCase(),
+                'Mint Mark':          (_mintCtrl.text.trim().toUpperCase() == 'W (WEST POINT)' || _mintCtrl.text.trim().toUpperCase() == 'W')
+            ? 'W'
+            : _mintCtrl.text.trim().toUpperCase(),
         'Denomination':       DenominationCanon.normalize(_denomCtrl.text.trim()),
         'Program/Series':     _programCtrl.text.trim(),
         'Theme/Subject':      _themeCtrl.text.trim(),
@@ -438,7 +440,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
               textCapitalization: TextCapitalization.characters,
               inputFormatters: [UpperCaseTextFormatter()],
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
-              decoration: _inputDeco(context, 'D, S, P, W'),
+              decoration: _inputDeco(context, 'D, S, P, W (West Point)'),
             ),
           ),
         ],
@@ -580,6 +582,9 @@ class UpperCaseTextFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
-    return newValue.copyWith(text: newValue.text.toUpperCase());
+    return newValue.copyWith(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
   }
 }
