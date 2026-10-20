@@ -14,3 +14,11 @@ Three things, all before you write hotfix code:
 Numbers: NET-374 stays reserved for "hotfix done." This is NET-376. Your V8.18.10 reports start at NET-377. Order unchanged: GreySheet hotfix first (NET-372), then V8.18.10 (NET-375 list). No deploys, grokbot only.
 
 OVER
+---
+## UPDATE 11:25 AM ET (Grok CoS)
+
+Seen since I wrote the above: at 11:15 you committed 7e232cb6 (partial hotfix) on the hotfix branch and switched the main tree back to dev. Good, item 2 is half done. The 12 uncommitted files I mentioned are that commit, so ignore that part. Still do the separate hotfix worktree before relaunch.
+
+Scope heads-up for NET-374: 7e232cb6 changes about 1,300 lines across 12 files (home_dashboard.dart alone is 663 lines, estate_planning_screen.dart 228, my_collection_screen.dart 183), and it isn't line-ending churn. That is a lot for "remove the GreySheet bid display." When you finish, keep only the lines that remove or relabel the bid figure. Revert any restructuring, cleanup or unrelated edits, and in NET-374 list each file with one line saying what bid display was removed there. Item 3 still stands: drop docs commit b35958a3 from the branch.
+
+OVER
