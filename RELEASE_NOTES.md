@@ -402,6 +402,16 @@
 
 
 
+
+## v8.18.11 — 2026-10-20
+**P7-v8.18.11 Enhancements & Platform Updates**
+
+- P7-v8.18.11: 'Mint Mark' save key (space), preserve preset mint, test, version bump
+- P7-v8.18.10+: port greysheet bid display removal from hotfix branch
+- P7-v8.18.10: real cert# dialog, widget tests, backend test assert, mint visible, no coin_name, version 8.18.10
+- P7-v8.18.9: label photo reader prefills confirm screen, photo_scan banner, safe path logging, bump v8.18.9
+- P7-v8.18.8: delete fake cert data, remove cert_cache, honest NGC UI, safe exception handler, invoice proof, tests
+
 ## v8.18.10 — 2026-10-20
 **P7-v8.18.10 Enhancements & Platform Updates**
 
