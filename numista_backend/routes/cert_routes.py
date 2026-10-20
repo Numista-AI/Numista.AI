@@ -364,7 +364,12 @@ class ScanCertResponse(BaseModel):
     cert_number: Optional[str] = None
     grader: Optional[str] = None   # "PCGS" | "NGC" | "CAC" | null
     confidence: str = "LOW"        # "HIGH" | "MEDIUM" | "LOW"
-    message: str = ""
+    message: str = "OK"
+    year: Optional[str] = None
+    denomination: Optional[str] = None
+    grade: Optional[str] = None
+    mint: Optional[str] = None
+    variety: Optional[str] = None
 
 
 
@@ -390,7 +395,8 @@ def extract_cert_from_image(
     """
     Shared OCR function for grading slab photos to extract cert number and grader.
     Used by both /api/scan_cert_number_upload and /api/identify_coin_photo.
-    Returns a dict with keys: cert_number, grader, confidence, message.
+    Returns a dict with keys: cert_number, grader, confidence, message,
+    year, denomination, grade, mint, variety.
     """
     model_name = model or MODEL_FLASH
     try:
@@ -402,7 +408,7 @@ def extract_cert_from_image(
 
         prompt = (
             "You are examining an image of a certified coin grading slab label. "
-            "Your ONLY job is to extract the certification number and identify the grading company.\n\n"
+            "Extract the certification number, grading company, and coin details printed on the label.\n\n"
             "Grading companies and their cert # formats:\n"
             "- PCGS: 8-digit number (e.g. 53652580). Label says 'PCGS' or 'Professional Coin Grading Service'.\n"
             "- NGC: 7-digit number, optionally with a dash suffix (e.g. 8321797 or 8321797-003). "
@@ -410,8 +416,13 @@ def extract_cert_from_image(
             "- CAC: starts with 'CAC' (e.g. CAC12345 or CACG12345). "
             "  Label says 'CAC' or 'Certified Acceptance Corporation'.\n\n"
             "Return ONLY valid JSON, no markdown:\n"
-            '{"cert_number": "<number or null>", "grader": "<PCGS|NGC|CAC|null>", '
-            '"confidence": "<HIGH|MEDIUM|LOW>"}'
+            '{"cert_number": "<number or null>", "grader": "<PCGS|NGC|CAC|CACG|null>", '
+            '"confidence": "<HIGH|MEDIUM|LOW>", '
+            '"year": "<4-digit year or null>", '
+            '"denomination": "<denomination as printed or null>", '
+            '"grade": "<grade as printed e.g. MS-65 or null>", '
+            '"mint": "<mint mark or null>", '
+            '"variety": "<variety or null>"}'
         )
 
         image_part = _genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
@@ -420,7 +431,7 @@ def extract_cert_from_image(
             contents=[prompt, image_part],
             config=_genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                max_output_tokens=128,
+                max_output_tokens=256,
             ),
         )
         text = response.text.strip()
@@ -432,6 +443,11 @@ def extract_cert_from_image(
         confidence = data.get("confidence", "LOW").upper()
         if confidence not in ("HIGH", "MEDIUM", "LOW"):
             confidence = "LOW"
+        year = (data.get("year") or "").strip() or None
+        denomination = (data.get("denomination") or "").strip() or None
+        grade = (data.get("grade") or "").strip() or None
+        mint = (data.get("mint") or "").strip() or None
+        variety = (data.get("variety") or "").strip() or None
 
         if not cert_num:
             return {
@@ -439,6 +455,11 @@ def extract_cert_from_image(
                 "grader": None,
                 "confidence": "LOW",
                 "message": "No cert number found in image.",
+                "year": None,
+                "denomination": None,
+                "grade": None,
+                "mint": None,
+                "variety": None,
             }
 
         return {
@@ -446,6 +467,11 @@ def extract_cert_from_image(
             "grader": grader,
             "confidence": confidence,
             "message": "OK",
+            "year": year,
+            "denomination": denomination,
+            "grade": grade,
+            "mint": mint,
+            "variety": variety,
         }
     except Exception as e:
         logger.warning(f"extract_cert_from_image failed: {e}")
@@ -454,6 +480,11 @@ def extract_cert_from_image(
             "grader": None,
             "confidence": "LOW",
             "message": "Scan failed — please enter cert # manually.",
+            "year": None,
+            "denomination": None,
+            "grade": None,
+            "mint": None,
+            "variety": None,
         }
 
 

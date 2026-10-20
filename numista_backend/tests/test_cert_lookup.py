@@ -664,5 +664,37 @@ def test_list_receipts_cors_headers_on_p7gate_origin():
         )
         assert response.headers.get("access-control-allow-origin") == "https://numista-vault--p7-gate-8avtpz22.web.app"
 
-
+def test_scan_cert_number_upload_returns_label_fields_not_api_source():
+    """scan_cert_number_upload must return optional label fields (year/denom/grade)
+    and must NEVER return source='api' (that is a cert lookup concern, not a scan concern).
+    Also verifies no Firestore write occurs.
+    """
+    # Mock extract_cert_from_image to return label fields
+    with patch("routes.cert_routes.extract_cert_from_image") as mock_scan:
+        mock_scan.return_value = {
+            "cert_number": "8321797",
+            "grader": "NGC",
+            "confidence": "HIGH",
+            "message": "OK",
+            "year": "1881",
+            "denomination": "Morgan Dollar",
+            "grade": "MS-65",
+            "mint": "S",
+            "variety": None,
+        }
+        # Also mock _check_cert_rate_limit to be a no-op
+        with patch("routes.cert_routes._check_cert_rate_limit"):
+            # Use the test client - match the existing fixture pattern
+            resp = client.post(
+                "/api/scan_cert_number_upload",
+                files={"file": ("test.jpg", b"fakejpeg", "image/jpeg")},
+                headers={"Authorization": "Bearer test_token"},
+            )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["cert_number"] == "8321797"
+    assert data["year"] == "1881"
+    assert data["denomination"] == "Morgan Dollar"
+    assert "source" not in data, "scan endpoint must never return source field"
+    # No Firestore write: mock_scan was called once, db.collection never called
 

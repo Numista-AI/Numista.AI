@@ -108,6 +108,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   String? _scanResultGrader;
   String? _scanErrorMsg;
   String? _scanErrorType;
+  bool _photoScanBanner = false;
+  String? _photoScanTypedCert; // set when photo cert # differs from typed cert #
   final FocusNode _pcgsSingleFocusNode = FocusNode();
 
   // ─── Excel import state ─────────────────────────────────────────────────
@@ -2836,6 +2838,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                                 _pcgsLookupResult = null;
                                 _pcgsLookupError = '';
                                 _certPendingConfirm = null;
+                                _photoScanBanner = false;
+                                _photoScanTypedCert = null;
                                 _scanResultText = null;
                                 _scanResultGrader = null;
                               }),
@@ -3245,16 +3249,58 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             !RegExp(r'^[0-9A-Za-z\-]+$').hasMatch(rawCert))
             ? '' : rawCert;
         final grader  = (data['grader'] as String? ?? '').trim().toUpperCase();
+
+        // NEW: extract label fields
+        final photoYear  = (data['year']         as String? ?? '').trim();
+        final photoDenom = (data['denomination'] as String? ?? '').trim();
+        final photoGrade = (data['grade']        as String? ?? '').trim();
+        final photoMint  = (data['mint']         as String? ?? '').trim();
+        final photoVariety = (data['variety']    as String? ?? '').trim();
+        final hasLabelData = photoYear.isNotEmpty || photoDenom.isNotEmpty || photoGrade.isNotEmpty;
+
         if (certNum.isNotEmpty) {
           setState(() {
+            // Check if photo cert # differs from typed cert #
+            final typedCert = _pcgsSingleCtrl.text.trim();
             _pcgsSingleCtrl.text = certNum;
             if (grader == 'NGC' || grader == 'CAC' || grader == 'CACG' || grader == 'PCGS') {
               _certGrader = grader;
             }
-            _scanResultText = certNum;
+            _scanResultText   = certNum;
             _scanResultGrader = grader.isNotEmpty ? grader : null;
-            _scanErrorMsg = null;
+            _scanErrorMsg  = null;
             _scanErrorType = null;
+
+            // NEW: prefill manual entry fields from photo label
+            if (hasLabelData) {
+              if (photoYear.isNotEmpty)    _certManualYear.text  = photoYear;
+              if (photoDenom.isNotEmpty)   _certManualDenom.text = photoDenom;
+              if (photoGrade.isNotEmpty)   _certManualGrade.text = photoGrade;
+              if (photoVariety.isNotEmpty && _certManualNotes.text.isEmpty) {
+                _certManualNotes.text = photoVariety;
+              }
+              if (photoMint.isNotEmpty && _certManualCoinName.text.isEmpty) {
+                _certManualCoinName.text = [photoYear, photoMint, photoDenom].where((s) => s.isNotEmpty).join(' ');
+              }
+              // Store photo_scan metadata in pending confirm
+              _photoScanBanner = true;
+              // If typed cert differs from photo cert, store both for the user to see
+              if (typedCert.isNotEmpty && typedCert != certNum) {
+                _photoScanTypedCert = typedCert;
+              } else {
+                _photoScanTypedCert = null;
+              }
+              if (_certPendingConfirm == null && (grader == 'NGC' || grader == 'CAC' || grader == 'CACG')) {
+                _certPendingConfirm = {
+                  '_grader': grader,
+                  'certNo': certNum,
+                  '_found': false,
+                };
+              } else if (_certPendingConfirm != null) {
+                _certPendingConfirm!['certNo'] = certNum;
+                if (grader.isNotEmpty) _certPendingConfirm!['_grader'] = grader;
+              }
+            }
           });
         } else {
           setState(() {
@@ -3304,6 +3350,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       _pcgsLookupResult = null;
       _pcgsLookupError = '';
       _certPendingConfirm = null;
+      if (_scanResultText == null || raw != _scanResultText) {
+        _photoScanBanner = false;
+        _photoScanTypedCert = null;
+      }
     });
 
     if (grader == 'PCGS') {
@@ -3375,17 +3425,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         // Pre-fill manual fields from preset if available, else clear
         if (widget.initialCoinPreset?['name'] != null) {
           _certManualCoinName.text = widget.initialCoinPreset!['name'].toString();
-        } else {
+        } else if (!_photoScanBanner) {
           _certManualCoinName.clear();
         }
         if (widget.initialCoinPreset?['year'] != null) {
           _certManualYear.text = widget.initialCoinPreset!['year'].toString();
-        } else {
+        } else if (!_photoScanBanner) {
           _certManualYear.clear();
         }
-        _certManualGrade.clear();
-        _certManualDenom.clear();
-        _certManualNotes.clear();
+        if (!_photoScanBanner) {
+          _certManualGrade.clear();
+          _certManualDenom.clear();
+          _certManualNotes.clear();
+        }
       }
     });
   }
@@ -3482,7 +3534,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     onPressed: _launchCertPhotoScan,
                     icon: const Icon(Icons.camera_alt, size: 22),
                     label: const Text(
-                      'Scan Slab Photo',
+                      'Take a photo of the label',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -3495,6 +3547,40 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               ],
             ),
           ),
+        ],
+        // 18px photo scan banner
+        if (_photoScanBanner) ...[ 
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFF2563EB), width: 1),
+            ),
+            child: const Text(
+              '📷 Read from your slab photo - please check before saving',
+              style: TextStyle(fontSize: 18, color: Color(0xFF1E3A8A), fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        // Cert # conflict warning
+        if (_photoScanTypedCert != null) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFD97706), width: 1),
+            ),
+            child: Text(
+              '⚠️ Photo cert # ($certNo) differs from typed cert # ($_photoScanTypedCert). Using photo cert #. Please verify.',
+              style: const TextStyle(fontSize: 16, color: Color(0xFF92400E)),
+            ),
+          ),
+          const SizedBox(height: 8),
         ],
         // Cert # (read-only pre-filled)
         _certManualField('Cert number', TextEditingController(text: certNo), readOnly: true),
@@ -3719,7 +3805,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'Grade':             grade,
         'Denomination':      _certManualDenom.text.trim(),
         'Personal Notes':    _certManualNotes.text.trim(),
-        'source':            'cert_manual_${grader.toLowerCase()}',
+        'source':            _photoScanBanner ? 'photo_scan' : 'cert_manual_${grader.toLowerCase()}',
         'Added':             FieldValue.serverTimestamp(),
         'is_demo':           false,
         'is_demo_cleared':   false,
@@ -3770,6 +3856,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       setState(() {
         _certManualSaving  = false;
         _certPendingConfirm = null;
+        _photoScanBanner = false;
+        _photoScanTypedCert = null;
         _pcgsSingleCtrl.clear();
         _certManualCoinName.clear();
         _certManualYear.clear();

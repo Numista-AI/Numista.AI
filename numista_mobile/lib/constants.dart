@@ -25,5 +25,5 @@ const String kScanServiceUrl = String.fromEnvironment(
 const String kAppPublicDomain = 'numista.ai';
 
 // App display version shown in the UI and About dialog
-const String kAppVersion = 'v8.18.7';
+const String kAppVersion = 'v8.18.9';
 

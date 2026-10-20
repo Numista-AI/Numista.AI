@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -1956,7 +1958,7 @@ void main() {
       );
 
       // Verify Scan Slab Photo button is displayed with height >= 48px
-      final scanBtnFinder = find.widgetWithText(ElevatedButton, 'Scan Slab Photo');
+      final scanBtnFinder = find.widgetWithText(ElevatedButton, 'Take a photo of the label');
       expect(scanBtnFinder, findsOneWidget);
       final btnSize = tester.getSize(scanBtnFinder);
       expect(btnSize.height, greaterThanOrEqualTo(48.0));
@@ -2236,6 +2238,139 @@ void main() {
         HttpOverrides.global = prevOverrides;
       }
     });
+
+    testWidgets('p7_v8189_photo_scan_prefills_label_fields_and_shows_banner', (tester) async {
+      setTestViewSize(tester, width: 800, height: 1400);
+
+      final prevPicker = ImagePickerPlatform.instance;
+      ImagePickerPlatform.instance = _TestImagePickerPlatform();
+      addTearDown(() {
+        ImagePickerPlatform.instance = prevPicker;
+      });
+
+      HttpAuthClient.httpClientOverride = MockClient.streaming((request, bodyStream) async {
+        if (request.url.path == '/api/scan_cert_number_upload') {
+          final resBytes = utf8.encode(jsonEncode({
+            'cert_number': '8321797',
+            'grader': 'NGC',
+            'confidence': 'HIGH',
+            'message': 'OK',
+            'year': '1881',
+            'denomination': 'Morgan Dollar',
+            'grade': 'MS-65',
+            'mint': 'S',
+            'variety': null,
+          }));
+          return http.StreamedResponse(
+            Stream.value(resBytes),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.StreamedResponse(Stream.value(utf8.encode('{"detail":"not found"}')), 404);
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Trigger photo scan via the 56px photo button
+      final photoBtn = find.text('📷 Take a photo of the label');
+      expect(photoBtn, findsOneWidget);
+      await tester.tap(photoBtn);
+      await tester.pumpAndSettle();
+
+      // Tap 'Take a photo' in bottom sheet
+      final takePhotoOption = find.text('Take a photo');
+      expect(takePhotoOption, findsOneWidget);
+      await tester.tap(takePhotoOption);
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 500));
+      });
+      await tester.pumpAndSettle();
+
+      // Verify fields prefilled
+      expect(find.text('1881'), findsOneWidget);
+      expect(find.text('Morgan Dollar'), findsOneWidget);
+      expect(find.text('MS-65'), findsOneWidget);
+
+      // Verify banner text & 18px font size
+      final bannerFinder = find.textContaining('Read from your slab photo');
+      expect(bannerFinder, findsOneWidget);
+      final bannerText = tester.widget<Text>(bannerFinder);
+      expect(bannerText.style?.fontSize, equals(18.0));
+    });
+
+    testWidgets('p7_v8189_photo_scan_cert_mismatch_shows_dialog_and_resolves', (tester) async {
+      setTestViewSize(tester, width: 800, height: 1400);
+
+      final prevPicker = ImagePickerPlatform.instance;
+      ImagePickerPlatform.instance = _TestImagePickerPlatform();
+      addTearDown(() {
+        ImagePickerPlatform.instance = prevPicker;
+      });
+
+      HttpAuthClient.httpClientOverride = MockClient.streaming((request, bodyStream) async {
+        if (request.url.path == '/api/scan_cert_number_upload') {
+          final resBytes = utf8.encode(jsonEncode({
+            'cert_number': '8321797',
+            'grader': 'NGC',
+            'confidence': 'HIGH',
+            'message': 'OK',
+            'year': '1881',
+            'denomination': 'Morgan Dollar',
+            'grade': 'MS-65',
+            'mint': 'S',
+            'variety': null,
+          }));
+          return http.StreamedResponse(
+            Stream.value(resBytes),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.StreamedResponse(Stream.value(utf8.encode('{"detail":"not found"}')), 404);
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Enter a different cert number initially
+      final certField = find.byType(TextField).first;
+      await tester.enterText(certField, '1111111');
+      await tester.pumpAndSettle();
+
+      // Trigger photo scan
+      final photoBtn = find.text('📷 Take a photo of the label');
+      expect(photoBtn, findsOneWidget);
+      await tester.tap(photoBtn);
+      await tester.pumpAndSettle();
+
+      final takePhotoOption = find.text('Take a photo');
+      expect(takePhotoOption, findsOneWidget);
+      await tester.tap(takePhotoOption);
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 500));
+      });
+      await tester.pumpAndSettle();
+
+      // Conflict warning banner must appear
+      expect(find.textContaining('differs from typed cert #'), findsOneWidget);
+      expect(find.textContaining('8321797'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('1111111'), findsAtLeastNWidgets(1));
+
+      // Verify fields prefilled
+      expect(find.text('1881'), findsOneWidget);
+      expect(find.text('Morgan Dollar'), findsOneWidget);
+      expect(find.text('MS-65'), findsOneWidget);
+    });
   });
 }
 
@@ -2297,4 +2432,18 @@ class _TrackingHttpClient implements HttpClient {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _TestImagePickerPlatform extends ImagePickerPlatform {
+  @override
+  Future<XFile?> getImageFromSource({
+    required ImageSource source,
+    ImagePickerOptions options = const ImagePickerOptions(),
+  }) async {
+    return XFile.fromData(
+      Uint8List.fromList([255, 216, 255, 224, 0, 16, 74, 70, 73, 70]),
+      name: 'test_slab.jpg',
+      mimeType: 'image/jpeg',
+    );
+  }
 }
