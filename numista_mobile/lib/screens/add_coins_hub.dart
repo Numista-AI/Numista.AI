@@ -174,6 +174,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       if (year.isNotEmpty) {
         _certManualYear.text = year;
       }
+      final mint = (preset['mint'] ?? preset['mintMark'])?.toString() ?? '';
+      if (mint.isNotEmpty) {
+        _certManualMint.text = mint;
+      }
       final certNo = preset['certNo']?.toString() ?? '';
       if (certNo.isNotEmpty) {
         final grader = preset['grader']?.toString() ?? 'NGC';
@@ -3510,7 +3514,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         if (!_photoScanBanner) {
           _certManualGrade.clear();
           _certManualDenom.clear();
-          _certManualMint.clear();
           _certManualNotes.clear();
         }
       }
@@ -3862,7 +3865,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'grader':            grader,
         'CoinName':          _certManualCoinName.text.trim(),
         'Year':              _certManualYear.text.trim(),
-        'MintMark':          _certManualMint.text.trim(),
+        'Mint Mark':         _certManualMint.text.trim(),
         'Grade':             grade,
         'Denomination':      _certManualDenom.text.trim(),
         'Personal Notes':    _certManualNotes.text.trim(),

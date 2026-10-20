@@ -2459,6 +2459,67 @@ void main() {
       expect(find.text('MS-65'), findsOneWidget);
       expect(find.text('S'), findsOneWidget);
     });
+
+    testWidgets('p7_v81811_cert_save_mint_mark_key', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 2000);
+
+      Map<String, dynamic>? interceptedPayload;
+
+      final prevOverride = HttpAuthClient.httpClientOverride;
+      HttpAuthClient.httpClientOverride = MockClient.streaming((request, bodyStream) async {
+        if (request.url.path == '/api/cert_save') {
+          final bodyBytes = await bodyStream.toBytes();
+          final jsonMap = jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
+          interceptedPayload = jsonMap['coin_data'] as Map<String, dynamic>?;
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(jsonEncode({'status': 'ok'}))),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.StreamedResponse(Stream.value(utf8.encode('{"detail":"not found"}')), 404);
+      });
+      addTearDown(() {
+        HttpAuthClient.httpClientOverride = prevOverride;
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(
+            showCertFullScreen: true,
+            initialCoinPreset: {
+              'name': 'Morgan Dollar',
+              'year': '1881',
+              'mint': 'S',
+              'certNo': '8321797',
+              'grader': 'NGC',
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Ensure 'S' is populated in the mint mark field
+      expect(find.widgetWithText(TextField, 'S'), findsOneWidget);
+
+      // Trigger save
+      final saveBtn = find.text('Confirm & Add to My Collection');
+      expect(saveBtn, findsOneWidget);
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
+      await tester.pumpAndSettle();
+
+      // Assert: the coin map contains 'Mint Mark': 'S'
+      expect(interceptedPayload, isNotNull);
+      expect(interceptedPayload!['Mint Mark'], equals('S'));
+      // Assert: the coin map does NOT contain key 'MintMark' (no space variant)
+      expect(interceptedPayload!.containsKey('MintMark'), isFalse);
+
+      // Static source assertion confirming save block writes 'Mint Mark' and not 'MintMark'
+      final hubSrc = File('lib/screens/add_coins_hub.dart').readAsStringSync();
+      expect(hubSrc, contains("'Mint Mark':         _certManualMint.text.trim()"));
+      expect(hubSrc.contains("'MintMark':"), isFalse);
+    });
   });
 }
 
