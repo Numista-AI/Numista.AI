@@ -682,19 +682,19 @@ def test_scan_cert_number_upload_returns_label_fields_not_api_source():
             "mint": "S",
             "variety": None,
         }
-        # Also mock _check_cert_rate_limit to be a no-op
-        with patch("routes.cert_routes._check_cert_rate_limit"):
+        # Also mock _check_cert_rate_limit to be a no-op and db to assert no Firestore write
+        with patch("routes.cert_routes._check_cert_rate_limit"), patch("routes.cert_routes.db") as mock_db:
             # Use the test client - match the existing fixture pattern
             resp = client.post(
                 "/api/scan_cert_number_upload",
                 files={"file": ("test.jpg", b"fakejpeg", "image/jpeg")},
                 headers={"Authorization": "Bearer test_token"},
             )
+            mock_db.collection.assert_not_called()
     assert resp.status_code == 200
     data = resp.json()
     assert data["cert_number"] == "8321797"
     assert data["year"] == "1881"
     assert data["denomination"] == "Morgan Dollar"
     assert "source" not in data, "scan endpoint must never return source field"
-    # No Firestore write: mock_scan was called once, db.collection never called
 

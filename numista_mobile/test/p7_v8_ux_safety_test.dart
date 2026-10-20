@@ -2296,6 +2296,7 @@ void main() {
       expect(find.text('1881'), findsOneWidget);
       expect(find.text('Morgan Dollar'), findsOneWidget);
       expect(find.text('MS-65'), findsOneWidget);
+      expect(find.text('S'), findsOneWidget);
 
       // Verify banner text & 18px font size
       final bannerFinder = find.textContaining('Read from your slab photo');
@@ -2304,7 +2305,7 @@ void main() {
       expect(bannerText.style?.fontSize, equals(18.0));
     });
 
-    testWidgets('p7_v8189_photo_scan_cert_mismatch_shows_dialog_and_resolves', (tester) async {
+    testWidgets('p7_v81810_cert_mismatch_dialog_keep_typed', (tester) async {
       setTestViewSize(tester, width: 800, height: 1400);
 
       final prevPicker = ImagePickerPlatform.instance;
@@ -2361,15 +2362,103 @@ void main() {
       });
       await tester.pumpAndSettle();
 
-      // Conflict warning banner must appear
-      expect(find.textContaining('differs from typed cert #'), findsOneWidget);
-      expect(find.textContaining('8321797'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('1111111'), findsAtLeastNWidgets(1));
+      // Verify conflict dialog appears with both cert numbers and 18px text
+      expect(find.text('Cert Number Conflict'), findsOneWidget);
+      final keepTypedBtn = find.text('Keep the number I typed (1111111)');
+      final usePhotoBtn = find.text('Use the number on the photo (8321797)');
+      expect(keepTypedBtn, findsOneWidget);
+      expect(usePhotoBtn, findsOneWidget);
 
-      // Verify fields prefilled
+      // Tap "Keep the number I typed (1111111)"
+      await tester.tap(keepTypedBtn);
+      await tester.pumpAndSettle();
+
+      // Verify cert number is kept as 1111111
+      expect(find.widgetWithText(TextField, '1111111'), findsWidgets);
+
+      // Verify photo label fields prefilled
       expect(find.text('1881'), findsOneWidget);
       expect(find.text('Morgan Dollar'), findsOneWidget);
       expect(find.text('MS-65'), findsOneWidget);
+      expect(find.text('S'), findsOneWidget);
+    });
+
+    testWidgets('p7_v81810_cert_mismatch_dialog_use_photo', (tester) async {
+      setTestViewSize(tester, width: 800, height: 1400);
+
+      final prevPicker = ImagePickerPlatform.instance;
+      ImagePickerPlatform.instance = _TestImagePickerPlatform();
+      addTearDown(() {
+        ImagePickerPlatform.instance = prevPicker;
+      });
+
+      HttpAuthClient.httpClientOverride = MockClient.streaming((request, bodyStream) async {
+        if (request.url.path == '/api/scan_cert_number_upload') {
+          final resBytes = utf8.encode(jsonEncode({
+            'cert_number': '8321797',
+            'grader': 'NGC',
+            'confidence': 'HIGH',
+            'message': 'OK',
+            'year': '1881',
+            'denomination': 'Morgan Dollar',
+            'grade': 'MS-65',
+            'mint': 'S',
+            'variety': null,
+          }));
+          return http.StreamedResponse(
+            Stream.value(resBytes),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.StreamedResponse(Stream.value(utf8.encode('{"detail":"not found"}')), 404);
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Enter a different cert number initially
+      final certField = find.byType(TextField).first;
+      await tester.enterText(certField, '1111111');
+      await tester.pumpAndSettle();
+
+      // Trigger photo scan
+      final photoBtn = find.text('📷 Take a photo of the label');
+      expect(photoBtn, findsOneWidget);
+      await tester.tap(photoBtn);
+      await tester.pumpAndSettle();
+
+      final takePhotoOption = find.text('Take a photo');
+      expect(takePhotoOption, findsOneWidget);
+      await tester.tap(takePhotoOption);
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 500));
+      });
+      await tester.pumpAndSettle();
+
+      // Verify conflict dialog appears with both cert numbers
+      expect(find.text('Cert Number Conflict'), findsOneWidget);
+      final keepTypedBtn = find.text('Keep the number I typed (1111111)');
+      final usePhotoBtn = find.text('Use the number on the photo (8321797)');
+      expect(keepTypedBtn, findsOneWidget);
+      expect(usePhotoBtn, findsOneWidget);
+
+      // Tap "Use the number on the photo (8321797)"
+      await tester.tap(usePhotoBtn);
+      await tester.pumpAndSettle();
+
+      // Verify cert number is updated to 8321797
+      expect(find.widgetWithText(TextField, '8321797'), findsWidgets);
+
+      // Verify photo label fields prefilled
+      expect(find.text('1881'), findsOneWidget);
+      expect(find.text('Morgan Dollar'), findsOneWidget);
+      expect(find.text('MS-65'), findsOneWidget);
+      expect(find.text('S'), findsOneWidget);
     });
   });
 }

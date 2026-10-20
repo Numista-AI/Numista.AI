@@ -99,6 +99,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   final _certManualYear      = TextEditingController();
   final _certManualGrade     = TextEditingController();
   final _certManualDenom     = TextEditingController();
+  final _certManualMint      = TextEditingController();
   final _certManualNotes     = TextEditingController();
   bool   _certManualSaving   = false;
   // Confirm-before-save state: holds the result data pending user confirmation
@@ -109,6 +110,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   String? _scanErrorMsg;
   String? _scanErrorType;
   bool _photoScanBanner = false;
+  // ignore: unused_field
   String? _photoScanTypedCert; // set when photo cert # differs from typed cert #
   final FocusNode _pcgsSingleFocusNode = FocusNode();
 
@@ -246,6 +248,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     _certManualYear.dispose();
     _certManualGrade.dispose();
     _certManualDenom.dispose();
+    _certManualMint.dispose();
     _certManualNotes.dispose();
     _pcgsSingleFocusNode.dispose();
     super.dispose();
@@ -3256,48 +3259,110 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         final photoGrade = (data['grade']        as String? ?? '').trim();
         final photoMint  = (data['mint']         as String? ?? '').trim();
         final photoVariety = (data['variety']    as String? ?? '').trim();
-        final hasLabelData = photoYear.isNotEmpty || photoDenom.isNotEmpty || photoGrade.isNotEmpty;
+        final hasLabelData = photoYear.isNotEmpty || photoDenom.isNotEmpty || photoGrade.isNotEmpty || photoMint.isNotEmpty;
 
         if (certNum.isNotEmpty) {
+          final typedCert = _pcgsSingleCtrl.text.trim();
+          String chosenCert = certNum;
+          if (typedCert.isNotEmpty && typedCert != certNum) {
+            // NET-375 / Item 1: Real showDialog when photo cert differs from typed cert
+            final chosen = await showDialog<String>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Text(
+                  'Cert Number Conflict',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'The cert # on the photo differs from the number you typed.\n\nTyped cert #: $typedCert\nPhoto cert #: $certNum\n\nWhich number would you like to use?',
+                        style: const TextStyle(fontSize: 18, height: 1.4),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 56,
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          key: const Key('cert_conflict_keep_typed_button'),
+                          onPressed: () => Navigator.of(ctx).pop(typedCert),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 56),
+                            side: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: Text(
+                            'Keep the number I typed ($typedCert)',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF2563EB)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 56,
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          key: const Key('cert_conflict_use_photo_button'),
+                          onPressed: () => Navigator.of(ctx).pop(certNum),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 56),
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: Text(
+                            'Use the number on the photo ($certNum)',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+            if (!mounted) return;
+            // If user dismisses dialog (taps outside), keep the typed cert # (safer default)
+            chosenCert = chosen ?? typedCert;
+          }
+
           setState(() {
-            // Check if photo cert # differs from typed cert #
-            final typedCert = _pcgsSingleCtrl.text.trim();
-            _pcgsSingleCtrl.text = certNum;
+            _pcgsSingleCtrl.text = chosenCert;
             if (grader == 'NGC' || grader == 'CAC' || grader == 'CACG' || grader == 'PCGS') {
               _certGrader = grader;
             }
-            _scanResultText   = certNum;
+            _scanResultText   = chosenCert;
             _scanResultGrader = grader.isNotEmpty ? grader : null;
             _scanErrorMsg  = null;
             _scanErrorType = null;
 
-            // NEW: prefill manual entry fields from photo label
+            // prefill manual entry fields from photo label
             if (hasLabelData) {
               if (photoYear.isNotEmpty)    _certManualYear.text  = photoYear;
               if (photoDenom.isNotEmpty)   _certManualDenom.text = photoDenom;
               if (photoGrade.isNotEmpty)   _certManualGrade.text = photoGrade;
+              if (photoMint.isNotEmpty)    _certManualMint.text  = photoMint;
               if (photoVariety.isNotEmpty && _certManualNotes.text.isEmpty) {
                 _certManualNotes.text = photoVariety;
               }
-              if (photoMint.isNotEmpty && _certManualCoinName.text.isEmpty) {
-                _certManualCoinName.text = [photoYear, photoMint, photoDenom].where((s) => s.isNotEmpty).join(' ');
-              }
+              // Item 5: coin name should come from cert lookup or manual entry, not slab label scan
               // Store photo_scan metadata in pending confirm
               _photoScanBanner = true;
-              // If typed cert differs from photo cert, store both for the user to see
-              if (typedCert.isNotEmpty && typedCert != certNum) {
-                _photoScanTypedCert = typedCert;
-              } else {
-                _photoScanTypedCert = null;
-              }
+              _photoScanTypedCert = null;
               if (_certPendingConfirm == null && (grader == 'NGC' || grader == 'CAC' || grader == 'CACG')) {
                 _certPendingConfirm = {
                   '_grader': grader,
-                  'certNo': certNum,
+                  'certNo': chosenCert,
                   '_found': false,
                 };
               } else if (_certPendingConfirm != null) {
-                _certPendingConfirm!['certNo'] = certNum;
+                _certPendingConfirm!['certNo'] = chosenCert;
                 if (grader.isNotEmpty) _certPendingConfirm!['_grader'] = grader;
               }
             }
@@ -3411,6 +3476,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         final year = (lookupData['year'] ?? '').toString();
         final grade = (lookupData['grade'] ?? '').toString();
         final denom = (lookupData['denomination'] ?? '').toString();
+        final mint = (lookupData['mint'] ?? '').toString();
 
         _certManualCoinName.text = coinName.isNotEmpty
             ? coinName
@@ -3420,6 +3486,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             : (widget.initialCoinPreset?['year']?.toString() ?? '');
         _certManualGrade.text = grade;
         _certManualDenom.text = denom;
+        if (mint.isNotEmpty) {
+          _certManualMint.text = mint;
+        }
         _certManualNotes.clear();
       } else {
         // Pre-fill manual fields from preset if available, else clear
@@ -3433,9 +3502,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         } else if (!_photoScanBanner) {
           _certManualYear.clear();
         }
+        if (widget.initialCoinPreset?['mint'] != null || widget.initialCoinPreset?['mintMark'] != null) {
+          _certManualMint.text = (widget.initialCoinPreset!['mint'] ?? widget.initialCoinPreset!['mintMark']).toString();
+        } else if (!_photoScanBanner) {
+          _certManualMint.clear();
+        }
         if (!_photoScanBanner) {
           _certManualGrade.clear();
           _certManualDenom.clear();
+          _certManualMint.clear();
           _certManualNotes.clear();
         }
       }
@@ -3565,23 +3640,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           ),
           const SizedBox(height: 8),
         ],
-        // Cert # conflict warning
-        if (_photoScanTypedCert != null) ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFFBEB),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFD97706), width: 1),
-            ),
-            child: Text(
-              '⚠️ Photo cert # ($certNo) differs from typed cert # ($_photoScanTypedCert). Using photo cert #. Please verify.',
-              style: const TextStyle(fontSize: 16, color: Color(0xFF92400E)),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
         // Cert # (read-only pre-filled)
         _certManualField('Cert number', TextEditingController(text: certNo), readOnly: true),
         const SizedBox(height: 14),
@@ -3593,6 +3651,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               keyboardType: const TextInputType.numberWithOptions(decimal: false),
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               webInputMode: 'numeric')),   // V8.7 Item 3: inputmode="numeric" on web
+          const SizedBox(width: 14),
+          Expanded(child: _certManualField('Mint mark', _certManualMint, hint: 'e.g. S, D, CC')),
           const SizedBox(width: 14),
           Expanded(child: _certManualField('Grade', _certManualGrade, hint: 'e.g. MS-64')),
         ]),
@@ -3802,6 +3862,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'grader':            grader,
         'CoinName':          _certManualCoinName.text.trim(),
         'Year':              _certManualYear.text.trim(),
+        'MintMark':          _certManualMint.text.trim(),
         'Grade':             grade,
         'Denomination':      _certManualDenom.text.trim(),
         'Personal Notes':    _certManualNotes.text.trim(),
@@ -3861,6 +3922,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         _pcgsSingleCtrl.clear();
         _certManualCoinName.clear();
         _certManualYear.clear();
+        _certManualMint.clear();
         _certManualGrade.clear();
         _certManualDenom.clear();
         _certManualNotes.clear();
