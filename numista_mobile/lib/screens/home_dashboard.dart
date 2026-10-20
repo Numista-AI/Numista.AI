@@ -331,6 +331,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             return FutureBuilder<bool>(
               future: ValuationModeService.isAdvancedMode(),
               builder: (context, modeSnap) {
+                // ignore: unused_local_variable (NET-372: bid/advanced mode removed)
                 final advanced = modeSnap.data ?? false;
 
                 // ── Compute portfolio metrics ──────────────────────────────────
@@ -340,8 +341,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 final int totalCoins = expansion.totalCoins;
                 final int totalItems = totalCoins + currency.length + worldItems.length;
             double cpgTotal = 0;
-            double bidTotal = 0;
-            double askTotal = 0;
             double acquisitionCost = 0;
             double meltValue       = 0;
             double faceValue       = 0;
@@ -395,19 +394,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 }
               }
 
-              // Greysheet fields
+              // Valuation fields (NET-372: CPG Retail only, bid removed)
               final coinCpg = _parseCurrency(data['cpgRetail']);
-              final coinBid = _parseCurrency(data['greysheetBid']);
-              final coinAsk = _parseCurrency(data['greysheetAsk']);
-
               final finalCpg = coinCpg > 0 ? coinCpg : finalVal;
-              final finalBid = coinBid > 0 ? coinBid : finalVal * 0.80;
-              final finalAsk = coinAsk > 0 ? coinAsk : finalVal * 0.92;
 
               if (!isPending) {
                 cpgTotal += finalCpg;
-                bidTotal += finalBid;
-                askTotal += finalAsk;
               }
               acquisitionCost += _parseCurrency(data['Cost']);
               meltValue       += liveMelt;
@@ -431,12 +423,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               }
 
               final curCpg = _parseCurrency(data['cpgRetail']);
-              final curBid = _parseCurrency(data['greysheetBid']);
-              final curAsk = _parseCurrency(data['greysheetAsk']);
-
               cpgTotal += curCpg > 0 ? curCpg : finalVal;
-              bidTotal += curBid > 0 ? curBid : finalVal * 0.80;
-              askTotal += curAsk > 0 ? curAsk : finalVal * 0.92;
 
               currencyVal += finalVal;
               acquisitionCost += _parseCurrency(data['Cost']);
@@ -464,12 +451,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
               }
 
               final wCpg = _parseCurrency(data['cpgRetail']);
-              final wBid = _parseCurrency(data['greysheetBid']);
-              final wAsk = _parseCurrency(data['greysheetAsk']);
 
               cpgTotal += wCpg > 0 ? wCpg : finalVal;
-              bidTotal += wBid > 0 ? wBid : finalVal * 0.80;
-              askTotal += wAsk > 0 ? wAsk : finalVal * 0.92;
 
               acquisitionCost += purchPrice;
               final spotEntry = _parseCurrency(data['spot_value_at_entry']);
@@ -479,8 +462,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
               faceValue += _computeFaceValue(data['denomination']?.toString() ?? '');
             }
 
-            final portfolioValue = advanced ? cpgTotal : bidTotal;
-            final effectiveCoinsVal = advanced ? cpgTotal : bidTotal;
+            final portfolioValue = cpgTotal;
+            final effectiveCoinsVal = cpgTotal;
 
             // ── Portfolio snapshot (fire-and-forget) ───────────────────────
             if (totalCoins > 0 || totalItems > 0) {
@@ -643,7 +626,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalCoins, advanced: advanced),
+                                _buildPortfolioValueSection(cpgTotal, fmt, totalCoins, advanced: advanced),
                                 if (pendingValueCount > 0)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 4),
@@ -743,8 +726,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               final series = data['Program/Series']?.toString() ?? '';
                               final theme  = data['Theme/Subject']?.toString() ?? '';
                               final coinCpg = _parseCurrency(data['cpgRetail']);
-                              final coinBid = _parseCurrency(data['greysheetBid']);
-                              final gVal = advanced ? coinCpg : coinBid;
+                              final gVal = coinCpg;
                               final estVal = gVal > 0 
                                   ? fmt.format(gVal)
                                   : (data['AI Estimated Value']?.toString() ?? '—');
@@ -1248,9 +1230,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   // ── Portfolio value section with batch valuation progress ───────────────────
   Widget _buildPortfolioValueSection(
-      double cpgTotal, double bidTotal, double askTotal, intl.NumberFormat fmt, int totalCoins, {bool advanced = false}) {
+      double cpgTotal, intl.NumberFormat fmt, int totalCoins, {bool advanced = false}) {
     final v = _valuation;
-    final displayVal  = advanced ? cpgTotal : bidTotal;
+    final displayVal  = cpgTotal;
     final hasValue    = displayVal > 0;
     final isRunning   = v.isRunning;
     final isPaused    = v.isPaused;
@@ -1259,7 +1241,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(advanced ? 'EST. PORTFOLIO VALUE (RETAIL)' : 'EST. PORTFOLIO VALUE (ESTATE/LIQ)',
+        Text('EST. PORTFOLIO VALUE (RETAIL)',
             style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
@@ -1274,7 +1256,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   fontWeight: FontWeight.w900,
                   color: _accent)),
           Text(
-            advanced ? 'CPG Retail Market basis' : 'Wholesale / Greysheet Bid basis',
+            'CPG Retail Market basis',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w500,
@@ -1297,26 +1279,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: _subtext)),
-
-        if (hasValue && advanced) ...[
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text('Bid: ${fmt.format(bidTotal)}',
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF4A5568))),
-              const SizedBox(width: 8),
-              Text('Ask: ${fmt.format(askTotal)}',
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF4A5568))),
-            ],
-          ),
-        ],
 
         const SizedBox(height: 6),
 

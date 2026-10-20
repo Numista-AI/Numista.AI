@@ -1641,13 +1641,10 @@ class _FinancialsTab extends StatelessWidget {
     );
 
 
-    // ── EST. VALUE: same greysheet-first priority as the collection grid ─────
-    // EST. VALUE: CPG Retail (collector/market price) first, then greysheet bid
-    // (dealer wholesale floor), then raw AI Estimated Value string.
-    // This matches what Greysheet.com labels as "CPG Value (Retail)".
-    final gBid = coin.greysheetBid;
+    // ── EST. VALUE: CPG Retail first, then raw AI Estimated Value string ─────
+    // NET-372: GreySheet bid removed from display and fallback. CPG Retail only.
     final gCpg = coin.cpgRetail;
-    final greysheetVal = gCpg > 0 ? gCpg : (gBid > 0 ? gBid : 0.0);
+    final greysheetVal = gCpg > 0 ? gCpg : 0.0;
     final aiDisplay = greysheetVal > 0
         ? '\$${greysheetVal.toStringAsFixed(2)}'
         : (coin.aiEstimatedValue.isEmpty || coin.aiEstimatedValue == 'Pending'
@@ -1841,7 +1838,7 @@ class _FinancialsTab extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Does this physical NGC/PCGS holder have a green or gold CAC sticker? (Adds a 20%-50%+ premium to market Bid/Retail values).',
+                          'Does this physical NGC/PCGS holder have a green or gold CAC sticker? (Adds a 20%-50%+ premium to market Retail values).',
                           style: TextStyle(
                             fontSize: 12,
                             color: _kSubtext(context),

@@ -9,7 +9,7 @@ import '../services/set_expansion_helper.dart';
 /// 1. Count (with dynamic filter context)
 /// 2. US Face Value (isolated from foreign currencies)
 /// 3. Melt Value (live precious metals calculation)
-/// 4. Valuation Block (completeness + Bid coverage + CPG coverage, never merged)
+/// 4. Valuation Block (completeness + CPG coverage, never merged)
 class HeaderStatsBar extends StatefulWidget {
   final List<QueryDocumentSnapshot> docs;
   final int totalCoinsCount;
@@ -33,9 +33,6 @@ class HeaderStatsBar extends StatefulWidget {
 }
 
 class _HeaderStatsBarState extends State<HeaderStatsBar> {
-  // Screen-only viewing preference for narrow screens (<1100px)
-  bool _showWholesaleOnMobile = true;
-
   static const _kGold = Color(0xFFC9A227);
   static const _kTeal = Color(0xFF0D9488);
   static const _kSubtext = Color(0xFF8B92B4);
@@ -66,13 +63,10 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
     final textCol = isDark ? const Color(0xFFE8EAF0) : const Color(0xFF0F172A);
 
     // -- 1. Calculate Aggregations
-    double wholesaleGuideSum = 0.0;
-    int wholesaleGuideCount = 0;
-
     double retailGuideSum = 0.0;
     int retailGuideCount = 0;
 
-    // Completeness: coins with ANY price estimate (AI Estimated Value, Bid, or CPG)
+    // Completeness: coins with ANY price estimate (AI Estimated Value or CPG)
     int estimatedCount = 0;
     int pendingCount = 0;
 
@@ -85,14 +79,6 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
       final m = doc.data() as Map<String, dynamic>;
       final qtyRaw = _parseNumber(m['Quantity'] ?? m['qty']).toInt();
       final qty = qtyRaw > 0 ? qtyRaw : 1;
-
-      // Wholesale (Greysheet Bid)
-      final rawBid = m['greysheetBid'] ?? m['greysheet_bid'];
-      final bidVal = _parseNumber(rawBid);
-      if (rawBid != null) {
-        wholesaleGuideSum += bidVal * qty;
-        wholesaleGuideCount++;
-      }
 
       // Retail (CPG)
       final rawCpg = m['cpgRetail'] ?? m['cpg_retail'];
@@ -109,7 +95,7 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
       final isPending = valueStatus == 'pending' || 
           rawAi?.toString() == 'Pending' ||
           rawAi?.toString() == '\$0.50';
-      if (!isPending && (aiVal > 0 || bidVal > 0 || cpgVal > 0)) {
+      if (!isPending && (aiVal > 0 || cpgVal > 0)) {
         estimatedCount++;
       } else if (isPending) {
         pendingCount++;
@@ -190,8 +176,6 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
 
         // Fact 4: Valuation Block
         final valChip = _buildValuationBlock(
-          wholesaleSum: wholesaleGuideSum,
-          wholesaleCount: wholesaleGuideCount,
           retailSum: retailGuideSum,
           retailCount: retailGuideCount,
           estimatedCount: estimatedCount,
@@ -306,8 +290,6 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
   }
 
   Widget _buildValuationBlock({
-    required double wholesaleSum,
-    required int wholesaleCount,
     required double retailSum,
     required int retailCount,
     required int estimatedCount,
@@ -319,14 +301,14 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
     required bool isWide,
   }) {
     const disclaimer =
-        'Numismatic estimates powered by CDN Greysheet Wholesale Bid & CPG Retail Price Guides. '
+        'Numismatic estimates powered by CPG® Retail Price Guide. '
         'Bullion values calculated using live spot market feeds. '
         'CDN does not endorse this collection. For asset reference only; not a certified USPAP appraisal.';
 
     final v = widget.valuation;
 
     return Container(
-      // Slightly taller on desktop to hold three rows cleanly without crowding
+      // Slightly taller on desktop to hold rows cleanly without crowding
       height: isWide ? 56 : 48,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -338,9 +320,8 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isWide) ...[
-            // ── Desktop: three distinct labeled facts ─────────────────────────
-            //   ESTIMATED  N/Total  — completeness (any AI/Bid/CPG value)
-            //   BID GUIDE  N/Total  — Greysheet Wholesale Bid coverage
+            // ── Desktop: two distinct labeled facts ─────────────────────────
+            //   ESTIMATED  N/Total  — completeness (any AI/CPG value)
             //   CPG RETAIL N/Total  — CPG Retail guide coverage
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,37 +353,7 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
                   ],
                 ),
                 const SizedBox(height: 2),
-                // Row B — Greysheet Bid coverage
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'BID GUIDE',
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w700,
-                        color: _kSubtext,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      '$wholesaleCount/$totalDocs',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: _kGold,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '(\$${wholesaleSum.toStringAsFixed(2)})',
-                      style: const TextStyle(fontSize: 8, color: _kSubtext),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                // Row C — CPG Retail coverage
+                // Row B — CPG Retail coverage
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -434,50 +385,26 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
               ],
             ),
           ] else ...[
-            // ── Narrow / Mobile: segmented toggle (unchanged) ─────────────────
+            // ── Narrow / Mobile: CPG Retail display (NET-372: Wholesale removed) ──
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: () => setState(() => _showWholesaleOnMobile = true),
-                      child: Text(
-                        'Wholesale (Bid)',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: _showWholesaleOnMobile ? FontWeight.bold : FontWeight.normal,
-                          color: _showWholesaleOnMobile ? _kGold : _kSubtext,
-                          decoration: _showWholesaleOnMobile ? TextDecoration.underline : TextDecoration.none,
-                        ),
-                      ),
-                    ),
-                    const Text(' | ', style: TextStyle(fontSize: 9, color: _kSubtext)),
-                    GestureDetector(
-                      onTap: () => setState(() => _showWholesaleOnMobile = false),
-                      child: Text(
-                        'Retail (CPG)',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: !_showWholesaleOnMobile ? FontWeight.bold : FontWeight.normal,
-                          color: !_showWholesaleOnMobile ? const Color(0xFF60A5FA) : _kSubtext,
-                          decoration: !_showWholesaleOnMobile ? TextDecoration.underline : TextDecoration.none,
-                        ),
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'Retail (CPG)',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF60A5FA),
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _showWholesaleOnMobile
-                      ? '\$${wholesaleSum.toStringAsFixed(2)} ($wholesaleCount/$totalDocs)'
-                      : '\$${retailSum.toStringAsFixed(2)} ($retailCount/$totalDocs)',
-                  style: TextStyle(
+                  '\$${retailSum.toStringAsFixed(2)} ($retailCount/$totalDocs)',
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: _showWholesaleOnMobile ? _kGold : const Color(0xFF60A5FA),
+                    color: Color(0xFF60A5FA),
                   ),
                 ),
               ],
