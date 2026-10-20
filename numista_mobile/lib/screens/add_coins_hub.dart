@@ -3135,6 +3135,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
   /// Unified cert lookup — dispatches to PCGS live API or NGC/CAC manual entry.
   // NET-093: Slab photo → cert # pre-fill
+  void _launchCertPhotoScan() {
+    _scanSlabPhoto();
+  }
+
   Future<void> _scanSlabPhoto({ImageSource? directSource}) async {
     setState(() {
       _scanErrorMsg = null;
@@ -3350,6 +3354,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       _certPendingConfirm = {
         '_grader': grader,
         'certNo': certClean,
+        '_found': lookupData != null,
       };
       if (lookupData != null) {
         final coinName = (lookupData['coin_name'] ?? '').toString();
@@ -3422,26 +3427,75 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           )),
         ]),
         const SizedBox(height: 4),
-        Container(
-          margin: const EdgeInsets.only(top: 6, bottom: 16),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFBFDBFE)),
+        if (pending['_found'] == true) ...[
+          Container(
+            margin: const EdgeInsets.only(top: 6, bottom: 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: const Row(children: [
+              Icon(Icons.check_circle_outline, size: 20, color: Color(0xFF16A34A)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Cert details found. Please verify details below and save.',
+                  style: TextStyle(fontSize: 18, color: Color(0xFF166534), height: 1.4),
+                ),
+              ),
+            ]),
           ),
-          child: Row(children: [
-            const Icon(Icons.info_outline, size: 18, color: Color(0xFF2563EB)),
-            const SizedBox(width: 8),
-            Expanded(child: Text(
-              grader == 'NGC'
-                  ? 'Verify your cert at ngccoin.com/certlookup/$certNo/ then enter the details below.'
-                  : 'Verify your cert at cacgrading.com/cert-verify/$certNo then enter the details below.',
-              style: const TextStyle(fontSize: 18, color: Color(0xFF1E3A8A), height: 1.4),
-            )),
-          ]),
-        ),
-
+        ] else ...[
+          Container(
+            margin: const EdgeInsets.only(top: 6, bottom: 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline, size: 20, color: Color(0xFF2563EB)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        grader == 'NGC'
+                            ? 'Direct NGC cert lookup is not supported. Please scan the slab photo or enter details manually below.'
+                            : '$grader cert lookup is not available. Please scan the slab photo or enter details manually below.',
+                        style: const TextStyle(fontSize: 18, color: Color(0xFF1E3A8A), height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    key: const Key('cert_lookup_scan_slab_button'),
+                    onPressed: _launchCertPhotoScan,
+                    icon: const Icon(Icons.camera_alt, size: 22),
+                    label: const Text(
+                      'Scan Slab Photo',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         // Cert # (read-only pre-filled)
         _certManualField('Cert number', TextEditingController(text: certNo), readOnly: true),
         const SizedBox(height: 14),

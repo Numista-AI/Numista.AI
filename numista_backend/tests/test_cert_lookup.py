@@ -597,23 +597,8 @@ def test_shared_cert_reader_budget_timeout_no_500(monkeypatch):
     assert not coin.get("Certification Number")
 
 
-def test_cert_lookup_cacg_benchmark():
-    """CACG benchmark cert 663261171 returns found=True with 1952 5C MS-64 coin data."""
-    response = client.post(
-        "/api/cert_lookup",
-        json={"cert_num": "663261171", "grader": "CACG"}
-    )
-    assert response.status_code == 200, response.text
-    data = response.json()
-    assert data["grader"] == "CACG"
-    assert data["found"] is True
-    assert data["year"] == "1952"
-    assert "MS-64" in data["grade"]
-    assert "5C" in data["denomination"]
-
-
-def test_cert_lookup_ngc_benchmark():
-    """NGC benchmark cert 8321797-003 returns found=True with 1958 25C PF 67 coin data."""
+def test_cert_lookup_never_found_without_real_lookup():
+    """cert_lookup must not return found=True for NGC/CACG/CAC certs (no real API available)."""
     response = client.post(
         "/api/cert_lookup",
         json={"cert_num": "8321797-003", "grader": "NGC"}
@@ -621,48 +606,63 @@ def test_cert_lookup_ngc_benchmark():
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["grader"] == "NGC"
-    assert data["found"] is True
-    assert data["year"] == "1958"
-    assert "PF 67" in data["grade"]
-    assert "25C" in data["denomination"]
+    assert data["found"] is False
+    assert data.get("source") != "api"
 
 
-def test_cert_lookup_ngc_benchmark_digits():
-    """NGC benchmark cert 8321797003 without hyphen returns found=True."""
-    response = client.post(
-        "/api/cert_lookup",
-        json={"cert_num": "8321797003"}
-    )
-    assert response.status_code == 200, response.text
-    data = response.json()
-    assert data["grader"] == "NGC"
-    assert data["found"] is True
-    assert data["year"] == "1958"
+def test_list_receipts_no_composite_index_required():
+    """list_receipts with session_id must not call order_by (which needs a composite index)."""
+    from main import list_receipts
+
+    mock_db = MagicMock()
+    mock_coll = MagicMock()
+    user_ref = MagicMock()
+    mock_db.collection.return_value.document.return_value = user_ref
+    user_ref.collection.side_effect = lambda name: mock_coll if name == "receipts" else MagicMock(select=lambda _: MagicMock(stream=lambda: []))
+
+    doc1 = MagicMock()
+    doc1.id = "rec1"
+    doc1.to_dict.return_value = {"uploaded_at": 100, "session_id": "sess_123", "linked_coin_ids": []}
+
+    doc2 = MagicMock()
+    doc2.id = "rec2"
+    doc2.to_dict.return_value = {"uploaded_at": 200, "import_session_id": "sess_123", "linked_coin_ids": []}
+
+    where_q1 = MagicMock()
+    where_q1.stream.return_value = [doc1]
+    where_q2 = MagicMock()
+    where_q2.stream.return_value = [doc2]
+
+    def mock_where(field, op, val):
+        if field == "session_id":
+            return where_q1
+        if field == "import_session_id":
+            return where_q2
+        return MagicMock(stream=lambda: [])
+
+    mock_coll.where.side_effect = mock_where
+
+    with patch("main.db", mock_db):
+        res = list_receipts(user_email="test_user@numista.ai", session_id="sess_123", _user={"email": "test_user@numista.ai"})
+
+    assert mock_coll.order_by.call_count == 0, "order_by must NOT be called when session_id is provided"
+    receipts = res.get("receipts", res) if isinstance(res, dict) else res
+    assert len(receipts) == 2
+    assert receipts[0]["receipt_id"] == "rec2"
+    assert receipts[1]["receipt_id"] == "rec1"
 
 
-def test_cert_lookup_cert_cache_hit():
-    """When a cert is present in Firestore cert_cache, cert_lookup returns found=True."""
-    mock_cached = {
-        "grader": "NGC",
-        "cert_num": "9998887-001",
-        "coin_name": "1943-S 1C Steel MS66",
-        "year": "1943",
-        "mint": "S",
-        "grade": "MS66",
-        "denomination": "1C",
-    }
-    with patch("routes.cert_routes._lookup_cert_cache", return_value=mock_cached):
-        response = client.post(
-            "/api/cert_lookup",
-            json={"cert_num": "9998887-001", "grader": "NGC"}
+def test_list_receipts_cors_headers_on_p7gate_origin():
+    """GET /api/receipts must return Access-Control-Allow-Origin for the p7gate preview origin."""
+    with patch("main.db") as mock_db:
+        mock_coll = MagicMock()
+        mock_db.collection.return_value.document.return_value.collection.return_value = mock_coll
+        mock_coll.order_by.return_value.limit.return_value.stream.return_value = []
+        response = client.get(
+            "/api/receipts?user_email=test_user@numista.ai",
+            headers={"Origin": "https://numista-vault--p7-gate-8avtpz22.web.app"}
         )
-        assert response.status_code == 200, response.text
-        data = response.json()
-        assert data["grader"] == "NGC"
-        assert data["found"] is True
-        assert data["coin_name"] == "1943-S 1C Steel MS66"
-        assert data["year"] == "1943"
-        assert data["grade"] == "MS66"
+        assert response.headers.get("access-control-allow-origin") == "https://numista-vault--p7-gate-8avtpz22.web.app"
 
 
 

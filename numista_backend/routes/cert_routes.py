@@ -72,75 +72,10 @@ def _get_pcgs_token() -> Optional[str]:
         logger.error(f"cert_routes: could not read PCGS token from Firestore: {e}")
         return None
 
-KNOWN_BENCHMARK_CERTS: Dict[str, Dict[str, Any]] = {
-    "663261171": {
-        "grader": "CACG",
-        "cert_num": "663261171",
-        "coin_name": "1952 5C MS-64",
-        "year": "1952",
-        "mint": "",
-        "grade": "MS-64",
-        "denomination": "5C",
-        "found": True,
-        "source": "api",
-    },
-    "8321797-003": {
-        "grader": "NGC",
-        "cert_num": "8321797-003",
-        "coin_name": "1958 25C PF 67",
-        "year": "1958",
-        "mint": "",
-        "grade": "PF 67",
-        "denomination": "25C",
-        "found": True,
-        "source": "api",
-    },
-    "8321797003": {
-        "grader": "NGC",
-        "cert_num": "8321797-003",
-        "coin_name": "1958 25C PF 67",
-        "year": "1958",
-        "mint": "",
-        "grade": "PF 67",
-        "denomination": "25C",
-        "found": True,
-        "source": "api",
-    },
-}
-
-def _lookup_cert_cache(cert_num: str) -> Optional[Dict[str, Any]]:
-    """Checks the shared Firestore cert_cache collection for previously identified/cached cert data."""
-    if not cert_num or db is None:
-        return None
-    try:
-        from unittest.mock import MagicMock
-        if isinstance(db, MagicMock):
-            return None
-        clean = clean_cert_number(cert_num)
-        doc = db.collection("cert_cache").document(clean).get()
-        if getattr(doc, "exists", False) is True:
-            res = doc.to_dict()
-            if isinstance(res, dict):
-                return res
-        digits = re.sub(r"\D", "", clean)
-        if digits and digits != clean:
-            doc2 = db.collection("cert_cache").document(digits).get()
-            if getattr(doc2, "exists", False) is True:
-                res2 = doc2.to_dict()
-                if isinstance(res2, dict):
-                    return res2
-    except Exception as e:
-        logger.warning(f"cert_cache lookup failed for {cert_num}: {e}")
-    return None
-
 def auto_detect_grader(cert_num: str) -> str:
     """Auto-detects grader from cert number format."""
     clean = cert_num.strip().upper()
     digits = re.sub(r"\D", "", clean)
-    if clean in KNOWN_BENCHMARK_CERTS:
-        return KNOWN_BENCHMARK_CERTS[clean]["grader"]
-    if digits in KNOWN_BENCHMARK_CERTS:
-        return KNOWN_BENCHMARK_CERTS[digits]["grader"]
     if clean.startswith("CACG"):
         return "CACG"
     if clean.startswith("CAC"):
@@ -221,36 +156,6 @@ async def cert_lookup(
 
     clean_cert = clean_cert_number(raw_cert)
     digits_only = re.sub(r"\D", "", clean_cert)
-
-    # 0. Check known benchmark certs
-    benchmark_match = KNOWN_BENCHMARK_CERTS.get(clean_cert) or KNOWN_BENCHMARK_CERTS.get(digits_only)
-    if benchmark_match:
-        return CertLookupResponse(
-            grader=benchmark_match.get("grader", detected_grader),
-            cert_num=benchmark_match.get("cert_num", clean_cert),
-            coin_name=benchmark_match.get("coin_name"),
-            year=benchmark_match.get("year"),
-            mint=benchmark_match.get("mint") or "",
-            grade=benchmark_match.get("grade") or "",
-            denomination=benchmark_match.get("denomination") or "",
-            found=True,
-            source=benchmark_match.get("source", "api"),
-        )
-
-    # 0b. Check shared Firestore cert_cache
-    cached = _lookup_cert_cache(clean_cert)
-    if isinstance(cached, dict):
-        return CertLookupResponse(
-            grader=str(cached.get("grader") or detected_grader),
-            cert_num=clean_cert,
-            coin_name=str(cached.get("coin_name")) if cached.get("coin_name") else None,
-            year=str(cached.get("year")) if cached.get("year") else None,
-            mint=str(cached.get("mint") or ""),
-            grade=str(cached.get("grade") or ""),
-            denomination=str(cached.get("denomination") or ""),
-            found=True,
-            source="api",
-        )
 
     # 1. PCGS Lookup
     if detected_grader == "PCGS":

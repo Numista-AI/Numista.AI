@@ -71,20 +71,23 @@ def _is_allowed_origin(origin: str) -> bool:
     return False
 
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+def _cors_headers(request: Request) -> dict:
     origin = request.headers.get("origin", "")
     headers = {}
     if _is_allowed_origin(origin):
         headers["Access-Control-Allow-Origin"] = origin
         headers["Access-Control-Allow-Credentials"] = "true"
-        headers["Access-Control-Allow-Methods"] = "*"
-        headers["Access-Control-Allow-Headers"] = "*"
-    logger.error(f"Global unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
+    return headers
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception on {request.method} {request.url}: {exc}", exc_info=True)
+    # Do NOT return str(exc) — friendly message only
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error", "error": str(exc)},
-        headers=headers,
+        content={"detail": "Something went wrong. Please try again."},
+        headers=_cors_headers(request),
     )
 
 
@@ -6492,36 +6495,6 @@ async def identify_coin_photo(
         "source":         "AI Photo Identifier",
         "deep_dive_status": "PENDING",
     }
-
-    if final_cert:
-        try:
-            from routes.cert_routes import clean_cert_number as _clean_cnum
-            cert_clean_id = _clean_cnum(str(final_cert))
-            coin_display = f"{ai_coin.get('Year', '')} {ai_coin.get('Denomination', '')} {ai_coin.get('Program/Series', '')}".strip()
-            db.collection("cert_cache").document(cert_clean_id).set({
-                "grader": final_service or "UNKNOWN",
-                "cert_num": cert_clean_id,
-                "coin_name": coin_display,
-                "year": str(ai_coin.get("Year") or ""),
-                "mint": ai_coin.get("Mint Mark") or "",
-                "grade": ai_coin.get("Condition") or "",
-                "denomination": ai_coin.get("Denomination") or "",
-                "updated_at": firestore.SERVER_TIMESTAMP,
-            }, merge=True)
-            digits_id = re.sub(r"\D", "", cert_clean_id)
-            if digits_id and digits_id != cert_clean_id:
-                db.collection("cert_cache").document(digits_id).set({
-                    "grader": final_service or "UNKNOWN",
-                    "cert_num": cert_clean_id,
-                    "coin_name": coin_display,
-                    "year": str(ai_coin.get("Year") or ""),
-                    "mint": ai_coin.get("Mint Mark") or "",
-                    "grade": ai_coin.get("Condition") or "",
-                    "denomination": ai_coin.get("Denomination") or "",
-                    "updated_at": firestore.SERVER_TIMESTAMP,
-                }, merge=True)
-        except Exception as _ce:
-            logger.warning(f"Could not cache identified cert {final_cert} into cert_cache: {_ce}")
 
     # -- 5. Optionally save to Firestore + GCS ---------------------------------
     coin_id      = str(uuid.uuid4())

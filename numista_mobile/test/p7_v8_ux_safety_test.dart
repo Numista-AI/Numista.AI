@@ -1863,6 +1863,111 @@ void main() {
       expect(find.text('Check this slab on cacgrading.com'), findsOneWidget);
     });
 
+    testWidgets('p7_v8188_cert_lookup_found_prefills_fields', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 1200);
+
+      HttpAuthClient.httpClientOverride = MockClient((request) async {
+        if (request.url.path == '/api/cert_lookup') {
+          return http.Response(
+            jsonEncode({
+              'found': true,
+              'cert_num': '12345678',
+              'grader': 'NGC',
+              'coin_name': r'1881-S $1 Morgan',
+              'year': '1881',
+              'grade': 'MS65',
+              'denomination': r'$1',
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{"detail":"not found"}', 404);
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Select NGC chip
+      await tester.tap(find.widgetWithText(FilterChip, 'NGC'));
+      await tester.pumpAndSettle();
+
+      // Enter cert number
+      final certField = find.byType(TextField).first;
+      await tester.enterText(certField, '12345678');
+      await tester.pumpAndSettle();
+
+      // Tap Look Up
+      await tester.tap(find.text('Look Up'));
+      await tester.pumpAndSettle();
+
+      // Verify fields prefilled
+      expect(find.text(r'1881-S $1 Morgan'), findsOneWidget);
+      expect(find.text('1881'), findsOneWidget);
+      expect(find.text('MS65'), findsOneWidget);
+      expect(find.text(r'$1'), findsOneWidget);
+    });
+
+    testWidgets('p7_v8188_cert_lookup_not_found_ngc_shows_honest_message', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 1200);
+
+      HttpAuthClient.httpClientOverride = MockClient((request) async {
+        if (request.url.path == '/api/cert_lookup') {
+          return http.Response(
+            jsonEncode({
+              'found': false,
+              'message': 'Direct NGC cert lookup is not supported.',
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{"detail":"not found"}', 404);
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Select NGC chip
+      await tester.tap(find.widgetWithText(FilterChip, 'NGC'));
+      await tester.pumpAndSettle();
+
+      // Enter cert number
+      final certField = find.byType(TextField).first;
+      await tester.enterText(certField, '1234567-001');
+      await tester.pumpAndSettle();
+
+      // Tap Look Up
+      await tester.tap(find.text('Look Up'));
+      await tester.pumpAndSettle();
+
+      // Verify honest message is displayed
+      expect(
+        find.textContaining('Direct NGC cert lookup is not supported'),
+        findsOneWidget,
+      );
+
+      // Verify Scan Slab Photo button is displayed with height >= 48px
+      final scanBtnFinder = find.widgetWithText(ElevatedButton, 'Scan Slab Photo');
+      expect(scanBtnFinder, findsOneWidget);
+      final btnSize = tester.getSize(scanBtnFinder);
+      expect(btnSize.height, greaterThanOrEqualTo(48.0));
+
+      // Tap Scan Slab Photo and verify scan flow is triggered
+      await tester.tap(scanBtnFinder);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Take a photo'), findsOneWidget);
+    });
+
     test('URL constants default to live URLs', () {
       // These must match byte-for-byte with the live deployed values
       expect(kApiBaseUrl, equals('https://numista-backend-568985927038.us-central1.run.app'));
