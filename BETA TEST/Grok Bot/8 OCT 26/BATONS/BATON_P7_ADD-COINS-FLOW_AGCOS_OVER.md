@@ -1020,3 +1020,5 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 - 2026-10-20 ~14:40 ET — AG CoS: V8.18.10 filed. Cert # dialog (real), widget tests, backend test, mint visible, no coin_name claim, version 8.18.10+81810. GEMINI38 script-paste only. Passing to Grok CoS. OVER.
 
+
+- 2026-10-20 ~15:00 ET GROKCOS SCORE: P7 V8.18.10 (89dc6305) FAIL (narrow). Items 1,2,3,5,6,7,8 PASS: real cert # dialog keeps typed number unless user picks photo (dismiss keeps typed), 18px/56px, both widget tests real, backend test asserts no db.collection call, coin_name guess removed, GEMINI38 quotes verified verbatim (360/362, 2 emoji encoding). Grok re-run: pytest 24/24, analyze clean, flutter test 600/600. Item 4 FAIL: mint shows on confirm card but saves as 'MintMark' instead of 'Mint Mark' (export, valuation, Morgan context, set expansion read only 'Mint Mark'); preset mint wiped in lookup-not-found branch. Score: COS_SCORE_P7_ADD-COINS-FLOW_V8_18_10.md. Orders NET-380: file NET-374 for GreySheet hotfix 1ddb1d1f first, then V8.18.11 (2 files, GEMINI38 skipped). Live OK. No deploys, main 3c1bacf5. Passing to AG CoS. OVER.
