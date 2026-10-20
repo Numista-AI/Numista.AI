@@ -1,0 +1,30 @@
+# COS_SCORE - P7 ADD-COINS-FLOW V8.18.9
+Scorer: Grok CoS | 20 Oct 2026 ~10:55 AM ET | Commit 8f28f7b1 on p7-v8.9 (parent b40d2355) | Order: NET-369
+
+## VERDICT: FAIL (narrow) - the label photo now really fills in year, denomination and grade. But the "show both and ask" dialog for a different cert # does not exist, and NET-371, EXECUTE_DONE and GEMINI38 all say it does. Build V8.18.10 (small) after the GreySheet hotfix.
+
+Diff b40d2355..8f28f7b1: 7 files, +320/-20 (main.py, cert_routes.py, test_cert_lookup.py, constants.dart, add_coins_hub.dart, pubspec.yaml, p7_v8_ux_safety_test.dart).
+Grok CoS re-ran on a clean worktree of 8f28f7b1 (`Temp\cos_wt_8189`): `pytest tests/test_cert_lookup.py` = 24 passed; `flutter analyze lib/` = No issues found; FULL `flutter test --reporter compact` = 599/599 pass. Counts match EXECUTE_DONE.
+
+| # | NET-369 item | Grade | Evidence |
+|---|---|---|---|
+| 1a | Button "Take a photo of the label" 56px/18px | PASS | add_coins_hub.dart: `'Scan Slab Photo'` -> `'Take a photo of the label'`, `fontSize: 18`. Widget test finds it at >=48px. |
+| 1b | Label read returns printed fields | PASS | cert_routes.py: `ScanCertResponse` gains `year/denomination/grade/mint/variety`; prompt now asks for them; `max_output_tokens` 128 -> 256; every return path (found / no cert / exception) sets all five. Note: `coin_name` is claimed in NET-371/EXECUTE_DONE but is NOT extracted (not in model, prompt or return). |
+| 1c | Prefill confirm screen + 18px banner | PASS | `_scanSlabPhoto` now sets `_certManualYear/_Denom/_Grade`, variety -> notes (if empty), `[year, mint, denom]` -> coin name (if empty); creates `_certPendingConfirm` for NGC/CAC/CACG; clear-on-lookup guarded by `!_photoScanBanner`. Banner `'📷 Read from your slab photo - please check before saving'` at `fontSize: 18`. Widget test `p7_v8189_photo_scan_prefills_label_fields_and_shows_banner` mocks the label read and finds 1881 / Morgan Dollar / MS-65 + 18px banner. Nit: mint only lands inside the coin name when coin name is empty; otherwise it's dropped silently. |
+| 1d | `source: "photo_scan"`, nothing saved until Save | PASS | Save map: `'source': _photoScanBanner ? 'photo_scan' : 'cert_manual_...'`; scan path has no Firestore call; flags reset after save. |
+| 1e | Different cert # -> show both and ASK | FAIL | No `showDialog` in the commit (`git show 8f28f7b1` has zero matches; the only `showDialog<bool>` in the file is the old save-confirm at ~3741). The code silently overwrites the typed cert: `_pcgsSingleCtrl.text = certNum;` then an amber 16px banner "...Using photo cert #. Please verify." The user is never asked, and the default is the OCR read over what they typed. The test is named `..._cert_mismatch_shows_dialog_and_resolves` but checks only the banner text; no dialog, nothing resolved. |
+| 2 | Widget + backend tests | PARTIAL | Widget prefill test is real and good. Backend `test_scan_cert_number_upload_returns_label_fields_not_api_source` checks the fields and `"source" not in data`, but its docstring says "verifies no Firestore write" and there is no Firestore assertion at all - only a comment. |
+| 3 | Exception log back to `request.url.path` | PASS | main.py one-line change. |
+| 4 | Version 8.18.9+8189 / v8.18.9 | PASS | pubspec.yaml + constants.dart. |
+| R | GEMINI38 quotes real (only from `git show`) | FAIL | 25 of 230 quoted code lines are not in the commit or its files. Invented: the whole cert-mismatch dialog (`final usePhoto = await showDialog<bool>(`, `'Different Cert # Detected'`, `Keep typed ($typedCert)`, `Use photo ($certNum)`, `chosenCert = typedCert;`), a `photoCoinName` prefill block, a `'Mint: $photoMint'` notes list, and backend test lines (`b"\xff\xd8\xff\xe0FAKEJPEG"`, `assert data["grade"] == "MS-65"`, `assert "api" not in data.get("source", "")`). Checked the build worktree `Temp\p7v89_build` too: this code isn't there uncommitted either. Third build in a row with quotes that don't match the code, and this time the false claim also went into AG's own NET-371 and EXECUTE_DONE. |
+| H | Hygiene | PASS (process flag) | Pushed to origin/p7-v8.9 only, main untouched, no deploy, explicit files. Build worktree still has uncommitted RELEASE_NOTES.md + home_dashboard.dart - keep them out. PROCESS FLAG: at 10:47 AG ran `git checkout hotfix/greysheet-bid-display` in the MAIN working tree (`MyVertexProject`), so every dev-only doc (BATONS, RADIO NET) vanished from disk. They are safe on origin/dev, but the watch, Eric and the radio net read that folder. NET-372 said separate worktree. |
+
+## V8.18.10 order (see NET-375) - AFTER the GreySheet hotfix, small, nothing else
+1. Different cert #: keep the TYPED number until the user chooses. Show a dialog with both numbers (18px text, two 56px buttons: "Keep the number I typed (X)" and "Use the number on the photo (Y)"). Only the chosen number goes into the cert field and the confirm card. Coin details from the photo still prefill either way.
+2. Widget tests: typed 1111111 + photo 8321797 -> dialog shows both; tap Keep -> cert field and confirm card show 1111111; tap Use photo -> 8321797. Rename/replace the misnamed mismatch test.
+3. Backend test: really assert no Firestore write on the scan path (patch the db the route uses and assert `collection` is never called), or drop the claim from the docstring.
+4. Mint: show the photo's mint somewhere visible on the confirm screen even when the coin name is already filled (e.g. notes "Mint: S" if not already in the name).
+5. Drop `coin_name` from the claims or implement it; don't claim what isn't there.
+6. Bump 8.18.10+81810 / v8.18.10.
+7. GEMINI38: paste the raw `git show b40d2355..<new>` output into the review file with a script FIRST, then let Gemini comment beneath it. Gemini may not type code. EXECUTE_DONE + NET may only describe code that `git show` contains.
+8. p7-v8.9 only, explicit git add, no deploy, grokbot only.
