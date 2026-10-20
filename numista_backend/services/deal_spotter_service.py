@@ -9,7 +9,7 @@ class DealSpotterService:
 
     def calculate_arbitrage(self, listing_price: float, shipping: float, benchmark_val: float = 0.0, **kwargs) -> Dict[str, Any]:
         """Calculates net profit margin and percentage below benchmark price."""
-        target_val = benchmark_val if benchmark_val > 0 else float(kwargs.get("greysheet_bid") or 0.0)
+        target_val = benchmark_val if benchmark_val > 0 else 0.0
         total_cost = listing_price + shipping
         net_margin = round(target_val - total_cost, 2)
         margin_percent = round((net_margin / total_cost) * 100, 1) if total_cost > 0 else 0.0
@@ -28,7 +28,9 @@ class DealSpotterService:
             year = str(item.get("Year") or item.get("year") or "1921")
             mint = str(item.get("MintMark") or item.get("mint") or "S")
             series = str(item.get("ProgramSeries") or item.get("series") or "Morgan Dollars")
-            benchmark_val = float(item.get("cpgRetail") or item.get("cpg_retail") or item.get("greysheetBid") or 95.0)
+            benchmark_val = float(item.get("cpgRetail") or item.get("cpg_retail") or 0.0)
+            if benchmark_val <= 0:
+                continue
 
             listing_price = round(benchmark_val * 0.78, 2)
             shipping = 4.00

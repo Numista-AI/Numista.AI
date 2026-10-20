@@ -146,3 +146,38 @@ def test_invoice_cost_split_contains_no_bid_fields():
         assert "greysheet_bid" not in detail
         assert "share_pct" in detail
         assert "cost" in detail
+
+
+# --- DealSpotterService rev 2 tests (hotfix: CPG-only, no bid fallback, no fake $95) ---
+
+from services.deal_spotter_service import DealSpotterService
+
+
+def test_deal_spotter_bid_only_item_yields_no_deal():
+    """An item with only greysheetBid and no CPG must yield no deal (not relabeled as cpg_retail)."""
+    service = DealSpotterService()
+    items = [{"Year": "1881", "mint": "S", "series": "Morgan Dollars", "greysheetBid": 120.0}]
+    deals = service.match_wishlist_items(items)
+    assert deals == [], f"Expected no deals for bid-only item, got: {deals}"
+    # Confirm no cpg_retail == 120.0 sneaking through
+    for deal in deals:
+        assert deal.get("cpg_retail") != 120.0
+
+
+def test_deal_spotter_empty_item_yields_no_deal():
+    """An item with no pricing values at all must yield no deal (not a fake $95 deal)."""
+    service = DealSpotterService()
+    items = [{"Year": "1921", "mint": "", "series": "Morgan Dollars"}]
+    deals = service.match_wishlist_items(items)
+    assert deals == [], f"Expected no deals for empty item, got: {deals}"
+
+
+def test_deal_spotter_real_cpg_item_yields_deal():
+    """An item with a real cpgRetail value must still produce a deal (regression guard)."""
+    service = DealSpotterService()
+    items = [{"Year": "1881", "mint": "S", "series": "Morgan Dollars", "cpgRetail": 150.0}]
+    deals = service.match_wishlist_items(items)
+    assert len(deals) == 1, f"Expected 1 deal for CPG item, got: {deals}"
+    assert deals[0]["cpg_retail"] == 150.0
+    assert "greysheet_bid" not in deals[0]
+    assert "net_margin" not in deals[0]
