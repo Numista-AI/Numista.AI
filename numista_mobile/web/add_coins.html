@@ -550,6 +550,19 @@ async function getAuthHeader() {
   }
 }
 
+const SIGN_IN_AGAIN_MSG = 'Please sign in again. Your sign-in has expired - go back to Numista.AI, sign in, then reopen Bulk Import.';
+class AuthError extends Error {}
+
+/** Waits for Firebase sign-in; throws AuthError if no signed-in user/token. */
+async function requireAuthHeader() {
+  const h = await getAuthHeader();
+  if (!h.Authorization) throw new AuthError(SIGN_IN_AGAIN_MSG);
+  return h;
+}
+function checkAuthResp(resp) {
+  if (resp && (resp.status === 401 || resp.status === 403)) throw new AuthError(SIGN_IN_AGAIN_MSG);
+}
+
 function showError(msg) {
   let errBox = document.getElementById('error-banner');
   if (!errBox) {
@@ -684,8 +697,10 @@ async function startImport() {
 
       const resp = await fetch(API_BASE + '/api/import/upload', {
         method: 'POST',
+        headers: await requireAuthHeader(),
         body: formData
       });
+      checkAuthResp(resp);
 
       if (!resp.ok) {
         let errMsg = 'Upload failed';
@@ -704,9 +719,10 @@ async function startImport() {
     startPolling();
 
     const procResp = await fetch(API_BASE + '/api/import/process', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: Object.assign({'Content-Type':'application/json'}, await requireAuthHeader()),
       body: JSON.stringify({ user_email: USER_EMAIL, session_id: sessionId, mask_pii: maskPiiEnabled }),
     });
+    checkAuthResp(procResp);
 
     if (!procResp.ok) {
       const procData = await procResp.json();
@@ -714,7 +730,9 @@ async function startImport() {
     }
   } catch(err) {
     console.error('Import failure:', err);
-    showError('Import Error: ' + err.message);
+    if (err instanceof AuthError) { clearInterval(pollInterval); showError(SIGN_IN_AGAIN_MSG); }
+    else if (err instanceof TypeError) showError('Could not reach Numista.AI. If this keeps happening, please sign in again and retry.');
+    else showError('Import Error: ' + err.message);
   } finally {
     resetImportUIState();
   }
@@ -765,8 +783,10 @@ function startPolling() {
   pollInterval = setInterval(async () => {
     try {
       const r = await fetch(
-        API_BASE + '/api/import/status/' + sessionId + '?user_email=' + encodeURIComponent(USER_EMAIL)
+        API_BASE + '/api/import/status/' + sessionId + '?user_email=' + encodeURIComponent(USER_EMAIL),
+        { headers: await getAuthHeader() }
       );
+      if (r.status === 401 || r.status === 403) { clearInterval(pollInterval); showError(SIGN_IN_AGAIN_MSG); return; }
       if (!r.ok) return;
       const data = await r.json();
 
@@ -814,6 +834,7 @@ async function loadReceipts() {
       API_BASE + '/api/receipts/' + encodeURIComponent(USER_EMAIL) + '?session_id=' + sessionId,
       { headers: authHeader }
     );
+    if (r.status === 401 || r.status === 403) { showError(SIGN_IN_AGAIN_MSG); return; }
     if (!r.ok) return;
     const data = await r.json();
     if (!(data.receipts || []).length) return;
@@ -877,6 +898,7 @@ async function viewReceipt(receiptId, e) {
       API_BASE + '/api/receipts/' + encodeURIComponent(USER_EMAIL) + '/' + receiptId + '/view_url',
       { headers: authHeader }
     );
+    if (r.status === 401 || r.status === 403) { showError(SIGN_IN_AGAIN_MSG); return; }
     const data = await r.json();
     if (data.signed_url) window.open(data.signed_url, '_blank');
     else alert('Could not retrieve receipt URL.');
