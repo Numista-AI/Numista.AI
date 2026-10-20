@@ -400,6 +400,28 @@
 
 
 
+
+
+## v8.18.10 — 2026-10-20
+**P7-v8.18.10 Enhancements & Platform Updates**
+
+- P7-v8.18.10: real cert# dialog, widget tests, backend test assert, mint visible, no coin_name, version 8.18.10
+- NET-372 / NET-376: Greysheet bid/wholesale display and data stripped across app, retail market basis only
+- P7-v8.18.9: label photo reader prefills confirm screen, photo_scan banner, safe path logging, bump v8.18.9
+- P7-v8.18.8: delete fake cert data, remove cert_cache, honest NGC UI, safe exception handler, invoice proof, tests
+
+## v8.18.9 — 2026-10-20
+**P7-v8.18.9 Enhancements & Platform Updates**
+
+- P7-v8.18.9: label photo reader prefills confirm screen, photo_scan banner, safe path logging, bump v8.18.9
+- P7-v8.18.8: delete fake cert data, remove cert_cache, honest NGC UI, safe exception handler, invoice proof, tests
+- P7: V8.18.7 resolve FT gate V3 blockers for cert lookup, CORS, caching, and mapping
+- P7-v8.18.6: concurrent shared cert reader with budget, precedence over pass1/2, friendly error message
+- P7-v8.18.5: one error card, cert reader unified, morgan avatar HTML fix, ValueKey finders, camera=(self), localhost proof, config test glob
+- P7-v8.18.4: test fixes, Photo ID error card, same cert reader, image pin, morgan avatar, importer banner, firebase config test, localhost proof
+- P7-v8.18.3: firebase config align, scan guards, 18px+56px, camera fallback, manual cert fields, pubspec image pin
+- P7-v8.18.2: cert_routes project-id code fix, scan 28s cap, 314vs312 doc IDs
+
 ## v4.403 — 2026-10-01
 **Security Hardening — Auth on Grade Reviews, Admin Access, Beta Status Fix**
 

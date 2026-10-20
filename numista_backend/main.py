@@ -2746,10 +2746,11 @@ def execute_add_coin(
             "created_at": firestore.SERVER_TIMESTAMP,
         }
         if dry_run:
+            snap = {k: v for k, v in coin_data.items() if k not in ("greysheet_bid", "greysheet_ask", "greysheetBid", "greysheetAsk")}
             return {
                 "action": "add_coin",
                 "status": "prepared",
-                "coin_snapshot": coin_data,
+                "coin_snapshot": snap,
                 "year": str(year),
                 "mint_mark": clean_mint,
                 "denomination": norm_denom,
@@ -5893,7 +5894,6 @@ async def preview_cost_split(
                 "cost": f"${int_cents[i] / 100:.2f}",
                 "cost_cents": int_cents[i],
                 "share_pct": round(pct, 2),
-                "greysheet_bid": greysheet_values[i],
             })
     else:
         split_method = "even_split"
@@ -5909,7 +5909,6 @@ async def preview_cost_split(
                 "cost": f"${cents / 100:.2f}",
                 "cost_cents": cents,
                 "share_pct": round(100.0 / n, 2),
-                "greysheet_bid": greysheet_values[i] if i < len(greysheet_values) else 0.0,
             })
 
     return JSONResponse(content={
@@ -6077,7 +6076,6 @@ async def commit_group_photo(
                             "coin_id": cid,
                             "cost": cost_str,
                             "share_pct": round(pct, 2),
-                            "greysheet_bid": greysheet_values[idx],
                             "denomination": request.coins[orig_i].denomination if orig_i < len(request.coins) else "",
                         })
                         try:
@@ -6108,7 +6106,6 @@ async def commit_group_photo(
                             "coin_id": cid,
                             "cost": cost_str,
                             "share_pct": round(100.0 / n_ids, 2),
-                            "greysheet_bid": greysheet_values[idx] if idx < len(greysheet_values) else 0.0,
                             "denomination": request.coins[orig_i].denomination if orig_i < len(request.coins) else "",
                         })
                         try:
@@ -10567,15 +10564,13 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                         "greysheetName": f"{coin_data.get('name', 'Coin Set')} (Aggregate {valid_coins_count}-Coin Sum)",
                         "priceLastUpdated": firestore.SERVER_TIMESTAMP,
                         "greysheet_aggregate_basis": f"Calculated by summing Greysheet values across {valid_coins_count} constituent coins.",
-                        "ai_value_basis": f"Greysheet aggregate sum of {valid_coins_count} uncirculated coins: Bid ${agg_bid:.2f} / Ask ${agg_ask:.2f} / Retail ${agg_retail:.2f}.",
-                        "AI Estimated Value": f"${agg_bid:.2f} - ${agg_retail:.2f}"
+                        "ai_value_basis": f"Greysheet aggregate sum of {valid_coins_count} uncirculated coins: Retail ${agg_retail:.2f}.",
+                        "AI Estimated Value": f"${agg_retail:.2f}"
                     }
                     coin_ref.update(update_payload)
                     return {
                         "status": "success",
                         "cpgRetail": round(agg_retail, 2),
-                        "greysheetBid": round(agg_bid, 2),
-                        "greysheetAsk": round(agg_ask, 2),
                         "greysheetGrade": "Uncirculated Set",
                         "greysheetName": f"{coin_data.get('name', 'Coin Set')} (Aggregate {valid_coins_count}-Coin Sum)",
                         "gradeMatched": "Uncirculated Set"
@@ -10930,15 +10925,11 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         return {
             "status": "success",
             "cpg_retail": cpg_retail,
-            "greysheet_bid": greysheet_bid,
-            "greysheet_ask": greysheet_ask,
             "pcgs_value": pcgs_val,
             "ngc_value": ngc_val,
             "blue_book_value": blue_book_val,
             "cac_premium_flag": has_cac_flag,
             "cpgRetail": cpg_retail,
-            "greysheetBid": greysheet_bid,
-            "greysheetAsk": greysheet_ask,
             "greysheetGrade": grade_label,
             "greysheetName": cached_gs_name,
             "gradeMatched": grade_label,
@@ -10990,8 +10981,7 @@ DEALS_DB = [
         "shipping": 4.00,
         "gsid": 429,
         "grade": "MS64",
-        "greysheet_bid": 95.00,
-        "net_margin": 16.00,
+        "cpg_retail": 95.00,
         "margin_percent": 16.8
     },
     {
@@ -11003,8 +10993,7 @@ DEALS_DB = [
         "shipping": 3.50,
         "gsid": 429,
         "grade": "MS63",
-        "greysheet_bid": 52.00,
-        "net_margin": 6.50,
+        "cpg_retail": 52.00,
         "margin_percent": 12.5
     }
 ]
@@ -11027,7 +11016,7 @@ async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user
             "shipping": 4.00,
             "gsid": 429,
             "grade": "MS64",
-            "greysheet_bid": 95.00,
+            "cpg_retail": 95.00,
         },
         {
             "id": f"ebay_{random.randint(10000000000, 99999999999)}",
@@ -11038,7 +11027,7 @@ async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user
             "shipping": 3.50,
             "gsid": 429,
             "grade": "MS63",
-            "greysheet_bid": 52.00,
+            "cpg_retail": 52.00,
         },
         {
             "id": f"ebay_{random.randint(10000000000, 99999999999)}",
@@ -11049,14 +11038,14 @@ async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user
             "shipping": 12.00,
             "gsid": 420,
             "grade": "VF30",
-            "greysheet_bid": 1250.00,
+            "cpg_retail": 1250.00,
         }
     ]
     
-    # Calculate margins
+    # Calculate margins against CPG Retail benchmark
     for d in new_deals:
-        d["net_margin"] = d["greysheet_bid"] - d["price"] - d["shipping"]
-        d["margin_percent"] = round((d["net_margin"] / (d["price"] + d["shipping"])) * 100, 1)
+        margin = d["cpg_retail"] - d["price"] - d["shipping"]
+        d["margin_percent"] = round((margin / (d["price"] + d["shipping"])) * 100, 1) if (d["price"] + d["shipping"]) > 0 else 0.0
     
     global DEALS_DB
     DEALS_DB = new_deals
@@ -11106,8 +11095,8 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest, _admin: dic
             except Exception:
                 pass
             
-            # Default to Bid value as standard valuation
-            val = float(coin.get("greysheetBid") or 0.0)
+            # Default to CPG value as standard valuation (NET-372: bid removed)
+            val = float(coin.get("cpgRetail") or 0.0)
             if val == 0.0:
                 # Fallback to AI Value -- use clean_valuation_value() which
                 # correctly handles range strings like "$1,150 - $1,350"
@@ -11586,9 +11575,8 @@ async def search_ebay_deals(
                 "shipping": shipping_val,
                 "gsid": 429,  # Default / fallback mapped GSID
                 "grade": "MS64",
-                "greysheet_bid": 95.00,
-                "net_margin": 95.00 - price_val - shipping_val,
-                "margin_percent": round(((95.00 - price_val - shipping_val) / (price_val + shipping_val)) * 100, 1) if price_val > 0 else 0,
+                "cpg_retail": 95.00,
+                "margin_percent": round(((95.00 - price_val - shipping_val) / (price_val + shipping_val)) * 100, 1) if (price_val + shipping_val) > 0 else 0,
             })
         return {"deals": deals}
     except HTTPException:
@@ -11770,8 +11758,8 @@ async def get_user_wishlist_deals(
         service = DealSpotterService(db=db)
         
         default_items = [
-            {"year": "1909", "mint": "S", "series": "Lincoln Cents", "greysheetBid": 95.0},
-            {"year": "1881", "mint": "S", "series": "Morgan Dollars", "greysheetBid": 125.0}
+            {"year": "1909", "mint": "S", "series": "Lincoln Cents", "cpgRetail": 95.0},
+            {"year": "1881", "mint": "S", "series": "Morgan Dollars", "cpgRetail": 125.0}
         ]
         
         deals = service.match_wishlist_items(default_items)

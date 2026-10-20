@@ -22,7 +22,8 @@ def test_deal_spotter_wishlist_matching():
     deals = service.match_wishlist_items(items)
     assert len(deals) == 1
     assert "deal_badge" in deals[0]
-    assert deals[0]["greysheet_bid"] == 150.0
+    assert deals[0]["cpg_retail"] == 150.0
+    assert "greysheet_bid" not in deals[0]
 
 def test_wishlist_deals_endpoints():
     res1 = client.get("/api/wishlist/deals/test@numista.ai")

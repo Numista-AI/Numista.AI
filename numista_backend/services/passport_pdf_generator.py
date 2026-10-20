@@ -164,7 +164,7 @@ def format_financial_details(itm: Dict[str, Any]) -> str:
     ret = _get_val(itm, "retailer", "Retailer", "vendor_name")
     inv = _get_val(itm, "retailerInvoiceNo", "retailer_invoice_no", "Retailer Invoice #", "invoice_id")
     loc = _get_val(itm, "storageLocation", "storage_location", "Storage Location")
-    est_val = _get_val(itm, "AI Estimated Value", "ai_value", "cpgRetail", "greysheetBid", "Melt Value")
+    est_val = _get_val(itm, "AI Estimated Value", "ai_value", "cpgRetail", "Melt Value")
     # Personal notes strictly from user input (series_description is ignored)
     raw_notes = _get_val(itm, "personalNotes", "personal_notes", "Personal Notes I", "Personal Notes")
     
@@ -200,17 +200,6 @@ def format_financial_details(itm: Dict[str, Any]) -> str:
         except ValueError:
             cost_str = str(cost_val)
     details.append(f"<b>Qty:</b> {qty} | <b>Cost:</b> {cost_str}")
-
-    # Wholesale (Greysheet Bid)
-    bid_raw = _get_val(itm, "greysheetBid", "greysheet_bid")
-    if bid_raw is not None and str(bid_raw).strip() not in ("", "null"):
-        try:
-            bid_num = float(str(bid_raw).replace("$", "").replace(",", "").strip())
-            details.append(f"<b>Wholesale (Bid):</b> ${bid_num:,.2f}")
-        except ValueError:
-            details.append("<b>Wholesale (Bid):</b> —")
-    else:
-        details.append("<b>Wholesale (Bid):</b> —")
 
     # Retail (CPG Market)
     cpg_raw = _get_val(itm, "cpgRetail", "cpg_retail")
@@ -383,9 +372,7 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     ]]
 
     total_cost = 0.0
-    total_wholesale_bid = 0.0
     total_retail_cpg = 0.0
-    bid_count = 0
     cpg_count = 0
     has_cost = False
 
@@ -411,15 +398,6 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
             except ValueError:
                 pass
 
-        bid_raw = _get_val(itm, "greysheetBid", "greysheet_bid")
-        if bid_raw is not None and str(bid_raw).strip() not in ("", "null"):
-            try:
-                b_val = float(str(bid_raw).replace("$", "").replace(",", "").strip())
-                total_wholesale_bid += b_val * qty
-                bid_count += 1
-            except ValueError:
-                pass
-
         cpg_raw = _get_val(itm, "cpgRetail", "cpg_retail")
         if cpg_raw is not None and str(cpg_raw).strip() not in ("", "null"):
             try:
@@ -436,13 +414,7 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
             Paragraph(fin_details, body_normal)
         ])
 
-    if total_wholesale_bid > 0 or total_retail_cpg > 0:
-        item_rows.append([
-            Paragraph("<b>TOTAL WHOLESALE LIQUIDATION (BID)</b>", body_bold),
-            Paragraph(f"{bid_count}/{len(items)} items with Bid", body_normal),
-            Paragraph("", body_normal),
-            Paragraph(f"<font color='#0284C7'><b>${total_wholesale_bid:,.2f}</b></font>", body_bold)
-        ])
+    if total_retail_cpg > 0:
         item_rows.append([
             Paragraph("<b>TOTAL RETAIL REPLACEMENT (CPG)</b>", body_bold),
             Paragraph(f"{cpg_count}/{len(items)} items with CPG", body_normal),
@@ -503,7 +475,7 @@ def generate_passport_pdf(transfer_data: Dict[str, Any]) -> bytes:
     # Valuation & CDN Greysheet Attribution Disclaimer
     val_disclaimer_text = (
         "<font size=7 color='#64748B'><b>VALUATION NOTICE &amp; DISCLAIMER:</b> Numismatic value estimates powered by "
-        "CDN Greysheet® Wholesale Bid &amp; CPG® Retail Price Guides. Bullion values calculated using live spot market feeds. "
+        "CPG® Retail Price Guide. Bullion values calculated using live spot market feeds. "
         "CDN does not endorse this collection. This document is generated for lateral transfer and inventory documentation "
         "purposes only; it is not a certified USPAP appraisal.</font>"
     )

@@ -62,13 +62,24 @@ class BackupExportService {
     final email = user?.email ?? 'guest@numista.ai';
     final fs = FirebaseFirestore.instance;
 
+    // Helper: strip non-exportable bid/ask fields per NET-372
+    Map<String, dynamic> sanitizeDoc(Map<String, dynamic> doc) {
+      final copy = Map<String, dynamic>.from(doc);
+      copy.remove('greysheetBid');
+      copy.remove('greysheet_bid');
+      copy.remove('greysheetAsk');
+      copy.remove('greysheet_ask');
+      copy.remove('bid_total');
+      return copy;
+    }
+
     // Helper: query a subcollection under the user doc and return list of maps
     Future<List<Map<String, dynamic>>> fetchCollection(String subcollection) async {
       final List<Map<String, dynamic>> results = [];
       try {
         final snap = await fs.doc(AuthService.userDocPath).collection(subcollection).get();
         for (final doc in snap.docs) {
-          results.add({'_id': doc.id, ...doc.data()});
+          results.add(sanitizeDoc({'_id': doc.id, ...doc.data()}));
         }
       } catch (e) {
         debugPrint('[BackupExportService] Error fetching $subcollection: $e');
@@ -81,7 +92,7 @@ class BackupExportService {
       try {
         final docSnap = await fs.doc(AuthService.userDocPath).collection(subcollection).doc(docId).get();
         if (docSnap.exists && docSnap.data() != null) {
-          return {'_id': docSnap.id, ...docSnap.data()!};
+          return sanitizeDoc({'_id': docSnap.id, ...docSnap.data()!});
         }
       } catch (e) {
         debugPrint('[BackupExportService] Error fetching $subcollection/$docId: $e');

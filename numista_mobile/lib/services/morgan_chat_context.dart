@@ -227,13 +227,12 @@ class MorganChatContextService {
 
         final aiVal = _parseCurrency(data['AI Estimated Value'] ?? data['ai_estimated_value'] ?? data['ai_value']);
         final cpg   = _parseCurrency(data['cpgRetail'] ?? data['cpg_retail']);
-        final bid   = _parseCurrency(data['greysheetBid'] ?? data['greysheet_bid']);
         final cost  = _parseCurrency(data['Cost'] ?? data['cost'] ?? data['purchase_cost'] ?? data['purchase_price']);
 
-        final baseVal  = cpg > 0 ? cpg : (bid > 0 ? bid : aiVal);
-        final finalBid = bid > 0 ? bid : (baseVal * 0.80);
+        // NET-372: retail market basis only, bid removed
+        final baseVal = cpg > 0 ? cpg : aiVal;
 
-        portfolioValue  += finalBid;
+        portfolioValue  += baseVal;
         acquisitionCost += cost;
 
         final rawItemType = data['item_type']?.toString().trim();
@@ -306,7 +305,7 @@ class MorganChatContextService {
           unverifiedCount++;
         }
 
-        ranked.add({...data, '_parsedValue': baseVal > 0 ? baseVal : finalBid, '_docId': docId});
+        ranked.add({...data, '_parsedValue': baseVal, '_docId': docId});
       }
 
       // Sort by value descending

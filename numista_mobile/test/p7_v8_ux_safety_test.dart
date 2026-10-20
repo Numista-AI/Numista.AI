@@ -1572,14 +1572,13 @@ void main() {
         {
           'Year': 1921,
           'Denomination': 'Morgan Dollar',
-          'greysheetBid': '50.00',
-          'cpgRetail': '65.00',
+          'cpgRetail': '50.00',
           'quantity': 2,
         },
         {
           'Year': 2021,
           'Denomination': 'Silver Eagle',
-          'greysheetBid': '35.00',
+          'cpgRetail': '35.00',
           'quantity': 1,
         },
         {
@@ -1591,7 +1590,7 @@ void main() {
             {'Denomination': 'Half Dollar', 'Year': '1976'},
             {'Denomination': 'Dollar', 'Year': '1976'},
           ],
-          'greysheetBid': '25.00',
+          'cpgRetail': '25.00',
         },
       ]);
 
@@ -1600,7 +1599,7 @@ void main() {
       // Verify totalCoins expanded: 2 + 1 + 3 = 6 coins
       expect(ctx.totalCoins, equals(6));
 
-      // Verify portfolio valuation: 50.0 + 35.0 + 25.0 = 110.0 (estate bid default)
+      // Verify portfolio valuation: 50.0 + 35.0 + 25.0 = 110.0 (NET-372: retail market basis)
       expect(ctx.portfolioValue, equals(110.0));
 
       // Verify opening message aligns with count and formatted value

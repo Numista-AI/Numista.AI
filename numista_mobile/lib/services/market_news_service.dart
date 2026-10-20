@@ -110,7 +110,7 @@ class MarketNewsService {
         link: "https://www.greysheet.com",
         source: "Greysheet",
         published: "Sun, 26 Jul 2026",
-        summary: "Wholesale prices across MS63 to MS66 grades hold steady amid strong collector demand.",
+        summary: "Market prices across MS63 to MS66 grades hold steady amid strong collector demand.",
       )
     ];
   }

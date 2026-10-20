@@ -528,13 +528,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Comparable _sortKey(String field, Map<String, dynamic> m) {
     switch (field) {
       // ── AI Value ────────────────────────────────────────────────────────────
-      // Display logic (in _getCellValue) prefers greysheetBid / cpgRetail over
-      // the raw AI Estimated Value string.  Sort must use the same hierarchy.
+      // NET-372: Display logic prefers cpgRetail over raw AI Estimated Value.
+      // Greysheet bid is removed from display and sorting.
       case _F.aiValue:
         final cpg = _parseNumber(m['cpgRetail']);
-        final bid = _parseNumber(m['greysheetBid']);
-        // CPG Retail is the collector/market price (default); bid is dealer-wholesale (advanced)
-        final gVal = cpg > 0 ? cpg : bid;
+        final gVal = cpg;
         if (gVal > 0) return gVal;
         final av = m[_F.aiValue]?.toString() ?? '';
         return _parseAiValue(av); // strips ~, $, commas → double (0 if empty)
@@ -1419,6 +1417,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     return FutureBuilder<bool>(
                       future: ValuationModeService.isAdvancedMode(),
                       builder: (context, modeSnap) {
+                        // ignore: unused_local_variable (NET-372: bid/advanced mode removed)
                         final advanced = modeSnap.data ?? false;
                         // Use _cachedCoinsDocs (same data source as Coins tab)
                         // falling back to coinsSnap which resolves stream data
@@ -1437,8 +1436,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             final data = doc.data();
                             if (data['item_type'] == 'supply' || data['is_supply'] == true) continue;
                             final coinCpg = _parseNumber(data['cpgRetail']);
-                            final coinBid = _parseNumber(data['greysheetBid']);
-                            final gVal = advanced ? coinCpg : coinBid;
+                            final gVal = coinCpg;
                             if (gVal > 0) {
                               fallbackCoinsValue += gVal;
                             } else {
@@ -1491,8 +1489,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           final title = TextSanitizer.fixMojibake('$year $denom'.trim());
 
                           final coinCpg = _parseNumber(data['cpgRetail']);
-                          final coinBid = _parseNumber(data['greysheetBid']);
-                          final gVal = advanced ? coinCpg : coinBid;
+                          final gVal = coinCpg;
                           final displayValue = gVal > 0 
                               ? gVal 
                               : _parseAiValue(data['AI Estimated Value']?.toString() ?? '');
@@ -3017,8 +3014,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             : (themeStartsYear ? label : '$yearMint $label').trim();
         
         final valCpg = _parseNumber(m['cpgRetail']);
-        final valBid = _parseNumber(m['greysheetBid']);
-        final finalVal = advanced ? valCpg : valBid;
+        final finalVal = valCpg;
         
         final fmt = intl.NumberFormat.currency(symbol: '\$');
         final valueText = finalVal > 0 
@@ -3340,9 +3336,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         return n != null ? _currencyFmt.format(n) : rawC;
       case _F.aiValue:
         final coinCpg = _parseNumber(m['cpgRetail']);
-        final coinBid = _parseNumber(m['greysheetBid']);
-        // Default: CPG Retail (collector/market price).  Advanced: Greysheet Bid (dealer wholesale).
-        final gVal = advanced ? coinBid : (coinCpg > 0 ? coinCpg : coinBid);
+        // NET-372: CPG Retail only, bid removed from display
+        final gVal = coinCpg;
         if (gVal > 0) {
           return _currencyFmt.format(gVal);
         }

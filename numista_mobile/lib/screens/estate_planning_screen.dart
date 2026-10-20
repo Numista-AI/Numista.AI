@@ -839,6 +839,7 @@ class _CollectionTabState extends State<_CollectionTab> {
   Map<String, CoinEstateData> _estateData = {};
   List<EstateBeneficiary> _beneficiaries = [];
   bool _loading = true;
+  // ignore: unused_field (NET-372: bid/advanced mode removed from FMV calc)
   bool _isAdvancedMode = false;
   String _filter = 'All'; // 'All' | 'Unassigned' | 'Needs Appraisal'
   StreamSubscription<Map<String, CoinEstateData>>? _estateSub;
@@ -904,15 +905,9 @@ class _CollectionTabState extends State<_CollectionTab> {
     if (_estateData[c.id]?.fmvOverride != null) {
       return _estateData[c.id]!.fmvOverride!;
     }
-    if (_isAdvancedMode) {
-      final cpg = c.cpgRetail;
-      if (cpg > 0) return cpg;
-      return _parseValue(c.aiEstimatedValue);
-    } else {
-      final bid = c.greysheetBid;
-      if (bid > 0) return bid;
-      return _parseValue(c.aiEstimatedValue) * 0.80;
-    }
+    final cpg = c.cpgRetail;
+    if (cpg > 0) return cpg;
+    return _parseValue(c.aiEstimatedValue);
   }
 
   double _parseValue(String v) {
@@ -1054,6 +1049,7 @@ class _DivisionTabState extends State<_DivisionTab> {
   EstateProfile? _profile;
   bool _loading = true;
   bool _saving = false;
+  // ignore: unused_field (NET-372: bid/advanced mode removed from FMV calc)
   bool _isAdvancedMode = false;
 
   // Simulation results
@@ -1130,15 +1126,9 @@ class _DivisionTabState extends State<_DivisionTab> {
     if (_estateData[c.id]?.fmvOverride != null) {
       return _estateData[c.id]!.fmvOverride!;
     }
-    if (_isAdvancedMode) {
-      final cpg = c.cpgRetail;
-      if (cpg > 0) return cpg;
-      return _parseValue(c.aiEstimatedValue);
-    } else {
-      final bid = c.greysheetBid;
-      if (bid > 0) return bid;
-      return _parseValue(c.aiEstimatedValue) * 0.80;
-    }
+    final cpg = c.cpgRetail;
+    if (cpg > 0) return cpg;
+    return _parseValue(c.aiEstimatedValue);
   }
 
   double _parseValue(String v) {
