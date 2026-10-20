@@ -7,10 +7,11 @@ class DealSpotterService:
     def __init__(self, db=None):
         self.db = db
 
-    def calculate_arbitrage(self, listing_price: float, shipping: float, benchmark_val: float) -> Dict[str, Any]:
+    def calculate_arbitrage(self, listing_price: float, shipping: float, benchmark_val: float = 0.0, **kwargs) -> Dict[str, Any]:
         """Calculates net profit margin and percentage below benchmark price."""
+        target_val = benchmark_val if benchmark_val > 0 else float(kwargs.get("greysheet_bid") or 0.0)
         total_cost = listing_price + shipping
-        net_margin = round(benchmark_val - total_cost, 2)
+        net_margin = round(target_val - total_cost, 2)
         margin_percent = round((net_margin / total_cost) * 100, 1) if total_cost > 0 else 0.0
         is_arbitrage_deal = net_margin > 0 and margin_percent >= 10.0
         return {
