@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart' as intl;
@@ -27,9 +27,9 @@ import '../services/upcoming_releases_service.dart';
 import 'upcoming_releases_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
-  /// Called when the user taps "Ask Morgan" — routes to 'AI Deepdive'.
+  /// Called when the user taps "Ask Morgan" â€” routes to 'AI Deepdive'.
   final VoidCallback? onAskMorgan;
-  /// Called when the user taps a Morgan suggestion chip — navigates to AI Deepdive
+  /// Called when the user taps a Morgan suggestion chip â€” navigates to AI Deepdive
   /// with the given query pre-populated in the chat.
   final void Function(String query)? onAskMorganWithQuery;
   /// Called to navigate to My Collection (e.g. to run AI Valuation).
@@ -141,10 +141,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
   bool _isLoadingNews = true;
   Set<String> _dismissedNewsIds = {};
 
-  // ── Portfolio Insights state ───────────────────────────────────────────
+  // â”€â”€ Portfolio Insights state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   List<PortfolioSnapshot> _snapshots = [];
 
-  // ── Batch Valuation state ──────────────────────────────────────────────
+  // â”€â”€ Batch Valuation state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   BatchValuationProgress _valuation = const BatchValuationProgress();
   StreamSubscription<BatchValuationProgress>? _valuationSub;
 
@@ -179,7 +179,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   /// Computes a stable, deterministic article ID from a URL.
   /// Dart's String.hashCode is randomized each app start since Dart 2.x,
-  /// so we use a simple djb2-style hash instead — same URL → same ID always.
+  /// so we use a simple djb2-style hash instead â€” same URL â†’ same ID always.
   static String _stableArticleId(String url) {
     // Normalize: strip trailing slash and query params so equivalent URLs match.
     final normalized = Uri.tryParse(url)?.replace(queryParameters: {}).toString()
@@ -215,7 +215,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
   Future<void> _loadDismissedNews() async {
     try {
-      // ITEM 1: GET /api/dismissed_news (no path param — identity from JWT Bearer token).
+      // ITEM 1: GET /api/dismissed_news (no path param â€” identity from JWT Bearer token).
       final resp = await HttpAuthClient.get(
         Uri.parse('$kApiBaseUrl/api/dismissed_news'),
       );
@@ -331,17 +331,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
             return FutureBuilder<bool>(
               future: ValuationModeService.isAdvancedMode(),
               builder: (context, modeSnap) {
+                // ignore: unused_local_variable (NET-372: bid/advanced mode removed)
                 final advanced = modeSnap.data ?? false;
 
-                // ── Compute portfolio metrics ──────────────────────────────────
+                // â”€â”€ Compute portfolio metrics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 // Use expansion-aware counting (Dimes Bug v2.2)
                 final coinDocIds = coins.map((d) => (d['id'] ?? '').toString()).toList();
                 final expansion = expandCollection(coins, coinDocIds);
                 final int totalCoins = expansion.totalCoins;
                 final int totalItems = totalCoins + currency.length + worldItems.length;
             double cpgTotal = 0;
-            double bidTotal = 0;
-            double askTotal = 0;
             double acquisitionCost = 0;
             double meltValue       = 0;
             double faceValue       = 0;
@@ -395,19 +394,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 }
               }
 
-              // Greysheet fields
+              // Valuation fields (NET-372: CPG Retail only, bid removed)
               final coinCpg = _parseCurrency(data['cpgRetail']);
-              final coinBid = _parseCurrency(data['greysheetBid']);
-              final coinAsk = _parseCurrency(data['greysheetAsk']);
-
               final finalCpg = coinCpg > 0 ? coinCpg : finalVal;
-              final finalBid = coinBid > 0 ? coinBid : finalVal * 0.80;
-              final finalAsk = coinAsk > 0 ? coinAsk : finalVal * 0.92;
 
               if (!isPending) {
                 cpgTotal += finalCpg;
-                bidTotal += finalBid;
-                askTotal += finalAsk;
               }
               acquisitionCost += _parseCurrency(data['Cost']);
               meltValue       += liveMelt;
@@ -431,12 +423,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               }
 
               final curCpg = _parseCurrency(data['cpgRetail']);
-              final curBid = _parseCurrency(data['greysheetBid']);
-              final curAsk = _parseCurrency(data['greysheetAsk']);
-
               cpgTotal += curCpg > 0 ? curCpg : finalVal;
-              bidTotal += curBid > 0 ? curBid : finalVal * 0.80;
-              askTotal += curAsk > 0 ? curAsk : finalVal * 0.92;
 
               currencyVal += finalVal;
               acquisitionCost += _parseCurrency(data['Cost']);
@@ -464,12 +451,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               }
 
               final wCpg = _parseCurrency(data['cpgRetail']);
-              final wBid = _parseCurrency(data['greysheetBid']);
-              final wAsk = _parseCurrency(data['greysheetAsk']);
-
               cpgTotal += wCpg > 0 ? wCpg : finalVal;
-              bidTotal += wBid > 0 ? wBid : finalVal * 0.80;
-              askTotal += wAsk > 0 ? wAsk : finalVal * 0.92;
 
               acquisitionCost += purchPrice;
               final spotEntry = _parseCurrency(data['spot_value_at_entry']);
@@ -479,10 +461,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
               faceValue += _computeFaceValue(data['denomination']?.toString() ?? '');
             }
 
-            final portfolioValue = advanced ? cpgTotal : bidTotal;
-            final effectiveCoinsVal = advanced ? cpgTotal : bidTotal;
+            final portfolioValue = cpgTotal;
+            final effectiveCoinsVal = cpgTotal;
 
-            // ── Portfolio snapshot (fire-and-forget) ───────────────────────
+            // â”€â”€ Portfolio snapshot (fire-and-forget) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (totalCoins > 0 || totalItems > 0) {
               PortfolioSnapshotService.maybeTakeSnapshot(
                 totalCoins: totalCoins,
@@ -497,7 +479,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               });
             }
 
-            // ── Last 3 added (using coins) ──────────────────────────────────
+            // â”€â”€ Last 3 added (using coins) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             final sorted = List<Map<String, dynamic>>.from(coins);
             sorted.sort((a, b) {
               final aTs = a['Added'] ?? a['timestamp'] ?? a['created_at'];
@@ -520,7 +502,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Version badge ─────────────────────────────────────────
+                  // â”€â”€ Version badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 5),
@@ -537,7 +519,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             color: Color(0xFF166534))),
                   ),
                   const SizedBox(height: 12),
-                  // ── Welcome Beta Tester Banner Card — shown only to qualifying beta accounts ──
+                  // â”€â”€ Welcome Beta Tester Banner Card â€” shown only to qualifying beta accounts â”€â”€
                   if (AuthService.isBetaTester)
                   Container(
                     width: double.infinity,
@@ -565,7 +547,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             Flexible(
                               child: Row(
                                 children: [
-                                   const Text('👋 Welcome Beta Tester!',
+                                   const Text('ðŸ‘‹ Welcome Beta Tester!',
                                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                                   const SizedBox(width: 8),
                                   Container(
@@ -574,7 +556,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                       color: const Color(0xFF166534),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: const Text('FOUNDING BETA ⭐ FREE FOREVER',
+                                    child: const Text('FOUNDING BETA â­ FREE FOREVER',
                                         style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ),
                                 ],
@@ -611,7 +593,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Header: title + portfolio value ──────────────────────
+                  // â”€â”€ Header: title + portfolio value â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -643,7 +625,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalCoins, advanced: advanced),
+                                _buildPortfolioValueSection(cpgTotal, fmt, totalCoins, advanced: advanced),
                                 if (pendingValueCount > 0)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 4),
@@ -661,11 +643,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Category Breakdown ─────────────────────────────────────
+                  // â”€â”€ Category Breakdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   _buildCategoryBreakdown(effectiveCoinsVal, currencyVal, medalsVal, othersVal, fmt),
                   const SizedBox(height: 24),
 
-                   // ── Metric cards ──────────────────────────────────────────
+                   // â”€â”€ Metric cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   LayoutBuilder(builder: (ctx, bc) {
                     final profit = portfolioValue - acquisitionCost;
                     final profitFmt = (profit >= 0 ? '+' : '') + fmt.format(profit);
@@ -706,7 +688,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   }),
                   const SizedBox(height: 24),
 
-                  // ── Portfolio Insights Charts ──────────────────────────────
+                  // â”€â”€ Portfolio Insights Charts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   PortfolioChartsPanel(
                     portfolioValue: portfolioValue,
                     meltValue: meltValue,
@@ -716,7 +698,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Recently Added ────────────────────────────────────────
+                  // â”€â”€ Recently Added â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   const Text('Recently Added',
                       style: TextStyle(
                           fontSize: 16,
@@ -732,7 +714,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     child: last5.isEmpty
                         ? const Padding(
                             padding: EdgeInsets.all(16),
-                            child: Text('No coins yet — add your first coin!',
+                            child: Text('No coins yet â€” add your first coin!',
                                 style: TextStyle(color: Color(0xFF5A5C69))))
                         : Column(
                             children: last5.asMap().entries.map((entry) {
@@ -743,11 +725,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               final series = data['Program/Series']?.toString() ?? '';
                               final theme  = data['Theme/Subject']?.toString() ?? '';
                               final coinCpg = _parseCurrency(data['cpgRetail']);
-                              final coinBid = _parseCurrency(data['greysheetBid']);
-                              final gVal = advanced ? coinCpg : coinBid;
+                              final gVal = coinCpg;
                               final estVal = gVal > 0 
                                   ? fmt.format(gVal)
-                                  : (data['AI Estimated Value']?.toString() ?? '—');
+                                  : (data['AI Estimated Value']?.toString() ?? 'â€”');
 
                               // Build a human-readable coin name
                               // Priority: Program/Series > Theme/Subject > Denomination > fallback
@@ -766,8 +747,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               // Build year-mint label, normalise "Multiple" to "Various"
                               final yearLabel = (year.isEmpty || year == 'Multiple') ? 'Various' : year;
                               final mintLabel = (mint.isEmpty || mint == 'Multiple') ? '' : '-$mint';
-                              // Build denomination label — only prepend '$' if the
-                              // value is numeric (e.g. "1" → "$1") or already has it.
+                              // Build denomination label â€” only prepend '$' if the
+                              // value is numeric (e.g. "1" â†’ "$1") or already has it.
                               // Word-form denominations (penny, nickel, dime, quarter) stay as-is.
                               String fmtDenom(String d) {
                                 final cleanD = d.trim();
@@ -776,24 +757,24 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 final numeric = double.tryParse(
                                     cleanD.replaceAll(RegExp(r'[^\d.]'), ''));
                                 if (numeric != null && cleanD.contains(RegExp(r'^[\d]'))) {
-                                  return '\$$cleanD';                              // numeric → add $
+                                  return '\$$cleanD';                              // numeric â†’ add $
                                 }
-                                return cleanD[0].toUpperCase() + cleanD.substring(1);   // word → capitalise
+                                return cleanD[0].toUpperCase() + cleanD.substring(1);   // word â†’ capitalise
                               }
                               final denomLabel = fmtDenom(denom);
                               final condition = data['Condition']?.toString() ?? '';
 
-                              // When year is known → "2025-W  $1"
-                              // When year is Various (sets/lots) → use Theme + Condition to differentiate
+                              // When year is known â†’ "2025-W  $1"
+                              // When year is Various (sets/lots) â†’ use Theme + Condition to differentiate
                               final String subtitle;
                               if (yearLabel != 'Various') {
                                 final parts = [
                                   '$yearLabel$mintLabel',
                                   if (denomLabel.isNotEmpty) denomLabel,
                                 ].where((s) => s.isNotEmpty).toList();
-                                subtitle = parts.join(' · ');
+                                subtitle = parts.join(' Â· ');
                               } else {
-                                // Year unknown — use theme + condition to distinguish
+                                // Year unknown â€” use theme + condition to distinguish
                                 final themeStr = theme.isNotEmpty && theme != 'Multiple' ? theme : '';
                                 final condStr = (condition.isNotEmpty && condition != 'Ungraded') ? condition : '';
                                 final parts = [
@@ -801,7 +782,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                   if (condStr.isNotEmpty) condStr,
                                   if (denomLabel.isNotEmpty) denomLabel,
                                 ];
-                                subtitle = parts.isEmpty ? 'Set / Lot' : parts.join(' · ');
+                                subtitle = parts.isEmpty ? 'Set / Lot' : parts.join(' Â· ');
                               }
 
                               return Column(children: [
@@ -837,7 +818,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Morgan Widget ─────────────────────────────────────────
+                  // â”€â”€ Morgan Widget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   _MorganDashboardCard(
                     totalCoins: totalCoins,
                     onAskMorgan: widget.onAskMorgan,
@@ -845,7 +826,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Live Spot Prices ──────────────────────────────────────
+                  // â”€â”€ Live Spot Prices â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   Row(children: [
                     const Icon(Icons.show_chart, size: 14, color: Color(0xFF0F9D58)),
                     const SizedBox(width: 6),
@@ -858,7 +839,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     const SizedBox(width: 10),
                     if (_pricesLastUpdated != null)
                       Text(
-                        'Last updated: ${intl.DateFormat("dd MMM yyyy @ HHmm").format(_pricesLastUpdated!.toLocal())} · Source: metals-api.com',
+                        'Last updated: ${intl.DateFormat("dd MMM yyyy @ HHmm").format(_pricesLastUpdated!.toLocal())} Â· Source: metals-api.com',
                         style: const TextStyle(
                             fontSize: 9,
                             color: Color(0xFF94A3B8)),
@@ -907,11 +888,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     ),
                   const SizedBox(height: 24),
 
-                  // ── System Updates & Release Notes ────────────────────────
+                  // â”€â”€ System Updates & Release Notes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   _ReleaseNotesPanel(),
                   const SizedBox(height: 24),
 
-                  // ── Upcoming Mint Releases ────────────────────────
+                  // â”€â”€ Upcoming Mint Releases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   FutureBuilder<List<UpcomingRelease>>(
                     future: UpcomingReleasesService.fetchUpcoming(),
                     builder: (context, snapshot) {
@@ -937,7 +918,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               const Spacer(),
                               TextButton(
                                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpcomingReleasesScreen())),
-                                child: const Text('See All →', style: TextStyle(fontSize: 12, color: Color(0xFFF63366))),
+                                child: const Text('See All â†’', style: TextStyle(fontSize: 12, color: Color(0xFFF63366))),
                               ),
                             ],
                           ),
@@ -1017,7 +998,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     }
                   ),
 
-                  // ── Market Intel / News feed (bottom) ─────────────────────
+                  // â”€â”€ Market Intel / News feed (bottom) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   Row(
                     children: [
                       const Icon(Icons.newspaper,
@@ -1060,7 +1041,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         Icon(Icons.wifi_off_outlined,
                             size: 28, color: Color(0xFFCBD5E1)),
                         SizedBox(height: 8),
-                        Text('Market news unavailable right now — check back shortly.',
+                        Text('Market news unavailable right now â€” check back shortly.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 fontSize: 12, color: Color(0xFF94A3B8))),
@@ -1166,7 +1147,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                               height: 1.4),
                                         ),
                                       ),
-                                      // ── Bottom row: Read more + 👎 Not relevant ──
+                                      // â”€â”€ Bottom row: Read more + ðŸ‘Ž Not relevant â”€â”€
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
@@ -1187,12 +1168,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                             )
                                           else
                                             const SizedBox.shrink(),
-                                          // 👎 Not relevant
+                                          // ðŸ‘Ž Not relevant
                                           if (articleId.isNotEmpty)
                                             GestureDetector(
                                               onTap: () => _dismissArticle(articleId),
                                               child: const Tooltip(
-                                                message: 'Not relevant — hide this article',
+                                                message: 'Not relevant â€” hide this article',
                                                 child: Icon(
                                                   Icons.thumb_down_outlined,
                                                   size: 13,
@@ -1246,11 +1227,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
-  // ── Portfolio value section with batch valuation progress ───────────────────
+  // â”€â”€ Portfolio value section with batch valuation progress â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Widget _buildPortfolioValueSection(
-      double cpgTotal, double bidTotal, double askTotal, intl.NumberFormat fmt, int totalCoins, {bool advanced = false}) {
+      double cpgTotal, intl.NumberFormat fmt, int totalCoins, {bool advanced = false}) {
     final v = _valuation;
-    final displayVal  = advanced ? cpgTotal : bidTotal;
+    final displayVal  = cpgTotal;
     final hasValue    = displayVal > 0;
     final isRunning   = v.isRunning;
     final isPaused    = v.isPaused;
@@ -1259,14 +1240,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(advanced ? 'EST. PORTFOLIO VALUE (RETAIL)' : 'EST. PORTFOLIO VALUE (ESTATE/LIQ)',
+        Text('EST. PORTFOLIO VALUE (RETAIL)',
             style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
                 color: _subtext)),
         const SizedBox(height: 2),
 
-        // ── Main value display ──────────────────────────────────────────────
+        // â”€â”€ Main value display â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (hasValue) ...[
           Text(fmt.format(displayVal),
               style: TextStyle(
@@ -1274,7 +1255,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   fontWeight: FontWeight.w900,
                   color: _accent)),
           Text(
-            advanced ? 'CPG Retail Market basis' : 'Wholesale / Greysheet Bid basis',
+            'CPG Retail Market basis',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w500,
@@ -1298,29 +1279,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   fontWeight: FontWeight.w700,
                   color: _subtext)),
 
-        if (hasValue && advanced) ...[
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text('Bid: ${fmt.format(bidTotal)}',
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF4A5568))),
-              const SizedBox(width: 8),
-              Text('Ask: ${fmt.format(askTotal)}',
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF4A5568))),
-            ],
-          ),
-        ],
-
         const SizedBox(height: 6),
 
-        // ── Progress bar (running or paused with progress) ──────────────────
+        // â”€â”€ Progress bar (running or paused with progress) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if ((isRunning || isPaused) && v.total > 0) ...[
           ClipRRect(
             borderRadius: BorderRadius.circular(3),
@@ -1375,7 +1336,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 textAlign: TextAlign.right),
         ],
 
-        // ── Run button (not started) ────────────────────────────────────────
+        // â”€â”€ Run button (not started) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (!isRunning && !isPaused && !hasValue && !hasProgress)
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -1418,7 +1379,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ],
           ),
 
-        // ── Resume button (paused) ──────────────────────────────────────────
+        // â”€â”€ Resume button (paused) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (!isRunning && isPaused && !hasValue)
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -1659,7 +1620,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 }
 
-// ─── Release Notes Data ────────────────────────────────────────────────────────
+// â”€â”€â”€ Release Notes Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _Release {
   final String version;
@@ -1683,12 +1644,12 @@ const _versionHistory = <_Release>[
   _Release(
     version: 'v4.403',
     date: '2026-10-01',
-    description: 'Security Hardening — Auth on Grade Reviews, Admin Access, Beta Status Fix',
+    description: 'Security Hardening â€” Auth on Grade Reviews, Admin Access, Beta Status Fix',
     isLatest: true,
     changes: [
-      'Security: grade review submit now requires a sign-in token — the server reads the user from the token',
+      'Security: grade review submit now requires a sign-in token â€” the server reads the user from the token',
       'Security: the admin grade review dashboard now requires an admin-level token; others receive 403',
-      'Security: the admin claim is now the only way to gain admin access — the email allowlist has been removed',
+      'Security: the admin claim is now the only way to gain admin access â€” the email allowlist has been removed',
       'Security: the transfer Certificate of Transfer PDF can only be downloaded by the sender or recipient',
       'Security: Stripe billing portal now reads your account from the sign-in token, not a URL parameter',
       'Beta: "Founding Beta" status is now per-account and permanent for accounts created before 26 Nov 2026',
@@ -1701,7 +1662,7 @@ const _versionHistory = <_Release>[
     description: 'Transfer Security & Auth Hardening',
     isLatest: false,
     changes: [
-      'Security: transfer routes now require a valid sign-in token — unauthenticated requests are rejected',
+      'Security: transfer routes now require a valid sign-in token â€” unauthenticated requests are rejected',
       'Security: transfer identity is verified by the server; the request body cannot override it',
       'Security: recipient-locked transfers can only be claimed by the designated account',
       'Security: repeated wrong claim-PIN attempts trigger a 15-minute lockout on the transfer',
@@ -2338,9 +2299,9 @@ const _versionHistory = <_Release>[
       'Image-match: v6 hasSubject extends to _subjectPrograms for program-level steal-guard',
       'Image-match: v6 program-level steal-guard + unified _rowField on all paths',
       'Image-match: v4 obverse+reverse steal-guard + normalizeDenom + Inspector auto-flip',
-      'Images: MF7 regression tests â€” 36 tests covering v2/v3 image-match fixes',
-      'Images: v3 P0 image match â€” subject-filter Similar carousel + honest placeholders',
-      'Images: P0 image match v2 â€” steal-guard, America250 namespace, cents fix',
+      'Images: MF7 regression tests Ã¢â‚¬â€ 36 tests covering v2/v3 image-match fixes',
+      'Images: v3 P0 image match Ã¢â‚¬â€ subject-filter Similar carousel + honest placeholders',
+      'Images: P0 image match v2 Ã¢â‚¬â€ steal-guard, America250 namespace, cents fix',
       'Sync release notes and version bump v4.350',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.349)',
     ],
@@ -2354,9 +2315,9 @@ const _versionHistory = <_Release>[
       'Image-match: v6 hasSubject extends to _subjectPrograms for program-level steal-guard',
       'Image-match: v6 program-level steal-guard + unified _rowField on all paths',
       'Image-match: v4 obverse+reverse steal-guard + normalizeDenom + Inspector auto-flip',
-      'Images: MF7 regression tests â€” 36 tests covering v2/v3 image-match fixes',
-      'Images: v3 P0 image match â€” subject-filter Similar carousel + honest placeholders',
-      'Images: P0 image match v2 â€” steal-guard, America250 namespace, cents fix',
+      'Images: MF7 regression tests Ã¢â‚¬â€ 36 tests covering v2/v3 image-match fixes',
+      'Images: v3 P0 image match Ã¢â‚¬â€ subject-filter Similar carousel + honest placeholders',
+      'Images: P0 image match v2 Ã¢â‚¬â€ steal-guard, America250 namespace, cents fix',
       'Sync release notes and version bump v4.350',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.349)',
     ],
@@ -2404,14 +2365,14 @@ const _versionHistory = <_Release>[
     description: 'Images Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Images: P0 image match accuracy â€” kill substring collision, add subject-aware resolution',
+      'Images: P0 image match accuracy Ã¢â‚¬â€ kill substring collision, add subject-aware resolution',
       'Scripts: grokbot key migrate script - fixed Firebase init + Unicode + ran stats rebuild',
       'Import: normalize before dupe queries, dual-read fallback, migration script',
       'Cards: year sort groups by theme/subject so same-design P/D coins are adjacent',
       'Cards+import: reverse image priority, All-tab cached docs, CSV field normalization',
       'Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)',
-      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
-      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+      'Export: resolve JSON download silent no-op Ã¢â‚¬â€ Timestamp serialization + web download',
+      'Qc: clear overnight scan holds Ã¢â‚¬â€ flutter note test, dart unused locals, honest SCAN labeling',
     ],
   ),
   _Release(
@@ -2420,14 +2381,14 @@ const _versionHistory = <_Release>[
     description: 'Images Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Images: P0 image match accuracy â€” kill substring collision, add subject-aware resolution',
+      'Images: P0 image match accuracy Ã¢â‚¬â€ kill substring collision, add subject-aware resolution',
       'Scripts: grokbot key migrate script - fixed Firebase init + Unicode + ran stats rebuild',
       'Import: normalize before dupe queries, dual-read fallback, migration script',
       'Cards: year sort groups by theme/subject so same-design P/D coins are adjacent',
       'Cards+import: reverse image priority, All-tab cached docs, CSV field normalization',
       'Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)',
-      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
-      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+      'Export: resolve JSON download silent no-op Ã¢â‚¬â€ Timestamp serialization + web download',
+      'Qc: clear overnight scan holds Ã¢â‚¬â€ flutter note test, dart unused locals, honest SCAN labeling',
     ],
   ),
   _Release(
@@ -2436,14 +2397,14 @@ const _versionHistory = <_Release>[
     description: 'Images Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Images: P0 image match accuracy â€” kill substring collision, add subject-aware resolution',
+      'Images: P0 image match accuracy Ã¢â‚¬â€ kill substring collision, add subject-aware resolution',
       'Scripts: grokbot key migrate script - fixed Firebase init + Unicode + ran stats rebuild',
       'Import: normalize before dupe queries, dual-read fallback, migration script',
       'Cards: year sort groups by theme/subject so same-design P/D coins are adjacent',
       'Cards+import: reverse image priority, All-tab cached docs, CSV field normalization',
       'Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)',
-      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
-      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+      'Export: resolve JSON download silent no-op Ã¢â‚¬â€ Timestamp serialization + web download',
+      'Qc: clear overnight scan holds Ã¢â‚¬â€ flutter note test, dart unused locals, honest SCAN labeling',
     ],
   ),
   _Release(
@@ -2457,8 +2418,8 @@ const _versionHistory = <_Release>[
       'Cards: year sort groups by theme/subject so same-design P/D coins are adjacent',
       'Cards+import: reverse image priority, All-tab cached docs, CSV field normalization',
       'Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)',
-      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
-      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+      'Export: resolve JSON download silent no-op Ã¢â‚¬â€ Timestamp serialization + web download',
+      'Qc: clear overnight scan holds Ã¢â‚¬â€ flutter note test, dart unused locals, honest SCAN labeling',
       'Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)',
     ],
   ),
@@ -2472,8 +2433,8 @@ const _versionHistory = <_Release>[
       'Cards: year sort groups by theme/subject so same-design P/D coins are adjacent',
       'Cards+import: reverse image priority, All-tab cached docs, CSV field normalization',
       'Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)',
-      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
-      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+      'Export: resolve JSON download silent no-op Ã¢â‚¬â€ Timestamp serialization + web download',
+      'Qc: clear overnight scan holds Ã¢â‚¬â€ flutter note test, dart unused locals, honest SCAN labeling',
       'Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)',
     ],
@@ -2487,8 +2448,8 @@ const _versionHistory = <_Release>[
       'Cards: year sort groups by theme/subject so same-design P/D coins are adjacent',
       'Cards+import: reverse image priority, All-tab cached docs, CSV field normalization',
       'Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)',
-      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
-      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+      'Export: resolve JSON download silent no-op Ã¢â‚¬â€ Timestamp serialization + web download',
+      'Qc: clear overnight scan holds Ã¢â‚¬â€ flutter note test, dart unused locals, honest SCAN labeling',
       'Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)',
     ],
@@ -2501,8 +2462,8 @@ const _versionHistory = <_Release>[
     changes: [
       'Cards+import: reverse image priority, All-tab cached docs, CSV field normalization',
       'Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)',
-      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
-      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+      'Export: resolve JSON download silent no-op Ã¢â‚¬â€ Timestamp serialization + web download',
+      'Qc: clear overnight scan holds Ã¢â‚¬â€ flutter note test, dart unused locals, honest SCAN labeling',
       'Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)',
     ],
@@ -2514,8 +2475,8 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Export: full-fidelity JSON backup with multi-collection support (schemaVersion 2)',
-      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
-      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+      'Export: resolve JSON download silent no-op Ã¢â‚¬â€ Timestamp serialization + web download',
+      'Qc: clear overnight scan holds Ã¢â‚¬â€ flutter note test, dart unused locals, honest SCAN labeling',
       'Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)',
     ],
@@ -2526,8 +2487,8 @@ const _versionHistory = <_Release>[
     description: 'Export Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Export: resolve JSON download silent no-op â€” Timestamp serialization + web download',
-      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+      'Export: resolve JSON download silent no-op Ã¢â‚¬â€ Timestamp serialization + web download',
+      'Qc: clear overnight scan holds Ã¢â‚¬â€ flutter note test, dart unused locals, honest SCAN labeling',
       'Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)',
     ],
@@ -2538,14 +2499,14 @@ const _versionHistory = <_Release>[
     description: 'Qc Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Qc: clear overnight scan holds â€” flutter note test, dart unused locals, honest SCAN labeling',
+      'Qc: clear overnight scan holds Ã¢â‚¬â€ flutter note test, dart unused locals, honest SCAN labeling',
       'Auth: smart-detect 6-digit PIN in password mode, heal UI, fix autofill hints (P0)',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.337)',
       'Catalog: resolve 26RJ 20-coin set count, USMC image mismapping, and ghost children',
       'Programs: harden expandCollection Map.from + fix deriveCoinFamily legacy path',
       'Programs: add set_expansion_helper regression tests for field preservation',
       'Programs: preserve program_id, Strike Type, Variety in expandCollection',
-      'Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
+      'Checklist: Plan.v1.1 Ã¢â‚¬â€ Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
     ],
   ),
   _Release(
@@ -2558,7 +2519,7 @@ const _versionHistory = <_Release>[
       'Programs: harden expandCollection Map.from + fix deriveCoinFamily legacy path',
       'Programs: add set_expansion_helper regression tests for field preservation',
       'Programs: preserve program_id, Strike Type, Variety in expandCollection',
-      'Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
+      'Checklist: Plan.v1.1 Ã¢â‚¬â€ Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
       'Scan: full system check v4.337 and update SCAN_REPORT.md',
     ],
   ),
@@ -2572,7 +2533,7 @@ const _versionHistory = <_Release>[
       'Programs: harden expandCollection Map.from + fix deriveCoinFamily legacy path',
       'Programs: add set_expansion_helper regression tests for field preservation',
       'Programs: preserve program_id, Strike Type, Variety in expandCollection',
-      'Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
+      'Checklist: Plan.v1.1 Ã¢â‚¬â€ Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
       'Scan: full system check v4.330 and update SCAN_REPORT.md',
     ],
   ),
@@ -2585,7 +2546,7 @@ const _versionHistory = <_Release>[
       'Programs: harden expandCollection Map.from + fix deriveCoinFamily legacy path',
       'Programs: add set_expansion_helper regression tests for field preservation',
       'Programs: preserve program_id, Strike Type, Variety in expandCollection',
-      'Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
+      'Checklist: Plan.v1.1 Ã¢â‚¬â€ Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
       'Scan: full system check v4.330 and update SCAN_REPORT.md',
     ],
   ),
@@ -2597,7 +2558,7 @@ const _versionHistory = <_Release>[
     changes: [
       'Programs: add set_expansion_helper regression tests for field preservation',
       'Programs: preserve program_id, Strike Type, Variety in expandCollection',
-      'Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
+      'Checklist: Plan.v1.1 Ã¢â‚¬â€ Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
       'Scan: full system check v4.330 and update SCAN_REPORT.md',
     ],
   ),
@@ -2608,7 +2569,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Programs: preserve program_id, Strike Type, Variety in expandCollection',
-      'Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
+      'Checklist: Plan.v1.1 Ã¢â‚¬â€ Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
       'Scan: full system check v4.330 and update SCAN_REPORT.md',
     ],
   ),
@@ -2618,7 +2579,7 @@ const _versionHistory = <_Release>[
     description: 'Checklist Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Checklist: Plan.v1.1 â€” Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
+      'Checklist: Plan.v1.1 Ã¢â‚¬â€ Numismatic Collectibles checkoff/PDF ownership (MF1+MF2)',
       'Scan: full system check v4.330 and update SCAN_REPORT.md',
     ],
   ),
@@ -2637,8 +2598,8 @@ const _versionHistory = <_Release>[
     description: 'Checklist Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Checklist: PDF export reads fresh server docs, not stale closure â€” HOTFIX PDF_STALE',
-      'Checklist: bust coin cache after checkoff write â€” PDF_STALE_AFTER_CHECKOFF',
+      'Checklist: PDF export reads fresh server docs, not stale closure Ã¢â‚¬â€ HOTFIX PDF_STALE',
+      'Checklist: bust coin cache after checkoff write Ã¢â‚¬â€ PDF_STALE_AFTER_CHECKOFF',
       'Scan: full system check v4.326 and update SCAN_REPORT.md',
     ],
   ),
@@ -2648,8 +2609,8 @@ const _versionHistory = <_Release>[
     description: 'Checklist Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Checklist: PDF export reads fresh server docs, not stale closure â€” HOTFIX PDF_STALE',
-      'Checklist: bust coin cache after checkoff write â€” PDF_STALE_AFTER_CHECKOFF',
+      'Checklist: PDF export reads fresh server docs, not stale closure Ã¢â‚¬â€ HOTFIX PDF_STALE',
+      'Checklist: bust coin cache after checkoff write Ã¢â‚¬â€ PDF_STALE_AFTER_CHECKOFF',
       'Scan: full system check v4.326 and update SCAN_REPORT.md',
     ],
   ),
@@ -2659,8 +2620,8 @@ const _versionHistory = <_Release>[
     description: 'Checklist Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Checklist: PDF export reads fresh server docs, not stale closure â€” HOTFIX PDF_STALE',
-      'Checklist: bust coin cache after checkoff write â€” PDF_STALE_AFTER_CHECKOFF',
+      'Checklist: PDF export reads fresh server docs, not stale closure Ã¢â‚¬â€ HOTFIX PDF_STALE',
+      'Checklist: bust coin cache after checkoff write Ã¢â‚¬â€ PDF_STALE_AFTER_CHECKOFF',
       'Scan: full system check v4.326 and update SCAN_REPORT.md',
     ],
   ),
@@ -2670,7 +2631,7 @@ const _versionHistory = <_Release>[
     description: 'Checklist Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Checklist: bust coin cache after checkoff write â€” PDF_STALE_AFTER_CHECKOFF',
+      'Checklist: bust coin cache after checkoff write Ã¢â‚¬â€ PDF_STALE_AFTER_CHECKOFF',
       'Scan: full system check v4.326 and update SCAN_REPORT.md',
     ],
   ),
@@ -2718,7 +2679,7 @@ const _versionHistory = <_Release>[
     changes: [
       'Release: update v4.321 release notes',
       'Ai: upgrade to gemini-3.8-flash with multimodal coin deepdive across frontend and backend',
-      'Resolver: heuristic multi-design guard before §5 contains (G3b v5.1)',
+      'Resolver: heuristic multi-design guard before Â§5 contains (G3b v5.1)',
       'Release: push pending auto-version hook changes',
       'Resolver: remove length-equality OR in title path (G3b v4)',
       'Resolver: subject guard on program_id fast path (G3b)',
@@ -2732,7 +2693,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Ai: upgrade to gemini-3.8-flash with multimodal coin deepdive across frontend and backend',
-      'Resolver: heuristic multi-design guard before Â§5 contains (G3b v5.1)',
+      'Resolver: heuristic multi-design guard before Ã‚Â§5 contains (G3b v5.1)',
       'Release: push pending auto-version hook changes',
       'Resolver: remove length-equality OR in title path (G3b v4)',
       'Resolver: subject guard on program_id fast path (G3b)',
@@ -2745,7 +2706,7 @@ const _versionHistory = <_Release>[
     description: 'Resolver Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Resolver: heuristic multi-design guard before Â§5 contains (G3b v5.1)',
+      'Resolver: heuristic multi-design guard before Ã‚Â§5 contains (G3b v5.1)',
       'Release: push pending auto-version hook changes',
       'Resolver: remove length-equality OR in title path (G3b v4)',
       'Resolver: subject guard on program_id fast path (G3b)',
@@ -2758,7 +2719,7 @@ const _versionHistory = <_Release>[
     description: 'Resolver Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Resolver: heuristic multi-design guard before Â§5 contains (G3b v5.1)',
+      'Resolver: heuristic multi-design guard before Ã‚Â§5 contains (G3b v5.1)',
       'Release: push pending auto-version hook changes',
       'Resolver: remove length-equality OR in title path (G3b v4)',
       'Resolver: subject guard on program_id fast path (G3b)',
@@ -2787,9 +2748,9 @@ const _versionHistory = <_Release>[
       'Checklists: Program Manager grid card uses expandCollection + saved goal (GRID_CARD_PCT_LAG)',
       'Brain: make absorb_document signature robust and ingest 4 SEP 2026 live US Mint harvest',
       'Collection: real My Collection rows use Firestore snapshot not snake-only expansion (blank columns / empty inspector)',
-      'Scan: update SCAN_REPORT to v4.311 â€” 0 Dependabot alerts, ISSUE-002/003 resolved',
+      'Scan: update SCAN_REPORT to v4.311 Ã¢â‚¬â€ 0 Dependabot alerts, ISSUE-002/003 resolved',
       'Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)',
-      'Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9',
+      'Deps: npm audit fix numista_hardware Ã¢â‚¬â€ browserslist 4.28.4 -> 4.28.9',
     ],
   ),
   _Release(
@@ -2803,9 +2764,9 @@ const _versionHistory = <_Release>[
       'Checklists: Program Manager grid card uses expandCollection + saved goal (GRID_CARD_PCT_LAG)',
       'Brain: make absorb_document signature robust and ingest 4 SEP 2026 live US Mint harvest',
       'Collection: real My Collection rows use Firestore snapshot not snake-only expansion (blank columns / empty inspector)',
-      'Scan: update SCAN_REPORT to v4.311 â€” 0 Dependabot alerts, ISSUE-002/003 resolved',
+      'Scan: update SCAN_REPORT to v4.311 Ã¢â‚¬â€ 0 Dependabot alerts, ISSUE-002/003 resolved',
       'Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)',
-      'Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9',
+      'Deps: npm audit fix numista_hardware Ã¢â‚¬â€ browserslist 4.28.4 -> 4.28.9',
     ],
   ),
   _Release(
@@ -2819,9 +2780,9 @@ const _versionHistory = <_Release>[
       'Checklists: Program Manager grid card uses expandCollection + saved goal (GRID_CARD_PCT_LAG)',
       'Brain: make absorb_document signature robust and ingest 4 SEP 2026 live US Mint harvest',
       'Collection: real My Collection rows use Firestore snapshot not snake-only expansion (blank columns / empty inspector)',
-      'Scan: update SCAN_REPORT to v4.311 â€” 0 Dependabot alerts, ISSUE-002/003 resolved',
+      'Scan: update SCAN_REPORT to v4.311 Ã¢â‚¬â€ 0 Dependabot alerts, ISSUE-002/003 resolved',
       'Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)',
-      'Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9',
+      'Deps: npm audit fix numista_hardware Ã¢â‚¬â€ browserslist 4.28.4 -> 4.28.9',
     ],
   ),
   _Release(
@@ -2831,11 +2792,11 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Collection: real My Collection rows use Firestore snapshot not snake-only expansion (blank columns / empty inspector)',
-      'Scan: update SCAN_REPORT to v4.311 â€” 0 Dependabot alerts, ISSUE-002/003 resolved',
+      'Scan: update SCAN_REPORT to v4.311 Ã¢â‚¬â€ 0 Dependabot alerts, ISSUE-002/003 resolved',
       'Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)',
-      'Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9',
+      'Deps: npm audit fix numista_hardware Ã¢â‚¬â€ browserslist 4.28.4 -> 4.28.9',
       'Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start',
-      'Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
+      'Ingest: dual-key find-or-create query Ã¢â‚¬â€ Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
       'Auto-version bump to v4.308',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)',
     ],
@@ -2846,11 +2807,11 @@ const _versionHistory = <_Release>[
     description: 'Scan Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Scan: update SCAN_REPORT to v4.311 â€” 0 Dependabot alerts, ISSUE-002/003 resolved',
+      'Scan: update SCAN_REPORT to v4.311 Ã¢â‚¬â€ 0 Dependabot alerts, ISSUE-002/003 resolved',
       'Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)',
-      'Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9',
+      'Deps: npm audit fix numista_hardware Ã¢â‚¬â€ browserslist 4.28.4 -> 4.28.9',
       'Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start',
-      'Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
+      'Ingest: dual-key find-or-create query Ã¢â‚¬â€ Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
       'Auto-version bump to v4.308',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)',
     ],
@@ -2862,9 +2823,9 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Checklists: detail S Proof chips use expandCollection coinPool (SCREEN_S_PROOF_EMPTY)',
-      'Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9',
+      'Deps: npm audit fix numista_hardware Ã¢â‚¬â€ browserslist 4.28.4 -> 4.28.9',
       'Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start',
-      'Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
+      'Ingest: dual-key find-or-create query Ã¢â‚¬â€ Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
       'Auto-version bump to v4.308',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)',
     ],
@@ -2875,9 +2836,9 @@ const _versionHistory = <_Release>[
     description: 'Deps Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Deps: npm audit fix numista_hardware â€” browserslist 4.28.4 -> 4.28.9',
+      'Deps: npm audit fix numista_hardware Ã¢â‚¬â€ browserslist 4.28.4 -> 4.28.9',
       'Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start',
-      'Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
+      'Ingest: dual-key find-or-create query Ã¢â‚¬â€ Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
       'Auto-version bump to v4.308',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)',
     ],
@@ -2889,7 +2850,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Brain: dump_brain_status embedding_vector + hash/legacy split; watcher kill-before-start',
-      'Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
+      'Ingest: dual-key find-or-create query Ã¢â‚¬â€ Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
       'Auto-version bump to v4.308',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)',
     ],
@@ -2900,7 +2861,7 @@ const _versionHistory = <_Release>[
     description: 'Ingest Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Ingest: dual-key find-or-create query â€” Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
+      'Ingest: dual-key find-or-create query Ã¢â‚¬â€ Year+Denomination query, Python filter on Mint Mark / mint_mark; covers legacy PascalCase-only parents (INGEST_MINT_MARK_FIELD_PATH)',
       'Auto-version bump to v4.308',
       'Audit: run full system check via project-scanner skill and update SCAN_REPORT.md (v4.307)',
     ],
@@ -3016,7 +2977,7 @@ const _versionHistory = <_Release>[
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005 (v1.2-final)',
       'Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"',
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005',
-      'Collection: Fix B — virtual set children as table rows',
+      'Collection: Fix B â€” virtual set children as table rows',
       'Add authoritative Westward Journey Nickel Series program research and checklist reference',
       'Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)',
     ],
@@ -3031,7 +2992,7 @@ const _versionHistory = <_Release>[
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005 (v1.2-final)',
       'Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"',
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005',
-      'Collection: Fix B — virtual set children as table rows',
+      'Collection: Fix B â€” virtual set children as table rows',
       'Add authoritative Westward Journey Nickel Series program research and checklist reference',
       'Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)',
       'Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files',
@@ -3046,7 +3007,7 @@ const _versionHistory = <_Release>[
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005 (v1.2-final)',
       'Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"',
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005',
-      'Collection: Fix B — virtual set children as table rows',
+      'Collection: Fix B â€” virtual set children as table rows',
       'Add authoritative Westward Journey Nickel Series program research and checklist reference',
       'Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)',
       'Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files',
@@ -3062,7 +3023,7 @@ const _versionHistory = <_Release>[
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005 (v1.2-final)',
       'Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"',
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005',
-      'Collection: Fix B â€” virtual set children as table rows',
+      'Collection: Fix B Ã¢â‚¬â€ virtual set children as table rows',
       'Add authoritative Westward Journey Nickel Series program research and checklist reference',
       'Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)',
       'Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files',
@@ -3077,7 +3038,7 @@ const _versionHistory = <_Release>[
     changes: [
       'Revert "feat(checklists): add Westward Journey Nickel Series(tm) 2004-2005"',
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005',
-      'Collection: Fix B â€” virtual set children as table rows',
+      'Collection: Fix B Ã¢â‚¬â€ virtual set children as table rows',
       'Add authoritative Westward Journey Nickel Series program research and checklist reference',
       'Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)',
       'Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files',
@@ -3092,7 +3053,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Checklists: add Westward Journey Nickel Series(tm) 2004-2005',
-      'Collection: Fix B â€” virtual set children as table rows',
+      'Collection: Fix B Ã¢â‚¬â€ virtual set children as table rows',
       'Add authoritative Westward Journey Nickel Series program research and checklist reference',
       'Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)',
       'Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files',
@@ -3107,7 +3068,7 @@ const _versionHistory = <_Release>[
     description: 'Collection Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Collection: Fix B â€” virtual set children as table rows',
+      'Collection: Fix B Ã¢â‚¬â€ virtual set children as table rows',
       'Add authoritative Westward Journey Nickel Series program research and checklist reference',
       'Collection: header uses expandCollection for consistent count (Dimes Bug v2.3.3)',
       'Add Item 26RJ (2026 Uncirculated P&D Mint Set) to all 2026 product references and audit files',
@@ -3443,7 +3404,7 @@ const _versionHistory = <_Release>[
       'Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root',
       'Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)',
       'Attorney-portal: guard empty token in initState, add no-token placeholder',
-      'Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script',
+      'Attorney: ITEM B Ã¢â‚¬â€ SHA-256 token portal, snapshot allow-list, entitlements script',
     ],
   ),
   _Release(
@@ -3458,8 +3419,8 @@ const _versionHistory = <_Release>[
       'Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root',
       'Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)',
       'Attorney-portal: guard empty token in initState, add no-token placeholder',
-      'Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script',
-      'Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage',
+      'Attorney: ITEM B Ã¢â‚¬â€ SHA-256 token portal, snapshot allow-list, entitlements script',
+      'Security: ITEM A + C Ã¢â‚¬â€ is_demo backfill complete, rules hardened, Dependabot triage',
     ],
   ),
   _Release(
@@ -3474,8 +3435,8 @@ const _versionHistory = <_Release>[
       'Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root',
       'Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)',
       'Attorney-portal: guard empty token in initState, add no-token placeholder',
-      'Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script',
-      'Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage',
+      'Attorney: ITEM B Ã¢â‚¬â€ SHA-256 token portal, snapshot allow-list, entitlements script',
+      'Security: ITEM A + C Ã¢â‚¬â€ is_demo backfill complete, rules hardened, Dependabot triage',
     ],
   ),
   _Release(
@@ -3489,8 +3450,8 @@ const _versionHistory = <_Release>[
       'Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root',
       'Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)',
       'Attorney-portal: guard empty token in initState, add no-token placeholder',
-      'Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script',
-      'Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage',
+      'Attorney: ITEM B Ã¢â‚¬â€ SHA-256 token portal, snapshot allow-list, entitlements script',
+      'Security: ITEM A + C Ã¢â‚¬â€ is_demo backfill complete, rules hardened, Dependabot triage',
       'Deps: update pip and npm dependencies to resolve dependabot vulnerabilities',
     ],
   ),
@@ -3504,8 +3465,8 @@ const _versionHistory = <_Release>[
       'Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root',
       'Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)',
       'Attorney-portal: guard empty token in initState, add no-token placeholder',
-      'Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script',
-      'Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage',
+      'Attorney: ITEM B Ã¢â‚¬â€ SHA-256 token portal, snapshot allow-list, entitlements script',
+      'Security: ITEM A + C Ã¢â‚¬â€ is_demo backfill complete, rules hardened, Dependabot triage',
       'Deps: update pip and npm dependencies to resolve dependabot vulnerabilities',
       'Lint: use null-aware map elements in ticket_service.dart',
     ],
@@ -3519,8 +3480,8 @@ const _versionHistory = <_Release>[
       'Startup: resolve absolute serviceAccountKey path, working directories in launch_brain.ps1, and Turbopack root',
       'Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)',
       'Attorney-portal: guard empty token in initState, add no-token placeholder',
-      'Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script',
-      'Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage',
+      'Attorney: ITEM B Ã¢â‚¬â€ SHA-256 token portal, snapshot allow-list, entitlements script',
+      'Security: ITEM A + C Ã¢â‚¬â€ is_demo backfill complete, rules hardened, Dependabot triage',
       'Deps: update pip and npm dependencies to resolve dependabot vulnerabilities',
       'Lint: use null-aware map elements in ticket_service.dart',
       'Lint: remove unused imports in customer_service_screen.dart',
@@ -3534,8 +3495,8 @@ const _versionHistory = <_Release>[
     changes: [
       'Deps: bump hpack 4.1.0->4.2.0 to satisfy h2==4.4.1 constraint (fixes Docker build)',
       'Attorney-portal: guard empty token in initState, add no-token placeholder',
-      'Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script',
-      'Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage',
+      'Attorney: ITEM B Ã¢â‚¬â€ SHA-256 token portal, snapshot allow-list, entitlements script',
+      'Security: ITEM A + C Ã¢â‚¬â€ is_demo backfill complete, rules hardened, Dependabot triage',
       'Deps: update pip and npm dependencies to resolve dependabot vulnerabilities',
       'Lint: use null-aware map elements in ticket_service.dart',
       'Lint: remove unused imports in customer_service_screen.dart',
@@ -3549,8 +3510,8 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Attorney-portal: guard empty token in initState, add no-token placeholder',
-      'Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script',
-      'Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage',
+      'Attorney: ITEM B Ã¢â‚¬â€ SHA-256 token portal, snapshot allow-list, entitlements script',
+      'Security: ITEM A + C Ã¢â‚¬â€ is_demo backfill complete, rules hardened, Dependabot triage',
       'Deps: update pip and npm dependencies to resolve dependabot vulnerabilities',
       'Lint: use null-aware map elements in ticket_service.dart',
       'Lint: remove unused imports in customer_service_screen.dart',
@@ -3564,8 +3525,8 @@ const _versionHistory = <_Release>[
     description: 'Attorney Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Attorney: ITEM B â€” SHA-256 token portal, snapshot allow-list, entitlements script',
-      'Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage',
+      'Attorney: ITEM B Ã¢â‚¬â€ SHA-256 token portal, snapshot allow-list, entitlements script',
+      'Security: ITEM A + C Ã¢â‚¬â€ is_demo backfill complete, rules hardened, Dependabot triage',
       'Deps: update pip and npm dependencies to resolve dependabot vulnerabilities',
       'Lint: use null-aware map elements in ticket_service.dart',
       'Lint: remove unused imports in customer_service_screen.dart',
@@ -3580,7 +3541,7 @@ const _versionHistory = <_Release>[
     description: 'Security Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Security: ITEM A + C â€” is_demo backfill complete, rules hardened, Dependabot triage',
+      'Security: ITEM A + C Ã¢â‚¬â€ is_demo backfill complete, rules hardened, Dependabot triage',
       'Deps: update pip and npm dependencies to resolve dependabot vulnerabilities',
       'Lint: use null-aware map elements in ticket_service.dart',
       'Lint: remove unused imports in customer_service_screen.dart',
@@ -3687,7 +3648,7 @@ const _versionHistory = <_Release>[
     changes: [
       'Audit: sync SCAN_REPORT.md system audit with 100% test pass',
       'Auto-version hook files',
-      'Card-count: use matchesVariety per variety â€” eliminates 100% overcounting',
+      'Card-count: use matchesVariety per variety Ã¢â‚¬â€ eliminates 100% overcounting',
       'Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets',
       'Circulating: add Native American dollar slot + set expansion authorized by owner',
       'Auto-version v4.249 hook files',
@@ -3702,7 +3663,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Auto-version hook files',
-      'Card-count: use matchesVariety per variety â€” eliminates 100% overcounting',
+      'Card-count: use matchesVariety per variety Ã¢â‚¬â€ eliminates 100% overcounting',
       'Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets',
       'Circulating: add Native American dollar slot + set expansion authorized by owner',
       'Auto-version v4.249 hook files',
@@ -3718,7 +3679,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Auto-version hook files',
-      'Card-count: use matchesVariety per variety â€” eliminates 100% overcounting',
+      'Card-count: use matchesVariety per variety Ã¢â‚¬â€ eliminates 100% overcounting',
       'Circulating-2026: D-UNC blank-mint guard for annual uncirculated sets',
       'Circulating: add Native American dollar slot + set expansion authorized by owner',
       'Auto-version v4.249 hook files',
@@ -3755,7 +3716,7 @@ const _versionHistory = <_Release>[
       'Auto-versioning and firebase cache',
       'Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program',
       'Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists',
-      'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
+      'Programs: delete _isMatch Ã¢â‚¬â€ all callers use SlotResolver.isMatch()',
       'Auto-versioning hook changes (v4.244)',
     ],
   ),
@@ -3770,7 +3731,7 @@ const _versionHistory = <_Release>[
       'Auto-versioning and firebase cache',
       'Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program',
       'Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists',
-      'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
+      'Programs: delete _isMatch Ã¢â‚¬â€ all callers use SlotResolver.isMatch()',
       'Auto-versioning hook changes (v4.244)',
       'Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs',
     ],
@@ -3785,7 +3746,7 @@ const _versionHistory = <_Release>[
       'Auto-versioning and firebase cache',
       'Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program',
       'Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists',
-      'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
+      'Programs: delete _isMatch Ã¢â‚¬â€ all callers use SlotResolver.isMatch()',
       'Auto-versioning hook changes (v4.244)',
       'Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs',
     ],
@@ -3799,7 +3760,7 @@ const _versionHistory = <_Release>[
       'Auto-versioning and firebase cache',
       'Circulating: add parent-series names to circulatingDesigns so 2026 Roosevelt Dimes and Kennedy Halves tick the Circulating Currency program',
       'Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists',
-      'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
+      'Programs: delete _isMatch Ã¢â‚¬â€ all callers use SlotResolver.isMatch()',
       'Auto-versioning hook changes (v4.244)',
       'Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs',
     ],
@@ -3811,7 +3772,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Add comprehensive US Mint official programs audit cross-referencing all 123 programs and 34 checklists',
-      'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
+      'Programs: delete _isMatch Ã¢â‚¬â€ all callers use SlotResolver.isMatch()',
       'Auto-versioning hook changes (v4.244)',
       'Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs',
     ],
@@ -3822,7 +3783,7 @@ const _versionHistory = <_Release>[
     description: 'Programs Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Programs: delete _isMatch â€” all callers use SlotResolver.isMatch()',
+      'Programs: delete _isMatch Ã¢â‚¬â€ all callers use SlotResolver.isMatch()',
       'Auto-versioning hook changes (v4.244)',
       'Pitch-deck: integrate official owl logo and Morgan avatar into presentation and docs',
     ],
@@ -4080,7 +4041,7 @@ const _versionHistory = <_Release>[
       'Invoice: add US Mint product catalog mapping and few-shot extraction rules',
       'Programs: Phase 1 + 1b coin program data and seed script overhaul',
       'Release: auto-bump v4.222 for Addendum A+B',
-      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+      'Beta: ITEM 6 Addendum A+B Ã¢â‚¬â€ field-level rules, create-path is_demo stamp, backfill script',
     ],
   ),
   _Release(
@@ -4095,7 +4056,7 @@ const _versionHistory = <_Release>[
       'Invoice: add US Mint product catalog mapping and few-shot extraction rules',
       'Programs: Phase 1 + 1b coin program data and seed script overhaul',
       'Release: auto-bump v4.222 for Addendum A+B',
-      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+      'Beta: ITEM 6 Addendum A+B Ã¢â‚¬â€ field-level rules, create-path is_demo stamp, backfill script',
       'Release: auto-bump release notes',
     ],
   ),
@@ -4110,9 +4071,9 @@ const _versionHistory = <_Release>[
       'Invoice: add US Mint product catalog mapping and few-shot extraction rules',
       'Programs: Phase 1 + 1b coin program data and seed script overhaul',
       'Release: auto-bump v4.222 for Addendum A+B',
-      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+      'Beta: ITEM 6 Addendum A+B Ã¢â‚¬â€ field-level rules, create-path is_demo stamp, backfill script',
       'Release: auto-bump release notes',
-      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures',
+      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics Ã¢â‚¬â€ resolves all 3 Layer 2 failures',
     ],
   ),
   _Release(
@@ -4125,10 +4086,10 @@ const _versionHistory = <_Release>[
       'Invoice: add US Mint product catalog mapping and few-shot extraction rules',
       'Programs: Phase 1 + 1b coin program data and seed script overhaul',
       'Release: auto-bump v4.222 for Addendum A+B',
-      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+      'Beta: ITEM 6 Addendum A+B Ã¢â‚¬â€ field-level rules, create-path is_demo stamp, backfill script',
       'Release: auto-bump release notes',
-      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures',
-      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics Ã¢â‚¬â€ resolves all 3 Layer 2 failures',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection Ã¢â‚¬â€ fixes Layer 2 cold-start failures',
     ],
   ),
   _Release(
@@ -4140,10 +4101,10 @@ const _versionHistory = <_Release>[
       'Invoice: add US Mint product catalog mapping and few-shot extraction rules',
       'Programs: Phase 1 + 1b coin program data and seed script overhaul',
       'Release: auto-bump v4.222 for Addendum A+B',
-      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+      'Beta: ITEM 6 Addendum A+B Ã¢â‚¬â€ field-level rules, create-path is_demo stamp, backfill script',
       'Release: auto-bump release notes',
-      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures',
-      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics Ã¢â‚¬â€ resolves all 3 Layer 2 failures',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection Ã¢â‚¬â€ fixes Layer 2 cold-start failures',
       'Release: auto-bump v4.216 release notes',
     ],
   ),
@@ -4155,10 +4116,10 @@ const _versionHistory = <_Release>[
     changes: [
       'Programs: Phase 1 + 1b coin program data and seed script overhaul',
       'Release: auto-bump v4.222 for Addendum A+B',
-      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+      'Beta: ITEM 6 Addendum A+B Ã¢â‚¬â€ field-level rules, create-path is_demo stamp, backfill script',
       'Release: auto-bump release notes',
-      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures',
-      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics Ã¢â‚¬â€ resolves all 3 Layer 2 failures',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection Ã¢â‚¬â€ fixes Layer 2 cold-start failures',
       'Release: auto-bump v4.216 release notes',
       'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
     ],
@@ -4170,10 +4131,10 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Release: auto-bump v4.222 for Addendum A+B',
-      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+      'Beta: ITEM 6 Addendum A+B Ã¢â‚¬â€ field-level rules, create-path is_demo stamp, backfill script',
       'Release: auto-bump release notes',
-      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures',
-      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics Ã¢â‚¬â€ resolves all 3 Layer 2 failures',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection Ã¢â‚¬â€ fixes Layer 2 cold-start failures',
       'Release: auto-bump v4.216 release notes',
       'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
       'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
@@ -4185,10 +4146,10 @@ const _versionHistory = <_Release>[
     description: 'Beta Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Beta: ITEM 6 Addendum A+B â€” field-level rules, create-path is_demo stamp, backfill script',
+      'Beta: ITEM 6 Addendum A+B Ã¢â‚¬â€ field-level rules, create-path is_demo stamp, backfill script',
       'Release: auto-bump release notes',
-      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures',
-      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics Ã¢â‚¬â€ resolves all 3 Layer 2 failures',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection Ã¢â‚¬â€ fixes Layer 2 cold-start failures',
       'Release: auto-bump v4.216 release notes',
       'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
       'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
@@ -4202,8 +4163,8 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Release: auto-bump release notes',
-      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures',
-      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics Ã¢â‚¬â€ resolves all 3 Layer 2 failures',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection Ã¢â‚¬â€ fixes Layer 2 cold-start failures',
       'Release: auto-bump v4.216 release notes',
       'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
       'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
@@ -4217,9 +4178,9 @@ const _versionHistory = <_Release>[
     description: 'Qc/layer2 Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics â€” resolves all 3 Layer 2 failures',
+      'Qc/layer2: replace flt-glass-pane assertions with flt-semantics Ã¢â‚¬â€ resolves all 3 Layer 2 failures',
       'Release: auto-bump release notes',
-      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection Ã¢â‚¬â€ fixes Layer 2 cold-start failures',
       'Release: auto-bump v4.216 release notes',
       'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
       'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
@@ -4234,7 +4195,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Release: auto-bump release notes',
-      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection Ã¢â‚¬â€ fixes Layer 2 cold-start failures',
       'Release: auto-bump v4.216 release notes',
       'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
       'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
@@ -4249,7 +4210,7 @@ const _versionHistory = <_Release>[
     description: 'Qc/layer2 Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Qc/layer2: add auth.setup.js with IndexedDB injection â€” fixes Layer 2 cold-start failures',
+      'Qc/layer2: add auth.setup.js with IndexedDB injection Ã¢â‚¬â€ fixes Layer 2 cold-start failures',
       'Release: auto-bump v4.216 release notes',
       'Release: auto-bump v4.213 for beta sprint P1 items 9-11',
       'Beta: ITEM 9 tab reorder + ITEM 10 kApiBaseUrl guard + ITEM 11 pair-v2 session token; fix ITEM 1 dismissed_news URL',
@@ -4564,7 +4525,7 @@ const _versionHistory = <_Release>[
       'Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)',
       'Ui: default My Collection to card view and soften gray-screen errors',
       'Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)',
-      'Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout',
+      'Build: add onNavigateToCollection param to MorganChatPopout Ã¢â‚¬â€ required by base_layout',
     ],
   ),
   _Release(
@@ -4579,7 +4540,7 @@ const _versionHistory = <_Release>[
       'Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)',
       'Ui: default My Collection to card view and soften gray-screen errors',
       'Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)',
-      'Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout',
+      'Build: add onNavigateToCollection param to MorganChatPopout Ã¢â‚¬â€ required by base_layout',
       'Ux: feedback button routes to general feedback or support ticket',
     ],
   ),
@@ -4594,7 +4555,7 @@ const _versionHistory = <_Release>[
       'Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)',
       'Ui: default My Collection to card view and soften gray-screen errors',
       'Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)',
-      'Build: add onNavigateToCollection param to MorganChatPopout — required by base_layout',
+      'Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout',
       'Ux: feedback button routes to general feedback or support ticket',
       'Support: remove stale grant-token text from portal empty state',
     ],
@@ -4609,7 +4570,7 @@ const _versionHistory = <_Release>[
       'Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)',
       'Ui: default My Collection to card view and soften gray-screen errors',
       'Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)',
-      'Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout',
+      'Build: add onNavigateToCollection param to MorganChatPopout Ã¢â‚¬â€ required by base_layout',
       'Ux: feedback button routes to general feedback or support ticket',
       'Support: remove stale grant-token text from portal empty state',
       'Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)',
@@ -4624,11 +4585,11 @@ const _versionHistory = <_Release>[
       'Qc: replace Select-String -Recurse with Get-ChildItem | Select-String (PowerShell compatibility)',
       'Ui: default My Collection to card view and soften gray-screen errors',
       'Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)',
-      'Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout',
+      'Build: add onNavigateToCollection param to MorganChatPopout Ã¢â‚¬â€ required by base_layout',
       'Ux: feedback button routes to general feedback or support ticket',
       'Support: remove stale grant-token text from portal empty state',
       'Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)',
-      'Support: eliminate token â€” replace with server-side consent flag',
+      'Support: eliminate token Ã¢â‚¬â€ replace with server-side consent flag',
     ],
   ),
   _Release(
@@ -4639,12 +4600,12 @@ const _versionHistory = <_Release>[
     changes: [
       'Ui: default My Collection to card view and soften gray-screen errors',
       'Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)',
-      'Build: add onNavigateToCollection param to MorganChatPopout — required by base_layout',
+      'Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout',
       'Ux: feedback button routes to general feedback or support ticket',
       'Support: remove stale grant-token text from portal empty state',
       'Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)',
-      'Support: eliminate token — replace with server-side consent flag',
-      'Support: catch FailedPrecondition (index building) → 503 instead of 500 crash',
+      'Support: eliminate token â€” replace with server-side consent flag',
+      'Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash',
     ],
   ),
   _Release(
@@ -4654,12 +4615,12 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Qc: remove non-ASCII chars from run_qc.ps1 (em dashes, variation selectors broke PowerShell parser)',
-      'Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout',
+      'Build: add onNavigateToCollection param to MorganChatPopout Ã¢â‚¬â€ required by base_layout',
       'Ux: feedback button routes to general feedback or support ticket',
       'Support: remove stale grant-token text from portal empty state',
       'Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)',
-      'Support: eliminate token â€” replace with server-side consent flag',
-      'Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash',
+      'Support: eliminate token Ã¢â‚¬â€ replace with server-side consent flag',
+      'Support: catch FailedPrecondition (index building) Ã¢â€ â€™ 503 instead of 500 crash',
       'Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver',
     ],
   ),
@@ -4669,12 +4630,12 @@ const _versionHistory = <_Release>[
     description: 'Build Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Build: add onNavigateToCollection param to MorganChatPopout â€” required by base_layout',
+      'Build: add onNavigateToCollection param to MorganChatPopout Ã¢â‚¬â€ required by base_layout',
       'Ux: feedback button routes to general feedback or support ticket',
       'Support: remove stale grant-token text from portal empty state',
       'Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)',
-      'Support: eliminate token â€” replace with server-side consent flag',
-      'Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash',
+      'Support: eliminate token Ã¢â‚¬â€ replace with server-side consent flag',
+      'Support: catch FailedPrecondition (index building) Ã¢â€ â€™ 503 instead of 500 crash',
       'Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver',
       'Support: add My Tickets and Support Portal to nav enabled-routes allowlist',
     ],
@@ -4688,8 +4649,8 @@ const _versionHistory = <_Release>[
       'Ux: feedback button routes to general feedback or support ticket',
       'Support: remove stale grant-token text from portal empty state',
       'Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)',
-      'Support: eliminate token â€” replace with server-side consent flag',
-      'Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash',
+      'Support: eliminate token Ã¢â‚¬â€ replace with server-side consent flag',
+      'Support: catch FailedPrecondition (index building) Ã¢â€ â€™ 503 instead of 500 crash',
       'Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver',
       'Support: add My Tickets and Support Portal to nav enabled-routes allowlist',
       'Support: scoped consent support access system (v5)',
@@ -4703,8 +4664,8 @@ const _versionHistory = <_Release>[
     changes: [
       'Support: remove stale grant-token text from portal empty state',
       'Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)',
-      'Support: eliminate token â€” replace with server-side consent flag',
-      'Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash',
+      'Support: eliminate token Ã¢â‚¬â€ replace with server-side consent flag',
+      'Support: catch FailedPrecondition (index building) Ã¢â€ â€™ 503 instead of 500 crash',
       'Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver',
       'Support: add My Tickets and Support Portal to nav enabled-routes allowlist',
       'Support: scoped consent support access system (v5)',
@@ -4718,8 +4679,8 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Qc: connect stacks, harden isolation guards, archive legacy scripts (v4 plan)',
-      'Support: eliminate token â€” replace with server-side consent flag',
-      'Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash',
+      'Support: eliminate token Ã¢â‚¬â€ replace with server-side consent flag',
+      'Support: catch FailedPrecondition (index building) Ã¢â€ â€™ 503 instead of 500 crash',
       'Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver',
       'Support: add My Tickets and Support Portal to nav enabled-routes allowlist',
       'Support: scoped consent support access system (v5)',
@@ -4733,8 +4694,8 @@ const _versionHistory = <_Release>[
     description: 'Support Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Support: eliminate token â€” replace with server-side consent flag',
-      'Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash',
+      'Support: eliminate token Ã¢â‚¬â€ replace with server-side consent flag',
+      'Support: catch FailedPrecondition (index building) Ã¢â€ â€™ 503 instead of 500 crash',
       'Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver',
       'Support: add My Tickets and Support Portal to nav enabled-routes allowlist',
       'Support: scoped consent support access system (v5)',
@@ -4749,7 +4710,7 @@ const _versionHistory = <_Release>[
     description: 'Support Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Support: catch FailedPrecondition (index building) â†’ 503 instead of 500 crash',
+      'Support: catch FailedPrecondition (index building) Ã¢â€ â€™ 503 instead of 500 crash',
       'Ui: make customer service email clickable; brighten My Tickets heading/subtitle to silver',
       'Support: add My Tickets and Support Portal to nav enabled-routes allowlist',
       'Support: scoped consent support access system (v5)',
@@ -4854,7 +4815,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Infra+tests: 40-min Playwright timeout, health-check retry, Phase 3 financials tests',
-      'Phase3c: spec green â€” 16/16 tests passing on preview channel',
+      'Phase3c: spec green Ã¢â‚¬â€ 16/16 tests passing on preview channel',
       'Qc: add numista_qc/ consolidated QC suite (v5 plan)',
       'A11y: enable Flutter web accessibility for Playwright testing',
       'Financials: Phase 3A cost-display + P&L; Phase 3B backfill script; Phase 3C auth fixture',
@@ -4924,7 +4885,7 @@ const _versionHistory = <_Release>[
       'Feedback: correct ServiceUnavailable exception name for installed SDK version',
       'Feedback: resolve composite index error and correct transcript field names',
       'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
-      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Checklist: compact year-row layout Ã¢â‚¬â€ one row per year, varieties inline',
     ],
   ),
   _Release(
@@ -4939,7 +4900,7 @@ const _versionHistory = <_Release>[
       'Feedback: correct ServiceUnavailable exception name for installed SDK version',
       'Feedback: resolve composite index error and correct transcript field names',
       'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
-      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Checklist: compact year-row layout Ã¢â‚¬â€ one row per year, varieties inline',
       'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
     ],
   ),
@@ -4954,7 +4915,7 @@ const _versionHistory = <_Release>[
       'Feedback: correct ServiceUnavailable exception name for installed SDK version',
       'Feedback: resolve composite index error and correct transcript field names',
       'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
-      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Checklist: compact year-row layout Ã¢â‚¬â€ one row per year, varieties inline',
       'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
       'Release: auto-bump version notes for checklist variety-level fix',
     ],
@@ -4970,7 +4931,7 @@ const _versionHistory = <_Release>[
       'Feedback: correct ServiceUnavailable exception name for installed SDK version',
       'Feedback: resolve composite index error and correct transcript field names',
       'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
-      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Checklist: compact year-row layout Ã¢â‚¬â€ one row per year, varieties inline',
       'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
       'Release: auto-bump version notes for checklist variety-level fix',
     ],
@@ -4986,7 +4947,7 @@ const _versionHistory = <_Release>[
       'Feedback: correct ServiceUnavailable exception name for installed SDK version',
       'Feedback: resolve composite index error and correct transcript field names',
       'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
-      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Checklist: compact year-row layout Ã¢â‚¬â€ one row per year, varieties inline',
       'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
       'Release: auto-bump version notes for checklist variety-level fix',
     ],
@@ -5001,7 +4962,7 @@ const _versionHistory = <_Release>[
       'Feedback: correct ServiceUnavailable exception name for installed SDK version',
       'Feedback: resolve composite index error and correct transcript field names',
       'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
-      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Checklist: compact year-row layout Ã¢â‚¬â€ one row per year, varieties inline',
       'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
       'Release: auto-bump version notes for checklist variety-level fix',
       'Checklist: flatten program checklist to variety-level slots',
@@ -5016,7 +4977,7 @@ const _versionHistory = <_Release>[
       'Feedback: correct ServiceUnavailable exception name for installed SDK version',
       'Feedback: resolve composite index error and correct transcript field names',
       'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
-      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Checklist: compact year-row layout Ã¢â‚¬â€ one row per year, varieties inline',
       'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
       'Release: auto-bump version notes for checklist variety-level fix',
       'Checklist: flatten program checklist to variety-level slots',
@@ -5031,7 +4992,7 @@ const _versionHistory = <_Release>[
     changes: [
       'Feedback: resolve composite index error and correct transcript field names',
       'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
-      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Checklist: compact year-row layout Ã¢â‚¬â€ one row per year, varieties inline',
       'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
       'Release: auto-bump version notes for checklist variety-level fix',
       'Checklist: flatten program checklist to variety-level slots',
@@ -5046,7 +5007,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Feedback: add Antigravity feedback reader, triage script, and workflow protocol',
-      'Checklist: compact year-row layout â€” one row per year, varieties inline',
+      'Checklist: compact year-row layout Ã¢â‚¬â€ one row per year, varieties inline',
       'Program_model: use List.from + Map.from to safely cast Firestore web SDK types',
       'Release: auto-bump version notes for checklist variety-level fix',
       'Checklist: flatten program checklist to variety-level slots',
@@ -5084,7 +5045,7 @@ const _versionHistory = <_Release>[
       'Release: sync release notes v4.159',
       'Lint: resolve all flutter analyze warnings to 0 issues',
       'Sync unstaged UI and test changes pre-deploy',
-      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Known-errors: Greysheet Known Errors tab Ã¢â‚¬â€ two-layer classification, GSID merge, lazy pricing, admin claim gate',
     ],
   ),
   _Release(
@@ -5099,7 +5060,7 @@ const _versionHistory = <_Release>[
       'Release: sync release notes v4.159',
       'Lint: resolve all flutter analyze warnings to 0 issues',
       'Sync unstaged UI and test changes pre-deploy',
-      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Known-errors: Greysheet Known Errors tab Ã¢â‚¬â€ two-layer classification, GSID merge, lazy pricing, admin claim gate',
       'Sync release notes pre-push',
     ],
   ),
@@ -5114,7 +5075,7 @@ const _versionHistory = <_Release>[
       'Release: sync release notes v4.159',
       'Lint: resolve all flutter analyze warnings to 0 issues',
       'Sync unstaged UI and test changes pre-deploy',
-      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Known-errors: Greysheet Known Errors tab Ã¢â‚¬â€ two-layer classification, GSID merge, lazy pricing, admin claim gate',
       'Sync release notes pre-push',
       'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
     ],
@@ -5129,7 +5090,7 @@ const _versionHistory = <_Release>[
       'Release: sync release notes v4.159',
       'Lint: resolve all flutter analyze warnings to 0 issues',
       'Sync unstaged UI and test changes pre-deploy',
-      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Known-errors: Greysheet Known Errors tab Ã¢â‚¬â€ two-layer classification, GSID merge, lazy pricing, admin claim gate',
       'Sync release notes pre-push',
       'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
       'Model: upgrade feedbackIntelligence.js to gemini-3.7-flash',
@@ -5144,7 +5105,7 @@ const _versionHistory = <_Release>[
       'Release: sync release notes v4.159',
       'Lint: resolve all flutter analyze warnings to 0 issues',
       'Sync unstaged UI and test changes pre-deploy',
-      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Known-errors: Greysheet Known Errors tab Ã¢â‚¬â€ two-layer classification, GSID merge, lazy pricing, admin claim gate',
       'Sync release notes pre-push',
       'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
       'Model: upgrade feedbackIntelligence.js to gemini-3.7-flash',
@@ -5159,7 +5120,7 @@ const _versionHistory = <_Release>[
     changes: [
       'Lint: resolve all flutter analyze warnings to 0 issues',
       'Sync unstaged UI and test changes pre-deploy',
-      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Known-errors: Greysheet Known Errors tab Ã¢â‚¬â€ two-layer classification, GSID merge, lazy pricing, admin claim gate',
       'Sync release notes pre-push',
       'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
       'Model: upgrade feedbackIntelligence.js to gemini-3.7-flash',
@@ -5174,7 +5135,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Sync unstaged UI and test changes pre-deploy',
-      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Known-errors: Greysheet Known Errors tab Ã¢â‚¬â€ two-layer classification, GSID merge, lazy pricing, admin claim gate',
       'Sync release notes pre-push',
       'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
       'Model: upgrade feedbackIntelligence.js to gemini-3.7-flash',
@@ -5189,7 +5150,7 @@ const _versionHistory = <_Release>[
     description: 'Known-errors Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Known-errors: Greysheet Known Errors tab Ã¢â‚¬â€ two-layer classification, GSID merge, lazy pricing, admin claim gate',
       'Sync release notes pre-push',
       'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
       'Model: upgrade feedbackIntelligence.js to gemini-3.7-flash',
@@ -5205,7 +5166,7 @@ const _versionHistory = <_Release>[
     description: 'Known-errors Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Known-errors: Greysheet Known Errors tab â€” two-layer classification, GSID merge, lazy pricing, admin claim gate',
+      'Known-errors: Greysheet Known Errors tab Ã¢â‚¬â€ two-layer classification, GSID merge, lazy pricing, admin claim gate',
       'Sync release notes pre-push',
       'Add S-PROOF-T1/T2 resolver tests and catalog slot count regression tests',
       'Model: upgrade feedbackIntelligence.js to gemini-3.7-flash',
@@ -5439,7 +5400,7 @@ const _versionHistory = <_Release>[
       'Scanner: update SCAN_REPORT.md via project-scanner full system audit',
       'Catalog: three easy program corrections',
       'Checklist: Washington Classic Quarters 0/210 SNAP fix',
-      'Scan: daily system check 2026-08-21 â€” 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
+      'Scan: daily system check 2026-08-21 Ã¢â‚¬â€ 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
       'Infra+tests: Playwright 25-min hard timeout, slot resolver unit tests, Suite 24 autocomplete',
     ],
   ),
@@ -5451,7 +5412,7 @@ const _versionHistory = <_Release>[
     changes: [
       'Catalog: three easy program corrections',
       'Checklist: Washington Classic Quarters 0/210 SNAP fix',
-      'Scan: daily system check 2026-08-21 â€” 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
+      'Scan: daily system check 2026-08-21 Ã¢â‚¬â€ 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
       'Infra+tests: Playwright 25-min hard timeout, slot resolver unit tests, Suite 24 autocomplete',
     ],
   ),
@@ -5462,7 +5423,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Checklist: Washington Classic Quarters 0/210 SNAP fix',
-      'Scan: daily system check 2026-08-21 â€” 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
+      'Scan: daily system check 2026-08-21 Ã¢â‚¬â€ 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
       'Infra+tests: Playwright 25-min hard timeout, slot resolver unit tests, Suite 24 autocomplete',
     ],
   ),
@@ -5472,7 +5433,7 @@ const _versionHistory = <_Release>[
     description: 'Scan Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Scan: daily system check 2026-08-21 â€” 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
+      'Scan: daily system check 2026-08-21 Ã¢â‚¬â€ 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
       'Infra+tests: Playwright 25-min hard timeout, slot resolver unit tests, Suite 24 autocomplete',
     ],
   ),
@@ -5482,7 +5443,7 @@ const _versionHistory = <_Release>[
     description: 'Scan Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Scan: daily system check 2026-08-21 â€” 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
+      'Scan: daily system check 2026-08-21 Ã¢â‚¬â€ 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
       'Infra+tests: Playwright 25-min hard timeout, slot resolver unit tests, Suite 24 autocomplete',
     ],
   ),
@@ -5492,7 +5453,7 @@ const _versionHistory = <_Release>[
     description: 'Scan Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Scan: daily system check 2026-08-21 â€” 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
+      'Scan: daily system check 2026-08-21 Ã¢â‚¬â€ 201 pytest PASS, 103/103 E2E PASS, domain engine 19 PASS',
       'Infra+tests: Playwright 25-min hard timeout, slot resolver unit tests, Suite 24 autocomplete',
     ],
   ),
@@ -5504,12 +5465,12 @@ const _versionHistory = <_Release>[
     changes: [
       'Infra+tests: Playwright 25-min hard timeout, slot resolver unit tests, Suite 24 autocomplete',
       'Infra: Firestore deploy steps use numista_mobile working-dir, not numista_backend',
-      'Infra: add firestore target to numista_backend/firebase.json â€” fix deploy workflow Firestore rules step',
+      'Infra: add firestore target to numista_backend/firebase.json Ã¢â‚¬â€ fix deploy workflow Firestore rules step',
       'Sync release notes pre-push',
-      'Flutter: Phase 4a-C1 â€” Program/Series Autocomplete picker with canonical write, Theme/Subject adjacency',
-      'Backend: Phase 4a-C3 â€” 2026 Semiquincentennial prompt rules + program_hint injection',
-      'Flutter: Phase 4a-C2 â€” matcher aliases, country guard, Rule 24 split, S-SILVER fix, requiresPrivy gate, cent quarantine, double-tap guard',
-      'Functions: improve email CTA â€” sidebar nav hint + Firestore console link',
+      'Flutter: Phase 4a-C1 Ã¢â‚¬â€ Program/Series Autocomplete picker with canonical write, Theme/Subject adjacency',
+      'Backend: Phase 4a-C3 Ã¢â‚¬â€ 2026 Semiquincentennial prompt rules + program_hint injection',
+      'Flutter: Phase 4a-C2 Ã¢â‚¬â€ matcher aliases, country guard, Rule 24 split, S-SILVER fix, requiresPrivy gate, cent quarantine, double-tap guard',
+      'Functions: improve email CTA Ã¢â‚¬â€ sidebar nav hint + Firestore console link',
     ],
   ),
   _Release(
@@ -5518,14 +5479,14 @@ const _versionHistory = <_Release>[
     description: 'Flutter Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Flutter: Phase 4a-C1 â€” Program/Series Autocomplete picker with canonical write, Theme/Subject adjacency',
-      'Backend: Phase 4a-C3 â€” 2026 Semiquincentennial prompt rules + program_hint injection',
-      'Flutter: Phase 4a-C2 â€” matcher aliases, country guard, Rule 24 split, S-SILVER fix, requiresPrivy gate, cent quarantine, double-tap guard',
-      'Functions: improve email CTA â€” sidebar nav hint + Firestore console link',
+      'Flutter: Phase 4a-C1 Ã¢â‚¬â€ Program/Series Autocomplete picker with canonical write, Theme/Subject adjacency',
+      'Backend: Phase 4a-C3 Ã¢â‚¬â€ 2026 Semiquincentennial prompt rules + program_hint injection',
+      'Flutter: Phase 4a-C2 Ã¢â‚¬â€ matcher aliases, country guard, Rule 24 split, S-SILVER fix, requiresPrivy gate, cent quarantine, double-tap guard',
+      'Functions: improve email CTA Ã¢â‚¬â€ sidebar nav hint + Firestore console link',
       'Functions: lazy-load heavy modules + fix .doc() Firestore API',
       'Functions: add numista_backend/firebase.json for standalone functions deploy',
-      'Feedback: add onFeedbackCreated Cloud Function â€” Gemini analysis + email alert + monthly rollup',
-      'Ui: Phase 1+2 â€” BACK contrast + Review Hub subtitle chain',
+      'Feedback: add onFeedbackCreated Cloud Function Ã¢â‚¬â€ Gemini analysis + email alert + monthly rollup',
+      'Ui: Phase 1+2 Ã¢â‚¬â€ BACK contrast + Review Hub subtitle chain',
     ],
   ),
   _Release(
@@ -5534,14 +5495,14 @@ const _versionHistory = <_Release>[
     description: 'Flutter Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Flutter: Phase 4a-C1 â€” Program/Series Autocomplete picker with canonical write, Theme/Subject adjacency',
-      'Backend: Phase 4a-C3 â€” 2026 Semiquincentennial prompt rules + program_hint injection',
-      'Flutter: Phase 4a-C2 â€” matcher aliases, country guard, Rule 24 split, S-SILVER fix, requiresPrivy gate, cent quarantine, double-tap guard',
-      'Functions: improve email CTA â€” sidebar nav hint + Firestore console link',
+      'Flutter: Phase 4a-C1 Ã¢â‚¬â€ Program/Series Autocomplete picker with canonical write, Theme/Subject adjacency',
+      'Backend: Phase 4a-C3 Ã¢â‚¬â€ 2026 Semiquincentennial prompt rules + program_hint injection',
+      'Flutter: Phase 4a-C2 Ã¢â‚¬â€ matcher aliases, country guard, Rule 24 split, S-SILVER fix, requiresPrivy gate, cent quarantine, double-tap guard',
+      'Functions: improve email CTA Ã¢â‚¬â€ sidebar nav hint + Firestore console link',
       'Functions: lazy-load heavy modules + fix .doc() Firestore API',
       'Functions: add numista_backend/firebase.json for standalone functions deploy',
-      'Feedback: add onFeedbackCreated Cloud Function â€” Gemini analysis + email alert + monthly rollup',
-      'Ui: Phase 1+2 â€” BACK contrast + Review Hub subtitle chain',
+      'Feedback: add onFeedbackCreated Cloud Function Ã¢â‚¬â€ Gemini analysis + email alert + monthly rollup',
+      'Ui: Phase 1+2 Ã¢â‚¬â€ BACK contrast + Review Hub subtitle chain',
     ],
   ),
   _Release(
@@ -5554,7 +5515,7 @@ const _versionHistory = <_Release>[
       'Feedback: FAB still invisible - remove LayoutBuilder from Positioned',
       'Feedback: FeedbackDrawerOverlay web crash - StackFit.expand + FocusNode lifecycle fix',
       'Feedback: FAB invisible on web - switch to Stack-relative bottom/right anchor',
-      'Feedback: MORGAN Feedback System Phase 1 â€” callable architecture, interview drawer, fallback form',
+      'Feedback: MORGAN Feedback System Phase 1 Ã¢â‚¬â€ callable architecture, interview drawer, fallback form',
       'Web: stop BaseLayout setState during My Collection build',
       'All-view: banknote and world-item cards open detail on tap',
       'Header-stats-bar: split Valuation chip into three distinct desktop facts',
@@ -6004,7 +5965,7 @@ const _versionHistory = <_Release>[
       'Ai: integrate Generate-and-Select verifier services and Antigravity command protocols',
       'Qa: synchronize v6.0 canonical 32-issue verification matrix and durable audit engine',
       'Lint: resolve all use_build_context_synchronously warnings across 9 files',
-      'Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"',
+      'Revert "fix(lint): resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits"',
     ],
   ),
   _Release(
@@ -6019,8 +5980,8 @@ const _versionHistory = <_Release>[
       'Ai: integrate Generate-and-Select verifier services and Antigravity command protocols',
       'Qa: synchronize v6.0 canonical 32-issue verification matrix and durable audit engine',
       'Lint: resolve all use_build_context_synchronously warnings across 9 files',
-      'Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"',
-      'Lint: resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits',
+      'Revert "fix(lint): resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits"',
+      'Lint: resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits',
     ],
   ),
   _Release(
@@ -6034,8 +5995,8 @@ const _versionHistory = <_Release>[
       'Ai: integrate Generate-and-Select verifier services and Antigravity command protocols',
       'Qa: synchronize v6.0 canonical 32-issue verification matrix and durable audit engine',
       'Lint: resolve all use_build_context_synchronously warnings across 9 files',
-      'Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"',
-      'Lint: resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits',
+      'Revert "fix(lint): resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits"',
+      'Lint: resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits',
       'Walkthrough: Aug 15 audit review - SCAN_REPORT v4.89 sync and Flutter lint remediation plan',
     ],
   ),
@@ -6049,8 +6010,8 @@ const _versionHistory = <_Release>[
       'Ai: integrate Generate-and-Select verifier services and Antigravity command protocols',
       'Qa: synchronize v6.0 canonical 32-issue verification matrix and durable audit engine',
       'Lint: resolve all use_build_context_synchronously warnings across 9 files',
-      'Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"',
-      'Lint: resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits',
+      'Revert "fix(lint): resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits"',
+      'Lint: resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits',
       'Walkthrough: Aug 15 audit review - SCAN_REPORT v4.89 sync and Flutter lint remediation plan',
       'Audit: update SCAN_REPORT to v4.89 with accurate test metrics, correct Dependabot count, and Flutter analyze results',
     ],
@@ -6064,8 +6025,8 @@ const _versionHistory = <_Release>[
       'Ai: integrate Generate-and-Select verifier services and Antigravity command protocols',
       'Qa: synchronize v6.0 canonical 32-issue verification matrix and durable audit engine',
       'Lint: resolve all use_build_context_synchronously warnings across 9 files',
-      'Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"',
-      'Lint: resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits',
+      'Revert "fix(lint): resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits"',
+      'Lint: resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits',
       'Walkthrough: Aug 15 audit review - SCAN_REPORT v4.89 sync and Flutter lint remediation plan',
       'Audit: update SCAN_REPORT to v4.89 with accurate test metrics, correct Dependabot count, and Flutter analyze results',
       'Audit: update SCAN_REPORT.md with final Playwright 141/145 pass metrics',
@@ -6079,8 +6040,8 @@ const _versionHistory = <_Release>[
     changes: [
       'Qa: synchronize v6.0 canonical 32-issue verification matrix and durable audit engine',
       'Lint: resolve all use_build_context_synchronously warnings across 9 files',
-      'Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"',
-      'Lint: resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits',
+      'Revert "fix(lint): resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits"',
+      'Lint: resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits',
       'Walkthrough: Aug 15 audit review - SCAN_REPORT v4.89 sync and Flutter lint remediation plan',
       'Audit: update SCAN_REPORT to v4.89 with accurate test metrics, correct Dependabot count, and Flutter analyze results',
       'Audit: update SCAN_REPORT.md with final Playwright 141/145 pass metrics',
@@ -6094,8 +6055,8 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Lint: resolve all use_build_context_synchronously warnings across 9 files',
-      'Revert "fix(lint): resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits"',
-      'Lint: resolve all use_build_context_synchronously warnings â€” add mounted guards and extract context refs before awaits',
+      'Revert "fix(lint): resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits"',
+      'Lint: resolve all use_build_context_synchronously warnings Ã¢â‚¬â€ add mounted guards and extract context refs before awaits',
       'Walkthrough: Aug 15 audit review - SCAN_REPORT v4.89 sync and Flutter lint remediation plan',
       'Audit: update SCAN_REPORT to v4.89 with accurate test metrics, correct Dependabot count, and Flutter analyze results',
       'Audit: update SCAN_REPORT.md with final Playwright 141/145 pass metrics',
@@ -6681,7 +6642,7 @@ const _versionHistory = <_Release>[
       'Release: update release notes v4.37',
       'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
       'Web: resolve closing bracket syntax in my_collection_screen',
-      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Build: restore missing try { block in my_collection_screen Ã¢â‚¬â€ orphaned catch was causing Dart syntax error',
     ],
   ),
   _Release(
@@ -6696,7 +6657,7 @@ const _versionHistory = <_Release>[
       'Release: update release notes v4.37',
       'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
       'Web: resolve closing bracket syntax in my_collection_screen',
-      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Build: restore missing try { block in my_collection_screen Ã¢â‚¬â€ orphaned catch was causing Dart syntax error',
       'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
     ],
   ),
@@ -6711,7 +6672,7 @@ const _versionHistory = <_Release>[
       'Release: update release notes v4.37',
       'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
       'Web: resolve closing bracket syntax in my_collection_screen',
-      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Build: restore missing try { block in my_collection_screen Ã¢â‚¬â€ orphaned catch was causing Dart syntax error',
       'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
       'Release: update release notes',
     ],
@@ -6726,10 +6687,10 @@ const _versionHistory = <_Release>[
       'Release: update release notes v4.37',
       'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
       'Web: resolve closing bracket syntax in my_collection_screen',
-      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Build: restore missing try { block in my_collection_screen Ã¢â‚¬â€ orphaned catch was causing Dart syntax error',
       'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
       'Release: update release notes',
-      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants Ã¢â‚¬â€ fixes Cloud Run startup crash',
     ],
   ),
   _Release(
@@ -6741,11 +6702,11 @@ const _versionHistory = <_Release>[
       'Release: update release notes v4.37',
       'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
       'Web: resolve closing bracket syntax in my_collection_screen',
-      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Build: restore missing try { block in my_collection_screen Ã¢â‚¬â€ orphaned catch was causing Dart syntax error',
       'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
       'Release: update release notes',
-      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
-      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants Ã¢â‚¬â€ fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py Ã¢â‚¬â€ Cloud Run was crashing on import',
     ],
   ),
   _Release(
@@ -6756,11 +6717,11 @@ const _versionHistory = <_Release>[
     changes: [
       'Programs: harden checklist printing, UTF-8 font engine, and firestore ghost cleanup',
       'Web: resolve closing bracket syntax in my_collection_screen',
-      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Build: restore missing try { block in my_collection_screen Ã¢â‚¬â€ orphaned catch was causing Dart syntax error',
       'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
       'Release: update release notes',
-      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
-      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants Ã¢â‚¬â€ fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py Ã¢â‚¬â€ Cloud Run was crashing on import',
       'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
     ],
   ),
@@ -6771,11 +6732,11 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Web: resolve closing bracket syntax in my_collection_screen',
-      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Build: restore missing try { block in my_collection_screen Ã¢â‚¬â€ orphaned catch was causing Dart syntax error',
       'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
       'Release: update release notes',
-      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
-      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants Ã¢â‚¬â€ fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py Ã¢â‚¬â€ Cloud Run was crashing on import',
       'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
       'Build: define missing kAppVersion constant and add constants import to home_dashboard',
     ],
@@ -6786,11 +6747,11 @@ const _versionHistory = <_Release>[
     description: 'Build Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Build: restore missing try { block in my_collection_screen â€” orphaned catch was causing Dart syntax error',
+      'Build: restore missing try { block in my_collection_screen Ã¢â‚¬â€ orphaned catch was causing Dart syntax error',
       'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
       'Release: update release notes',
-      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
-      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants Ã¢â‚¬â€ fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py Ã¢â‚¬â€ Cloud Run was crashing on import',
       'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
       'Build: define missing kAppVersion constant and add constants import to home_dashboard',
       'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
@@ -6804,8 +6765,8 @@ const _versionHistory = <_Release>[
     changes: [
       'Estate-v3: harden state machine, morgan context, pdf clean schema, and web scrollbar',
       'Release: update release notes',
-      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
-      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants Ã¢â‚¬â€ fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py Ã¢â‚¬â€ Cloud Run was crashing on import',
       'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
       'Build: define missing kAppVersion constant and add constants import to home_dashboard',
       'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
@@ -6819,8 +6780,8 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Release: update release notes',
-      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
-      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants Ã¢â‚¬â€ fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py Ã¢â‚¬â€ Cloud Run was crashing on import',
       'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
       'Build: define missing kAppVersion constant and add constants import to home_dashboard',
       'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
@@ -6834,8 +6795,8 @@ const _versionHistory = <_Release>[
     description: 'Backend Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
-      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants Ã¢â‚¬â€ fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py Ã¢â‚¬â€ Cloud Run was crashing on import',
       'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
       'Build: define missing kAppVersion constant and add constants import to home_dashboard',
       'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
@@ -6850,8 +6811,8 @@ const _versionHistory = <_Release>[
     description: 'Backend Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants â€” fixes Cloud Run startup crash',
-      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Backend: add missing DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL, DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL constants Ã¢â‚¬â€ fixes Cloud Run startup crash',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py Ã¢â‚¬â€ Cloud Run was crashing on import',
       'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
       'Build: define missing kAppVersion constant and add constants import to home_dashboard',
       'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
@@ -6866,7 +6827,7 @@ const _versionHistory = <_Release>[
     description: 'Backend Enhancements & Platform Updates',
     isLatest: false,
     changes: [
-      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py â€” Cloud Run was crashing on import',
+      'Backend: add missing GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL constants to config.py Ã¢â‚¬â€ Cloud Run was crashing on import',
       'Version: sync kAppVersion to v4.28 and include auto-generated release notes',
       'Build: define missing kAppVersion constant and add constants import to home_dashboard',
       'Pdf: parse estimated portfolio market value and acquisition cost basis separately on transfer certificate',
@@ -7056,7 +7017,7 @@ const _versionHistory = <_Release>[
       'Estate: implement missing downsample_image_to_300dpi_thumb in passport_pdf_generator',
       'Audit: generate SCAN_REPORT.md system audit report',
       'Transfer: replace invalid activeThumbColor parameter with activeColor on SwitchListTile',
-      'Transfer: replace activeThumbColor with activeColor on CheckboxListTile â€” activeThumbColor is a Switch-only parameter',
+      'Transfer: replace activeThumbColor with activeColor on CheckboxListTile Ã¢â‚¬â€ activeThumbColor is a Switch-only parameter',
       'Transfer: overhaul PDF invoice formatting, default unscrubbed toggles, remove estate references, and add web receiving flow',
     ],
   ),
@@ -7071,7 +7032,7 @@ const _versionHistory = <_Release>[
       'Estate: implement missing downsample_image_to_300dpi_thumb in passport_pdf_generator',
       'Audit: generate SCAN_REPORT.md system audit report',
       'Transfer: replace invalid activeThumbColor parameter with activeColor on SwitchListTile',
-      'Transfer: replace activeThumbColor with activeColor on CheckboxListTile â€” activeThumbColor is a Switch-only parameter',
+      'Transfer: replace activeThumbColor with activeColor on CheckboxListTile Ã¢â‚¬â€ activeThumbColor is a Switch-only parameter',
       'Transfer: overhaul PDF invoice formatting, default unscrubbed toggles, remove estate references, and add web receiving flow',
       'Release: sync release notes for system health check',
     ],
@@ -7084,7 +7045,7 @@ const _versionHistory = <_Release>[
     changes: [
       'Merge(dev->main): overhaul PDF invoice formatting, default unscrubbed toggles, remove estate references, and add web receiving flow',
       'Transfer: replace invalid activeThumbColor parameter with activeColor on SwitchListTile',
-      'Transfer: replace activeThumbColor with activeColor on CheckboxListTile â€” activeThumbColor is a Switch-only parameter',
+      'Transfer: replace activeThumbColor with activeColor on CheckboxListTile Ã¢â‚¬â€ activeThumbColor is a Switch-only parameter',
       'Transfer: overhaul PDF invoice formatting, default unscrubbed toggles, remove estate references, and add web receiving flow',
       'Mobile: remove unused imports, home dashboard improvements + docs: release notes, SCAN_REPORT, E2E test fixes',
       'Release: sync release notes for system health check',
@@ -7356,10 +7317,10 @@ const _versionHistory = <_Release>[
     description: 'Code Quality & Morgan UX Pass',
     isLatest: false,
     changes: [
-      'Morgan guide bubbles fully redesigned: concise narrations, explicit arrow directions, gold ← arrow points at search box.',
+      'Morgan guide bubbles fully redesigned: concise narrations, explicit arrow directions, gold â† arrow points at search box.',
       'PDF invoice overlay: indeterminate bouncing progress bar replaces the frozen "0%" state; 10-30s timing hint added.',
-      'API URL centralised in lib/constants.dart — all 11 files now reference kApiBaseUrl.',
-      'Flutter analyze: 32 lint issues eliminated — zero warnings, zero errors.',
+      'API URL centralised in lib/constants.dart â€” all 11 files now reference kApiBaseUrl.',
+      'Flutter analyze: 32 lint issues eliminated â€” zero warnings, zero errors.',
       'Home dashboard: friendly news-unavailable message replaces internal config detail.',
       'Unnecessary Map<String,dynamic> casts removed from 4 files.',
     ],
@@ -7376,7 +7337,7 @@ const _versionHistory = <_Release>[
       'Category filter chips (Circulating, Commemorative, Bullion, Proof) narrow results instantly.',
       'Mint mark chips and draggable detail sheet for every result card.',
       'AI Reference Search button added to My Collection toolbar for quick cross-reference.',
-      'GET /api/coin_search open endpoint on Cloud Run — no authentication required (public reference data).',
+      'GET /api/coin_search open endpoint on Cloud Run â€” no authentication required (public reference data).',
     ],
   ),
   _Release(
@@ -7386,7 +7347,7 @@ const _versionHistory = <_Release>[
     isLatest: false,
     changes: [
       'Invoice AI now classifies every line item: coins, sets, stamps, currency, medals, and supplies.',
-      'Coin sets create a single Set Record in Review Hub — choose Break Up or Keep as Set.',
+      'Coin sets create a single Set Record in Review Hub â€” choose Break Up or Keep as Set.',
       'Break Up Set expands a set into individual coins, each inheriting set provenance.',
       'Supplies (binders, pages, capsules) automatically routed to the new Inventory screen.',
       'Stamps and non-numismatic items held in Pending Items for future module support.',
@@ -7404,7 +7365,7 @@ const _versionHistory = <_Release>[
       'Paste cert numbers manually or upload a PCGS registry CSV export.',
       'Automatic schema mapping: Year, Mint Mark, Grade, PCGS#, images, and price guide value.',
       'Duplicate detection prevents double-importing slabs.',
-      'Bearer token saved to your account — no re-entry needed each session.',
+      'Bearer token saved to your account â€” no re-entry needed each session.',
       'API called client-side (Flutter Web) to bypass Cloudflare restrictions.',
     ],
   ),
@@ -7413,12 +7374,12 @@ const _versionHistory = <_Release>[
     date: '2026-04-23',
     description: 'AI Checklist Scanner',
     changes: [
-      'Photograph a printed coin checklist — AI reads it and syncs your collection.',
+      'Photograph a printed coin checklist â€” AI reads it and syncs your collection.',
       'Supports all 31 coin programs (Morgan Dollars, State Quarters, Lincoln Cents, etc.).',
       'QTY and notes column now captured from the checklist (e.g. "MS-65", "stored in binder").',
       'Unchecked coins auto-populate your Wish List in one scan.',
       'Page-aware chunking: Gemini processes one page at a time to prevent token overflow.',
-      'SDK migrated from vertexai → google-genai ahead of June 24, 2026 shutdown.',
+      'SDK migrated from vertexai â†’ google-genai ahead of June 24, 2026 shutdown.',
     ],
   ),
   _Release(
@@ -7468,7 +7429,7 @@ const _versionHistory = <_Release>[
   ),
 ];
 
-// ─── Release Notes Panel Widget ───────────────────────────────────────────────
+// â”€â”€â”€ Release Notes Panel Widget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ReleaseNotesPanel extends StatelessWidget {
   const _ReleaseNotesPanel();
@@ -7486,7 +7447,7 @@ class _ReleaseNotesPanel extends StatelessWidget {
         child: ExpansionTile(
           iconColor: const Color(0xFF31333F),
           collapsedIconColor: const Color(0xFF31333F),
-          title: const Text('🚀 System Updates & Release Notes',
+          title: const Text('ðŸš€ System Updates & Release Notes',
               style: TextStyle(
                   color: Color(0xFF31333F),
                   fontWeight: FontWeight.w500,
@@ -7578,7 +7539,7 @@ class _ReleaseNotesPanel extends StatelessWidget {
         ...r.changes.map((c) => Padding(
               padding: const EdgeInsets.only(bottom: 3),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('• ',
+                Text('â€¢ ',
                     style: TextStyle(
                         color: r.isLegacy
                             ? const Color(0xFF9AA0A6)
@@ -7600,12 +7561,12 @@ class _ReleaseNotesPanel extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  _MorganDashboardCard
-//  ────────────────────
+//  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //  Contextual "Ask Morgan" card shown on the home dashboard.
 //  Shows a personalised greeting, coin count, and one-tap access to Morgan chat.
-// ══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 class _MorganDashboardCard extends StatelessWidget {
   final int totalCoins;
   final VoidCallback? onAskMorgan;
@@ -7656,7 +7617,7 @@ class _MorganDashboardCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Header row ──────────────────────────────────────────────
+                // â”€â”€ Header row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 Row(
                   children: [
                     // Morgan avatar
@@ -7723,7 +7684,7 @@ class _MorganDashboardCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
 
-                // ── Suggestion chips ─────────────────────────────────────────
+                // â”€â”€ Suggestion chips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -7756,7 +7717,7 @@ class _MorganDashboardCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
 
-                // ── Ask Morgan button ────────────────────────────────────────
+                // â”€â”€ Ask Morgan button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -7823,8 +7784,8 @@ class _MorganDashboardCard extends StatelessWidget {
   }
 }
 
-// ─── Coin Thumbnail ────────────────────────────────────────────────────────────
-/// Circular 36×36 coin image for use in list tiles.
+// â”€â”€â”€ Coin Thumbnail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/// Circular 36Ã—36 coin image for use in list tiles.
 /// Shows the actual coin photo when [imageUrl] is available;
 /// falls back to a generic coin icon on null / error.
 class _CoinThumbnail extends StatelessWidget {

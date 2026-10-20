@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:intl/intl.dart' as intl;
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 import 'package:flutter/material.dart';
@@ -63,7 +63,7 @@ class _F {
   static const personalNotes    = 'Personal Notes';
   static const personalRef      = 'Personal Reference #';
   static const storageLocation  = 'Storage Location';
-  // originalDesc removed — field exists in Firestore but not used in this screen
+  // originalDesc removed â€” field exists in Firestore but not used in this screen
 
   // Internal/Legacy
   static const aiValue          = 'AI Estimated Value';
@@ -105,7 +105,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   String? _selectedCoinId;
   CollectionLimitMode _limitMode = CollectionLimitMode.all;
   String  _searchQuery      = '';
-  // _showInspector removed — inspector is now always expanded in the dialog
+  // _showInspector removed â€” inspector is now always expanded in the dialog
   // Default: sort by date added, newest first (column index -1 = special Added sort)
   // Users can click any column header to override.
   int     _sortColumnIndex  = -1;   // -1 = sort by Added timestamp
@@ -128,7 +128,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _cachedCoinsDocs = [];
   Timer? _coinsTimeoutTimer;
   
-  // ── Batch valuation progress ────────────────────────────────────────────────
+  // â”€â”€ Batch valuation progress â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   BatchValuationProgress _valuation = BatchValuationProgress();
   StreamSubscription<BatchValuationProgress>? _valuationSub;
 
@@ -141,12 +141,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   
   // Stores fetched eBay prices keyed by coinId
   final Map<String, String> _ebayPrices = {};
-  // _isCheckingEbay removed — eBay fetch state tracked locally in each call
+  // _isCheckingEbay removed â€” eBay fetch state tracked locally in each call
 
   // --- Similar Coins state (inspector) ------------------------------------
   List<ReferenceImage> _inspectorSimilar = [];
   bool _loadingInspectorSimilar = false;
-  // _inspectorSimilarCoinId removed — tracking via _selectedCoinId is sufficient
+  // _inspectorSimilarCoinId removed â€” tracking via _selectedCoinId is sufficient
 
 
   // --- Coin origin filter state ('All', 'U.S.', 'World') ------------------
@@ -228,7 +228,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     _ColDef(_F.condition,        'Condition',      70),
     _ColDef(_F.gradingService,   'Service',        90),
     _ColDef(_F.gradingCert,      'Cert #',        120),
-    _ColDef(_F.aiValue,          'AI Value',      100), // moved left — visible on load
+    _ColDef(_F.aiValue,          'AI Value',      100), // moved left â€” visible on load
     _ColDef(_F.cost,             'Cost',           90),
     _ColDef(_F.isSilver,         'Metal',          62), // moved right
     _ColDef(_F.meltValue,        'Melt Value',     80), // moved right
@@ -384,7 +384,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     super.didUpdateWidget(oldWidget);
     // Parent already owns initialTab. Sync locally for the upcoming build.
     // Do not setState (this runs during the parent's build) and do not
-    // echo onTabChanged back — that was the web crash loop.
+    // echo onTabChanged back â€” that was the web crash loop.
     if (widget.initialTab != null &&
         widget.initialTab != oldWidget.initialTab &&
         widget.initialTab != _currentTab) {
@@ -509,33 +509,31 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   // --- Sort + filter helpers -----------------------------------------------
   // ---------------------------------------------------------------------------
-  // _sortKey — returns a Comparable that represents the column's logical sort
+  // _sortKey â€” returns a Comparable that represents the column's logical sort
   // order for a single coin data map.  This mirrors _getCellValue logic so that
   // the sort order always matches what the user *sees* in the cell.
   // ---------------------------------------------------------------------------
   Comparable _sortKey(String field, Map<String, dynamic> m) {
     switch (field) {
-      // ── AI Value ────────────────────────────────────────────────────────────
-      // Display logic (in _getCellValue) prefers greysheetBid / cpgRetail over
-      // the raw AI Estimated Value string.  Sort must use the same hierarchy.
+      // â”€â”€ AI Value â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // NET-372: Display logic prefers cpgRetail over raw AI Estimated Value.
+      // Greysheet bid is removed from display and sorting.
       case _F.aiValue:
         final cpg = _parseNumber(m['cpgRetail']);
-        final bid = _parseNumber(m['greysheetBid']);
-        // CPG Retail is the collector/market price (default); bid is dealer-wholesale (advanced)
-        final gVal = cpg > 0 ? cpg : bid;
+        final gVal = cpg;
         if (gVal > 0) return gVal;
         final av = m[_F.aiValue]?.toString() ?? '';
-        return _parseAiValue(av); // strips ~, $, commas → double (0 if empty)
+        return _parseAiValue(av); // strips ~, $, commas â†’ double (0 if empty)
 
-      // ── Condition ──────────────────────────────────────────────────────────
-      // Sort by Sheldon numeric grade (0–70) so grades appear in proper order.
+      // â”€â”€ Condition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Sort by Sheldon numeric grade (0â€“70) so grades appear in proper order.
       // Blank / unknown values sort last (use -1 so they sink to the bottom
       // when ascending, which is more useful than floating to the top).
       case _F.condition:
         final raw = m[_F.condition]?.toString().trim() ?? '';
-        return _conditionToGrade(raw); // returns double 0–70
+        return _conditionToGrade(raw); // returns double 0â€“70
 
-      // ── Melt Value ─────────────────────────────────────────────────────────
+      // â”€â”€ Melt Value â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // Live value from spot prices if available, otherwise stored string.
       case _F.meltValue:
         if (_spotPrices.isNotEmpty) {
@@ -549,12 +547,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final mv = m[_F.meltValue]?.toString() ?? '';
         return double.tryParse(mv.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
 
-      // ── Cost ───────────────────────────────────────────────────────────────
+      // â”€â”€ Cost â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       case _F.cost:
         final raw = m[_F.cost]?.toString() ?? '';
         return double.tryParse(raw.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
 
-      // ── Year ───────────────────────────────────────────────────────────────
+      // â”€â”€ Year â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       case _F.year:
         // Dual-read: PascalCase 'Year' first, then lowercase 'year' fallback
         final raw = (m[_F.year] ?? m['year'])?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
@@ -565,14 +563,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final mint = (m[_F.mintMark] ?? m['mint_mark'])?.toString().toLowerCase() ?? '';
         return '${yearNum.toStringAsFixed(4).padLeft(10, '0')}|$theme|$mint';
 
-      // ── Default: plain text (alphabetical) ─────────────────────────────────
+      // â”€â”€ Default: plain text (alphabetical) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       default:
         final v = m[field]?.toString().trim() ?? '';
         return (v == 'null' || v == 'nan') ? '' : v;
     }
   }
 
-  // Converts a raw condition string → Sheldon grade (0–70).
+  // Converts a raw condition string â†’ Sheldon grade (0â€“70).
   // Unknown/blank values return -1 so they sort consistently to the bottom.
   static double _conditionToGrade(String raw) {
     if (raw.isEmpty || raw == 'null') return -1;
@@ -598,9 +596,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     if (lower == 'au-58' || lower == 'au58') return 58;
     // Circulated shorthand (mid-range estimate: ~25)
     if (lower.contains('circ') && !lower.contains('unc')) return 25;
-    // Uncirculated shorthand (≈ MS-60)
+    // Uncirculated shorthand (â‰ˆ MS-60)
     if (lower.contains('unc') || lower.contains('uncirculated')) return 60;
-    // Proof (≈ PF-65)
+    // Proof (â‰ˆ PF-65)
     if (lower.contains('proof')) return 65;
     // MS-xx or PF-xx (e.g. "MS-65", "MS65", "PF-68")
     final msMatch = RegExp(r'(?:ms|pf|pr)[-\s]?(\d{1,2})', caseSensitive: false).firstMatch(lower);
@@ -655,7 +653,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Fix B: CollectionRow pipeline — virtual set children as table rows
+  // Fix B: CollectionRow pipeline â€” virtual set children as table rows
   // ---------------------------------------------------------------------------
 
   /// Dual-key field getter: tries snake_case first, then legacy PascalCase.
@@ -704,7 +702,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       if (psid.isNotEmpty) parentSetIdSet.add(psid);
     }
 
-    // Build snapshot lookup: docId → QueryDocumentSnapshot
+    // Build snapshot lookup: docId â†’ QueryDocumentSnapshot
     final snapById = <String, QueryDocumentSnapshot>{};
     for (final doc in _cachedCoinsDocs) {
       snapById[doc.id] = doc;
@@ -737,7 +735,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           snapshot: null,
         ));
       } else {
-        // Real doc (parent or loose coin) — use the ORIGINAL Firestore snapshot
+        // Real doc (parent or loose coin) â€” use the ORIGINAL Firestore snapshot
         // map, not the expansion projection. expandCollection()'s item is a
         // snake_case-only projection that drops photos, grades, metal, and every
         // PascalCase field that _getCellValue / Coin Inspector expect.
@@ -766,7 +764,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return rows;
   }
 
-  /// Filter CollectionRows — adapted from _filtered() for the CollectionRow pipeline.
+  /// Filter CollectionRows â€” adapted from _filtered() for the CollectionRow pipeline.
   /// - Transferred items: hidden
   /// - Supplies: hidden
   /// - Virtual non-coin children on Coins tab: hidden
@@ -806,7 +804,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       if (!row.isVirtualChild) {
         final parentSetId = m['parent_set_id']?.toString() ?? '';
         if (parentSetId.isNotEmpty) {
-          // This is a real child doc — always visible
+          // This is a real child doc â€” always visible
           return true;
         }
       }
@@ -885,7 +883,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }).toList();
   }
 
-  /// Sort CollectionRows — adapted from _sorted() for the CollectionRow pipeline.
+  /// Sort CollectionRows â€” adapted from _sorted() for the CollectionRow pipeline.
   List<CollectionRow> _sortedRows(List<CollectionRow> raw) {
     final copy = List<CollectionRow>.from(raw);
 
@@ -1007,7 +1005,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }).toList();
   }
 
-  // --- Returns columns that have ≥1 non-empty value in current docs ---------
+  // --- Returns columns that have â‰¥1 non-empty value in current docs ---------
   // When _showOnlyPopulated is false, returns all columns unchanged.
   List<_ColDef> _visibleColumns(List<QueryDocumentSnapshot> docs) {
     if (!_showOnlyPopulated) return _columns;
@@ -1393,6 +1391,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     return FutureBuilder<bool>(
                       future: ValuationModeService.isAdvancedMode(),
                       builder: (context, modeSnap) {
+                        // ignore: unused_local_variable (NET-372: bid/advanced mode removed)
                         final advanced = modeSnap.data ?? false;
                         // Use _cachedCoinsDocs (same data source as Coins tab)
                         // instead of coinsSnap which races stream assignment on first mount
@@ -1411,8 +1410,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             final data = doc.data();
                             if (data['item_type'] == 'supply' || data['is_supply'] == true) continue;
                             final coinCpg = _parseNumber(data['cpgRetail']);
-                            final coinBid = _parseNumber(data['greysheetBid']);
-                            final gVal = advanced ? coinCpg : coinBid;
+                            final gVal = coinCpg;
                             if (gVal > 0) {
                               fallbackCoinsValue += gVal;
                             } else {
@@ -1465,8 +1463,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           final title = '$year $denom'.trim();
 
                           final coinCpg = _parseNumber(data['cpgRetail']);
-                          final coinBid = _parseNumber(data['greysheetBid']);
-                          final gVal = advanced ? coinCpg : coinBid;
+                          final gVal = coinCpg;
                           final displayValue = gVal > 0 
                               ? gVal 
                               : _parseAiValue(data['AI Estimated Value']?.toString() ?? '');
@@ -1474,7 +1471,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           return UnifiedCollectionItem(
                             title: title.isNotEmpty ? title : 'Coin',
                             category: 'Coin',
-                            emoji: '🪙',
+                            emoji: 'ðŸª™',
                             country: data['Country']?.toString() ?? 'US',
                             dateAdded: addedDate,
                             value: displayValue,
@@ -1493,7 +1490,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           return UnifiedCollectionItem(
                             title: data['Description']?.toString() ?? 'Banknote',
                             category: 'Currency',
-                            emoji: '💵',
+                            emoji: 'ðŸ’µ',
                             country: data['Country']?.toString() ?? 'US',
                             dateAdded: addedDate,
                             value: _parseNumber(data['Cost']),
@@ -1580,7 +1577,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             ),
                         SizedBox(height: 32),
 
-                        // ITEM 7: Estate $0.00 warning — shown when coins exist
+                        // ITEM 7: Estate $0.00 warning â€” shown when coins exist
                         // but no valuation has run yet (all values are zero).
                         // Guides users to Batch Valuation so estate report is meaningful.
                         if (coinsCount > 0 && grandTotalValue == 0.0)
@@ -1603,7 +1600,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      'Your collection shows \$0.00 — '
+                                      'Your collection shows \$0.00 â€” '
                                       'run Batch Valuation to price your coins.',
                                       style: TextStyle(
                                         color: Colors.orange.shade800,
@@ -1677,7 +1674,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                       child: Text(item.emoji, style: TextStyle(fontSize: 18)),
                                     ),
                                     title: Text(item.title, style: TextStyle(color: _text, fontWeight: FontWeight.w600)),
-                                    subtitle: Text('${item.category} · ${item.country}', style: TextStyle(color: _subtext)),
+                                    subtitle: Text('${item.category} Â· ${item.country}', style: TextStyle(color: _subtext)),
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -2078,7 +2075,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              '${item.country} · ${item.era}',
+                              '${item.country} Â· ${item.era}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -2138,15 +2135,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  // ── All-view tap-navigation helpers ──────────────────────────────────────────
+  // â”€â”€ All-view tap-navigation helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// Opens the currency/banknote detail dialog using data already cached in
-  /// [item.rawData].  No Firestore re-fetch — pure cache-first.
+  /// [item.rawData].  No Firestore re-fetch â€” pure cache-first.
   void _openCurrencyDetail(BuildContext context, UnifiedCollectionItem item) {
     final data = item.rawData;
     if (data == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item detail not available — please switch to the Currency tab.')),
+        const SnackBar(content: Text('Item detail not available â€” please switch to the Currency tab.')),
       );
       return;
     }
@@ -2208,12 +2205,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   /// Opens the World & Specialty detail dialog using [item.worldItem].
-  /// No Firestore re-fetch — pure cache-first.
+  /// No Firestore re-fetch â€” pure cache-first.
   void _openWorldItemDetail(BuildContext context, UnifiedCollectionItem item) {
     final wi = item.worldItem;
     if (wi == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item detail not available — please switch to the World & Specialty tab.')),
+        const SnackBar(content: Text('Item detail not available â€” please switch to the World & Specialty tab.')),
       );
       return;
     }
@@ -2351,7 +2348,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ]),
       ),
       SizedBox(width: 12),
-      // ── Vertex AI Reference Search button ─────────────────────────────
+      // â”€â”€ Vertex AI Reference Search button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       if (widget.onNavigate != null)
         Container(
           margin: EdgeInsets.only(top: 22),
@@ -2441,14 +2438,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.chevron_left_rounded, size: 18),
-                  tooltip: 'Pan Left (←)',
+                  tooltip: 'Pan Left (â†)',
                   onPressed: canScrollLeft ? () => _panTable(false) : null,
                   visualDensity: VisualDensity.compact,
                 ),
                 Container(width: 1, height: 20, color: _border),
                 IconButton(
                   icon: const Icon(Icons.chevron_right_rounded, size: 18),
-                  tooltip: 'Pan Right (→)',
+                  tooltip: 'Pan Right (â†’)',
                   onPressed: canScrollRight ? () => _panTable(true) : null,
                   visualDensity: VisualDensity.compact,
                 ),
@@ -2553,7 +2550,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ),
         const SizedBox(height: 6),
 
-        // ── EXTERNAL HEADER ROW ─────────────────────────────────────────
+        // â”€â”€ EXTERNAL HEADER ROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Not inside the TableView. Not pinned. Normal Flutter Row.
         // Taps here NEVER fall through to data cells.
         Container(
@@ -2598,7 +2595,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   ),
                 ),
               ),
-              // Scrollable header cells — slaved to _tvHorizCtrl via Transform
+              // Scrollable header cells â€” slaved to _tvHorizCtrl via Transform
               Expanded(
                 child: ClipRect(
                   child: ListenableBuilder(
@@ -2631,8 +2628,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         ),
 
-        // ── DATA-ONLY TABLE VIEW ────────────────────────────────────────
-        // pinnedRowCount: 0 — no header inside the TableView.
+        // â”€â”€ DATA-ONLY TABLE VIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // pinnedRowCount: 0 â€” no header inside the TableView.
         // All rows are data rows. Index = docs[row], not docs[row-1].
         Expanded(
           child: ClipRRect(
@@ -2731,7 +2728,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             final parentDoc = _cachedCoinsDocs
                                 .where((d) => d.id == crw.parentDocId)
                                 .firstOrNull;
-                            if (parentDoc == null) return; // parent missing — skip
+                            if (parentDoc == null) return; // parent missing â€” skip
                             final parentData = (parentDoc.data() as Map<String, dynamic>?) ?? {};
                             final coin = CoinModel.fromMap(parentData, parentDoc.id);
                             CoinDetailScreen.show(
@@ -2916,8 +2913,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      // First data column on virtual children gets ↳ prefix
-                      (crw.isVirtualChild && col == 1) ? '↳ $value' : value,
+                      // First data column on virtual children gets â†³ prefix
+                      (crw.isVirtualChild && col == 1) ? 'â†³ $value' : value,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontSize: 12,
@@ -2931,7 +2928,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               return TableViewCell(
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('—', style: TextStyle(fontSize: 12, color: _subtext)),
+                  child: Text('â€”', style: TextStyle(fontSize: 12, color: _subtext)),
                 ),
               );
             }
@@ -2940,7 +2937,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             return TableViewCell(
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('—', style: TextStyle(fontSize: 12, color: _subtext)),
+                child: Text('â€”', style: TextStyle(fontSize: 12, color: _subtext)),
               ),
             );
           }
@@ -2991,13 +2988,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             : (themeStartsYear ? label : '$yearMint $label').trim();
         
         final valCpg = _parseNumber(m['cpgRetail']);
-        final valBid = _parseNumber(m['greysheetBid']);
-        final finalVal = advanced ? valCpg : valBid;
+        final finalVal = valCpg;
         
         final fmt = intl.NumberFormat.currency(symbol: '\$');
         final valueText = finalVal > 0 
             ? fmt.format(finalVal) 
-            : (m[_F.aiValue]?.toString() ?? '—');
+            : (m[_F.aiValue]?.toString() ?? 'â€”');
 
         // For virtual children, selection targets parent doc
         final effectiveId = crw.isVirtualChild ? (crw.parentDocId ?? crw.id) : crw.id;
@@ -3041,7 +3037,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             child: _CollectionCardImage(data: m),
                           ),
                         ),
-                        // ITEM 6: Amber DEMO badge — shown only on sandbox coins.
+                        // ITEM 6: Amber DEMO badge â€” shown only on sandbox coins.
                         // is_demo is set server-side; never derive from string heuristics.
                         if (!crw.isVirtualChild && canMutate && m['is_set'] != true && m['isSet'] != true && (m['parent_set_id'] == null || m['parent_set_id'].toString().isEmpty))
                           Positioned(
@@ -3144,7 +3140,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (valueText == '—' || m['enrichment_status'] == 'pending')
+                      if (valueText == 'â€”' || m['enrichment_status'] == 'pending')
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
@@ -3178,7 +3174,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   /// External header cell for the sort header Row (Option A).
   /// Returns a plain Widget (not TableViewCell) sized to the column width.
-  /// Sort tap fills the entire cell — no pinned-row hit-test mismatch.
+  /// Sort tap fills the entire cell â€” no pinned-row hit-test mismatch.
   Widget _buildExternalHeaderCell(_ColDef colDef, double colPadding) {
     final sortIdx  = _columns.indexOf(colDef);
     final isSorted = _sortColumnIndex == sortIdx;
@@ -3314,15 +3310,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         return n != null ? _currencyFmt.format(n) : rawC;
       case _F.aiValue:
         final coinCpg = _parseNumber(m['cpgRetail']);
-        final coinBid = _parseNumber(m['greysheetBid']);
-        // Default: CPG Retail (collector/market price).  Advanced: Greysheet Bid (dealer wholesale).
-        final gVal = advanced ? coinBid : (coinCpg > 0 ? coinCpg : coinBid);
+        // NET-372: CPG Retail only, bid removed from display
+        final gVal = coinCpg;
         if (gVal > 0) {
           return _currencyFmt.format(gVal);
         }
         final av = m[_F.aiValue]?.toString().trim() ?? '';
         if (av == 'Pending' || av == 'null' || av.isEmpty) return '';
-        final rangeMatch = RegExp(r'^(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)$').firstMatch(av);
+        final rangeMatch = RegExp(r'^(\d+(?:\.\d+)?)\s*[-â€“]\s*(\d+(?:\.\d+)?)$').firstMatch(av);
         if (rangeMatch != null) {
           final v1 = double.tryParse(rangeMatch.group(1)!);
           final v2 = double.tryParse(rangeMatch.group(2)!);
@@ -3498,7 +3493,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     Text('Coin Inspector -- $title',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text)),
                     Spacer(),
-                    // Google Images search — only shown when no photo is active
+                    // Google Images search â€” only shown when no photo is active
                     if (!hasActive && refFuture != null) ...[
                       Tooltip(
                         message: 'Opens Google Images: searches for this coin',
@@ -3801,7 +3796,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-  // _buildInspectorSection was removed — inspector is now rendered directly
+  // _buildInspectorSection was removed â€” inspector is now rendered directly
   // inside showDialog via the _buildMetricStrip / _buildDetailGrid helpers below.
 
   // --- Metric strip --------------------------------------------------------
@@ -3997,7 +3992,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     ]),
   );
 
-  // _metric removed — replaced by _metricCard (the used variant with accent+icon)
+  // _metric removed â€” replaced by _metricCard (the used variant with accent+icon)
 
   // --- Dropdown helper -----------------------------------------------------
   Widget _styledDropdown<T>({
@@ -4224,7 +4219,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     onChanged: null, // can't deselect the source coin
                     activeColor: const Color(0xFFC9A227),
                     title: Text(
-                      '${data['Denomination'] ?? ''} — ${data['Theme/Subject'] ?? data['Program/Series'] ?? ''}',
+                      '${data['Denomination'] ?? ''} â€” ${data['Theme/Subject'] ?? data['Program/Series'] ?? ''}',
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                     ),
                     subtitle: Text(
@@ -4249,7 +4244,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                         });
                       },
                       title: Text(
-                        '${c['Denomination'] ?? ''} — ${c['Theme/Subject'] ?? c['Program/Series'] ?? ''}',
+                        '${c['Denomination'] ?? ''} â€” ${c['Theme/Subject'] ?? c['Program/Series'] ?? ''}',
                         style: const TextStyle(color: Colors.white, fontSize: 13),
                       ),
                       subtitle: Text(
@@ -4408,9 +4403,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   // --- Coin Vault Gallery widget --------------------------------------------
   /// Replaces the old upload-zone pair with a premium personal scan gallery.
-  /// Shows the user's microscope photo with a 📷 YOUR SCAN badge when present,
+  /// Shows the user's microscope photo with a ðŸ“· YOUR SCAN badge when present,
   /// or an inviting "Add Your Photo" prompt otherwise.
-  // ignore: unused_element — kept for CoinDetailScreen integration (Phase 2)
+  // ignore: unused_element â€” kept for CoinDetailScreen integration (Phase 2)
   Widget _buildCoinVaultGallery(Map<String, dynamic> data) {
     final obvUrl = data[_F.imageObverse]?.toString() ?? '';
     final revUrl = data[_F.imageReverse]?.toString() ?? '';
@@ -4998,7 +4993,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           content: Text('${side[0].toUpperCase()}${side.substring(1)} photo saved!'),
           backgroundColor: _green,
         ));
-        // ── Photo-sharing consent ─────────────────────────────────────────────
+        // â”€â”€ Photo-sharing consent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // On the user's very first upload: show a one-time opt-out popup.
         // On subsequent uploads: silently honour their stored preference.
         final firstUpload = await PhotoSharingService.shouldShowConsent();
@@ -5023,7 +5018,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               'contribute_queued_at':  DateTime.now().toIso8601String(),
             });
           } catch (_) {
-            // Non-fatal — library contribution tag is best-effort
+            // Non-fatal â€” library contribution tag is best-effort
           }
         }
       }
@@ -5076,14 +5071,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               children: [
                 SizedBox(height: 4),
                 Text(
-                  'Your photo looks great! 🎉',
+                  'Your photo looks great! ðŸŽ‰',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
                 SizedBox(height: 10),
                 Text(
                   'Would you like to contribute it to the Numista.AI reference '
                   'library? Other collectors will see it when they view the same '
-                  'coin — no personal info is shared.',
+                  'coin â€” no personal info is shared.',
                   style: TextStyle(fontSize: 13, height: 1.5),
                 ),
                 SizedBox(height: 14),
@@ -5104,7 +5099,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       Expanded(
                         child: Text(
                           'You\'ll never be asked this again. '  
-                          'Change anytime in Settings → Privacy.',
+                          'Change anytime in Settings â†’ Privacy.',
                           style: TextStyle(
                               fontSize: 11,
                               color: Colors.green.shade800,
@@ -5427,7 +5422,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     if (bytes == null) return;
     Uint8List uploadBytes = bytes;
     
-    // HEIC→JPEG conversion via server (M6: route owner-photo upload through conversion)
+    // HEICâ†’JPEG conversion via server (M6: route owner-photo upload through conversion)
     if (ext == 'heic' || ext == 'heif') {
       try {
         final uri = Uri.parse('$kApiBaseUrl/api/convert_heic');
@@ -5651,7 +5646,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 }
 
-// ── Segmented Tab Selection Control ──────────────────────────────────────────
+// â”€â”€ Segmented Tab Selection Control â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class MyCollectionSegmentedControl extends StatelessWidget {
   final String selectedTab;
   final ValueChanged<String> onTabChanged;
@@ -5716,7 +5711,7 @@ class MyCollectionSegmentedControl extends StatelessWidget {
   }
 }
 
-// ── Unified Portfolio Additions Model ─────────────────────────────────────────
+// â”€â”€ Unified Portfolio Additions Model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class UnifiedCollectionItem {
   final String title;
   final String category;
@@ -5725,11 +5720,11 @@ class UnifiedCollectionItem {
   final DateTime? dateAdded;
   final double value;
 
-  /// Full Firestore document data — populated for Currency items so the
+  /// Full Firestore document data â€” populated for Currency items so the
   /// All-view tap handler can open NoteDetailDialog without re-fetching.
   final Map<String, dynamic>? rawData;
 
-  /// The saved WorldItem object — populated for World & Specialty items so the
+  /// The saved WorldItem object â€” populated for World & Specialty items so the
   /// All-view tap handler can open _WorldItemDetailDialog without re-fetching.
   final WorldItem? worldItem;
 
@@ -5745,10 +5740,10 @@ class UnifiedCollectionItem {
   });
 }
 
-// ── World & Specialty Item Detail Dialog ─────────────────────────────────────
+// â”€â”€ World & Specialty Item Detail Dialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /// Shown when the user taps a World & Specialty card in the All-view recent
 /// additions feed. Data comes from the [WorldItem] already cached in the live
-/// stream — no extra Firestore read required.
+/// stream â€” no extra Firestore read required.
 class _WorldItemDetailDialog extends StatelessWidget {
   final WorldItem item;
   const _WorldItemDetailDialog({required this.item});
@@ -5824,7 +5819,7 @@ class _WorldItemDetailDialog extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ──────────────────────────────────────────────────────
+            // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -5855,7 +5850,7 @@ class _WorldItemDetailDialog extends StatelessWidget {
               ),
             ),
 
-            // ── Body ────────────────────────────────────────────────────────
+            // â”€â”€ Body â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -5936,7 +5931,7 @@ class _WorldItemDetailDialog extends StatelessWidget {
               ),
             ),
 
-            // ── Footer ──────────────────────────────────────────────────────
+            // â”€â”€ Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: SizedBox(
@@ -5962,7 +5957,7 @@ class _WorldItemDetailDialog extends StatelessWidget {
   }
 }
 
-// ── Interactive AI Collection Report Modal ─────────────────────────────────────
+// â”€â”€ Interactive AI Collection Report Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _GenerateReportDialog extends StatefulWidget {
   final String userEmail;
   const _GenerateReportDialog({required this.userEmail});
@@ -6156,7 +6151,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
                         await EstateReportService.openPdf(_result!.pdfBytes, 'Numista_AI_Collection_Report.pdf');
                       },
                       icon: const Icon(Icons.picture_as_pdf, size: 18),
-                      label: const Text('📄 Open PDF'),
+                      label: const Text('ðŸ“„ Open PDF'),
                       style: ElevatedButton.styleFrom(backgroundColor: pink, foregroundColor: Colors.white),
                     ),
                   ),

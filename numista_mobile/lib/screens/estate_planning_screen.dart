@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,9 +14,9 @@ import '../services/estate_fiduciary_service.dart';
 import '../services/beta_checklist_service.dart';
 import '../services/valuation_mode_service.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Theme-aware color tokens
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const _kGold       = Color(0xFFFFD700);
 const _kRed        = Color(0xFFF63366);
 
@@ -30,16 +30,16 @@ Color _kTextSecondary(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF8B92A5)
 
 final _dollarFmt = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Supported jurisdictions
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const _jurisdictions = ['NY', 'NC', 'NJ', 'FL', 'CA', 'TX', 'SC', 'Other'];
 
 Map<String, _StateInfo> _stateInfo = {
   'NY': _StateInfo(
     color: const Color(0xFFF59E0B),
     icon: Icons.warning_amber_rounded,
-    title: 'New York — Estate Tax Cliff',
+    title: 'New York â€” Estate Tax Cliff',
     body: 'NY imposes a state estate tax with a "cliff" effect. If the '
         'taxable estate exceeds 105% of the \$7.35M exemption, the ENTIRE '
         'estate is taxed (not just the excess). Tangible personal property '
@@ -49,7 +49,7 @@ Map<String, _StateInfo> _stateInfo = {
   'NJ': _StateInfo(
     color: const Color(0xFFEF4444),
     icon: Icons.gavel_rounded,
-    title: 'New Jersey — Inheritance Tax',
+    title: 'New Jersey â€” Inheritance Tax',
     body: 'NJ levies an inheritance tax based on the beneficiary\'s '
         'relationship class (A, C, D, E). Class A (spouse, children) pays '
         'no tax. Class D (friends, distant relatives) pays up to 16%. '
@@ -58,7 +58,7 @@ Map<String, _StateInfo> _stateInfo = {
   'FL': _StateInfo(
     color: const Color(0xFF10B981),
     icon: Icons.lock_outline_rounded,
-    title: 'Florida — Probate Inventory Confidentiality',
+    title: 'Florida â€” Probate Inventory Confidentiality',
     body: 'Florida provides strong probate inventory confidentiality. '
         'Coin collection inventories filed with the court are not public '
         'records. No state estate or inheritance tax.',
@@ -66,8 +66,8 @@ Map<String, _StateInfo> _stateInfo = {
   'CA': _StateInfo(
     color: const Color(0xFFF59E0B),
     icon: Icons.info_outline_rounded,
-    title: 'California — TPP Memo Cap',
-    body: 'CA Probate Code §13006 allows a TPP memo to transfer personal '
+    title: 'California â€” TPP Memo Cap',
+    body: 'CA Probate Code Â§13006 allows a TPP memo to transfer personal '
         'property, but is capped at \$25,000 retail value. Collections '
         'exceeding this must go through formal probate or a trust. '
         'Community property rules apply to coins purchased during marriage.',
@@ -75,7 +75,7 @@ Map<String, _StateInfo> _stateInfo = {
   'TX': _StateInfo(
     color: const Color(0xFF3B82F6),
     icon: Icons.gavel_rounded,
-    title: 'Texas — Coins Explicitly in Statute',
+    title: 'Texas â€” Coins Explicitly in Statute',
     body: 'Texas Estates Code explicitly lists coins and currency as '
         'tangible personal property. No state estate tax. Community '
         'property rules apply. Consider a transfer-on-death deed for '
@@ -84,7 +84,7 @@ Map<String, _StateInfo> _stateInfo = {
   'NC': _StateInfo(
     color: const Color(0xFF10B981),
     icon: Icons.check_circle_outline_rounded,
-    title: 'North Carolina — TPP Memo Allowed',
+    title: 'North Carolina â€” TPP Memo Allowed',
     body: 'NC allows tangible personal property memoranda to direct '
         'specific items (including coins) to named beneficiaries outside '
         'of probate. The memo can be updated any time without attorney '
@@ -93,7 +93,7 @@ Map<String, _StateInfo> _stateInfo = {
   'SC': _StateInfo(
     color: const Color(0xFF10B981),
     icon: Icons.check_circle_outline_rounded,
-    title: 'South Carolina — TPP Memo Allowed',
+    title: 'South Carolina â€” TPP Memo Allowed',
     body: 'SC allows TPP memos similar to NC. Coins can be directed to '
         'specific beneficiaries by memo attached to your will. No state '
         'inheritance tax.',
@@ -113,9 +113,9 @@ class _StateInfo {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EstatePlanningScreen — main entry point
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// EstatePlanningScreen â€” main entry point
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class EstatePlanningScreen extends StatefulWidget {
   const EstatePlanningScreen({super.key});
 
@@ -129,7 +129,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
   String get _uid =>
       FirebaseAuth.instance.currentUser?.email ?? '';
 
-  // ── Subscription tier & Flag-driven entitlements ─────────────────────────────
+  // â”€â”€ Subscription tier & Flag-driven entitlements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String _subscriptionTier = '';
   bool   _isLifetime       = false;
   bool   _isAiQc           = false;
@@ -489,9 +489,9 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 1 — Estate Profile
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 1 â€” Estate Profile
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _ProfileTab extends StatefulWidget {
   final String uid;
   const _ProfileTab({required this.uid});
@@ -599,7 +599,7 @@ class _ProfileTabState extends State<_ProfileTab> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── Privacy & Security Banner ──────────────────────────────────
+          // â”€â”€ Privacy & Security Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           _InfoBanner(
             color: const Color(0xFF10B981),
             icon: Icons.lock_outline,
@@ -610,7 +610,7 @@ class _ProfileTabState extends State<_ProfileTab> {
           ),
           const SizedBox(height: 16),
 
-          // ── Personal Information ──────────────────────────────────────
+          // â”€â”€ Personal Information â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           _SectionHeader(title: 'Personal Information', icon: Icons.person_outline),
           _EstateCard(children: [
             _label(context, 'Marital Status'),
@@ -641,13 +641,13 @@ class _ProfileTabState extends State<_ProfileTab> {
 
           const SizedBox(height: 16),
 
-          // ── Jurisdiction ──────────────────────────────────────────────
+          // â”€â”€ Jurisdiction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           _SectionHeader(title: 'Jurisdiction', icon: Icons.location_city_outlined),
           _EstateCard(children: [
             _label(context, 'State / Jurisdiction'),
             SizedBox(height: 6),
             DropdownButtonFormField<String>(
-              // ignore: deprecated_member_use — `value` drives selected item on a controlled dropdown
+              // ignore: deprecated_member_use â€” `value` drives selected item on a controlled dropdown
               value: _jurisdiction.isEmpty ? null : _jurisdiction,
               decoration: _inputDecoration(context, hint: 'Select your state'),
               dropdownColor: _kCard(context),
@@ -674,7 +674,7 @@ class _ProfileTabState extends State<_ProfileTab> {
 
           const SizedBox(height: 16),
 
-          // ── Estate Documents ──────────────────────────────────────────
+          // â”€â”€ Estate Documents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           _SectionHeader(title: 'Estate Documents', icon: Icons.description_outlined),
           _EstateCard(children: [
             _label(context, 'Will / Trust Status'),
@@ -688,7 +688,7 @@ class _ProfileTabState extends State<_ProfileTab> {
 
           const SizedBox(height: 16),
 
-          // ── Beneficiaries ─────────────────────────────────────────────
+          // â”€â”€ Beneficiaries â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           _SectionHeader(
             title: 'Beneficiaries',
             icon: Icons.people_outline,
@@ -708,7 +708,7 @@ class _ProfileTabState extends State<_ProfileTab> {
 
           const SizedBox(height: 16),
 
-          // ── Liquidation & Division Settings ───────────────────────────
+          // â”€â”€ Liquidation & Division Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           _SectionHeader(
             title: 'Liquidation & Division Settings',
             icon: Icons.pie_chart_outline,
@@ -789,7 +789,7 @@ class _ProfileTabState extends State<_ProfileTab> {
 
           const SizedBox(height: 24),
 
-          // ── Save button ───────────────────────────────────────────────
+          // â”€â”€ Save button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -822,9 +822,9 @@ class _ProfileTabState extends State<_ProfileTab> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 2 — Collection Review
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 2 â€” Collection Review
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _CollectionTab extends StatefulWidget {
   final String uid;
   const _CollectionTab({required this.uid});
@@ -838,6 +838,7 @@ class _CollectionTabState extends State<_CollectionTab> {
   Map<String, CoinEstateData> _estateData = {};
   List<EstateBeneficiary> _beneficiaries = [];
   bool _loading = true;
+  // ignore: unused_field
   bool _isAdvancedMode = false;
   String _filter = 'All'; // 'All' | 'Unassigned' | 'Needs Appraisal'
   StreamSubscription<Map<String, CoinEstateData>>? _estateSub;
@@ -903,15 +904,9 @@ class _CollectionTabState extends State<_CollectionTab> {
     if (_estateData[c.id]?.fmvOverride != null) {
       return _estateData[c.id]!.fmvOverride!;
     }
-    if (_isAdvancedMode) {
-      final cpg = c.cpgRetail;
-      if (cpg > 0) return cpg;
-      return _parseValue(c.aiEstimatedValue);
-    } else {
-      final bid = c.greysheetBid;
-      if (bid > 0) return bid;
-      return _parseValue(c.aiEstimatedValue) * 0.80;
-    }
+    final cpg = c.cpgRetail;
+    if (cpg > 0) return cpg;
+    return _parseValue(c.aiEstimatedValue);
   }
 
   double _parseValue(String v) {
@@ -936,7 +931,7 @@ class _CollectionTabState extends State<_CollectionTab> {
 
     return Column(
       children: [
-        // ── Stat cards ──────────────────────────────────────────────────
+        // â”€â”€ Stat cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Container(
           color: _kDeepPurple(context).withAlpha(180),
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
@@ -954,7 +949,7 @@ class _CollectionTabState extends State<_CollectionTab> {
           ),
         ),
 
-        // ── Filter buttons ───────────────────────────────────────────────
+        // â”€â”€ Filter buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
@@ -990,7 +985,7 @@ class _CollectionTabState extends State<_CollectionTab> {
           ),
         ),
 
-        // ── Coin list ─────────────────────────────────────────────────────
+        // â”€â”€ Coin list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Expanded(
           child: _filteredCoins.isEmpty
               ? Center(
@@ -1036,9 +1031,9 @@ class _CollectionTabState extends State<_CollectionTab> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 3 — Division Tab
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 3 â€” Division Tab
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _DivisionTab extends StatefulWidget {
   final String uid;
   const _DivisionTab({required this.uid});
@@ -1053,9 +1048,8 @@ class _DivisionTabState extends State<_DivisionTab> {
   EstateProfile? _profile;
   bool _loading = true;
   bool _saving = false;
+  // ignore: unused_field
   bool _isAdvancedMode = false;
-
-  // Simulation results
   Map<String, List<CoinModel>> _simulatedLots = {};
   Map<String, double> _simulatedTotals = {};
 
@@ -1129,15 +1123,9 @@ class _DivisionTabState extends State<_DivisionTab> {
     if (_estateData[c.id]?.fmvOverride != null) {
       return _estateData[c.id]!.fmvOverride!;
     }
-    if (_isAdvancedMode) {
-      final cpg = c.cpgRetail;
-      if (cpg > 0) return cpg;
-      return _parseValue(c.aiEstimatedValue);
-    } else {
-      final bid = c.greysheetBid;
-      if (bid > 0) return bid;
-      return _parseValue(c.aiEstimatedValue) * 0.80;
-    }
+    final cpg = c.cpgRetail;
+    if (cpg > 0) return cpg;
+    return _parseValue(c.aiEstimatedValue);
   }
 
   double _parseValue(String v) {
@@ -1404,7 +1392,7 @@ class _DivisionTabState extends State<_DivisionTab> {
                                 ),
                                 SizedBox(height: 2),
                                 Text(
-                                  '${lotCoins.length} coins • ${_dollarFmt.format(lotTotal)}',
+                                  '${lotCoins.length} coins â€¢ ${_dollarFmt.format(lotTotal)}',
                                   style: TextStyle(color: _kTextSecondary(context), fontSize: 11),
                                 ),
                               ],
@@ -1470,7 +1458,7 @@ class _DivisionTabState extends State<_DivisionTab> {
                       style: TextStyle(color: _kTextPrimary(context), fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      '${lotCoins.length} coins • ${_dollarFmt.format(lotTotal)}',
+                      '${lotCoins.length} coins â€¢ ${_dollarFmt.format(lotTotal)}',
                       style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                     ),
                     iconColor: _kGold,
@@ -1611,10 +1599,10 @@ class _DivisionTabState extends State<_DivisionTab> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 4 — Generate Report
-// ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 4 â€” Generate Report
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _GenerateTab extends StatefulWidget {
   final String uid;
   const _GenerateTab({required this.uid});
@@ -1839,7 +1827,7 @@ class _GenerateTabState extends State<_GenerateTab> {
               icon: Icons.link_rounded,
               color: _kGold,
               title: 'Copy Attorney Portal Link',
-              subtitle: 'Interactive, read-only — expires in 30 days',
+              subtitle: 'Interactive, read-only â€” expires in 30 days',
               onTap: () async {
                 await EstateReportService.copyAttorneyLink(uid, reportId);
                 if (ctx.mounted) {
@@ -1887,7 +1875,7 @@ class _GenerateTabState extends State<_GenerateTab> {
               icon: Icons.download_rounded,
               color: const Color(0xFF10B981),
               title: 'PDF Already Downloaded',
-              subtitle: 'The PDF opened in a new tab — save it from there',
+              subtitle: 'The PDF opened in a new tab â€” save it from there',
               onTap: () => Navigator.pop(ctx),
             ),
             const SizedBox(height: 12),
@@ -1936,11 +1924,11 @@ class _GenerateTabState extends State<_GenerateTab> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // ── Mode Selection ───────────────────────────────────────────────
+        // â”€â”€ Mode Selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         _SectionHeader(title: 'Report Mode', icon: Icons.tune_outlined),
         _ModeCard(
           selected: _mode == 'living_inventory',
-          icon: '📋',
+          icon: 'ðŸ“‹',
           title: 'Living Inventory Mode',
           subtitle: 'I am alive and preparing my estate plan proactively.',
           onTap: () => setState(() => _mode = 'living_inventory'),
@@ -1948,13 +1936,13 @@ class _GenerateTabState extends State<_GenerateTab> {
         const SizedBox(height: 8),
         _ModeCard(
           selected: _mode == 'estate_settlement',
-          icon: '⚖️',
+          icon: 'âš–ï¸',
           title: 'Estate Settlement Mode',
           subtitle: 'I am the executor filing for probate after the owner\'s passing.',
           onTap: () => setState(() => _mode = 'estate_settlement'),
         ),
 
-        // ── Estate settlement extra fields ───────────────────────────────
+        // â”€â”€ Estate settlement extra fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (_mode == 'estate_settlement') ...[
           SizedBox(height: 12),
           _EstateCard(children: [
@@ -2015,7 +2003,7 @@ class _GenerateTabState extends State<_GenerateTab> {
 
         const SizedBox(height: 16),
 
-        // ── Report Options ───────────────────────────────────────────────
+        // â”€â”€ Report Options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         _SectionHeader(title: 'Report Options', icon: Icons.settings_outlined),
         _EstateCard(children: [
           Row(
@@ -2048,20 +2036,20 @@ class _GenerateTabState extends State<_GenerateTab> {
 
         const SizedBox(height: 16),
 
-        // ── Readiness Checklist ──────────────────────────────────────────
+        // â”€â”€ Readiness Checklist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         _SectionHeader(
             title: 'Readiness Checklist', icon: Icons.checklist_outlined),
         _ChecklistCard(profile: _profile, coinCount: _coinCount),
 
         const SizedBox(height: 20),
 
-        // ── NY-Specific Warnings (only shown for NY users) ───────────────
+        // â”€â”€ NY-Specific Warnings (only shown for NY users) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (_profile?.jurisdiction == 'NY') ...[
           _NyWarningCard(totalFmv: null), // FMV not available pre-generation
           const SizedBox(height: 16),
         ],
 
-        // ── Generate Button ──────────────────────────────────────────────
+        // â”€â”€ Generate Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         _GenerateButton(
           canGenerate: _canGenerate && !_generating,
           generating: _generating,
@@ -2072,7 +2060,7 @@ class _GenerateTabState extends State<_GenerateTab> {
 
         const SizedBox(height: 24),
 
-        // ── Report History ───────────────────────────────────────────────
+        // â”€â”€ Report History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (_loadingHistory)
           const Center(child: CircularProgressIndicator(color: _kGold))
         else if (_history.isNotEmpty) ...[
@@ -2097,9 +2085,9 @@ class _GenerateTabState extends State<_GenerateTab> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Bottom Sheet — Edit coin estate data
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Bottom Sheet â€” Edit coin estate data
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _CoinEstateEditSheet extends StatefulWidget {
   final CoinModel coin;
   final CoinEstateData? existing;
@@ -2289,7 +2277,7 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                   _label(context, 'Assign to Beneficiary'),
                   SizedBox(height: 6),
                   DropdownButtonFormField<String?>(
-                    // ignore: deprecated_member_use — `value` drives selected item on a controlled dropdown
+                    // ignore: deprecated_member_use â€” `value` drives selected item on a controlled dropdown
                     value: _beneficiaryId,
                     decoration: _inputDecoration(context, hint: 'Unassigned'),
                     dropdownColor: _kCard(context),
@@ -2332,7 +2320,7 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                     maxLines: 2,
                     style: TextStyle(color: _kTextPrimary(context), fontSize: 14),
                     decoration: _inputDecoration(context,
-                        hint: 'e.g. "Heirloom — do not sell", "Store separately"'),
+                        hint: 'e.g. "Heirloom â€” do not sell", "Store separately"'),
                   ),
 
                   const SizedBox(height: 14),
@@ -2480,9 +2468,9 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Sub-widgets
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -2757,7 +2745,7 @@ class _BeneficiaryRowState extends State<_BeneficiaryRow> {
               Expanded(
                 flex: 2,
                 child: DropdownButtonFormField<String>(
-                  // ignore: deprecated_member_use — `value` drives selected item on a controlled dropdown
+                  // ignore: deprecated_member_use â€” `value` drives selected item on a controlled dropdown
                   value: _relationship,
                   decoration: _inputDecoration(context, hint: 'Rel.').copyWith(
                     contentPadding: const EdgeInsets.symmetric(
@@ -2903,7 +2891,7 @@ class _ChecklistCard extends StatelessWidget {
     final p = profile;
     final items = [
       _ChecklistItem(
-        label: '🔒 Zero-Knowledge Privacy Enabled',
+        label: 'ðŸ”’ Zero-Knowledge Privacy Enabled',
         ok: true,
         required: true,
       ),
@@ -3216,7 +3204,7 @@ class _CoinEstateRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                fmv > 0 ? _dollarFmt.format(fmv) : '–',
+                fmv > 0 ? _dollarFmt.format(fmv) : 'â€“',
                 style: TextStyle(
                   color: needsAppraisal ? _kGold : _kTextPrimary(context),
                   fontSize: 12,
@@ -3299,12 +3287,12 @@ class _ReportHistoryRow extends StatelessWidget {
                         fontSize: 12,
                         fontWeight: FontWeight.w600)),
                 Text(
-                  '${record.state} • ${record.totalCoins} coins • '
+                  '${record.state} â€¢ ${record.totalCoins} coins â€¢ '
                   '${_dollarFmt.format(record.totalFmv)} FMV',
                   style: TextStyle(color: _kTextSecondary(context), fontSize: 10),
                 ),
                 Text(
-                  DateFormat('MMM d, yyyy – h:mm a').format(record.generatedAt),
+                  DateFormat('MMM d, yyyy â€“ h:mm a').format(record.generatedAt),
                   style:
                       TextStyle(color: _kTextSecondary(context).withAlpha(140), fontSize: 9),
                 ),
@@ -3320,7 +3308,7 @@ class _ReportHistoryRow extends StatelessWidget {
       );
 }
 
-// ── NY-Specific Warning Card ─────────────────────────────────────────────────
+// â”€â”€ NY-Specific Warning Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _NyWarningCard extends StatelessWidget {
   final double? totalFmv; // if known, shows proximity to cliff
   const _NyWarningCard({this.totalFmv});
@@ -3360,7 +3348,7 @@ class _NyWarningCard extends StatelessWidget {
                   size: 16, color: borderColor),
               const SizedBox(width: 8),
               Text(
-                'New York Estate Planning — Key Alerts',
+                'New York Estate Planning â€” Key Alerts',
                 style: TextStyle(
                     color: borderColor,
                     fontSize: 13,
@@ -3375,7 +3363,7 @@ class _NyWarningCard extends StatelessWidget {
             icon: Icons.warning_amber_rounded,
             title: 'Estate Tax Cliff Rule',
             body: 'If gross estate exceeds \$7,717,500 (105% of the '
-                '\$7,350,000 exemption), the ENTIRE estate is taxed — '
+                '\$7,350,000 exemption), the ENTIRE estate is taxed â€” '
                 'not just the excess. This coin collection alone does not '
                 'trigger the cliff, but combined with real estate, retirement '
                 'accounts, and life insurance it may.',
@@ -3398,9 +3386,9 @@ class _NyWarningCard extends StatelessWidget {
             icon: Icons.schedule_rounded,
             title: 'ET-706 Filing Deadline',
             body: 'If the gross estate exceeds \$7,350,000, a NY estate '
-                'tax return (ET-706) must be filed within 9 months of death — '
+                'tax return (ET-706) must be filed within 9 months of death â€” '
                 'the same deadline as the Surrogate\'s Court inventory '
-                '(SCPA §2102 / 22 NYCRR §207.20).',
+                '(SCPA Â§2102 / 22 NYCRR Â§207.20).',
           ),
 
           if (fmv != null) ...[
@@ -3427,9 +3415,9 @@ class _NyWarningCard extends StatelessWidget {
                   SizedBox(width: 8),
                   Text(
                     overCliff
-                        ? '⚠ OVER CLIFF'
+                        ? 'âš  OVER CLIFF'
                         : nearCliff
-                            ? '⚡ Near cliff'
+                            ? 'âš¡ Near cliff'
                             : '\$${(_kCliffThreshold - fmv).toStringAsFixed(0).replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")} below cliff',
                     style: TextStyle(
                         color: overCliff
@@ -3481,7 +3469,7 @@ class _NyAlert extends StatelessWidget {
   );
 }
 
-// ── Premium Gate ─────────────────────────────────────────────────────────────
+// â”€â”€ Premium Gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _PremiumGate extends StatelessWidget {
 
   final VoidCallback onUpgrade;
@@ -3494,7 +3482,7 @@ class _PremiumGate extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('👑', style: TextStyle(fontSize: 48)),
+              const Text('ðŸ‘‘', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 16),
               Text('Estate Planning',
                   style: TextStyle(
@@ -3509,7 +3497,7 @@ class _PremiumGate extends StatelessWidget {
               SizedBox(height: 16),
               Text(
                 'Generate court-ready estate reports, assign beneficiaries, '
-                'track formal appraisals, and share a secure attorney portal — '
+                'track formal appraisals, and share a secure attorney portal â€” '
                 'all with one click.',
                 style: TextStyle(
                     color: _kTextSecondary(context), fontSize: 13, height: 1.6),
@@ -3571,9 +3559,9 @@ class _ToggleTile extends StatelessWidget {
       );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Helper: Sheet text field
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Widget _sheetField(BuildContext context, String label, TextEditingController ctrl,
     {String hint = '', TextInputType? keyboardType}) {
   return Padding(
@@ -3598,9 +3586,9 @@ Widget _sheetField(BuildContext context, String label, TextEditingController ctr
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Helper: form field with label
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Widget _formField(
   BuildContext context,
   String label,
@@ -3673,9 +3661,9 @@ InputDecoration _inputDecoration(BuildContext context, {String hint = ''}) => In
       ),
     );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// _ShareOption — tappable card for the share bottom sheet
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// _ShareOption â€” tappable card for the share bottom sheet
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _ShareOption extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -3741,9 +3729,9 @@ class _ShareOption extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Estate-specific theme (adapts to light/dark)
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 ThemeData _estateTheme(BuildContext context) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   return (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
@@ -3756,9 +3744,9 @@ ThemeData _estateTheme(BuildContext context) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Ephemeral Wizard Dialog for Zero-Knowledge PDF Generation (RAM-only)
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _EphemeralWizardDialog extends StatefulWidget {
   final EstateProfile profile;
   final String mode;
@@ -3883,7 +3871,7 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
                     style: const TextStyle(color: _kGold, fontSize: 11, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '🔒 Ephemeral RAM-Only',
+                    'ðŸ”’ Ephemeral RAM-Only',
                     style: TextStyle(color: _kTextSecondary(context), fontSize: 10),
                   ),
                 ],
@@ -4051,9 +4039,9 @@ class _EphemeralWizardDialogState extends State<_EphemeralWizardDialog> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 2 — Custody Transfers & Loans (Sub-Hand Receipts & Zero-Login Magic Links)
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 2 â€” Custody Transfers & Loans (Sub-Hand Receipts & Zero-Login Magic Links)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _CustodyTransfersTab extends StatefulWidget {
   final String uid;
   const _CustodyTransfersTab({required this.uid});
@@ -4200,7 +4188,7 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
                                     style: TextStyle(color: _kTextPrimary(context), fontWeight: FontWeight.w600, fontSize: 14)),
                                 SizedBox(height: 4),
                                 Text(
-                                  'Location: ${item.custodialLocation ?? "Primary Storage"} • Custodian: ${item.subHandReceiptHolder ?? "Self"}',
+                                  'Location: ${item.custodialLocation ?? "Primary Storage"} â€¢ Custodian: ${item.subHandReceiptHolder ?? "Self"}',
                                   style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                                 ),
                               ],
@@ -4281,7 +4269,7 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
                   await EstateFiduciaryService.createDocumentRegisterEntry(
                     uid: widget.uid,
                     docType: 'custody_transfer',
-                    title: 'Custody Agreement — ${_custodianCtrl.text.trim()}',
+                    title: 'Custody Agreement â€” ${_custodianCtrl.text.trim()}',
                     assetCount: 1,
                     totalFmv: 0.0,
                   );
@@ -4306,9 +4294,9 @@ class _CustodyTransfersTabState extends State<_CustodyTransfersTab> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 3 — Routine Spot-Checks & Audits (Cyclic Audits & Cert Checks)
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 3 â€” Routine Spot-Checks & Audits (Cyclic Audits & Cert Checks)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _SpotChecksTab extends StatefulWidget {
   final String uid;
   const _SpotChecksTab({required this.uid});
@@ -4441,11 +4429,11 @@ class _SpotChecksTabState extends State<_SpotChecksTab> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Coin ID: ${audit.coinId} • ${audit.auditType}',
+                                Text('Coin ID: ${audit.coinId} â€¢ ${audit.auditType}',
                                     style: TextStyle(color: _kTextPrimary(context), fontWeight: FontWeight.w600, fontSize: 14)),
                                 SizedBox(height: 4),
                                 Text(
-                                  'Condition: ${audit.physicalConditionCode} • Verified By: ${audit.verifiedByAlias} • Hash: ${audit.auditHash.substring(0, 16)}...',
+                                  'Condition: ${audit.physicalConditionCode} â€¢ Verified By: ${audit.verifiedByAlias} â€¢ Hash: ${audit.auditHash.substring(0, 16)}...',
                                   style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                                 ),
                               ],
@@ -4497,9 +4485,9 @@ class _SpotChecksTabState extends State<_SpotChecksTab> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB 4 — Audit Log & Basis Ledger (NUM-DOC-YYYY-XXXXX & Stepped-Up Basis)
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 4 â€” Audit Log & Basis Ledger (NUM-DOC-YYYY-XXXXX & Stepped-Up Basis)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _DocumentRegisterTab extends StatefulWidget {
   final String uid;
   const _DocumentRegisterTab({required this.uid});
@@ -4549,7 +4537,7 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
                               style: TextStyle(color: _kGold, fontSize: 18, fontWeight: FontWeight.w700)),
                           SizedBox(height: 4),
                           Text(
-                            'Sequential Document Register (NUM-DOC-YYYY-XXXXX). Tracks baseline locks, appraisal updates, and IRC § 1014 stepped-up basis snapshots.',
+                            'Sequential Document Register (NUM-DOC-YYYY-XXXXX). Tracks baseline locks, appraisal updates, and IRC Â§ 1014 stepped-up basis snapshots.',
                             style: TextStyle(color: _kTextSecondary(context), fontSize: 13, height: 1.4),
                           ),
                         ],
@@ -4569,7 +4557,7 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
                   ElevatedButton.icon(
                     onPressed: () => _snapshotSteppedUpBasis(context),
                     icon: Icon(Icons.trending_up_rounded, size: 18),
-                    label: Text('Snapshot Stepped-Up Basis (IRC § 1014)'),
+                    label: Text('Snapshot Stepped-Up Basis (IRC Â§ 1014)'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kGold,
                       foregroundColor: _kNavy(context),
@@ -4642,7 +4630,7 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
                                     style: TextStyle(color: _kTextPrimary(context), fontWeight: FontWeight.w600, fontSize: 14)),
                                 SizedBox(height: 4),
                                 Text(
-                                  '${doc.typeLabel} • ${doc.assetCount} Assets • Total FMV: ${_dollarFmt.format(doc.totalFmv)}',
+                                  '${doc.typeLabel} â€¢ ${doc.assetCount} Assets â€¢ Total FMV: ${_dollarFmt.format(doc.totalFmv)}',
                                   style: TextStyle(color: _kTextSecondary(context), fontSize: 12),
                                 ),
                               ],
@@ -4669,7 +4657,7 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
     final record = await EstateFiduciaryService.createDocumentRegisterEntry(
       uid: widget.uid,
       docType: 'stepped_up_basis',
-      title: 'Stepped-Up Cost Basis Snapshot (IRC § 1014)',
+      title: 'Stepped-Up Cost Basis Snapshot (IRC Â§ 1014)',
       assetCount: 1,
       totalFmv: 0.0,
     );
@@ -4677,7 +4665,7 @@ class _DocumentRegisterTabState extends State<_DocumentRegisterTab> {
     if (!mounted) return;
     messenger.showSnackBar(
       SnackBar(
-        content: Text('Issued Document Register Record: ${record.docNumber} — Stepped-Up Basis Logged.'),
+        content: Text('Issued Document Register Record: ${record.docNumber} â€” Stepped-Up Basis Logged.'),
         backgroundColor: const Color(0xFF161B27),
       ),
     );

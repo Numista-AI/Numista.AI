@@ -51,12 +51,13 @@ class _DealsScreenState extends State<DealsScreen> {
           final price = double.tryParse(priceVal) ?? 0.0;
           if (price <= 0.0) continue;
 
-          // Greysheet Bid benchmark
-          final bid = coin.greysheetBid > 0 ? coin.greysheetBid : 40.0; // fallback default
+          // Benchmark against CPG Retail (NET-372: bid removed, no fake 40.0 default)
+          final cpg = coin.cpgRetail;
+          if (cpg <= 0.0) continue;
           
-          // Flag as highly competitive if listing is near or below Greysheet Bid (or within 15% range)
-          if (price <= (bid * 1.15)) {
-            final margin = bid - price;
+          // Flag as competitive if listing is near or below CPG Retail
+          if (price <= (cpg * 1.15)) {
+            final margin = cpg - price;
             final marginPct = price > 0 ? (margin / price * 100) : 0.0;
             
             // Build EPN affiliate link
@@ -66,7 +67,7 @@ class _DealsScreenState extends State<DealsScreen> {
               'coin': coin,
               'title': itemSummary['title'] ?? '${coin.year} ${coin.denomination}',
               'price': price,
-              'greysheet_bid': bid,
+              'cpg_retail': cpg,
               'net_margin': margin,
               'margin_percent': marginPct,
               'url': affiliateUrl,
@@ -187,7 +188,7 @@ class _DealsScreenState extends State<DealsScreen> {
                         final deal = _matchedDeals[idx];
                         final coin = deal['coin'] as CoinModel;
                         final price = deal['price'] as double;
-                        final bid = deal['greysheet_bid'] as double;
+                        final cpg = deal['cpg_retail'] as double? ?? 0.0;
                         final marginPct = deal['margin_percent'] as double;
                         final imageUrl = deal['imageUrl'] as String;
 
@@ -232,7 +233,7 @@ class _DealsScreenState extends State<DealsScreen> {
                                           const SizedBox(width: 4),
                                           Text(
                                             marginPct >= 0
-                                                ? 'Below Bid (-${marginPct.toStringAsFixed(1)}%)'
+                                                ? 'Below Retail (-${marginPct.toStringAsFixed(1)}%)'
                                                 : 'Competitive Match',
                                             style: TextStyle(
                                               fontSize: 11,
@@ -314,9 +315,9 @@ class _DealsScreenState extends State<DealsScreen> {
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text('Greysheet Bid', style: TextStyle(fontSize: 11, color: descColor)),
+                                        Text('CPG Retail', style: TextStyle(fontSize: 11, color: descColor)),
                                         const SizedBox(height: 2),
-                                        Text(_dollarFmt.format(bid), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF4C8CDA))),
+                                        Text(cpg > 0 ? _dollarFmt.format(cpg) : '—', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF4C8CDA))),
                                       ],
                                     ),
                                     ElevatedButton(
