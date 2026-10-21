@@ -414,8 +414,12 @@ def extract_cert_from_image(
             "- NGC: 7-digit number, optionally with a dash suffix (e.g. 8321797 or 8321797-003). "
             "  Label says 'NGC' or 'Numismatic Guaranty Company'.\n"
             "- CAC / CACG: label says 'CAC' or 'CACG' or 'Certified Acceptance Corporation'. "
-            "  The cert number may be a 7 to 10 digit number (e.g. 663261170 or 1001234567), or may start with CAC / CACG (e.g. CAC12345 or CACG12345). "
-            "  On clear-slab CACG holders, look closely at the white label strip or transparent label for the numeric cert number.\n\n"
+            "  The cert number is a 7 to 10 digit number (e.g. 663261170 or 1001234567), or may start with CAC / CACG (e.g. CAC12345 or CACG12345). "
+            "  NOTE FOR CACG CLEAR SLABS: The certification number is frequently printed on the REVERSE side of the slab "
+            "  directly beneath the barcode / QR code, or along a narrow transparent/white margin strip. "
+            "  Inspect any barcode caption numbers, reverse-side labels, or edge engravings. "
+            "  If only the front label is photographed (showing year, denomination, and grade), extract those coin details "
+            "  and set cert_number to null if no numeric cert digits appear on the front.\n\n"
             "Return ONLY valid JSON, no markdown:\n"
             '{"cert_number": "<number or null>", "grader": "<PCGS|NGC|CAC|CACG|null>", '
             '"confidence": "<HIGH|MEDIUM|LOW>", '

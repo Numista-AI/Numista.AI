@@ -800,8 +800,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                   const Divider(height: 1, color: Color(0xFFE2E6E9)),
                                 ListTile(
                                   dense: true,
+                                  minVerticalPadding: 8,
                                   contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 4),
+                                      horizontal: 16, vertical: 6),
                                   leading: _CoinThumbnail(
                                     imageUrl: data['image_url_obverse']?.toString()
                                         ?? data['imageUrlObverse']?.toString(),
@@ -1665,10 +1666,22 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v8.18.13',
+    date: '2026-10-20',
+    description: 'P7-v8.18.13 UX Gate V5 Fixes, Webcam Fallback & Older-User Tap Sizing',
+    isLatest: true,
+    changes: [
+      'P7-v8.18.13: neutral cert heading stays \'Certification Number\' when grader is Not sure',
+      'P7-v8.18.13: webcam dialog friendly copy and direct file picker photo upload fallback',
+      'P7-v8.18.13: older-user tap targets >=48px (Cancel 56px, Scan Another 48px, cert help 48x48, sidebar >=48px)',
+      'P7-v8.18.13: cert not-found error specifically names cert # and grader searched + direct manual entry',
+      'P7-v8.18.13: CACG clear-slab OCR investigation, prompt enhancements, and label data fallback',
+    ],
+  ),
+  _Release(
     version: 'v8.18.12',
     date: '2026-10-20',
     description: 'P7-v8.18.12 Add-Coins Flow, Resilient Parser & Older-User Sizing',
-    isLatest: true,
     changes: [
       'P7-v8.18.12: invoice parser list/dict normalization, test fixtures & live alignment',
       'P7-v8.18.12: add-coins cert fallback in-app dialogs, neutral cert headers, blurred photo error card',

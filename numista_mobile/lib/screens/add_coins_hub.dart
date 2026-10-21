@@ -42,6 +42,7 @@ class AddCoinsHub extends StatefulWidget {
   final bool showAddAnotherConfirm;
   final Map<String, dynamic>? initialCoinPreset;
   final String? initialCamError;
+  final Map<String, dynamic>? initialCamResult;
 
   const AddCoinsHub({
     super.key,
@@ -53,6 +54,7 @@ class AddCoinsHub extends StatefulWidget {
     this.showAddAnotherConfirm = false,
     this.initialCoinPreset,
     this.initialCamError,
+    this.initialCamResult,
   });
 
   @visibleForTesting
@@ -157,6 +159,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     super.initState();
     if (widget.initialCamError != null) {
       _camError = widget.initialCamError;
+    }
+    if (widget.initialCamResult != null) {
+      _camResult = widget.initialCamResult;
     }
     int initialIdx = 0;
     // ITEM 9: Tab order — upload (spreadsheet/invoice) is tab 0 (first/default).
@@ -633,7 +638,18 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       return Scaffold(
         appBar: AppBar(
           title: const Text('Add by Cert #'),
-          leading: const BackButton(),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            tooltip: 'Back to Add hub',
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            onPressed: () {
+              if (widget.onNavigate != null) {
+                widget.onNavigate!('Add New Coins');
+              } else {
+                Navigator.pop(context);
+              }
+            },
+          ),
         ),
         body: _buildCertLookupTab(),
       );
@@ -656,6 +672,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             tooltip: 'Back to Add hub',
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             onPressed: () {
               if (widget.onNavigate != null) {
                 widget.onNavigate!('Add New Coins');
@@ -2776,9 +2793,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
   Widget _buildCertLookupTab() {
-    // Determine effective grader for display
-    final rawInput = _pcgsSingleCtrl.text;
-    final effectiveGrader = _certGrader ?? (rawInput.isNotEmpty ? _autoDetectGrader(rawInput) : null);
+    // Determine effective grader for display:
+    // Neutral cert heading when _certGrader == null ('Not sure'); only shows grader when explicitly selected
+    final effectiveGrader = _certGrader;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 64),
@@ -2903,10 +2920,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     const SizedBox(width: 6),
                     InkWell(
                       onTap: _showCertHelpDialog,
-                      borderRadius: BorderRadius.circular(12),
-                      child: const Padding(
-                        padding: EdgeInsets.all(2),
-                        child: Icon(Icons.help_outline_rounded, size: 18, color: Color(0xFF2563EB)),
+                      borderRadius: BorderRadius.circular(24),
+                      child: const SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Center(
+                          child: Icon(Icons.help_outline_rounded, size: 22, color: Color(0xFF2563EB)),
+                        ),
                       ),
                     ),
                   ]),
@@ -2935,6 +2955,11 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       side: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Tip: PCGS & NGC cert # is on front; CACG cert # is printed on the back under the barcode.',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
                   ),
 
                   // Scan error card (no camera, timeout, unreadable cert)
@@ -3385,13 +3410,50 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             }
           });
         } else {
-          final isBlurred = rawCert.toLowerCase().contains('blurred');
-          setState(() {
-            _scanErrorType = isBlurred ? 'blurred' : 'no_cert';
-            _scanErrorMsg = isBlurred
-                ? 'The photo is too blurry to read the certificate number. Please hold the camera steady or type the number in instead.'
-                : "Couldn't read a cert number from that photo";
-          });
+          final typedCert = _pcgsSingleCtrl.text.trim();
+          if (typedCert.isNotEmpty && hasLabelData) {
+            // CACG Clear-Slab Fallback:
+            // Cert # is physically on the back of CACG slabs, but front photo contains coin details.
+            // Preserve typed cert #, populate manual fields from the photo label, and clear scan error.
+            setState(() {
+              if (grader == 'NGC' || grader == 'CAC' || grader == 'CACG' || grader == 'PCGS') {
+                _certGrader = grader;
+              }
+              _scanResultText = typedCert;
+              _scanResultGrader = grader.isNotEmpty ? grader : (_certGrader ?? 'CACG');
+              _scanErrorMsg = null;
+              _scanErrorType = null;
+              if (photoYear.isNotEmpty) _certManualYear.text = photoYear;
+              if (photoDenom.isNotEmpty) _certManualDenom.text = photoDenom;
+              if (photoGrade.isNotEmpty) _certManualGrade.text = photoGrade;
+              if (photoMint.isNotEmpty) _certManualMint.text = photoMint;
+              if (photoVariety.isNotEmpty && _certManualNotes.text.isEmpty) {
+                _certManualNotes.text = photoVariety;
+              }
+              _photoScanBanner = true;
+              _photoScanTypedCert = null;
+              if (_certPendingConfirm == null && (grader == 'NGC' || grader == 'CAC' || grader == 'CACG')) {
+                _certPendingConfirm = {
+                  '_grader': grader.isNotEmpty ? grader : (_certGrader ?? 'CACG'),
+                  'certNo': typedCert,
+                  '_found': false,
+                };
+              } else if (_certPendingConfirm != null) {
+                _certPendingConfirm!['certNo'] = typedCert;
+                if (grader.isNotEmpty) _certPendingConfirm!['_grader'] = grader;
+              }
+            });
+          } else {
+            final isBlurred = rawCert.toLowerCase().contains('blurred');
+            setState(() {
+              _scanErrorType = isBlurred ? 'blurred' : 'no_cert';
+              _scanErrorMsg = isBlurred
+                  ? 'The photo is too blurry to read the certificate number. Please hold the camera steady or type the number in instead.'
+                  : (_certGrader == 'CACG'
+                      ? "Couldn't read a cert number. Tip: For CACG slabs, the cert # is printed on the back of the slab beneath the barcode."
+                      : "Couldn't read a cert number from that photo");
+            });
+          }
         }
 
       } else {
@@ -4035,10 +4097,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     const SizedBox(width: 6),
                     InkWell(
                       onTap: _showCertHelpDialog,
-                      borderRadius: BorderRadius.circular(12),
-                      child: const Padding(
-                        padding: EdgeInsets.all(2),
-                        child: Icon(Icons.help_outline_rounded, size: 18, color: Color(0xFF2563EB)),
+                      borderRadius: BorderRadius.circular(24),
+                      child: const SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Center(
+                          child: Icon(Icons.help_outline_rounded, size: 22, color: Color(0xFF2563EB)),
+                        ),
                       ),
                     ),
                   ]),
@@ -4311,10 +4376,13 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   // ─── Cert lookup fallback — shown when live lookup is unavailable ─────────
 
   Widget _buildCertLookupFallback(String errorMessage) {
+    final certNo = _pcgsSingleCtrl.text.trim();
+    final searchedGrader = _certGrader ?? _autoDetectGrader(certNo);
+
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFFFFF7ED),
           borderRadius: BorderRadius.circular(10),
@@ -4322,21 +4390,25 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const Icon(Icons.warning_amber_rounded, size: 20, color: Color(0xFFD97706)),
-            const SizedBox(width: 6),
-            const Expanded(
+            const Icon(Icons.warning_amber_rounded, size: 24, color: Color(0xFFD97706)),
+            const SizedBox(width: 8),
+            Expanded(
               child: Text(
-                'Lookup not available right now',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                certNo.isNotEmpty
+                    ? 'Cert #$certNo ($searchedGrader) not found'
+                    : 'Cert lookup not found',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
               ),
             ),
           ]),
-          const SizedBox(height: 8),
-          const Text(
-            "We couldn't verify this cert number automatically. You can try again or type the coin details in directly:",
-            style: TextStyle(fontSize: 16, color: Color(0xFF78350F), height: 1.4),
+          const SizedBox(height: 10),
+          Text(
+            certNo.isNotEmpty
+                ? 'Cert #$certNo ($searchedGrader) was not found. Please double-check the digits, pick a different grader if applicable, or type the coin details in directly.'
+                : "We couldn't verify this cert number automatically. Please double-check the digits, pick a different grader if applicable, or type the coin details in directly.",
+            style: const TextStyle(fontSize: 18, color: Color(0xFF78350F), height: 1.4),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Wrap(
             spacing: 12,
             runSpacing: 10,
@@ -4348,10 +4420,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   });
                   _lookupCertUnified();
                 },
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Try again', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.refresh, size: 20),
+                label: const Text('Try again', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(140, 48),
+                  minimumSize: const Size(140, 56),
                   backgroundColor: const Color(0xFF2563EB),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -4364,10 +4436,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     _tabController.animateTo(2); // Manual Entry tab
                   });
                 },
-                icon: const Icon(Icons.edit_note, size: 20),
-                label: const Text('Type the coin in instead', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.edit_note, size: 22),
+                label: const Text('Type the coin in instead', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(180, 48),
+                  minimumSize: const Size(220, 56),
                   foregroundColor: const Color(0xFF1E293B),
                   side: const BorderSide(color: Color(0xFF94A3B8)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -5516,18 +5588,20 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               children: [
                 const Icon(Icons.insights, color: Color(0xFFEC4899), size: 24),
                 const SizedBox(width: 10),
-                const Text(
-                  'AI Identification Result',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                const Expanded(
+                  child: Text(
+                    'AI Identification Result',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 TextButton(
                   onPressed: _resetCameraScanner,
                   style: TextButton.styleFrom(
-                    minimumSize: const Size(0, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    minimumSize: const Size(120, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
-                  child: const Text('Scan Another', style: TextStyle(color: Color(0xFFEC4899), fontSize: 16, fontWeight: FontWeight.w600)),
+                  child: const Text('Scan Another', style: TextStyle(color: Color(0xFFEC4899), fontSize: 18, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -5605,12 +5679,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             OutlinedButton(
               onPressed: _camSaving ? null : _resetCameraScanner,
               style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
+                minimumSize: const Size(double.infinity, 56),
                 foregroundColor: const Color(0xFF64748B),
                 side: const BorderSide(color: Color(0xFFCBD5E1)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Cancel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              child: const Text('Cancel', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -5630,7 +5704,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           maxLines: maxLines,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
-          style: const TextStyle(fontSize: 16, color: Color(0xFF1E293B)),
+          style: const TextStyle(fontSize: 18, color: Color(0xFF1E293B)),
           decoration: InputDecoration(
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

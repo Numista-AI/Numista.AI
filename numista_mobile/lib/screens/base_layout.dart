@@ -1107,6 +1107,8 @@ class _BaseLayoutState extends State<BaseLayout> {
             onTap: _showMorganDialog,
             borderRadius: BorderRadius.circular(8),
             child: Container(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              alignment: Alignment.center,
               padding: const EdgeInsets.all(10),
               child: Image.asset('assets/logo_owl.png', height: 20),
             ),
@@ -1115,6 +1117,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       );
     }
     return ListTile(
+      minVerticalPadding: 14,
       leading: Image.asset('assets/logo_owl.png', height: 20),
       title: const Text('Help & Ask Morgan',
           style: TextStyle(fontSize: NumistaTheme.textBody)),
@@ -1210,6 +1213,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                 : null,
             borderRadius: BorderRadius.circular(8),
             child: Container(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              alignment: Alignment.center,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: isActive
@@ -1266,6 +1271,8 @@ class _BaseLayoutState extends State<BaseLayout> {
             : null,
         borderRadius: BorderRadius.circular(6),
         child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          alignment: Alignment.centerLeft,
           padding: EdgeInsets.symmetric(vertical: 8, horizontal: isSubItem ? 16 : 8),
           decoration: BoxDecoration(
             color: isActive

@@ -2460,6 +2460,188 @@ void main() {
       expect(find.text('S'), findsOneWidget);
     });
 
+
+    testWidgets('p7_v81813_fix1_cert_heading_stays_neutral_when_not_sure', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 1400);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Grader defaults to 'Not sure' (_certGrader is null)
+      expect(find.text('Certification Number'), findsOneWidget);
+      expect(find.text('PCGS Certification Number'), findsNothing);
+
+      // Type an 8-digit PCGS-style cert number
+      final certField = find.byType(TextField).first;
+      await tester.enterText(certField, '53652580');
+      await tester.pumpAndSettle();
+
+      // Heading must STAY 'Certification Number' (NOT switch to 'PCGS Certification Number')
+      expect(find.text('Certification Number'), findsOneWidget);
+      expect(find.text('PCGS Certification Number'), findsNothing);
+    });
+
+    testWidgets('p7_v81813_fix3_tap_targets_and_help_icon_sizing', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 1400);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify cert '?' help icon has 48x48 tap target
+      final helpIcon = find.byIcon(Icons.help_outline_rounded);
+      expect(helpIcon, findsOneWidget);
+      final helpParent = find.ancestor(of: helpIcon, matching: find.byType(SizedBox)).first;
+      final size = tester.getSize(helpParent);
+      expect(size.width, greaterThanOrEqualTo(48.0));
+      expect(size.height, greaterThanOrEqualTo(48.0));
+
+      // Verify Back arrow has 48x48 constraints
+      final backBtn = find.byTooltip('Back to Add hub');
+      expect(backBtn, findsOneWidget);
+      final backSize = tester.getSize(backBtn);
+      expect(backSize.width, greaterThanOrEqualTo(48.0));
+      expect(backSize.height, greaterThanOrEqualTo(48.0));
+    });
+
+    testWidgets('p7_v81813_fix4_cert_not_found_names_cert_and_grader_with_manual_fallback', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 1400);
+
+      HttpAuthClient.httpClientOverride = MockClient.streaming((request, bodyStream) async {
+        return http.StreamedResponse(Stream.value(utf8.encode('{"found":false}')), 200);
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Enter a cert number
+      final certField = find.byType(TextField).first;
+      await tester.enterText(certField, '53652580');
+      await tester.pumpAndSettle();
+
+      // Tap Look Up
+      final lookUpBtn = find.text('Look Up');
+      expect(lookUpBtn, findsOneWidget);
+      await tester.tap(lookUpBtn);
+      await tester.pumpAndSettle();
+
+      // Error card must specifically name cert # and grader searched
+      expect(find.textContaining('Cert #53652580 (PCGS)'), findsWidgets);
+      expect(find.textContaining('Please double-check the digits'), findsOneWidget);
+
+      // Both buttons present with height >= 56px
+      final tryAgainBtn = find.widgetWithText(ElevatedButton, 'Try again');
+      expect(tryAgainBtn, findsOneWidget);
+      expect(tester.getSize(tryAgainBtn).height, greaterThanOrEqualTo(56.0));
+
+      final manualBtn = find.widgetWithText(OutlinedButton, 'Type the coin in instead');
+      expect(manualBtn, findsOneWidget);
+      expect(tester.getSize(manualBtn).height, greaterThanOrEqualTo(56.0));
+    });
+
+    testWidgets('p7_v81813_fix5_cacg_slab_photo_preserves_typed_cert_and_populates_label', (tester) async {
+      setTestViewSize(tester, width: 800, height: 1400);
+
+      final prevPicker = ImagePickerPlatform.instance;
+      ImagePickerPlatform.instance = _TestImagePickerPlatform();
+      addTearDown(() {
+        ImagePickerPlatform.instance = prevPicker;
+      });
+
+      // Backend returns coin details from front label, but cert_number is null (because it's on the reverse of CACG slab)
+      HttpAuthClient.httpClientOverride = MockClient.streaming((request, bodyStream) async {
+        if (request.url.path == '/api/scan_cert_number_upload') {
+          final resBytes = utf8.encode(jsonEncode({
+            'cert_number': null,
+            'grader': 'CACG',
+            'confidence': 'HIGH',
+            'message': 'OK',
+            'year': '1921',
+            'denomination': 'Morgan Dollar',
+            'grade': 'MS-66',
+            'mint': '',
+            'variety': null,
+          }));
+          return http.StreamedResponse(
+            Stream.value(resBytes),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.StreamedResponse(Stream.value(utf8.encode('{"detail":"not found"}')), 404);
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // User has typed their 9-digit CACG cert number
+      final certField = find.byType(TextField).first;
+      await tester.enterText(certField, '663261170');
+      await tester.pumpAndSettle();
+
+      // Trigger photo scan
+      final photoBtn = find.text('📷 Take a photo of the label');
+      await tester.tap(photoBtn);
+      await tester.pumpAndSettle();
+
+      final takePhotoOption = find.text('Take a photo');
+      await tester.tap(takePhotoOption);
+      await tester.runAsync(() async {
+        await Future.delayed(const Duration(milliseconds: 500));
+      });
+      await tester.pumpAndSettle();
+
+      // Cert #663261170 must NOT be cleared or error-out!
+      expect(find.widgetWithText(TextField, '663261170'), findsWidgets);
+
+      // Label fields must be populated from the front photo
+      expect(find.text('1921'), findsOneWidget);
+      expect(find.text('Morgan Dollar'), findsOneWidget);
+      expect(find.text('MS-66'), findsOneWidget);
+    });
+
+    testWidgets('p7_v81813_fix3_camera_confirm_card_cancel_and_scan_another_sizing', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 1600);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(
+            showCameraFullScreen: true,
+            initialCamResult: {
+              'Year': '1921',
+              'Denomination': 'Morgan Dollar',
+              'Condition': 'MS65',
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify Scan Another button has min height >= 48px
+      final scanAnotherBtn = find.widgetWithText(TextButton, 'Scan Another');
+      expect(scanAnotherBtn, findsOneWidget);
+      expect(tester.getSize(scanAnotherBtn).height, greaterThanOrEqualTo(48.0));
+
+      // Verify Cancel button on camera confirm card has min height >= 56px
+      final cancelBtn = find.widgetWithText(OutlinedButton, 'Cancel');
+      expect(cancelBtn, findsOneWidget);
+      expect(tester.getSize(cancelBtn).height, greaterThanOrEqualTo(56.0));
+    });
     testWidgets('p7_v81811_cert_save_mint_mark_key', (WidgetTester tester) async {
       setTestViewSize(tester, width: 800, height: 2000);
 

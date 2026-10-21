@@ -403,6 +403,27 @@
 
 
 
+## v8.18.13 — 2026-10-20
+**P7-v8.18.13 UX Gate V5 Fixes, Webcam Fallback & Older-User Tap Sizing**
+
+- Fix 1: Cert heading stays neutral ('Certification Number') when grader is 'Not sure' after Look Up
+- Fix 2: Webcam dialog displays friendly copy ('We couldn\'t find a camera on this device.') with >=48px file picker upload button
+- Fix 3: Tap targets >=48px (Cancel 56px, Scan Another 48px, back arrows 48x48, cert help 48x48, sidebar >=48px) and body text >=18px
+- Fix 4: Not-found message specifically names cert # and grader searched + check digits and direct manual entry options
+- Fix 5: CACG clear-slab photo OCR investigation, prompt enhancements, and label data fallback preservation
+
+## v8.18.12 — 2026-10-20
+**P7-v8.18.12 Add-Coins Flow, Resilient Parser & Older-User Sizing**
+
+- P7-v8.18.12: invoice parser list/dict normalization, test fixtures & live alignment
+- P7-v8.18.12: add-coins cert fallback in-app dialogs, neutral cert headers, blurred photo error card
+- P7-v8.18.12: camera friendly error & photo file chooser fallback
+- P7-v8.18.12: older-user sizing (>=48px chips, >=56px confirm, >=16px text, multi-line variety)
+- P7-v8.18.12: manual form input debounce & selection-preserving uppercase formatter
+- P7-v8.18.12: importer auth header support in add_coins.html (NET-389)
+- P7-v8.18.12: EPN firestore permission-denied rule and client credential fallback
+- P7-v8.18.12: settings toggle rename to Estate / Liquidation View
+
 ## v8.18.11 — 2026-10-20
 **P7-v8.18.11 Enhancements & Platform Updates**
 

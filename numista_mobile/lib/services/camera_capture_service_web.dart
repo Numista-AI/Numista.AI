@@ -5,6 +5,8 @@ import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
 import 'camera_capture_service.dart';
+import 'package:image_picker/image_picker.dart';
+
 
 Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
   final completer = Completer<CameraCaptureResult?>();
@@ -51,9 +53,12 @@ Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
   }).catchError((err) {
     debugPrint('Webcam access error: $err');
     isLoading = false;
-    errorMessage = 'Camera Access Failed:\n$err\n\n'
-        'Please ensure you have granted webcam permissions. '
-        'Note: Webcams are only accessible over localhost or secure HTTPS connections.';
+    final errStr = err.toString().toLowerCase();
+    if (errStr.contains('permission') || errStr.contains('notallowed') || errStr.contains('denied')) {
+      errorMessage = 'Camera access was denied. Please allow camera permissions in your browser settings.';
+    } else {
+      errorMessage = "We couldn't find a camera on this device.";
+    }
     if (dialogSetState != null) {
       dialogSetState!(() {});
     }
@@ -89,60 +94,108 @@ Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Align your coin inside the circular framing helper.',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Live Stream Window
-                    Container(
-                      width: 300,
-                      height: 300,
-                      decoration: const BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                      ),
-                      child: ClipOval(
-                        child: isLoading
-                            ? const Center(
-                                child: CircularProgressIndicator(color: Color(0xFFEC4899)),
-                              )
-                            : errorMessage != null
-                                ? Padding(
-                                    padding: const EdgeInsets.all(24),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.videocam_off, color: Colors.redAccent, size: 40),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          errorMessage!,
-                                          style: const TextStyle(color: Colors.white, fontSize: 11),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                : HtmlElementView(viewType: viewType),
-                      ),
-                    ),
-                    // Visual Circle Alignment Guide overlay
-                    Container(
-                      width: 290,
-                      height: 290,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          width: 2.0,
+                if (errorMessage == null) ...[
+                  const Text(
+                    'Align your coin inside the circular framing helper.',
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Live Stream Window
+                      Container(
+                        width: 300,
+                        height: 300,
+                        decoration: const BoxDecoration(
+                          color: Colors.black,
+                          shape: BoxShape.circle,
+                        ),
+                        child: ClipOval(
+                          child: isLoading
+                              ? const Center(
+                                  child: CircularProgressIndicator(color: Color(0xFFEC4899)),
+                                )
+                              : HtmlElementView(viewType: viewType),
                         ),
                       ),
+                      // Visual Circle Alignment Guide overlay
+                      Container(
+                        width: 290,
+                        height: 290,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            width: 2.0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  Container(
+                    width: 320,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(10),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFF87171).withAlpha(80)),
                     ),
-                  ],
-                ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.videocam_off_outlined, color: Color(0xFFF87171), size: 48),
+                        const SizedBox(height: 14),
+                        Text(
+                          errorMessage!,
+                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'You can choose an image file from your device instead.',
+                          style: TextStyle(color: Colors.white70, fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          key: const Key('webcam_upload_photo_button'),
+                          onPressed: () async {
+                            try {
+                              final picked = await ImagePicker().pickImage(
+                                source: ImageSource.gallery,
+                                maxWidth: 1920,
+                                maxHeight: 1920,
+                                imageQuality: 85,
+                              );
+                              if (picked != null) {
+                                final bytes = await picked.readAsBytes();
+                                _stopStream(localStream);
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                completer.complete(CameraCaptureResult(
+                                  bytes: bytes,
+                                  name: picked.name.isNotEmpty ? picked.name : 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                                ));
+                              }
+                            } catch (e) {
+                              debugPrint('Fallback photo pick error: $e');
+                            }
+                          },
+                          icon: const Icon(Icons.upload_file, size: 22),
+                          label: const Text('Upload a photo instead',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 56),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
             actions: [
@@ -152,9 +205,13 @@ Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
                   Navigator.pop(ctx);
                   completer.complete(null);
                 },
-                child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(100, 48),
+                ),
+                child: const Text('Cancel', style: TextStyle(color: Colors.white70, fontSize: 18)),
               ),
-              ElevatedButton.icon(
+              if (errorMessage == null)
+                ElevatedButton.icon(
                 onPressed: (isLoading || errorMessage != null)
                     ? null
                     : () {
@@ -196,6 +253,7 @@ Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.grey.shade800,
                   disabledForegroundColor: Colors.white30,
+                  minimumSize: const Size(160, 48),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
