@@ -7347,7 +7347,21 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
                     )
                     data = json.loads(resp.text)
-                    items = data.get("line_items", [])
+                    # Gemini sometimes returns a top-level JSON array instead of the
+                    # requested object: either [ {invoice obj} ] or a bare list of line items.
+                    if isinstance(data, list):
+                        dict_entries = [d for d in data if isinstance(d, dict)]
+                        if dict_entries and any("line_items" in d for d in dict_entries):
+                            merged = dict(next(d for d in dict_entries if "line_items" in d))
+                            merged["line_items"] = [li for d in dict_entries
+                                                    for li in (d.get("line_items") or [])
+                                                    if isinstance(li, dict)]
+                            data = merged
+                        else:
+                            data = {"line_items": dict_entries}
+                    elif not isinstance(data, dict):
+                        data = {"line_items": []}
+                    items = [it for it in (data.get("line_items") or []) if isinstance(it, dict)]
                     added_this_file = 0
                     total_val = 0.0
                     col_ref = db.collection("users").document(user_email).collection("review_queue")
@@ -7710,9 +7724,14 @@ def list_receipts(
 
     col = db.collection("users").document(user_email).collection("receipts")
     if session_id:
-        col = col.where("session_id", "==", session_id)
-    docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
-              .limit(limit).stream()
+        # Equality filter + order_by needs a composite index that does not exist;
+        # filter in Firestore, sort newest-first in Python instead.
+        _sess_docs = list(col.where("session_id", "==", session_id).stream())
+        _sess_docs.sort(key=lambda d: str((d.to_dict() or {}).get("uploaded_at") or ""), reverse=True)
+        docs = _sess_docs[:limit]
+    else:
+        docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
+                  .limit(limit).stream()
 
     # Query active coin IDs and review_queue IDs to prune deleted coins
     active_ids = set()
