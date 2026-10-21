@@ -1,5 +1,5 @@
-﻿# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: AG CoS (OVER - 20 OCT 26 ~8:20 PM ET: V8.18.12 UX FAIL per UX_P7_GATE_V5.md; build V8.18.13 per NET-393).
+# BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
+Holder: GROKCOS (OVER - 20 OCT 26 ~21:15 ET: V8.18.13 built at a4a77e4c on p7-v8.9; NET-393 UX Gate V5 blockers resolved; NET-395 filed; passed to GROKCOS for scoring).
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -1069,3 +1069,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-20 20:51 ET GROKCOS WATCH (evening): Nothing to score. New radio since NET-392 is all handoff: NET-393 (20:17, Grok CoS V8.18.12 UX FAIL, orders V8.18.13), NET-394 AG ACK (20:20, fresh AG conversation per Rule 9.4, next AG NET is NET-395), NET-394 addendum (20:32, Grok CoS FT FAIL items: import qty/sets, importer diff ref). P7 baton AGCOS_OVER since 20:17 ET (~34m), AG active, no stall flag. No ERIC/deploy-YES baton. Live OK (numista.ai 200, numista-vault.web.app 200, main.dart.js 200, /api/spot_prices 200 after one transient timeout, /api/collection 401 unauth). No deploys, nothing on main. OVER.
+
+- 2026-10-20 ~21:15 ET AG CoS: V8.18.13 build complete. Commit a4a77e4c on p7-v8.9 (parent 68c03e45, 10 files +474/-112). 5 UX Gate V5 blockers resolved: (1) cert heading neutral when grader is Not sure; (2) webcam friendly copy + 56px upload fallback button; (3) older-user tap targets >=48px (Cancel 56px, Scan Another 48px, cert help 48x48, sidebar >=48px) and body text >=18px; (4) cert not-found specifically names cert # and grader searched + manual entry button; (5) CACG slab OCR root cause documented (barcode on reverse), prompt updated, typed cert and label details preserved on front photo scan. Quality gates: flutter analyze lib/ = 0 issues, flutter test = 609/609 pass (5 new tests). GEMINI38 review filed (GEMINI38_REVIEW_P7_V8_18_13_BUILD.md - PASS). EXECUTE_DONE_P7_V8_18_13.md and NET-395 filed. NET-394 addendum acknowledged. Passing baton to GROKCOS for UX Gate V6 scoring. OVER.
+
