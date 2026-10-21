@@ -219,10 +219,18 @@ async def default_deny_auth_middleware(request: Request, call_next):
     if not is_prod and os.environ.get("ALLOW_UNAUTHENTICATED") == "1":
         return await call_next(request)
     from starlette.responses import JSONResponse
+    # This middleware sits outside CORSMiddleware, so add CORS headers here for
+    # allowed origins; otherwise the browser reports the 401 as "Failed to fetch".
+    _hdrs = {"WWW-Authenticate": "Bearer"}
+    _origin = request.headers.get("origin", "")
+    if _is_allowed_origin(_origin):
+        _hdrs["Access-Control-Allow-Origin"] = _origin
+        _hdrs["Access-Control-Allow-Credentials"] = "true"
+        _hdrs["Vary"] = "Origin"
     return JSONResponse(
         status_code=401,
         content={"detail": "Authentication token missing or invalid"},
-        headers={"WWW-Authenticate": "Bearer"},
+        headers=_hdrs,
     )
 
 # --- REQUEST OBSERVABILITY MIDDLEWARE ------------------------------------------
