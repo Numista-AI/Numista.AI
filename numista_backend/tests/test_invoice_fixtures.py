@@ -3,6 +3,8 @@ test_invoice_fixtures.py — Verify Repository-Relative Invoice Fixtures & OCR R
 """
 
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pathlib
 import pytest
 
@@ -57,7 +59,7 @@ def test_invoice_json_list_normalization():
     """Verify that if Gemini returns a JSON list instead of a dict, normalization extracts items safely."""
     import json
     try:
-        from numista_backend.main import clean_valuation_value
+        from main import clean_valuation_value
     except ModuleNotFoundError:
         from main import clean_valuation_value
 
@@ -98,7 +100,7 @@ def test_invoice_json_list_normalization():
 def test_invoice_multi_item_landed_cost_allocation():
     """Verify multi-item proportional landed cost allocation with non-zero shipping/tax."""
     try:
-        from numista_backend.main import clean_valuation_value
+        from main import clean_valuation_value
     except ModuleNotFoundError:
         from main import clean_valuation_value
 
@@ -131,7 +133,12 @@ def test_invoice_multi_item_landed_cost_allocation():
 
 
 def test_invoice_multi_object_line_items_merge():
-    """NET-400a: Verify multi-object list with line_items across multiple dicts merges correctly."""
+    """NET-400a: Verify multi-object list with line_items across multiple dicts merges correctly using production normalizer."""
+    try:
+        from main import normalize_and_validate_receipt
+    except ModuleNotFoundError:
+        from main import normalize_and_validate_receipt
+
     data = [
         {"retailer": "US Mint", "invoice_number": "INV-100", "line_items": [
             {"Program/Series": "American Silver Eagle", "Year": "2024", "Cost": 35.0, "qty": 1}
@@ -141,85 +148,110 @@ def test_invoice_multi_object_line_items_merge():
         ]}
     ]
 
-    if isinstance(data, list):
-        dict_entries = [d for d in data if isinstance(d, dict)]
-        if dict_entries and any("line_items" in d for d in dict_entries):
-            merged = dict(next(d for d in dict_entries if "line_items" in d))
-            merged["line_items"] = [li for d in dict_entries
-                                    for li in (d.get("line_items") or [])
-                                    if isinstance(li, dict)]
-            data = merged
-        else:
-            data = {"line_items": dict_entries}
-
-    assert "line_items" in data
-    assert len(data["line_items"]) == 2
-    assert data["line_items"][0]["Program/Series"] == "American Silver Eagle"
-    assert data["line_items"][1]["Program/Series"] == "Morgan Dollar"
-    assert data["retailer"] == "US Mint"
+    results = normalize_and_validate_receipt(data)
+    assert len(results) == 3  # 1 ASE + 2 Morgan Dollars
+    assert results[0]["Program/Series"] == "American Silver Eagle"
+    assert results[0]["retailer"] == "US Mint"
+    assert results[1]["Program/Series"] == "Morgan Dollar"
+    assert results[2]["Program/Series"] == "Morgan Dollar"
 
 
 def test_invoice_quantity_and_supply_filter_and_set_normalization():
-    """NET-400b,c: Test quantity looping, supply folder skipping, and Cent & Nickel Set normalization."""
-    import re
+    """NET-400b,c: Test quantity looping, supply folder skipping, and Cent & Nickel Set normalization using production normalizer."""
+    try:
+        from main import normalize_and_validate_receipt
+    except ModuleNotFoundError:
+        from main import normalize_and_validate_receipt
 
-    raw_items = [
-        {"Program/Series": "Lincoln Cent", "Year": "2024", "Cost": 5.0, "qty": 3, "Denomination": "Cent"},
-        {"Program/Series": "Whitman Coin Album", "Year": "", "Cost": 15.0, "is_supply": True, "Denomination": ""},
-        {"Program/Series": "", "Year": "2022", "Cost": 25.0, "qty": 1, "Denomination": "Unknown Cent/Nickel"},
-    ]
+    raw_data = {
+        "line_items": [
+            {"Program/Series": "Lincoln Cent", "Year": "2024", "Cost": 5.0, "qty": 3, "Denomination": "Cent"},
+            {"Program/Series": "Whitman Coin Album", "Year": "", "Cost": 15.0, "is_supply": True, "Denomination": ""},
+            {"Program/Series": "", "Year": "2022", "Cost": 25.0, "qty": 1, "Denomination": "Unknown Cent/Nickel"},
+        ]
+    }
 
-    def _get_item_qty(item_dict):
-        try:
-            val = item_dict.get("qty") or item_dict.get("quantity") or item_dict.get("Quantity") or 1
-            return max(1, min(int(val), 100))
-        except Exception:
-            return 1
-
-    processed_coins = []
-    supply_kws = ("folder", "supply", "album", "holder", "capsule", "supplies", "binder", "display box")
-
-    for it in raw_items:
-        is_supply = bool(it.get("is_supply", False))
-        prog_val = (it.get("Program/Series") or "").strip()
-        raw_desc = (it.get("Personal Notes") or "") + " " + prog_val + " " + (it.get("Denomination") or "")
-        raw_lower = raw_desc.lower()
-
-        has_year = bool(re.search(r"\b(1[789]\d\d|20[0-2]\d)\b", raw_desc))
-        if is_supply or (any(kw in raw_lower for kw in supply_kws) and not has_year and not it.get("Year")):
-            continue
-
-        denom_val = (it.get("Denomination") or "").strip()
-        denom_lower = denom_val.lower()
-        if "unknown cent/nickel" in denom_lower or denom_lower in ("cent/nickel", "cent / nickel", "unknown cent / nickel"):
-            denom_val = "Cent"
-            if not prog_val:
-                prog_val = "Cent & Nickel Set"
-        elif not denom_val:
-            denom_val = "Dollar"
-
-        qty = _get_item_qty(it)
-        for _ in range(qty):
-            processed_coins.append({
-                "Program/Series": prog_val,
-                "Year": it.get("Year"),
-                "Denomination": denom_val,
-                "Cost": it.get("Cost"),
-            })
-
+    results = normalize_and_validate_receipt(raw_data)
     # Album skipped (1 item), Lincoln Cent repeated 3 times, Cent & Nickel Set repeated 1 time = 4 coins
-    assert len(processed_coins) == 4
-    cents = [c for c in processed_coins if c["Program/Series"] == "Lincoln Cent"]
+    assert len(results) == 4
+    cents = [c for c in results if c["Program/Series"] == "Lincoln Cent"]
     assert len(cents) == 3
-    set_coin = [c for c in processed_coins if c["Program/Series"] == "Cent & Nickel Set"]
+    set_coin = [c for c in results if c["Program/Series"] == "Cent & Nickel Set"]
     assert len(set_coin) == 1
     assert set_coin[0]["Denomination"] == "Cent"
+    assert not any("album" in (c.get("Personal Notes") or "").lower() for c in results)
+
+
+def test_invoice_092052_acceptance():
+    """NET-400: Acceptance test for 092052 invoice (15 line items in, 2 with qty=2, 1 set, supply rows filtered).
+    Calls production normalize_and_validate_receipt directly from main.py and asserts:
+    - Exactly 15 output coins
+    - 0 supply rows
+    - Set rows mapped (Unknown Cent/Nickel -> Cent & Nickel Set, Cent)
+    - Quantities multiplied out
+    """
+    try:
+        from main import normalize_and_validate_receipt
+    except ModuleNotFoundError:
+        from main import normalize_and_validate_receipt
+
+    raw_invoice = {
+        "invoice_number": "092052",
+        "retailer": "USA Coins",
+        "line_items": [
+            # 1 supply row (must be skipped -> 0 coins)
+            {"Program/Series": "Whitman Eisenhower Dollar Album", "Year": "", "Cost": 12.95, "is_supply": True, "Denomination": "Supplies"},
+            # 1 accessory folder row (must be skipped -> 0 coins)
+            {"Program/Series": "Coin Storage Box & Flips", "Year": "", "Cost": 8.50, "is_supply": True, "Denomination": "Supplies"},
+            # 1 set row (must map to Cent & Nickel Set, Cent -> 1 coin)
+            {"Program/Series": "", "Year": "2021", "Cost": 35.0, "qty": 1, "Denomination": "Unknown Cent/Nickel", "Personal Notes": "21st Century Penny and Nickel Set"},
+            # 2 rows with qty=2 (must expand to 2 coins each -> 4 coins)
+            {"Program/Series": "Kennedy Half Dollar", "Year": "2001", "Cost": 10.0, "qty": 2, "Denomination": "Half Dollar", "Mint Mark": "P"},
+            {"Program/Series": "Kennedy Half Dollar", "Year": "1964", "Cost": 15.0, "qty": 2, "Denomination": "Half Dollar", "Mint Mark": "D"},
+            # 10 single coin rows (1 coin each -> 10 coins)
+            {"Program/Series": "Mercury Dime", "Year": "1943", "Cost": 5.0, "qty": 1, "Denomination": "Dime", "Mint Mark": ""},
+            {"Program/Series": "Mercury Dime", "Year": "1942", "Cost": 5.0, "qty": 1, "Denomination": "Dime", "Mint Mark": "D"},
+            {"Program/Series": "Roosevelt Dime", "Year": "1963", "Cost": 4.0, "qty": 1, "Denomination": "Dime", "Mint Mark": "D"},
+            {"Program/Series": "Buffalo Nickel", "Year": "1936", "Cost": 8.0, "qty": 1, "Denomination": "Nickel", "Mint Mark": "S"},
+            {"Program/Series": "Native American Dollar", "Year": "2017", "Cost": 6.0, "qty": 1, "Denomination": "Dollar", "Mint Mark": "P"},
+            {"Program/Series": "Morgan Dollar", "Year": "1881", "Cost": 65.0, "qty": 1, "Denomination": "Dollar", "Mint Mark": "S"},
+            {"Program/Series": "Peace Dollar", "Year": "1922", "Cost": 30.0, "qty": 1, "Denomination": "Dollar", "Mint Mark": ""},
+            {"Program/Series": "Franklin Half Dollar", "Year": "1954", "Cost": 16.0, "qty": 1, "Denomination": "Half Dollar", "Mint Mark": "D"},
+            {"Program/Series": "Walking Liberty Half", "Year": "1943", "Cost": 18.0, "qty": 1, "Denomination": "Half Dollar", "Mint Mark": ""},
+            {"Program/Series": "Lincoln Cent", "Year": "1909", "Cost": 12.0, "qty": 1, "Denomination": "Cent", "Mint Mark": "VDB"},
+        ]
+    }
+
+    # Verify input has exactly 15 line items (2 with qty=2, 1 set, supply rows)
+    assert len(raw_invoice["line_items"]) == 15
+
+    results = normalize_and_validate_receipt(raw_invoice, fname="Receipt_2026-06-03_092052.pdf")
+
+    # Output assertions:
+    # 1. Output must be exactly 15 coins
+    assert len(results) == 15, f"Expected 15 output coins, got {len(results)}"
+
+    # 2. 0 supply rows in output
+    for coin in results:
+        assert not coin.get("is_supply", False), f"Supply item leaked into output: {coin}"
+        notes = (coin.get("Personal Notes") or "").lower()
+        assert "album" not in notes, f"Album leaked into output: {coin}"
+        assert "storage box" not in notes, f"Box leaked into output: {coin}"
+
+    # 3. Sets mapped correctly
+    sets = [c for c in results if c["Program/Series"] == "Cent & Nickel Set"]
+    assert len(sets) == 1, "Expected 1 mapped Cent & Nickel Set"
+    assert sets[0]["Denomination"] == "Cent"
+
+    # 4. Quantity 2 coins expanded correctly
+    halves = [c for c in results if c["Program/Series"] == "Kennedy Half Dollar"]
+    assert len(halves) == 4, f"Expected 4 Kennedy halves (2x 2001-P + 2x 1964-D), got {len(halves)}"
 
 
 def test_duplicate_score_case_and_aliases():
     """NET-400f: Verify _score_duplicate handles case insensitivity and key aliases."""
     try:
-        from numista_backend.main import _score_duplicate
+        from main import _score_duplicate
     except ModuleNotFoundError:
         from main import _score_duplicate
 

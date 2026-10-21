@@ -7378,6 +7378,178 @@ async def import_process(
     return {"status": "processing", "session_id": session_id}
 
 
+def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "", session_id: str = "") -> list[dict]:
+    """
+    Production receipt normalization pipeline (NET-394, NET-400a, NET-400b, NET-400c).
+    - Merges line_items across multiple dict entries if Gemini returns a list (NET-400a).
+    - Handles quantities, multiplying out items by quantity (NET-400b).
+    - Filters out supply / album / folder rows (NET-400c).
+    - Normalizes set denominations and programs (NET-400c).
+    - Allocates landed cost if subtotal / shipping / tax / grand_total present.
+    """
+    if isinstance(data, list):
+        dict_entries = [d for d in data if isinstance(d, dict)]
+        if dict_entries and any("line_items" in d for d in dict_entries):
+            merged = dict(next(d for d in dict_entries if "line_items" in d))
+            merged["line_items"] = [li for d in dict_entries
+                                    for li in (d.get("line_items") or [])
+                                    if isinstance(li, dict)]
+            data = merged
+        else:
+            data = {"line_items": dict_entries}
+    elif not isinstance(data, dict):
+        data = {"line_items": []}
+
+    items = data.get("line_items")
+    if not isinstance(items, list) or not items:
+        for fallback_key in ("items", "coins", "results", "data"):
+            candidate = data.get(fallback_key)
+            if isinstance(candidate, list) and candidate:
+                items = candidate
+                break
+    if not isinstance(items, list):
+        items = []
+    items = [it for it in items if isinstance(it, dict)]
+
+    def _get_item_qty(item_dict):
+        try:
+            val = item_dict.get("qty") or item_dict.get("quantity") or item_dict.get("Quantity") or item_dict.get("Qty") or 1
+            return max(1, min(int(val), 100))
+        except Exception:
+            return 1
+
+    subtotal_val = clean_valuation_value(data.get("subtotal") or 0.0)
+    shipping_val = clean_valuation_value(data.get("shipping_fee") or 0.0)
+    tax_val      = clean_valuation_value(data.get("tax_fee") or 0.0)
+    grand_total  = clean_valuation_value(data.get("total_amount") or 0.0)
+
+    raw_item_sum = sum(clean_valuation_value(it.get("Cost") or 0.0) * _get_item_qty(it) for it in items)
+    if subtotal_val <= 0.0:
+        subtotal_val = raw_item_sum
+
+    total_global_fees = 0.0
+    if grand_total > subtotal_val:
+        total_global_fees = grand_total - subtotal_val
+    elif (shipping_val + tax_val) > 0:
+        total_global_fees = shipping_val + tax_val
+
+    results = []
+    for it in items:
+        item_qty = _get_item_qty(it)
+        sticker_price = clean_valuation_value(it.get("Cost") or 0.0)
+
+        # Proportional Landed Cost Allocation
+        if raw_item_sum > 0.0 and total_global_fees > 0.0:
+            allocated_fee = round(total_global_fees * (sticker_price / raw_item_sum), 2)
+        elif len(items) == 1 and total_global_fees > 0.0:
+            allocated_fee = round(total_global_fees, 2)
+        else:
+            allocated_fee = 0.0
+
+        landed_cost_basis = round(sticker_price + allocated_fee, 2)
+
+        is_supply = bool(it.get("is_supply", False))
+        prog_val = (it.get("Program/Series") or "").strip()
+        raw_desc = (it.get("Personal Notes") or "") + " " + fname + " " + prog_val + " " + (it.get("Denomination") or "")
+        raw_lower = raw_desc.lower()
+
+        # Supply / Folder Filter (NET-400c):
+        # Never import supply/folder rows as coins
+        supply_kws = ("folder", "supply", "album", "holder", "capsule", "supplies", "binder", "display box")
+        has_year = bool(re.search(r"\b(1[789]\d\d|20[0-2]\d)\b", raw_desc))
+        if is_supply or (any(kw in raw_lower for kw in supply_kws) and not has_year and not it.get("Year")):
+            logger.info(f"Skipping supply/accessory item: {raw_desc[:60]}")
+            continue
+
+        # Set & Denomination Normalization (NET-400c):
+        denom_val = (it.get("Denomination") or "").strip()
+        denom_lower = denom_val.lower()
+        if "unknown cent/nickel" in denom_lower or denom_lower in ("cent/nickel", "cent / nickel", "unknown cent / nickel"):
+            denom_val = "Cent"
+            if not prog_val:
+                prog_val = "Cent & Nickel Set"
+        elif "quarter set" in raw_lower and ("unknown" in denom_lower or not denom_val):
+            denom_val = "Quarter"
+        elif not denom_val:
+            denom_val = "Dollar"
+
+        # Smart Program/Series & Metal Content Normalization
+        metal_val = (it.get("Metal Content") or "").strip()
+
+        if "gold eagle" in raw_lower or "american gold eagle" in raw_lower:
+            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                prog_val = "American Gold Eagle"
+            if not metal_val:
+                metal_val = "Gold"
+        elif "platinum eagle" in raw_lower or "american platinum eagle" in raw_lower:
+            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                prog_val = "American Platinum Eagle"
+            if not metal_val:
+                metal_val = "Platinum"
+        elif "palladium eagle" in raw_lower or "american palladium eagle" in raw_lower:
+            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                prog_val = "American Palladium Eagle"
+            if not metal_val:
+                metal_val = "Palladium"
+        elif "silver eagle" in raw_lower or "american silver eagle" in raw_lower or "26ea" in raw_lower or ("american eagle" in raw_lower and "gold" not in raw_lower and "platinum" not in raw_lower):
+            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                prog_val = "American Silver Eagle"
+            if not metal_val:
+                metal_val = "Silver"
+
+        if not metal_val:
+            if "silver" in raw_lower or "morgan" in raw_lower or "peace" in raw_lower:
+                metal_val = "Silver"
+            elif "gold" in raw_lower or "saint-gaudens" in raw_lower or "krugerrand" in raw_lower or "sovereign" in raw_lower:
+                metal_val = "Gold"
+            elif "nickel" in raw_lower or "jefferson" in raw_lower or "buffalo nickel" in raw_lower:
+                metal_val = "Cupronickel"
+            elif "cent" in raw_lower or "lincoln" in raw_lower or "penny" in raw_lower or "indian head" in raw_lower:
+                metal_val = "Copper"
+
+        mint_mark_val = (it.get("Mint Mark") or "").strip()
+        notes_str = (it.get("Personal Notes") or "") + " " + fname
+        if not mint_mark_val and ("26ea" in notes_str.lower() or "west point" in notes_str.lower() or "26ea" in fname.lower()):
+            mint_mark_val = "W"
+
+        doc = {
+            "Program/Series":       prog_val,
+            "Year":                 it.get("Year", ""),
+            "Mint Mark":            mint_mark_val,
+            "Denomination":         denom_val,
+            "Condition":            it.get("Condition", "Ungraded"),
+            "Metal Content":        metal_val,
+            "Cost":                 landed_cost_basis,
+            "Quantity":             1,
+            "Country":              "United States",
+            "Personal Notes":       (it.get("Personal Notes") or it.get("Original Description from source") or "").strip(),
+            "source":               "PDF Invoice",
+            "is_demo":              False,
+            "is_demo_cleared":      False,
+            "invoice_number":       (it.get("Retailer Invoice #") or data.get("invoice_number") or "").strip(),
+            "retailer":             (it.get("Retailer/Website") or data.get("retailer") or "").strip(),
+            "purchase_date":        (it.get("invoice_date") or data.get("invoice_date") or "").strip(),
+            "status":               "pending_review",
+            "source_file":          fname,
+            "import_session_id":    session_id,
+            "source_type":          "invoice",
+            "deep_dive_status":     "PENDING",
+            "upload_method":        "pdf_invoice_import",
+            "item_type":            "coin",
+        }
+        if gcs_path:
+            doc["gcs_path"] = gcs_path
+        try:
+            doc["item_type"] = _classify_item_type(doc)
+        except Exception:
+            pass
+
+        for _ in range(item_qty):
+            results.append(dict(doc))
+
+    return results
+
+
 def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: bool):
     """
     Worker function executed in background task worker to process all session files.
@@ -7727,39 +7899,6 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     if data is None:
                         raise last_gen_err or RuntimeError("Failed to parse invoice with AI")
 
-                    # Defensively normalize data if Gemini returns a list or non-dict (NET-394/NET-400a)
-                    if isinstance(data, list):
-                        dict_entries = [d for d in data if isinstance(d, dict)]
-                        if dict_entries and any("line_items" in d for d in dict_entries):
-                            merged = dict(next(d for d in dict_entries if "line_items" in d))
-                            merged["line_items"] = [li for d in dict_entries
-                                                    for li in (d.get("line_items") or [])
-                                                    if isinstance(li, dict)]
-                            data = merged
-                        else:
-                            data = {"line_items": dict_entries}
-                    elif not isinstance(data, dict):
-                        data = {"line_items": []}
-
-                    items = data.get("line_items")
-                    if not isinstance(items, list) or not items:
-                        for fallback_key in ("items", "coins", "results", "data"):
-                            candidate = data.get(fallback_key)
-                            if isinstance(candidate, list) and candidate:
-                                items = candidate
-                                break
-                    if not isinstance(items, list):
-                        items = []
-                    items = [it for it in items if isinstance(it, dict)]
-
-                    # Quantity extraction helper (NET-400b)
-                    def _get_item_qty(item_dict):
-                        try:
-                            val = item_dict.get("qty") or item_dict.get("quantity") or item_dict.get("Quantity") or 1
-                            return max(1, min(int(val), 100))
-                        except Exception:
-                            return 1
-
                     added_this_file = 0
                     total_val = 0.0
                     col_ref = db.collection("users").document(user_email).collection("review_queue")
@@ -7769,145 +7908,18 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     receipt_id = f"rec_{safe_file_stem}"
                     line_items_out = []
 
-                    subtotal_val = clean_valuation_value(data.get("subtotal") or 0.0)
-                    shipping_val = clean_valuation_value(data.get("shipping_fee") or 0.0)
-                    tax_val      = clean_valuation_value(data.get("tax_fee") or 0.0)
-                    grand_total  = clean_valuation_value(data.get("total_amount") or 0.0)
-
-                    # Compute aggregate item price if subtotal missing (taking quantity into account)
-                    raw_item_sum = sum(clean_valuation_value(it.get("Cost") or 0.0) * _get_item_qty(it) for it in items)
-                    if subtotal_val <= 0.0:
-                        subtotal_val = raw_item_sum
-
-                    total_global_fees = 0.0
-                    if grand_total > subtotal_val:
-                        total_global_fees = grand_total - subtotal_val
-                    elif (shipping_val + tax_val) > 0:
-                        total_global_fees = shipping_val + tax_val
-
-                    for it in items:
-                        item_qty = _get_item_qty(it)
-                        sticker_price = clean_valuation_value(it.get("Cost") or 0.0)
-                        
-                        # Proportional Landed Cost Allocation
-                        if raw_item_sum > 0.0 and total_global_fees > 0.0:
-                            allocated_fee = round(total_global_fees * (sticker_price / raw_item_sum), 2)
-                        elif len(items) == 1 and total_global_fees > 0.0:
-                            allocated_fee = round(total_global_fees, 2)
-                        else:
-                            allocated_fee = 0.0
-
-                        landed_cost_basis = round(sticker_price + allocated_fee, 2)
-
-                        is_supply = bool(it.get("is_supply", False))
-                        prog_val = (it.get("Program/Series") or "").strip()
-                        raw_desc = (it.get("Personal Notes") or "") + " " + fname + " " + prog_val + " " + (it.get("Denomination") or "")
-                        raw_lower = raw_desc.lower()
-
-                        # Supply / Folder Filter (NET-400c):
-                        # Never import supply/folder rows as coins
-                        supply_kws = ("folder", "supply", "album", "holder", "capsule", "supplies", "binder", "display box")
-                        has_year = bool(re.search(r"\b(1[789]\d\d|20[0-2]\d)\b", raw_desc))
-                        if is_supply or (any(kw in raw_lower for kw in supply_kws) and not has_year and not it.get("Year")):
-                            logger.info(f"Skipping supply/accessory item: {raw_desc[:60]}")
-                            continue
-
-                        # Set & Denomination Normalization (NET-400c):
-                        denom_val = (it.get("Denomination") or "").strip()
-                        denom_lower = denom_val.lower()
-                        if "unknown cent/nickel" in denom_lower or denom_lower in ("cent/nickel", "cent / nickel", "unknown cent / nickel"):
-                            denom_val = "Cent"
-                            if not prog_val:
-                                prog_val = "Cent & Nickel Set"
-                        elif "quarter set" in raw_lower and ("unknown" in denom_lower or not denom_val):
-                            denom_val = "Quarter"
-                        elif not denom_val:
-                            denom_val = "Dollar"
-
-                        item_type_val = "coin"
-
-                        # Smart Program/Series & Metal Content Normalization
-                        metal_val = (it.get("Metal Content") or "").strip()
-
-                        if "gold eagle" in raw_lower or "american gold eagle" in raw_lower:
-                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                                prog_val = "American Gold Eagle"
-                            if not metal_val:
-                                metal_val = "Gold"
-                        elif "platinum eagle" in raw_lower or "american platinum eagle" in raw_lower:
-                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                                prog_val = "American Platinum Eagle"
-                            if not metal_val:
-                                metal_val = "Platinum"
-                        elif "palladium eagle" in raw_lower or "american palladium eagle" in raw_lower:
-                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                                prog_val = "American Palladium Eagle"
-                            if not metal_val:
-                                metal_val = "Palladium"
-                        elif "silver eagle" in raw_lower or "american silver eagle" in raw_lower or "26ea" in raw_lower or ("american eagle" in raw_lower and "gold" not in raw_lower and "platinum" not in raw_lower):
-                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                                prog_val = "American Silver Eagle"
-                            if not metal_val:
-                                metal_val = "Silver"
-
-                        # General metal fallbacks if still empty:
-                        if not metal_val:
-                            if "silver" in raw_lower or "morgan" in raw_lower or "peace" in raw_lower:
-                                metal_val = "Silver"
-                            elif "gold" in raw_lower or "saint-gaudens" in raw_lower or "krugerrand" in raw_lower or "sovereign" in raw_lower:
-                                metal_val = "Gold"
-                            elif "nickel" in raw_lower or "jefferson" in raw_lower or "buffalo nickel" in raw_lower:
-                                metal_val = "Cupronickel"
-                            elif "cent" in raw_lower or "lincoln" in raw_lower or "penny" in raw_lower or "indian head" in raw_lower:
-                                metal_val = "Copper"
-
-                        mint_mark_val = (it.get("Mint Mark") or "").strip()
-                        notes_str = (it.get("Personal Notes") or "") + " " + fname
-                        if not mint_mark_val and ("26ea" in notes_str.lower() or "west point" in notes_str.lower() or "26ea" in fname.lower()):
-                            mint_mark_val = "W"
-
-                        doc = {
-                            "Program/Series":       prog_val,
-                            "Year":                 it.get("Year", ""),
-                            "Mint Mark":            mint_mark_val,
-                            "Denomination":         denom_val,
-                            "Condition":            it.get("Condition", "Ungraded"),
-                            "Metal Content":        metal_val,
-                            "Cost":                 landed_cost_basis,
-                            "Purchase Cost":        landed_cost_basis,
-                            "Sticker Price":        sticker_price,
-                            "Allocated Fees":       allocated_fee,
-                            "Purchase Date":        data.get("invoice_date", ""),
-                            "Retailer/Website":     data.get("retailer", ""),
-                            "Retailer Invoice #":   data.get("invoice_number", ""),
-                            "Personal Reference #": data.get("invoice_number", ""),
-                            "Certification Number": it.get("Certification Number", ""),
-                            "Personal Notes":       it.get("Personal Notes", ""),
-                            "Country":              "United States",
-                            "deep_dive_status":     "PENDING",
-                            "upload_method":        "pdf_invoice_import",
-                            "source_file":          fname,
-                            "import_session_id":    session_id,
-                            "source_type":          "invoice",
-                            "receipt_id":           receipt_id,
-                            "gcs_path":             gcs_path,
-                            "created_at":           firestore.SERVER_TIMESTAMP,
-                            "item_type":            item_type_val,
-                        }
-                        if not is_supply:
-                            doc["item_type"] = _classify_item_type(doc)
-
-                        # Honor quantity: add one coin doc per unit (NET-400b)
-                        for _ in range(item_qty):
-                            total_val += landed_cost_basis
-                            doc_copy = dict(doc)
-                            doc_ref = col_ref.document(str(uuid.uuid4()))
-                            batch.set(doc_ref, doc_copy)
-                            new_coin_ids.append(doc_ref.id)
-                            added_this_file += 1
-                            line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in doc_copy.items()}
-                            line_item_entry["id"] = doc_ref.id
-                            line_items_out.append(line_item_entry)
+                    normalized_coins = normalize_and_validate_receipt(data, fname=fname, gcs_path=gcs_path, session_id=session_id)
+                    for coin_doc in normalized_coins:
+                        coin_doc["receipt_id"] = receipt_id
+                        coin_doc["created_at"] = firestore.SERVER_TIMESTAMP
+                        total_val += coin_doc.get("Cost", 0.0)
+                        doc_ref = col_ref.document(str(uuid.uuid4()))
+                        batch.set(doc_ref, coin_doc)
+                        new_coin_ids.append(doc_ref.id)
+                        added_this_file += 1
+                        line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in coin_doc.items()}
+                        line_item_entry["id"] = doc_ref.id
+                        line_items_out.append(line_item_entry)
 
                     batch.commit()
 

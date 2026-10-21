@@ -31,6 +31,10 @@ import 'package:numista_ai/services/market_news_service.dart';
 import 'package:numista_ai/services/hardware_service.dart';
 import 'package:numista_ai/widgets/auth_gate.dart';
 import 'package:numista_ai/constants.dart';
+import 'package:numista_ai/utils/platform_gate.dart';
+import 'package:numista_ai/services/camera_recovery_service.dart';
+import 'package:numista_ai/screens/microscope_scan_screen.dart';
+import 'package:numista_ai/widgets/morgan_greeter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -2703,6 +2707,349 @@ void main() {
       expect(hubSrc.contains("'MintMark':"), isFalse);
     });
   });
+  group('P7 V8.18.15 Regression & UX Safety Suite', () {
+    testWidgets('p7_v81815_400d_manual_save_writes_typed_year_and_cert', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 2000);
+
+      Map<String, dynamic>? interceptedPayload;
+      final prevOverride = HttpAuthClient.httpClientOverride;
+      HttpAuthClient.httpClientOverride = MockClient.streaming((request, bodyStream) async {
+        if (request.url.path == '/api/cert_save') {
+          final bodyBytes = await bodyStream.toBytes();
+          final jsonMap = jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
+          interceptedPayload = jsonMap['coin_data'] as Map<String, dynamic>?;
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(jsonEncode({'status': 'ok'}))),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.StreamedResponse(Stream.value(utf8.encode('{"detail":"not found"}')), 404);
+      });
+      addTearDown(() {
+        HttpAuthClient.httpClientOverride = prevOverride;
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(
+            showCertFullScreen: true,
+            initialCoinPreset: {
+              'name': 'Buffalo Nickel',
+              'year': '1936',
+              'mint': 'S',
+              'certNo': '53652580',
+              'grader': 'NGC',
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Trigger save
+      final saveBtn = find.text('Confirm & Add to My Collection');
+      expect(saveBtn, findsOneWidget);
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
+      await tester.pumpAndSettle();
+
+      // Assert typed year and cert are retained on save payload
+      expect(interceptedPayload, isNotNull);
+      expect(interceptedPayload!['Year'], equals('1936'));
+      expect(interceptedPayload!['certNo'], equals('53652580'));
+      expect(interceptedPayload!['Cert #'], equals('53652580'));
+    });
+
+    testWidgets('p7_v81815_400e_graded_condition_saves_graded_and_ms65', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 800, height: 2000);
+
+      Map<String, dynamic>? interceptedPayload;
+      final prevOverride = HttpAuthClient.httpClientOverride;
+      HttpAuthClient.httpClientOverride = MockClient.streaming((request, bodyStream) async {
+        if (request.url.path == '/api/cert_save') {
+          final bodyBytes = await bodyStream.toBytes();
+          final jsonMap = jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
+          interceptedPayload = jsonMap['coin_data'] as Map<String, dynamic>?;
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(jsonEncode({'status': 'ok'}))),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.StreamedResponse(Stream.value(utf8.encode('{"detail":"not found"}')), 404);
+      });
+      addTearDown(() {
+        HttpAuthClient.httpClientOverride = prevOverride;
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(
+            showCertFullScreen: true,
+            initialCoinPreset: {
+              'name': 'Morgan Dollar',
+              'year': '1881',
+              'mint': 'S',
+              'certNo': '8321797',
+              'grader': 'NGC',
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Enter grade MS65 into the Grade field
+      final gradeField = find.byWidgetPredicate((w) => w is TextField && w.decoration?.hintText == 'e.g. MS-64');
+      if (gradeField.evaluate().isNotEmpty) {
+        await tester.enterText(gradeField, 'MS65');
+        await tester.pumpAndSettle();
+      }
+
+      // Trigger save
+      final saveBtn = find.text('Confirm & Add to My Collection');
+      expect(saveBtn, findsOneWidget);
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
+      await tester.pumpAndSettle();
+
+      // Assert Graded condition and Grade: MS65 are saved, NOT Ungraded
+      expect(interceptedPayload, isNotNull);
+      expect(interceptedPayload!['grader'], equals('NGC'));
+      expect(interceptedPayload!['Grade'], equals('MS65'));
+      expect(interceptedPayload!['Condition'], equals('MS65'));
+      expect(interceptedPayload!['Condition'], isNot(equals('Ungraded')));
+    });
+
+    testWidgets('p7_v81815_401_3_width_360dp_button_sizes_ge_48px', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 360, height: 800);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(
+            showCameraFullScreen: true,
+            initialCamResult: {
+              'Year': '1921',
+              'Denomination': 'Morgan Dollar',
+              'Condition': 'MS65',
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify Scan Another button has min height >= 48px
+      final scanAnotherBtn = find.widgetWithText(TextButton, 'Scan Another');
+      expect(scanAnotherBtn, findsOneWidget);
+      expect(tester.getSize(scanAnotherBtn).height, greaterThanOrEqualTo(48.0));
+
+      // Verify Cancel button has min height >= 48px (56px)
+      final cancelBtn = find.widgetWithText(OutlinedButton, 'Cancel');
+      expect(cancelBtn, findsOneWidget);
+      expect(tester.getSize(cancelBtn).height, greaterThanOrEqualTo(48.0));
+
+      // Assert zero RenderFlex overflow occurred
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('p7_v81815_401_4_ngc_not_found_amber_card_with_cert', (WidgetTester tester) async {
+      setTestViewSize(tester, width: 360, height: 1200);
+
+      final prevOverride = HttpAuthClient.httpClientOverride;
+      HttpAuthClient.httpClientOverride = MockClient((request) async {
+        if (request.url.path == '/api/cert_lookup') {
+          return http.Response(
+            jsonEncode({
+              'found': false,
+              'message': 'Direct NGC cert lookup is not supported.',
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{"detail":"not found"}', 404);
+      });
+      addTearDown(() {
+        HttpAuthClient.httpClientOverride = prevOverride;
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: AddCoinsHub(showCertFullScreen: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Select NGC chip
+      await tester.tap(find.widgetWithText(FilterChip, 'NGC'));
+      await tester.pumpAndSettle();
+
+      // Enter cert number
+      final certField = find.byType(TextField).first;
+      await tester.enterText(certField, '99999999');
+      await tester.pumpAndSettle();
+
+      // Tap Look Up
+      final lookupBtn = find.text('Look Up');
+      expect(lookupBtn, findsOneWidget);
+      await tester.tap(lookupBtn);
+      await tester.pumpAndSettle();
+
+      // Amber card displayed with cert 99999999 and NGC
+      expect(find.textContaining('Cert #99999999 (NGC) was not found'), findsOneWidget);
+
+      // Button 'Take a photo of the label' has min height >= 56px
+      final labelPhotoBtn = find.byKey(const Key('cert_lookup_scan_slab_button'));
+      expect(labelPhotoBtn, findsOneWidget);
+      expect(tester.getSize(labelPhotoBtn).height, greaterThanOrEqualTo(56.0));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('p7_v81815_410_is_native_phone_override_gate', (WidgetTester tester) async {
+      addTearDown(() {
+        debugIsNativePhoneOverride = null;
+      });
+
+      // 1. debugIsNativePhoneOverride = true
+      debugIsNativePhoneOverride = true;
+      expect(isNativePhone, isTrue);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => Text(isNativePhone ? 'PHONE_VIEW' : 'WEB_VIEW'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('PHONE_VIEW'), findsOneWidget);
+      expect(find.text('WEB_VIEW'), findsNothing);
+
+      // 2. debugIsNativePhoneOverride = false
+      debugIsNativePhoneOverride = false;
+      expect(isNativePhone, isFalse);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => Text(isNativePhone ? 'PHONE_VIEW' : 'WEB_VIEW'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('WEB_VIEW'), findsOneWidget);
+      expect(find.text('PHONE_VIEW'), findsNothing);
+    });
+
+    testWidgets('p7_v81815_408n_portrait_resolutions_zero_overflow', (WidgetTester tester) async {
+      addTearDown(() {
+        debugIsNativePhoneOverride = null;
+      });
+      debugIsNativePhoneOverride = true;
+
+      final portraitSizes = [
+        const Size(360, 640),
+        const Size(412, 892),
+        const Size(457, 812),
+      ];
+
+      for (final size in portraitSizes) {
+        setTestViewSize(tester, width: size.width, height: size.height);
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: AddCoinsHub(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull, reason: 'Overflow in portrait at ${size.width}x${size.height}');
+      }
+    });
+
+    testWidgets('p7_v81815_413p_landscape_resolutions_zero_overflow', (WidgetTester tester) async {
+      addTearDown(() {
+        debugIsNativePhoneOverride = null;
+      });
+      debugIsNativePhoneOverride = true;
+
+      final landscapeSizes = [
+        const Size(640, 360),
+        const Size(892, 412),
+        const Size(812, 457),
+      ];
+
+      for (final size in landscapeSizes) {
+        setTestViewSize(tester, width: size.width, height: size.height);
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: AddCoinsHub(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull, reason: 'Overflow in landscape at ${size.width}x${size.height}');
+
+        // Verify the last entry card is reachable after scroll and hit-testable
+        final moreWaysFinder = find.text('More ways to add');
+        expect(moreWaysFinder, findsOneWidget);
+        await tester.ensureVisible(moreWaysFinder);
+        await tester.pumpAndSettle();
+        expect(tester.getCenter(moreWaysFinder), isNotNull);
+      }
+    });
+
+    testWidgets('p7_v81815_413q_camera_recovery_lost_data', (WidgetTester tester) async {
+      addTearDown(() {
+        debugIsNativePhoneOverride = null;
+        CameraRecoveryService.latestRecovered = null;
+        CameraRecoveryService.lastError = null;
+      });
+
+      // 1. When isNativePhone is false, retrieveLostData returns null immediately
+      debugIsNativePhoneOverride = false;
+      final resNonNative = await CameraRecoveryService.retrieveLostData();
+      expect(resNonNative, isNull);
+
+      // 2. When isNativePhone is true:
+      debugIsNativePhoneOverride = true;
+
+      // Mock ImagePickerPlatform
+      final mockPlatform = _MockRecoveryImagePickerPlatform();
+      final prevPlatform = ImagePickerPlatform.instance;
+      ImagePickerPlatform.instance = mockPlatform;
+      addTearDown(() {
+        ImagePickerPlatform.instance = prevPlatform;
+      });
+
+      // Scenario A: Successful recovery
+      mockPlatform.response = LostDataResponse(
+        file: XFile.fromData(
+          Uint8List.fromList([1, 2, 3, 4, 5]),
+          name: 'recovered_slab.jpg',
+          path: '/mock/recovered_slab.jpg',
+        ),
+      );
+      final resSuccess = await CameraRecoveryService.retrieveLostData();
+      expect(resSuccess, isNotNull);
+      expect(resSuccess!.name, contains('recovered_slab.jpg'));
+      expect(resSuccess.bytes, equals([1, 2, 3, 4, 5]));
+      expect(CameraRecoveryService.latestRecovered, isNotNull);
+      expect(CameraRecoveryService.lastError, isNull);
+
+      // Scenario B: Recovery exception handled gracefully without crash
+      mockPlatform.response = LostDataResponse(
+        exception: PlatformException(code: 'crash', message: 'Activity killed during camera intent'),
+      );
+      final resError = await CameraRecoveryService.retrieveLostData();
+      expect(resError, isNull);
+      expect(CameraRecoveryService.lastError, contains('Activity killed during camera intent'));
+    });
+  });
 }
 
 class _LocalhostTrackerHttpOverrides extends HttpOverrides {
@@ -2777,4 +3124,17 @@ class _TestImagePickerPlatform extends ImagePickerPlatform {
       mimeType: 'image/jpeg',
     );
   }
+}
+
+class _MockRecoveryImagePickerPlatform extends ImagePickerPlatform {
+  LostDataResponse response = LostDataResponse.empty();
+
+  @override
+  Future<LostDataResponse> getLostData() async => response;
+
+  @override
+  Future<XFile?> getImageFromSource({
+    required ImageSource source,
+    ImagePickerOptions options = const ImagePickerOptions(),
+  }) async => null;
 }

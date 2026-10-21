@@ -4,6 +4,7 @@ import '../services/morgan_prefs.dart';
 import 'morgan_setup_dialog.dart';
 import 'morgan_guide_flow.dart';
 import 'morgan_guides.dart';
+import '../utils/platform_gate.dart';
 
 /// Morgan — Numista.AI's AI concierge greeter.
 ///
@@ -195,8 +196,10 @@ class _MorganGreeterState extends State<MorganGreeter>
       emoji: '📷',
       icon: Icons.photo_camera_rounded,
       color: const Color(0xFFEC4899), // pink
-      title: 'Webcam / Camera Scanner',
-      subtitle: 'Snap obverse/reverse pictures to add instantly',
+      title: isNativePhone ? 'Take Photo / Camera' : 'Webcam / Camera Scanner',
+      subtitle: isNativePhone
+          ? 'Snap obverse/reverse pictures using your phone camera'
+          : 'Snap obverse/reverse pictures to add instantly',
       route: 'Add New Coins',
       tabName: 'camera',
     ),

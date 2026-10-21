@@ -404,6 +404,18 @@
 
 
 
+## v8.18.15 — 2026-10-21
+**P7-v8.18.15 Android Camera Recovery, Landscape Scroll & Phone UX Gating**
+
+- gated all phone-specific fixes behind isNativePhone to keep web 100% unchanged (NET-410)
+- fixed landscape overflow with scrollable entry methods and safe area padding (NET-413p)
+- repaired low-RAM Android camera death with CameraRecoveryService and safe byte handling (NET-413q)
+- fixed Morgan guide and greeter routing so onboarding Take Photo opens the camera (NET-404g)
+- resolved microscope scanner retry overflow and feedback fab occlusion (NET-404h, NET-406)
+- fixed founding beta badge overflow and dashboard single-column layout on phones (NET-406j,l)
+- made checklist count data-driven and prevented title text wrapping mid-word (NET-406k,m)
+- restored clean line endings on add_coins_hub.dart and verified PCGS server messages (NET-411)
+
 ## v8.18.14 — 2026-10-21
 **P7-v8.18.14 Invoice Rows Merge, Qty, Sets, Graded Condition & PCGS Lookup Fix**
 

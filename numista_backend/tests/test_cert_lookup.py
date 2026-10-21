@@ -16,6 +16,7 @@ Requirements:
 """
 
 import os
+import json
 import sys
 from unittest.mock import patch, MagicMock
 import pytest
@@ -698,3 +699,163 @@ def test_scan_cert_number_upload_returns_label_fields_not_api_source():
     assert data["denomination"] == "Morgan Dollar"
     assert "source" not in data, "scan endpoint must never return source field"
 
+
+def test_pcgs_cert_route_200_valid():
+    """GET /api/pcgs/cert/{cert_no} returns 200 with coinDetail and found=True when PCGS returns IsValidRequest=True."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "IsValidRequest": True,
+        "ServerMessage": "Success",
+        "CoinDetail": {
+            "FullName": "1881-S $1 Morgan",
+            "Year": "1881",
+            "MintMark": "S",
+            "Grade": "MS65",
+            "Denomination": "Dollar",
+        }
+    }
+    with patch("routes.pcgs_routes._get_pcgs_token", return_value="mock_token"), \
+         patch("routes.pcgs_routes._requests.get", return_value=mock_resp):
+        response = client.get("/api/pcgs/cert/53652580")
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["found"] is True
+        assert data["coinDetail"]["FullName"] == "1881-S $1 Morgan"
+        assert data["coinDetail"]["Grade"] == "MS65"
+
+
+def test_pcgs_cert_route_200_invalid_no_data_mapped_to_404():
+    """GET /api/pcgs/cert/{cert_no} maps IsValidRequest=False + 'No data found' to 404 not_found."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "IsValidRequest": False,
+        "ServerMessage": "No data found for this certification number."
+    }
+    with patch("routes.pcgs_routes._get_pcgs_token", return_value="mock_token"), \
+         patch("routes.pcgs_routes._requests.get", return_value=mock_resp):
+        response = client.get("/api/pcgs/cert/53652580")
+        assert response.status_code == 404, response.text
+        data = response.json()
+        assert data["detail"]["error"] == "not_found"
+        assert "No data found" in data["detail"]["message"]
+
+
+def test_pcgs_cert_route_200_quota_limit_mapped_to_503():
+    """GET /api/pcgs/cert/{cert_no} maps IsValidRequest=False + 'Rate limit exceeded' to 503 quota."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "IsValidRequest": False,
+        "ServerMessage": "Rate limit quota exceeded"
+    }
+    with patch("routes.pcgs_routes._get_pcgs_token", return_value="mock_token"), \
+         patch("routes.pcgs_routes._requests.get", return_value=mock_resp):
+        response = client.get("/api/pcgs/cert/53652580")
+        assert response.status_code == 503, response.text
+        data = response.json()
+        assert data["detail"]["error"] == "quota"
+
+
+def test_label_photo_fixture_pcgs_front():
+    """extract_cert_from_image extracts PCGS front label cert number, grader, and coin details."""
+    from routes.cert_routes import extract_cert_from_image
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "cert_number": "53652580",
+        "grader": "PCGS",
+        "confidence": "HIGH",
+        "slab_side": "front",
+        "year": "1881",
+        "denomination": "Morgan Dollar",
+        "grade": "MS65",
+        "mint": "S",
+        "variety": None,
+    })
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+    with patch("routes.cert_routes._genai.Client", return_value=mock_client):
+        res = extract_cert_from_image(b"fake_front_jpeg", mime_type="image/jpeg")
+        assert res["cert_number"] == "53652580"
+        assert res["grader"] == "PCGS"
+        assert res["confidence"] == "HIGH"
+        assert res["slab_side"] == "front"
+        assert res["year"] == "1881"
+        assert res["grade"] == "MS65"
+
+
+def test_label_photo_fixture_pcgs_rear():
+    """extract_cert_from_image extracts PCGS rear cert number and side."""
+    from routes.cert_routes import extract_cert_from_image
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "cert_number": "53652580",
+        "grader": "PCGS",
+        "confidence": "HIGH",
+        "slab_side": "rear",
+        "year": None,
+        "denomination": None,
+        "grade": None,
+        "mint": None,
+        "variety": None,
+    })
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+    with patch("routes.cert_routes._genai.Client", return_value=mock_client):
+        res = extract_cert_from_image(b"fake_rear_jpeg", mime_type="image/jpeg")
+        assert res["cert_number"] == "53652580"
+        assert res["grader"] == "PCGS"
+        assert res["confidence"] == "HIGH"
+        assert res["slab_side"] == "rear"
+
+
+def test_label_photo_fixture_cacg_front_hint():
+    """extract_cert_from_image returns hint to photo rear when CACG front has details but no cert #."""
+    from routes.cert_routes import extract_cert_from_image
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "cert_number": None,
+        "grader": "CACG",
+        "confidence": "HIGH",
+        "slab_side": "front",
+        "year": "1921",
+        "denomination": "Morgan Dollar",
+        "grade": "MS-64",
+        "mint": None,
+        "variety": None,
+    })
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+    with patch("routes.cert_routes._genai.Client", return_value=mock_client):
+        res = extract_cert_from_image(b"fake_cacg_front", mime_type="image/jpeg")
+        assert res["cert_number"] is None
+        assert res["grader"] == "CACG"
+        assert res["year"] == "1921"
+        assert res["grade"] == "MS-64"
+        assert res["slab_side"] == "front"
+        assert "photograph the back" in res["message"].lower()
+
+
+def test_label_photo_fixture_cacg_rear_cert():
+    """extract_cert_from_image extracts CACG rear cert number."""
+    from routes.cert_routes import extract_cert_from_image
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "cert_number": "1001234567",
+        "grader": "CACG",
+        "confidence": "HIGH",
+        "slab_side": "rear",
+        "year": None,
+        "denomination": None,
+        "grade": None,
+        "mint": None,
+        "variety": None,
+    })
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+    with patch("routes.cert_routes._genai.Client", return_value=mock_client):
+        res = extract_cert_from_image(b"fake_cacg_rear", mime_type="image/jpeg")
+        assert res["cert_number"] == "1001234567"
+        assert res["grader"] == "CACG"
+        assert res["slab_side"] == "rear"
