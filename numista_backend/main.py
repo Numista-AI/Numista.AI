@@ -57,9 +57,23 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 
+# Firebase Hosting preview channels only (numista-vault--<channel>.web.app). No wildcard hosts.
+ALLOWED_ORIGIN_REGEX = r"^https://numista-vault--[a-z0-9-]+\.web\.app$"
+_allowed_origin_re = re.compile(ALLOWED_ORIGIN_REGEX)
+
+
+def _is_allowed_origin(origin: str) -> bool:
+    if not origin:
+        return False
+    if origin in ALLOWED_ORIGINS:
+        return True
+    return bool(_allowed_origin_re.fullmatch(origin))
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -205,10 +219,18 @@ async def default_deny_auth_middleware(request: Request, call_next):
     if not is_prod and os.environ.get("ALLOW_UNAUTHENTICATED") == "1":
         return await call_next(request)
     from starlette.responses import JSONResponse
+    # This middleware sits outside CORSMiddleware, so add CORS headers here for
+    # allowed origins; otherwise the browser reports the 401 as "Failed to fetch".
+    _hdrs = {"WWW-Authenticate": "Bearer"}
+    _origin = request.headers.get("origin", "")
+    if _is_allowed_origin(_origin):
+        _hdrs["Access-Control-Allow-Origin"] = _origin
+        _hdrs["Access-Control-Allow-Credentials"] = "true"
+        _hdrs["Vary"] = "Origin"
     return JSONResponse(
         status_code=401,
         content={"detail": "Authentication token missing or invalid"},
-        headers={"WWW-Authenticate": "Bearer"},
+        headers=_hdrs,
     )
 
 # --- REQUEST OBSERVABILITY MIDDLEWARE ------------------------------------------
@@ -2666,10 +2688,11 @@ def execute_add_coin(
             "created_at": firestore.SERVER_TIMESTAMP,
         }
         if dry_run:
+            snap = {k: v for k, v in coin_data.items() if k not in ("greysheet_bid", "greysheet_ask", "greysheetBid", "greysheetAsk")}
             return {
                 "action": "add_coin",
                 "status": "prepared",
-                "coin_snapshot": coin_data,
+                "coin_snapshot": snap,
                 "year": str(year),
                 "mint_mark": clean_mint,
                 "denomination": norm_denom,
@@ -5489,10 +5512,11 @@ async def identify_group_photo(
     """Identify multiple coins in a single group photo.
     Returns identification JSON only — does NOT write to collection (L8: proposal-only)."""
     req_origin = request.headers.get("origin") or ""
-    cors_origin = req_origin if req_origin in ALLOWED_ORIGINS else ("*" if not req_origin else ALLOWED_ORIGINS[0])
+    is_allowed = _is_allowed_origin(req_origin)
+    cors_origin = req_origin if is_allowed else ("*" if not req_origin else ALLOWED_ORIGINS[0])
     cors_headers = {
         "Access-Control-Allow-Origin": cors_origin,
-        "Access-Control-Allow-Credentials": "true" if cors_origin in ALLOWED_ORIGINS else "false",
+        "Access-Control-Allow-Credentials": "true" if is_allowed else "false",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
     }
@@ -5741,7 +5765,6 @@ async def preview_cost_split(
                 "cost": f"${int_cents[i] / 100:.2f}",
                 "cost_cents": int_cents[i],
                 "share_pct": round(pct, 2),
-                "greysheet_bid": greysheet_values[i],
             })
     else:
         split_method = "even_split"
@@ -5757,7 +5780,6 @@ async def preview_cost_split(
                 "cost": f"${cents / 100:.2f}",
                 "cost_cents": cents,
                 "share_pct": round(100.0 / n, 2),
-                "greysheet_bid": greysheet_values[i] if i < len(greysheet_values) else 0.0,
             })
 
     return JSONResponse(content={
@@ -5925,7 +5947,6 @@ async def commit_group_photo(
                             "coin_id": cid,
                             "cost": cost_str,
                             "share_pct": round(pct, 2),
-                            "greysheet_bid": greysheet_values[idx],
                             "denomination": request.coins[orig_i].denomination if orig_i < len(request.coins) else "",
                         })
                         try:
@@ -5956,7 +5977,6 @@ async def commit_group_photo(
                             "coin_id": cid,
                             "cost": cost_str,
                             "share_pct": round(100.0 / n_ids, 2),
-                            "greysheet_bid": greysheet_values[idx] if idx < len(greysheet_values) else 0.0,
                             "denomination": request.coins[orig_i].denomination if orig_i < len(request.coins) else "",
                         })
                         try:
@@ -7350,7 +7370,21 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
                     )
                     data = json.loads(resp.text)
-                    items = data.get("line_items", [])
+                    # Gemini sometimes returns a top-level JSON array instead of the
+                    # requested object: either [ {invoice obj} ] or a bare list of line items.
+                    if isinstance(data, list):
+                        dict_entries = [d for d in data if isinstance(d, dict)]
+                        if dict_entries and any("line_items" in d for d in dict_entries):
+                            merged = dict(next(d for d in dict_entries if "line_items" in d))
+                            merged["line_items"] = [li for d in dict_entries
+                                                    for li in (d.get("line_items") or [])
+                                                    if isinstance(li, dict)]
+                            data = merged
+                        else:
+                            data = {"line_items": dict_entries}
+                    elif not isinstance(data, dict):
+                        data = {"line_items": []}
+                    items = [it for it in (data.get("line_items") or []) if isinstance(it, dict)]
                     added_this_file = 0
                     total_val = 0.0
                     col_ref = db.collection("users").document(user_email).collection("review_queue")
@@ -7713,9 +7747,14 @@ def list_receipts(
 
     col = db.collection("users").document(user_email).collection("receipts")
     if session_id:
-        col = col.where("session_id", "==", session_id)
-    docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
-              .limit(limit).stream()
+        # Equality filter + order_by needs a composite index that does not exist;
+        # filter in Firestore, sort newest-first in Python instead.
+        _sess_docs = list(col.where("session_id", "==", session_id).stream())
+        _sess_docs.sort(key=lambda d: str((d.to_dict() or {}).get("uploaded_at") or ""), reverse=True)
+        docs = _sess_docs[:limit]
+    else:
+        docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
+                  .limit(limit).stream()
 
     # Query active coin IDs and review_queue IDs to prune deleted coins
     active_ids = set()
@@ -10173,15 +10212,13 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                         "greysheetName": f"{coin_data.get('name', 'Coin Set')} (Aggregate {valid_coins_count}-Coin Sum)",
                         "priceLastUpdated": firestore.SERVER_TIMESTAMP,
                         "greysheet_aggregate_basis": f"Calculated by summing Greysheet values across {valid_coins_count} constituent coins.",
-                        "ai_value_basis": f"Greysheet aggregate sum of {valid_coins_count} uncirculated coins: Bid ${agg_bid:.2f} / Ask ${agg_ask:.2f} / Retail ${agg_retail:.2f}.",
-                        "AI Estimated Value": f"${agg_bid:.2f} - ${agg_retail:.2f}"
+                        "ai_value_basis": f"Greysheet aggregate sum of {valid_coins_count} uncirculated coins: Retail ${agg_retail:.2f}.",
+                        "AI Estimated Value": f"${agg_retail:.2f}"
                     }
                     coin_ref.update(update_payload)
                     return {
                         "status": "success",
                         "cpgRetail": round(agg_retail, 2),
-                        "greysheetBid": round(agg_bid, 2),
-                        "greysheetAsk": round(agg_ask, 2),
                         "greysheetGrade": "Uncirculated Set",
                         "greysheetName": f"{coin_data.get('name', 'Coin Set')} (Aggregate {valid_coins_count}-Coin Sum)",
                         "gradeMatched": "Uncirculated Set"
@@ -10536,15 +10573,11 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         return {
             "status": "success",
             "cpg_retail": cpg_retail,
-            "greysheet_bid": greysheet_bid,
-            "greysheet_ask": greysheet_ask,
             "pcgs_value": pcgs_val,
             "ngc_value": ngc_val,
             "blue_book_value": blue_book_val,
             "cac_premium_flag": has_cac_flag,
             "cpgRetail": cpg_retail,
-            "greysheetBid": greysheet_bid,
-            "greysheetAsk": greysheet_ask,
             "greysheetGrade": grade_label,
             "greysheetName": cached_gs_name,
             "gradeMatched": grade_label,
@@ -10596,8 +10629,7 @@ DEALS_DB = [
         "shipping": 4.00,
         "gsid": 429,
         "grade": "MS64",
-        "greysheet_bid": 95.00,
-        "net_margin": 16.00,
+        "cpg_retail": 95.00,
         "margin_percent": 16.8
     },
     {
@@ -10609,8 +10641,7 @@ DEALS_DB = [
         "shipping": 3.50,
         "gsid": 429,
         "grade": "MS63",
-        "greysheet_bid": 52.00,
-        "net_margin": 6.50,
+        "cpg_retail": 52.00,
         "margin_percent": 12.5
     }
 ]
@@ -10633,7 +10664,7 @@ async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user
             "shipping": 4.00,
             "gsid": 429,
             "grade": "MS64",
-            "greysheet_bid": 95.00,
+            "cpg_retail": 95.00,
         },
         {
             "id": f"ebay_{random.randint(10000000000, 99999999999)}",
@@ -10644,7 +10675,7 @@ async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user
             "shipping": 3.50,
             "gsid": 429,
             "grade": "MS63",
-            "greysheet_bid": 52.00,
+            "cpg_retail": 52.00,
         },
         {
             "id": f"ebay_{random.randint(10000000000, 99999999999)}",
@@ -10655,14 +10686,14 @@ async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user
             "shipping": 12.00,
             "gsid": 420,
             "grade": "VF30",
-            "greysheet_bid": 1250.00,
+            "cpg_retail": 1250.00,
         }
     ]
     
-    # Calculate margins
+    # Calculate margins against CPG Retail benchmark
     for d in new_deals:
-        d["net_margin"] = d["greysheet_bid"] - d["price"] - d["shipping"]
-        d["margin_percent"] = round((d["net_margin"] / (d["price"] + d["shipping"])) * 100, 1)
+        margin = d["cpg_retail"] - d["price"] - d["shipping"]
+        d["margin_percent"] = round((margin / (d["price"] + d["shipping"])) * 100, 1) if (d["price"] + d["shipping"]) > 0 else 0.0
     
     global DEALS_DB
     DEALS_DB = new_deals
@@ -10712,8 +10743,8 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest, _admin: dic
             except Exception:
                 pass
             
-            # Default to Bid value as standard valuation
-            val = float(coin.get("greysheetBid") or 0.0)
+            # Default to CPG value as standard valuation (NET-372: bid removed)
+            val = float(coin.get("cpgRetail") or 0.0)
             if val == 0.0:
                 # Fallback to AI Value -- use clean_valuation_value() which
                 # correctly handles range strings like "$1,150 - $1,350"
@@ -11192,9 +11223,8 @@ async def search_ebay_deals(
                 "shipping": shipping_val,
                 "gsid": 429,  # Default / fallback mapped GSID
                 "grade": "MS64",
-                "greysheet_bid": 95.00,
-                "net_margin": 95.00 - price_val - shipping_val,
-                "margin_percent": round(((95.00 - price_val - shipping_val) / (price_val + shipping_val)) * 100, 1) if price_val > 0 else 0,
+                "cpg_retail": 95.00,
+                "margin_percent": round(((95.00 - price_val - shipping_val) / (price_val + shipping_val)) * 100, 1) if (price_val + shipping_val) > 0 else 0,
             })
         return {"deals": deals}
     except HTTPException:
@@ -11366,8 +11396,8 @@ async def get_user_wishlist_deals(user_email: str):
         service = DealSpotterService(db=db)
         
         default_items = [
-            {"year": "1909", "mint": "S", "series": "Lincoln Cents", "greysheetBid": 95.0},
-            {"year": "1881", "mint": "S", "series": "Morgan Dollars", "greysheetBid": 125.0}
+            {"year": "1909", "mint": "S", "series": "Lincoln Cents", "cpgRetail": 95.0},
+            {"year": "1881", "mint": "S", "series": "Morgan Dollars", "cpgRetail": 125.0}
         ]
         
         deals = service.match_wishlist_items(default_items)
