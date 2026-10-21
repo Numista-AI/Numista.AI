@@ -403,6 +403,20 @@
 
 
 
+
+## v8.18.14 — 2026-10-21
+**P7-v8.18.14 Invoice Rows Merge, Qty, Sets, Graded Condition & PCGS Lookup Fix**
+
+- invoice line items merged across all dict entries in Gemini list responses (NET-400a)
+- quantity respected across invoice and spreadsheet imports adding N coin docs (NET-400b)
+- supply and accessory rows skipped, sets and unknown denominations normalized (NET-400c)
+- manual and add-another copies preserve condition, grade, and cert data (NET-400d,e)
+- duplicate sweep checks coins, collection, and review_queue with case-insensitive keys (NET-400f)
+- older-user sizing audit: 48px touch targets, 18px body font across cert screens (NET-401.3)
+- NGC and CAC friendly not-found card with retry and manual entry actions (NET-401.4)
+- PCGS lookup proxy handles IsValidRequest False with 404/503 and normalized detail (NET-401.4-CRIT)
+- slab photo reader preserves label coin details when cert # is not visible (NET-401.5)
+
 ## v8.18.13 — 2026-10-20
 **P7-v8.18.13 UX Gate V5 Fixes, Webcam Fallback & Older-User Tap Sizing**
 

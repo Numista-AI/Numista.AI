@@ -268,11 +268,21 @@ class BackupExportService {
         _cleanCsvCell(map['Denomination'] ?? map['denomination']),
         _cleanCsvCell(map['Program/Series'] ?? map['program_series']),
         _cleanCsvCell(map['Theme/Subject'] ?? map['theme_subject']),
-        _cleanCsvCell(map['Condition'] ?? map['condition']),
+        _cleanCsvCell((() {
+          final cond = map['Condition'] ?? map['condition'];
+          final grd = map['Grade'] ?? map['grade'];
+          if (cond != null && cond.toString().trim().isNotEmpty && cond.toString().trim() != 'Ungraded') {
+            return cond;
+          }
+          if (grd != null && grd.toString().trim().isNotEmpty) {
+            return grd;
+          }
+          return cond ?? 'Ungraded';
+        })()),
         _cleanCsvCell(_formatQuantity(map['Quantity'] ?? map['quantity'] ?? map['qty'])),
         _cleanCsvCell(_formatCost(map['Cost'] ?? map['cost'] ?? map['purchase_cost'])),
         _cleanCsvCell(map['AI Estimated Value'] ?? map['ai_estimated_value']),
-        _cleanCsvCell(map['Certification Number'] ?? map['cert_number']),
+        _cleanCsvCell(map['Certification Number'] ?? map['cert_number'] ?? map['certNo'] ?? map['Cert #'] ?? ''),
         _cleanCsvCell(map['Retailer/Website'] ?? map['Retailer'] ?? map['retailer'] ?? map['Dealer'] ?? map['dealer']),
         _cleanCsvCell(map['Retailer Invoice #'] ?? map['Invoice #'] ?? map['Invoice'] ?? map['invoice']),
         _cleanCsvCell(map['Storage Location'] ?? map['storage_location'] ?? map['Location'] ?? map['location']),

@@ -199,16 +199,19 @@ Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
               ],
             ),
             actions: [
-              TextButton(
-                onPressed: () {
-                  _stopStream(localStream);
-                  Navigator.pop(ctx);
-                  completer.complete(null);
-                },
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(100, 48),
+              SizedBox(
+                height: 48,
+                child: TextButton(
+                  onPressed: () {
+                    _stopStream(localStream);
+                    Navigator.pop(ctx);
+                    completer.complete(null);
+                  },
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(100, 48),
+                  ),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.white70, fontSize: 18)),
                 ),
-                child: const Text('Cancel', style: TextStyle(color: Colors.white70, fontSize: 18)),
               ),
               if (errorMessage == null)
                 ElevatedButton.icon(

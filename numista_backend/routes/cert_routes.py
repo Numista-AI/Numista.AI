@@ -362,7 +362,7 @@ def cert_save(
 
 class ScanCertResponse(BaseModel):
     cert_number: Optional[str] = None
-    grader: Optional[str] = None   # "PCGS" | "NGC" | "CAC" | null
+    grader: Optional[str] = None   # "PCGS" | "NGC" | "CAC" | "CACG" | null
     confidence: str = "LOW"        # "HIGH" | "MEDIUM" | "LOW"
     message: str = "OK"
     year: Optional[str] = None
@@ -370,6 +370,7 @@ class ScanCertResponse(BaseModel):
     grade: Optional[str] = None
     mint: Optional[str] = None
     variety: Optional[str] = None
+    slab_side: Optional[str] = None  # "front" | "rear" | "unknown"
 
 
 
@@ -423,6 +424,7 @@ def extract_cert_from_image(
             "Return ONLY valid JSON, no markdown:\n"
             '{"cert_number": "<number or null>", "grader": "<PCGS|NGC|CAC|CACG|null>", '
             '"confidence": "<HIGH|MEDIUM|LOW>", '
+            '"slab_side": "<front|rear|unknown>", '
             '"year": "<4-digit year or null>", '
             '"denomination": "<denomination as printed or null>", '
             '"grade": "<grade as printed e.g. MS-65 or null>", '
@@ -448,6 +450,9 @@ def extract_cert_from_image(
         confidence = data.get("confidence", "LOW").upper()
         if confidence not in ("HIGH", "MEDIUM", "LOW"):
             confidence = "LOW"
+        slab_side = (data.get("slab_side") or "").strip().lower() or "unknown"
+        if slab_side not in ("front", "rear", "unknown"):
+            slab_side = "unknown"
         year = (data.get("year") or "").strip() or None
         denomination = (data.get("denomination") or "").strip() or None
         grade = (data.get("grade") or "").strip() or None
@@ -455,16 +460,18 @@ def extract_cert_from_image(
         variety = (data.get("variety") or "").strip() or None
 
         if not cert_num:
+            has_details = bool(year or denomination or grade or mint)
             return {
                 "cert_number": None,
-                "grader": None,
-                "confidence": "LOW",
-                "message": "No cert number found in image.",
-                "year": None,
-                "denomination": None,
-                "grade": None,
-                "mint": None,
-                "variety": None,
+                "grader": grader,
+                "confidence": "MEDIUM" if has_details else "LOW",
+                "message": "Cert # not visible — photograph the back of the slab to add it" if has_details else "No cert number found in image.",
+                "year": year,
+                "denomination": denomination,
+                "grade": grade,
+                "mint": mint,
+                "variety": variety,
+                "slab_side": slab_side,
             }
 
         return {
@@ -477,6 +484,7 @@ def extract_cert_from_image(
             "grade": grade,
             "mint": mint,
             "variety": variety,
+            "slab_side": slab_side,
         }
     except Exception as e:
         logger.warning(f"extract_cert_from_image failed: {e}")
@@ -490,6 +498,7 @@ def extract_cert_from_image(
             "grade": None,
             "mint": None,
             "variety": None,
+            "slab_side": "unknown",
         }
 
 

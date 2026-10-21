@@ -713,16 +713,21 @@ class _BaseLayoutState extends State<BaseLayout> {
                       else
                         Image.asset('assets/logo_owl.png',
                             height: 36, fit: BoxFit.contain),
-                      IconButton(
-                        icon: Icon(
-                          _isSidebarCollapsed
-                              ? Icons.chevron_right
-                              : Icons.chevron_left,
-                          color: isDark ? Colors.white70 : Colors.black54,
-                          size: 20,
+                      SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: IconButton(
+                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                          icon: Icon(
+                            _isSidebarCollapsed
+                                ? Icons.chevron_right
+                                : Icons.chevron_left,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                            size: 20,
+                          ),
+                          tooltip: _isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
+                          onPressed: _toggleSidebar,
                         ),
-                        tooltip: _isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
-                        onPressed: _toggleSidebar,
                       ),
                     ],
                   ),

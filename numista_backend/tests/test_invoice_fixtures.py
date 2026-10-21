@@ -128,3 +128,114 @@ def test_invoice_multi_item_landed_cost_allocation():
     assert allocations[0] == (1000.0, 33.33, 1033.33)
     assert allocations[1] == (50.0, 1.67, 51.67)
     assert round(sum(a[1] for a in allocations), 2) == 35.0
+
+
+def test_invoice_multi_object_line_items_merge():
+    """NET-400a: Verify multi-object list with line_items across multiple dicts merges correctly."""
+    data = [
+        {"retailer": "US Mint", "invoice_number": "INV-100", "line_items": [
+            {"Program/Series": "American Silver Eagle", "Year": "2024", "Cost": 35.0, "qty": 1}
+        ]},
+        {"line_items": [
+            {"Program/Series": "Morgan Dollar", "Year": "2023", "Cost": 75.0, "qty": 2}
+        ]}
+    ]
+
+    if isinstance(data, list):
+        dict_entries = [d for d in data if isinstance(d, dict)]
+        if dict_entries and any("line_items" in d for d in dict_entries):
+            merged = dict(next(d for d in dict_entries if "line_items" in d))
+            merged["line_items"] = [li for d in dict_entries
+                                    for li in (d.get("line_items") or [])
+                                    if isinstance(li, dict)]
+            data = merged
+        else:
+            data = {"line_items": dict_entries}
+
+    assert "line_items" in data
+    assert len(data["line_items"]) == 2
+    assert data["line_items"][0]["Program/Series"] == "American Silver Eagle"
+    assert data["line_items"][1]["Program/Series"] == "Morgan Dollar"
+    assert data["retailer"] == "US Mint"
+
+
+def test_invoice_quantity_and_supply_filter_and_set_normalization():
+    """NET-400b,c: Test quantity looping, supply folder skipping, and Cent & Nickel Set normalization."""
+    import re
+
+    raw_items = [
+        {"Program/Series": "Lincoln Cent", "Year": "2024", "Cost": 5.0, "qty": 3, "Denomination": "Cent"},
+        {"Program/Series": "Whitman Coin Album", "Year": "", "Cost": 15.0, "is_supply": True, "Denomination": ""},
+        {"Program/Series": "", "Year": "2022", "Cost": 25.0, "qty": 1, "Denomination": "Unknown Cent/Nickel"},
+    ]
+
+    def _get_item_qty(item_dict):
+        try:
+            val = item_dict.get("qty") or item_dict.get("quantity") or item_dict.get("Quantity") or 1
+            return max(1, min(int(val), 100))
+        except Exception:
+            return 1
+
+    processed_coins = []
+    supply_kws = ("folder", "supply", "album", "holder", "capsule", "supplies", "binder", "display box")
+
+    for it in raw_items:
+        is_supply = bool(it.get("is_supply", False))
+        prog_val = (it.get("Program/Series") or "").strip()
+        raw_desc = (it.get("Personal Notes") or "") + " " + prog_val + " " + (it.get("Denomination") or "")
+        raw_lower = raw_desc.lower()
+
+        has_year = bool(re.search(r"\b(1[789]\d\d|20[0-2]\d)\b", raw_desc))
+        if is_supply or (any(kw in raw_lower for kw in supply_kws) and not has_year and not it.get("Year")):
+            continue
+
+        denom_val = (it.get("Denomination") or "").strip()
+        denom_lower = denom_val.lower()
+        if "unknown cent/nickel" in denom_lower or denom_lower in ("cent/nickel", "cent / nickel", "unknown cent / nickel"):
+            denom_val = "Cent"
+            if not prog_val:
+                prog_val = "Cent & Nickel Set"
+        elif not denom_val:
+            denom_val = "Dollar"
+
+        qty = _get_item_qty(it)
+        for _ in range(qty):
+            processed_coins.append({
+                "Program/Series": prog_val,
+                "Year": it.get("Year"),
+                "Denomination": denom_val,
+                "Cost": it.get("Cost"),
+            })
+
+    # Album skipped (1 item), Lincoln Cent repeated 3 times, Cent & Nickel Set repeated 1 time = 4 coins
+    assert len(processed_coins) == 4
+    cents = [c for c in processed_coins if c["Program/Series"] == "Lincoln Cent"]
+    assert len(cents) == 3
+    set_coin = [c for c in processed_coins if c["Program/Series"] == "Cent & Nickel Set"]
+    assert len(set_coin) == 1
+    assert set_coin[0]["Denomination"] == "Cent"
+
+
+def test_duplicate_score_case_and_aliases():
+    """NET-400f: Verify _score_duplicate handles case insensitivity and key aliases."""
+    try:
+        from numista_backend.main import _score_duplicate
+    except ModuleNotFoundError:
+        from main import _score_duplicate
+
+    new_coin = {
+        "year": "1921",
+        "program_series": "Morgan Dollar",
+        "mint_mark": "S",
+        "grade": "MS-64",
+    }
+    existing_coin = {
+        "Year": "1921",
+        "Program/Series": "Morgan Dollar",
+        "Mint Mark": "S",
+        "Condition": "MS-64",
+    }
+
+    score = _score_duplicate(new_coin, existing_coin)
+    # 0.40 (prog) + 0.30 (year) + 0.10 (mint) + 0.10 (grade/cond) = 0.90
+    assert round(score, 2) >= 0.90

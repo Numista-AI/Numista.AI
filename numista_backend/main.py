@@ -6891,27 +6891,43 @@ def _score_duplicate(new_coin: dict, existing_coin: dict) -> float:
     < 0.60   -> Unique
     """
     score = 0.0
-    def _norm(v):
-        return str(v or "").strip().lower()
+    def _val(coin, *keys):
+        for k in keys:
+            v = coin.get(k)
+            if v is not None and str(v).strip():
+                return str(v).strip().lower()
+        return ""
 
-    if _norm(new_coin.get("Program/Series")) == _norm(existing_coin.get("Program/Series")) \
-            and _norm(new_coin.get("Program/Series")):
+    new_prog = _val(new_coin, "Program/Series", "program_series", "series", "CoinName")
+    ex_prog  = _val(existing_coin, "Program/Series", "program_series", "series", "CoinName")
+    if new_prog and ex_prog and new_prog == ex_prog:
         score += 0.40
-    if _norm(new_coin.get("Year")) == _norm(existing_coin.get("Year")) \
-            and _norm(new_coin.get("Year")):
+
+    new_yr = _val(new_coin, "Year", "year")
+    ex_yr  = _val(existing_coin, "Year", "year")
+    if new_yr and ex_yr and new_yr == ex_yr:
         score += 0.30
-    if _norm(new_coin.get("Mint Mark")) == _norm(existing_coin.get("Mint Mark")):
+
+    new_mm = _val(new_coin, "Mint Mark", "mint_mark", "mintMark")
+    ex_mm  = _val(existing_coin, "Mint Mark", "mint_mark", "mintMark")
+    if new_mm == ex_mm:
         score += 0.10
-    if _norm(new_coin.get("Condition")) == _norm(existing_coin.get("Condition")) \
-            and _norm(new_coin.get("Condition")):
+
+    new_cond = _val(new_coin, "Condition", "condition", "Grade", "grade")
+    ex_cond  = _val(existing_coin, "Condition", "condition", "Grade", "grade")
+    if new_cond and ex_cond and new_cond == ex_cond:
         score += 0.10
-    # Purchase date + cost exact match adds a lot of confidence
-    if _norm(new_coin.get("Purchase Date")) == _norm(existing_coin.get("Purchase Date")) \
-            and _norm(new_coin.get("Purchase Date")):
+
+    new_date = _val(new_coin, "Purchase Date", "purchase_date", "purchaseDate")
+    ex_date  = _val(existing_coin, "Purchase Date", "purchase_date", "purchaseDate")
+    if new_date and ex_date and new_date == ex_date:
         score += 0.05
-    if _norm(new_coin.get("Cost")) == _norm(existing_coin.get("Cost")) \
-            and _norm(new_coin.get("Cost")):
+
+    new_cost = _val(new_coin, "Cost", "cost", "Purchase Cost", "purchase_cost")
+    ex_cost  = _val(existing_coin, "Cost", "cost", "Purchase Cost", "purchase_cost")
+    if new_cost and ex_cost and new_cost == ex_cost:
         score += 0.05
+
     return min(score, 1.0)
 
 
@@ -6924,9 +6940,9 @@ def _run_duplicate_sweep(user_email: str, session_id: str, new_coin_ids: list[st
     if not new_coin_ids:
         return {"strong": 0, "possible": 0}
 
-    # Load existing coins (collection + review_queue minus this session)
+    # Load existing coins (coins + collection + review_queue minus this session)
     existing = []
-    for coll_name in ("collection", "review_queue"):
+    for coll_name in ("coins", "collection", "review_queue"):
         docs = db.collection("users").document(user_email).collection(coll_name)\
                  .where("import_session_id", "!=", session_id)\
                  .limit(2000).stream()
@@ -7552,13 +7568,20 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         if not is_currency:
                             doc['item_type'] = _classify_item_type(doc)
 
-                        doc_ref = col_ref.document(str(uuid.uuid4()))
-                        batch.set(doc_ref, doc)
-                        new_coin_ids.append(doc_ref.id)
-                        count += 1
-                        if count % 490 == 0:
-                            batch.commit()
-                            batch = db.batch()
+                        doc_qty = 1
+                        try:
+                            doc_qty = max(1, min(int(doc.get("Quantity") or doc.get("quantity") or doc.get("Qty") or doc.get("qty") or 1), 100))
+                        except Exception:
+                            doc_qty = 1
+
+                        for _ in range(doc_qty):
+                            doc_ref = col_ref.document(str(uuid.uuid4()))
+                            batch.set(doc_ref, dict(doc))
+                            new_coin_ids.append(doc_ref.id)
+                            count += 1
+                            if count % 490 == 0:
+                                batch.commit()
+                                batch = db.batch()
                     if count % 490 != 0:
                         batch.commit()
 
@@ -7669,6 +7692,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                                 "Denomination": "Denomination (e.g. Dollar, Quarter, Cent)",
                                 "Condition": "Grade or condition if mentioned (e.g. MS-65, VF-20, Ungraded)",
                                 "Cost": 0.00,
+                                "qty": 1,
                                 "is_supply": false,
                                 "Certification Number": "Cert number if graded",
                                 "Personal Notes": "Any item description or catalog number"
@@ -7678,6 +7702,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     Field Instructions:
                     - "invoice_date": Output in ISO 8601 YYYY-MM-DD format.
                     - "Cost": Sticker price / unit price of the line item before global fees.
+                    - "qty": Integer quantity if more than 1 identical coin is on this line (default 1).
                     - "is_supply": Set to true ONLY if the item is a non-coin accessory/supply (e.g., coin album, display box, storage capsule, insurance, or grading fee).
                     Output ONLY valid JSON.
                     """
@@ -7702,27 +7727,38 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     if data is None:
                         raise last_gen_err or RuntimeError("Failed to parse invoice with AI")
 
-                    # Defensively normalize data if Gemini returns a list or non-dict
+                    # Defensively normalize data if Gemini returns a list or non-dict (NET-394/NET-400a)
                     if isinstance(data, list):
-                        if data and isinstance(data[0], dict) and ("line_items" in data[0] or "retailer" in data[0]):
-                            data = data[0]
-                        elif data and isinstance(data[0], dict):
-                            data = {"line_items": data}
+                        dict_entries = [d for d in data if isinstance(d, dict)]
+                        if dict_entries and any("line_items" in d for d in dict_entries):
+                            merged = dict(next(d for d in dict_entries if "line_items" in d))
+                            merged["line_items"] = [li for d in dict_entries
+                                                    for li in (d.get("line_items") or [])
+                                                    if isinstance(li, dict)]
+                            data = merged
                         else:
-                            data = {"line_items": []}
+                            data = {"line_items": dict_entries}
                     elif not isinstance(data, dict):
                         data = {"line_items": []}
 
                     items = data.get("line_items")
-                    if not isinstance(items, list):
+                    if not isinstance(items, list) or not items:
                         for fallback_key in ("items", "coins", "results", "data"):
                             candidate = data.get(fallback_key)
-                            if isinstance(candidate, list):
+                            if isinstance(candidate, list) and candidate:
                                 items = candidate
                                 break
                     if not isinstance(items, list):
                         items = []
                     items = [it for it in items if isinstance(it, dict)]
+
+                    # Quantity extraction helper (NET-400b)
+                    def _get_item_qty(item_dict):
+                        try:
+                            val = item_dict.get("qty") or item_dict.get("quantity") or item_dict.get("Quantity") or 1
+                            return max(1, min(int(val), 100))
+                        except Exception:
+                            return 1
 
                     added_this_file = 0
                     total_val = 0.0
@@ -7738,8 +7774,8 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     tax_val      = clean_valuation_value(data.get("tax_fee") or 0.0)
                     grand_total  = clean_valuation_value(data.get("total_amount") or 0.0)
 
-                    # Compute aggregate item price if subtotal missing
-                    raw_item_sum = sum(clean_valuation_value(it.get("Cost") or 0.0) for it in items)
+                    # Compute aggregate item price if subtotal missing (taking quantity into account)
+                    raw_item_sum = sum(clean_valuation_value(it.get("Cost") or 0.0) * _get_item_qty(it) for it in items)
                     if subtotal_val <= 0.0:
                         subtotal_val = raw_item_sum
 
@@ -7750,6 +7786,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         total_global_fees = shipping_val + tax_val
 
                     for it in items:
+                        item_qty = _get_item_qty(it)
                         sticker_price = clean_valuation_value(it.get("Cost") or 0.0)
                         
                         # Proportional Landed Cost Allocation
@@ -7761,14 +7798,33 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             allocated_fee = 0.0
 
                         landed_cost_basis = round(sticker_price + allocated_fee, 2)
-                        total_val += landed_cost_basis
 
                         is_supply = bool(it.get("is_supply", False))
-                        item_type_val = "supply" if is_supply else "coin"
-
                         prog_val = (it.get("Program/Series") or "").strip()
-                        raw_desc = (it.get("Personal Notes") or "") + " " + fname + " " + prog_val
+                        raw_desc = (it.get("Personal Notes") or "") + " " + fname + " " + prog_val + " " + (it.get("Denomination") or "")
                         raw_lower = raw_desc.lower()
+
+                        # Supply / Folder Filter (NET-400c):
+                        # Never import supply/folder rows as coins
+                        supply_kws = ("folder", "supply", "album", "holder", "capsule", "supplies", "binder", "display box")
+                        has_year = bool(re.search(r"\b(1[789]\d\d|20[0-2]\d)\b", raw_desc))
+                        if is_supply or (any(kw in raw_lower for kw in supply_kws) and not has_year and not it.get("Year")):
+                            logger.info(f"Skipping supply/accessory item: {raw_desc[:60]}")
+                            continue
+
+                        # Set & Denomination Normalization (NET-400c):
+                        denom_val = (it.get("Denomination") or "").strip()
+                        denom_lower = denom_val.lower()
+                        if "unknown cent/nickel" in denom_lower or denom_lower in ("cent/nickel", "cent / nickel", "unknown cent / nickel"):
+                            denom_val = "Cent"
+                            if not prog_val:
+                                prog_val = "Cent & Nickel Set"
+                        elif "quarter set" in raw_lower and ("unknown" in denom_lower or not denom_val):
+                            denom_val = "Quarter"
+                        elif not denom_val:
+                            denom_val = "Dollar"
+
+                        item_type_val = "coin"
 
                         # Smart Program/Series & Metal Content Normalization
                         metal_val = (it.get("Metal Content") or "").strip()
@@ -7814,7 +7870,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             "Program/Series":       prog_val,
                             "Year":                 it.get("Year", ""),
                             "Mint Mark":            mint_mark_val,
-                            "Denomination":         it.get("Denomination", "Dollar"),
+                            "Denomination":         denom_val,
                             "Condition":            it.get("Condition", "Ungraded"),
                             "Metal Content":        metal_val,
                             "Cost":                 landed_cost_basis,
@@ -7841,13 +7897,17 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         if not is_supply:
                             doc["item_type"] = _classify_item_type(doc)
 
-                        doc_ref = col_ref.document(str(uuid.uuid4()))
-                        batch.set(doc_ref, doc)
-                        new_coin_ids.append(doc_ref.id)
-                        added_this_file += 1
-                        line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in doc.items()}
-                        line_item_entry["id"] = doc_ref.id
-                        line_items_out.append(line_item_entry)
+                        # Honor quantity: add one coin doc per unit (NET-400b)
+                        for _ in range(item_qty):
+                            total_val += landed_cost_basis
+                            doc_copy = dict(doc)
+                            doc_ref = col_ref.document(str(uuid.uuid4()))
+                            batch.set(doc_ref, doc_copy)
+                            new_coin_ids.append(doc_ref.id)
+                            added_this_file += 1
+                            line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in doc_copy.items()}
+                            line_item_entry["id"] = doc_ref.id
+                            line_items_out.append(line_item_entry)
 
                     batch.commit()
 

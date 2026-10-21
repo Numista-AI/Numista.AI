@@ -154,10 +154,14 @@ class PcgsImportService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body) as Map<String, dynamic>;
-      if (data['found'] == true && data['coinDetail'] is Map) {
-        return data['coinDetail'] as Map<String, dynamic>;
+      if (data['found'] == true && (data['coinDetail'] is Map || data['CoinDetail'] is Map)) {
+        return (data['coinDetail'] ?? data['CoinDetail']) as Map<String, dynamic>;
       }
       return null;  // found=false means cert not in PCGS DB
+    } else if (response.statusCode == 404) {
+      return null;
+    } else if (response.statusCode == 503) {
+      throw Exception('PCGS lookup unavailable right now. Try again later or type the coin in instead.');
     } else if (response.statusCode == 401) {
       throw Exception('PCGS token expired. Update bearerToken in Firestore config/pcgs.');
     } else if (response.statusCode == 429) {
