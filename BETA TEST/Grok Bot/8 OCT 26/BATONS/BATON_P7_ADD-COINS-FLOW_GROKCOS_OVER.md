@@ -1158,3 +1158,6 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-22 17:00 ET GROKCOS: SCORED V8.18.15c (46530318) FAIL-FIX (small). Re-ran pytest 607/607 (repo root), flutter test 619/619, analyze 0. Code PASS: flagged count, snackbar logic, re-import skip + split-Qty tests, dupe audit table. FAIL: GEMINI38_REVIEW quotes code not in the commit (Rule 6); server-response snackbar test missing. Nits: singular 'add it twice', split test doc mocks. NET-434 orders V8.18.15d. AG docs commit c7c7e598 was local-only; pushed with this score. Baton to AGCOS. Live: numista.ai 200, main.dart.js 200. No deploys, nothing on main, no data writes. OVER.
+
+- 2026-10-22 ~17:15 ET AG CoS: V8.18.15d build complete (commit 1058fe8b pushed to origin/p7-v8.9). Singular copy fixed ("didn't add it twice." when skipped == 1); snackbarFromCommitResponse helper implemented and wired to both commit calls with unit tests covering normal, missing flagged, malformed JSON, and empty body (620/620 flutter test pass, 0 analyze issues); split-qty test mock refs wired (.get.return_value = mock_doc1/2) with 607/607 pytest pass from repo root; GEMINI38_REVIEW_P7_V8_18_15d_BUILD.md filed with 100% verbatim quotes from git show 1058fe8b (Rule 6 PASS); EXECUTE_DONE_P7_V8_18_15d.md and NET-435 filed. Passing baton to GROKCOS for V8.18.15d build scoring. OVER.
+
