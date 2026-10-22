@@ -281,8 +281,13 @@ def test_review_commit_split_invoice_qty_both_committed():
     # Attribute query returns empty
     mock_coins_col.where.return_value.where.return_value.where.return_value.limit.return_value.get.return_value = []
 
+    mock_ref1 = MagicMock()
+    mock_ref1.get.return_value = mock_doc1
+    mock_ref2 = MagicMock()
+    mock_ref2.get.return_value = mock_doc2
+
     mock_queue_col = MagicMock()
-    mock_queue_col.document.side_effect = lambda doc_id: mock_doc1 if doc_id == "rev-split-1" else mock_doc2
+    mock_queue_col.document.side_effect = lambda doc_id: mock_ref1 if doc_id == "rev-split-1" else mock_ref2
 
     def mock_collection(name):
         if name == "coins":

@@ -3101,7 +3101,7 @@ void main() {
       );
       expect(
         ReviewHubScreen.formatCommitSnackbar(committed: 1, skipped: 1, flagged: 0),
-        equals('Added 1 coin. 1 was already in your collection from the same invoice, so we didn\'t add them twice.'),
+        equals('Added 1 coin. 1 was already in your collection from the same invoice, so we didn\'t add it twice.'),
       );
       expect(
         ReviewHubScreen.formatCommitSnackbar(committed: 3, skipped: 0, flagged: 2),
@@ -3113,11 +3113,48 @@ void main() {
       );
       expect(
         ReviewHubScreen.formatCommitSnackbar(committed: 3, skipped: 1, flagged: 2),
-        equals('Added 3 coins. 1 was already in your collection from the same invoice, so we didn\'t add them twice. 2 might be coins you already have; look for the yellow \'Possible duplicate\' tag.'),
+        equals('Added 3 coins. 1 was already in your collection from the same invoice, so we didn\'t add it twice. 2 might be coins you already have; look for the yellow \'Possible duplicate\' tag.'),
       );
       expect(
         ReviewHubScreen.formatCommitSnackbar(committed: 0, skipped: 1, flagged: 0),
-        equals('1 was already in your collection from the same invoice, so we didn\'t add them twice.'),
+        equals('1 was already in your collection from the same invoice, so we didn\'t add it twice.'),
+      );
+    });
+
+    test('V8.18.15d: ReviewHubScreen.snackbarFromCommitResponse parses backend response JSON correctly', () {
+      // 1) Normal response with committed, skipped, and flagged
+      final normalJson = jsonEncode({
+        'status': 'success',
+        'committed': 3,
+        'skipped': 1,
+        'flagged': 2,
+      });
+      expect(
+        ReviewHubScreen.snackbarFromCommitResponse(normalJson, 5),
+        equals('Added 3 coins. 1 was already in your collection from the same invoice, so we didn\'t add it twice. 2 might be coins you already have; look for the yellow \'Possible duplicate\' tag.'),
+      );
+
+      // 2) Response with flagged missing (defaults to 0)
+      final missingFlaggedJson = jsonEncode({
+        'status': 'success',
+        'committed': 2,
+        'skipped': 2,
+      });
+      expect(
+        ReviewHubScreen.snackbarFromCommitResponse(missingFlaggedJson, 4),
+        equals('Added 2 coins. 2 were already in your collection from the same invoice, so we didn\'t add them twice.'),
+      );
+
+      // 3) Malformed/invalid JSON body (falls back to fallbackCommitted, 0, 0)
+      expect(
+        ReviewHubScreen.snackbarFromCommitResponse('not a json {[<', 4),
+        equals('Added 4 coins.'),
+      );
+
+      // 4) Empty string body (falls back to fallbackCommitted, 0, 0)
+      expect(
+        ReviewHubScreen.snackbarFromCommitResponse('', 1),
+        equals('Added 1 coin.'),
       );
     });
   });

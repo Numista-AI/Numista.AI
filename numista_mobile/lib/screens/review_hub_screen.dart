@@ -24,8 +24,11 @@ class ReviewHubScreen extends StatefulWidget {
       parts.add('Added $committed coin${committed != 1 ? 's' : ''}.');
     }
     if (skipped > 0) {
-      final subject = skipped == 1 ? '1 was' : '$skipped were';
-      parts.add('$subject already in your collection from the same invoice, so we didn\'t add them twice.');
+      if (skipped == 1) {
+        parts.add('1 was already in your collection from the same invoice, so we didn\'t add it twice.');
+      } else {
+        parts.add('$skipped were already in your collection from the same invoice, so we didn\'t add them twice.');
+      }
     }
     if (flagged > 0) {
       final subject = flagged == 1 ? '1 might be a coin' : '$flagged might be coins';
@@ -35,6 +38,36 @@ class ReviewHubScreen extends StatefulWidget {
       return 'No coins were added.';
     }
     return parts.join(' ');
+  }
+
+  /// Parse backend commit response JSON and return user-facing snackbar message.
+  static String snackbarFromCommitResponse(String responseBody, int fallbackCommitted) {
+    int committed = fallbackCommitted;
+    int skipped = 0;
+    int flagged = 0;
+
+    try {
+      final decoded = jsonDecode(responseBody);
+      if (decoded is Map) {
+        if (decoded.containsKey('committed') && decoded['committed'] != null) {
+          committed = (decoded['committed'] as num).toInt();
+        }
+        if (decoded.containsKey('skipped') && decoded['skipped'] != null) {
+          skipped = (decoded['skipped'] as num).toInt();
+        }
+        if (decoded.containsKey('flagged') && decoded['flagged'] != null) {
+          flagged = (decoded['flagged'] as num).toInt();
+        }
+      }
+    } catch (_) {
+      // Gracefully fall back to fallbackCommitted, 0, 0
+    }
+
+    return formatCommitSnackbar(
+      committed: committed,
+      skipped: skipped,
+      flagged: flagged,
+    );
   }
 
   @override
@@ -77,22 +110,9 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
       if (response.statusCode == 200) {
         if (!mounted) return;
-        int committed = _selectedIds.length;
-        int skipped = 0;
-        int flagged = 0;
-        try {
-          final resData = jsonDecode(response.body);
-          if (resData is Map) {
-            if (resData.containsKey('committed')) committed = (resData['committed'] as num).toInt();
-            if (resData.containsKey('skipped')) skipped = (resData['skipped'] as num).toInt();
-            if (resData.containsKey('flagged')) flagged = (resData['flagged'] as num).toInt();
-          }
-        } catch (_) {}
-
-        final snackText = ReviewHubScreen.formatCommitSnackbar(
-          committed: committed,
-          skipped: skipped,
-          flagged: flagged,
+        final snackText = ReviewHubScreen.snackbarFromCommitResponse(
+          response.body,
+          _selectedIds.length,
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -156,22 +176,9 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
       if (response.statusCode == 200) {
         if (!mounted) return;
-        int committed = highConfIds.length;
-        int skipped = 0;
-        int flagged = 0;
-        try {
-          final resData = jsonDecode(response.body);
-          if (resData is Map) {
-            if (resData.containsKey('committed')) committed = (resData['committed'] as num).toInt();
-            if (resData.containsKey('skipped')) skipped = (resData['skipped'] as num).toInt();
-            if (resData.containsKey('flagged')) flagged = (resData['flagged'] as num).toInt();
-          }
-        } catch (_) {}
-
-        final snackText = ReviewHubScreen.formatCommitSnackbar(
-          committed: committed,
-          skipped: skipped,
-          flagged: flagged,
+        final snackText = ReviewHubScreen.snackbarFromCommitResponse(
+          response.body,
+          highConfIds.length,
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
