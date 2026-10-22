@@ -34,6 +34,7 @@ import 'package:numista_ai/constants.dart';
 import 'package:numista_ai/utils/platform_gate.dart';
 import 'package:numista_ai/services/camera_recovery_service.dart';
 import 'package:numista_ai/screens/microscope_scan_screen.dart';
+import 'package:numista_ai/screens/review_hub_screen.dart';
 import 'package:numista_ai/widgets/morgan_greeter.dart';
 
 void main() {
@@ -1956,7 +1957,7 @@ void main() {
 
       // Verify honest message is displayed
       expect(
-        find.textContaining('Direct NGC cert lookup is not supported'),
+        find.textContaining("We can't look up NGC numbers automatically yet. Snap the label or type the details below."),
         findsOneWidget,
       );
 
@@ -2894,8 +2895,8 @@ void main() {
       await tester.tap(lookupBtn);
       await tester.pumpAndSettle();
 
-      // Amber card displayed with cert 99999999 and NGC
-      expect(find.textContaining('Cert #99999999 (NGC) was not found'), findsOneWidget);
+      // Amber card displayed with honest NGC message
+      expect(find.textContaining("We can't look up NGC numbers automatically yet. Snap the label or type the details below."), findsOneWidget);
 
       // Button 'Take a photo of the label' has min height >= 56px
       final labelPhotoBtn = find.byKey(const Key('cert_lookup_scan_slab_button'));
@@ -3085,22 +3086,38 @@ void main() {
       }
     });
 
-    test('V8.18.15b: Review Hub snackbar format generates clear message for committed and skipped', () {
-      String formatReviewSnackbar(int committed, int skipped) {
-        return skipped > 0
-            ? 'Added $committed coin${committed != 1 ? 's' : ''}. $skipped looked like coin${skipped != 1 ? 's' : ''} you already have; check them in Review.'
-            : 'Added $committed coin${committed != 1 ? 's' : ''}.';
-      }
-
-      expect(formatReviewSnackbar(5, 0), equals('Added 5 coins.'));
-      expect(formatReviewSnackbar(1, 0), equals('Added 1 coin.'));
+    test('V8.18.15c: Review Hub snackbar format generates clear message for committed, skipped, and flagged', () {
       expect(
-        formatReviewSnackbar(4, 2),
-        equals('Added 4 coins. 2 looked like coins you already have; check them in Review.'),
+        ReviewHubScreen.formatCommitSnackbar(committed: 5, skipped: 0, flagged: 0),
+        equals('Added 5 coins.'),
       );
       expect(
-        formatReviewSnackbar(1, 1),
-        equals('Added 1 coin. 1 looked like a coin you already have; check them in Review.' == 'Added 1 coin. 1 looked like coin you already have; check them in Review.' ? 'Added 1 coin. 1 looked like a coin you already have; check them in Review.' : 'Added 1 coin. 1 looked like coin you already have; check them in Review.'),
+        ReviewHubScreen.formatCommitSnackbar(committed: 1, skipped: 0, flagged: 0),
+        equals('Added 1 coin.'),
+      );
+      expect(
+        ReviewHubScreen.formatCommitSnackbar(committed: 4, skipped: 2, flagged: 0),
+        equals('Added 4 coins. 2 were already in your collection from the same invoice, so we didn\'t add them twice.'),
+      );
+      expect(
+        ReviewHubScreen.formatCommitSnackbar(committed: 1, skipped: 1, flagged: 0),
+        equals('Added 1 coin. 1 was already in your collection from the same invoice, so we didn\'t add them twice.'),
+      );
+      expect(
+        ReviewHubScreen.formatCommitSnackbar(committed: 3, skipped: 0, flagged: 2),
+        equals('Added 3 coins. 2 might be coins you already have; look for the yellow \'Possible duplicate\' tag.'),
+      );
+      expect(
+        ReviewHubScreen.formatCommitSnackbar(committed: 1, skipped: 0, flagged: 1),
+        equals('Added 1 coin. 1 might be a coin you already have; look for the yellow \'Possible duplicate\' tag.'),
+      );
+      expect(
+        ReviewHubScreen.formatCommitSnackbar(committed: 3, skipped: 1, flagged: 2),
+        equals('Added 3 coins. 1 was already in your collection from the same invoice, so we didn\'t add them twice. 2 might be coins you already have; look for the yellow \'Possible duplicate\' tag.'),
+      );
+      expect(
+        ReviewHubScreen.formatCommitSnackbar(committed: 0, skipped: 1, flagged: 0),
+        equals('1 was already in your collection from the same invoice, so we didn\'t add them twice.'),
       );
     });
   });

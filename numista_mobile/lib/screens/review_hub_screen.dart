@@ -13,6 +13,30 @@ import '../widgets/grade_badge_widget.dart';
 class ReviewHubScreen extends StatefulWidget {
   const ReviewHubScreen({super.key});
 
+  /// Format user-facing snackbar message after committing review items
+  static String formatCommitSnackbar({
+    required int committed,
+    int skipped = 0,
+    int flagged = 0,
+  }) {
+    final List<String> parts = [];
+    if (committed > 0) {
+      parts.add('Added $committed coin${committed != 1 ? 's' : ''}.');
+    }
+    if (skipped > 0) {
+      final subject = skipped == 1 ? '1 was' : '$skipped were';
+      parts.add('$subject already in your collection from the same invoice, so we didn\'t add them twice.');
+    }
+    if (flagged > 0) {
+      final subject = flagged == 1 ? '1 might be a coin' : '$flagged might be coins';
+      parts.add('$subject you already have; look for the yellow \'Possible duplicate\' tag.');
+    }
+    if (parts.isEmpty) {
+      return 'No coins were added.';
+    }
+    return parts.join(' ');
+  }
+
   @override
   State<ReviewHubScreen> createState() => _ReviewHubScreenState();
 }
@@ -55,17 +79,21 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
         if (!mounted) return;
         int committed = _selectedIds.length;
         int skipped = 0;
+        int flagged = 0;
         try {
           final resData = jsonDecode(response.body);
           if (resData is Map) {
             if (resData.containsKey('committed')) committed = (resData['committed'] as num).toInt();
             if (resData.containsKey('skipped')) skipped = (resData['skipped'] as num).toInt();
+            if (resData.containsKey('flagged')) flagged = (resData['flagged'] as num).toInt();
           }
         } catch (_) {}
 
-        final snackText = skipped > 0
-            ? 'Added $committed coin${committed != 1 ? 's' : ''}. $skipped looked like coin${skipped != 1 ? 's' : ''} you already have; check them in Review.'
-            : 'Added $committed coin${committed != 1 ? 's' : ''}.';
+        final snackText = ReviewHubScreen.formatCommitSnackbar(
+          committed: committed,
+          skipped: skipped,
+          flagged: flagged,
+        );
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(snackText)),
@@ -130,17 +158,21 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
         if (!mounted) return;
         int committed = highConfIds.length;
         int skipped = 0;
+        int flagged = 0;
         try {
           final resData = jsonDecode(response.body);
           if (resData is Map) {
             if (resData.containsKey('committed')) committed = (resData['committed'] as num).toInt();
             if (resData.containsKey('skipped')) skipped = (resData['skipped'] as num).toInt();
+            if (resData.containsKey('flagged')) flagged = (resData['flagged'] as num).toInt();
           }
         } catch (_) {}
 
-        final snackText = skipped > 0
-            ? 'Added $committed coin${committed != 1 ? 's' : ''}. $skipped looked like coin${skipped != 1 ? 's' : ''} you already have; check them in Review.'
-            : 'Added $committed coin${committed != 1 ? 's' : ''}.';
+        final snackText = ReviewHubScreen.formatCommitSnackbar(
+          committed: committed,
+          skipped: skipped,
+          flagged: flagged,
+        );
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

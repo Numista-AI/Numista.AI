@@ -3529,6 +3529,7 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
         batch_op_count = 0
         committed_count = 0
         skipped_count = 0
+        flagged_count = 0
         
         for doc_id in request.review_ids:
             doc_snapshot = queue_ref.document(doc_id).get()
@@ -3603,6 +3604,7 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
                     if is_possible_dupe:
                         data['possible_duplicate'] = True
                         data['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)'
+                        flagged_count += 1
 
                     # Legal System of Record Golden Schema defaults
                     if not data.get('Condition'):
@@ -3635,9 +3637,10 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
             batch.commit()
         return {
             "status": "success", 
-            "message": f"Committed {committed_count} items. Skipped {skipped_count} duplicates.",
+            "message": f"Committed {committed_count} items. Skipped {skipped_count} duplicates. Flagged {flagged_count} possible duplicates.",
             "committed": committed_count,
-            "skipped": skipped_count
+            "skipped": skipped_count,
+            "flagged": flagged_count
         }
     except Exception as e:
         logger.exception("Review commit error")

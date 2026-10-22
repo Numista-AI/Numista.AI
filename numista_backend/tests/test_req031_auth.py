@@ -241,12 +241,13 @@ def test_review_commit_attribute_dupe_committed_with_flag():
         data = resp.json()
         assert data["committed"] == 1
         assert data["skipped"] == 0
+        assert data["flagged"] == 1
         # Assert batch.set was called to commit the coin
         assert mock_batch.set.called
         saved_dict = mock_batch.set.call_args[0][1]
         assert saved_dict["possible_duplicate"] is True
 def test_review_commit_split_invoice_qty_both_committed():
-    """Verify that multiple items with same invoice# and item# in the same review batch are both committed (Qty split rows)."""
+    """Verify that multiple items with same invoice# and item# in the same review batch are both committed (Qty split rows), even when query matches one in the batch."""
     app.dependency_overrides[get_current_user] = _user_auth(email="alice@example.com")
     mock_db = MagicMock()
     mock_batch = MagicMock()
@@ -271,8 +272,13 @@ def test_review_commit_split_invoice_qty_both_committed():
         "Program/Series": "American Silver Eagle",
     }
 
+    mock_existing_in_batch = MagicMock()
+    mock_existing_in_batch.id = "rev-split-1"  # doc_id IS in review_ids
+
     mock_coins_col = MagicMock()
-    mock_coins_col.where.return_value.where.return_value.limit.return_value.get.return_value = []
+    # Invoice query returns a coin whose id is in review_ids -> is_definite_dupe remains False
+    mock_coins_col.where.return_value.where.return_value.limit.return_value.get.return_value = [mock_existing_in_batch]
+    # Attribute query returns empty
     mock_coins_col.where.return_value.where.return_value.where.return_value.limit.return_value.get.return_value = []
 
     mock_queue_col = MagicMock()
@@ -302,6 +308,61 @@ def test_review_commit_split_invoice_qty_both_committed():
         assert data["committed"] == 2
         assert data["skipped"] == 0
         assert mock_batch.set.call_count == 2
+
+
+def test_review_commit_reimport_same_invoice_item_skipped():
+    """Verify that true re-import of same invoice # + item no skips and reports skipped: 1."""
+    app.dependency_overrides[get_current_user] = _user_auth(email="alice@example.com")
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+
+    mock_doc = MagicMock()
+    mock_doc.exists = True
+    mock_doc.to_dict.return_value = {
+        "Year": "2026",
+        "Retailer Invoice #": "INV-1234",
+        "Retailer Item No.": "26EA",
+        "Denomination": "Dollar",
+        "Program/Series": "American Silver Eagle",
+    }
+
+    mock_existing_coin = MagicMock()
+    mock_existing_coin.id = "already-in-collection-coin"  # NOT in review_ids
+
+    mock_coins_col = MagicMock()
+    # Invoice query returns coin already in collection -> is_definite_dupe becomes True
+    mock_coins_col.where.return_value.where.return_value.limit.return_value.get.return_value = [mock_existing_coin]
+
+    mock_queue_col = MagicMock()
+    mock_queue_col.document.return_value.get.return_value = mock_doc
+
+    def mock_collection(name):
+        if name == "coins":
+            return mock_coins_col
+        elif name == "review_queue":
+            return mock_queue_col
+        mock_sub = MagicMock()
+        mock_sub.document.return_value.collection = mock_collection
+        return mock_sub
+
+    mock_user_doc = MagicMock()
+    mock_user_doc.collection = mock_collection
+    mock_db.collection.return_value.document.return_value = mock_user_doc
+
+    with patch("main.db", mock_db):
+        client = TestClient(app)
+        resp = client.post("/api/review/commit", json={
+            "user_email": "alice@example.com",
+            "review_ids": ["rev-reimport-1"]
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["committed"] == 0
+        assert data["skipped"] == 1
+        assert data["flagged"] == 0
+        assert mock_batch.delete.called
+        assert mock_batch.set.call_count == 0
 
 
 
