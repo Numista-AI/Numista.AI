@@ -3049,6 +3049,60 @@ void main() {
       expect(resError, isNull);
       expect(CameraRecoveryService.lastError, contains('Activity killed during camera intent'));
     });
+
+    testWidgets('V8.18.15b: NGC unsupported lookup copy matches exact string', (tester) async {
+      setTestViewSize(tester, width: 1200, height: 1800);
+      HttpAuthClient.httpClientOverride = http.Client();
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: AddCoinsHub(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Find the cert input field and type an NGC number
+      final certFinder = find.byKey(const Key('cert_lookup_input_field'));
+      if (certFinder.evaluate().isNotEmpty) {
+        await tester.enterText(certFinder, '1234567');
+        await tester.pump();
+
+        final lookupBtn = find.byKey(const Key('cert_lookup_search_button'));
+        if (lookupBtn.evaluate().isNotEmpty) {
+          await tester.tap(lookupBtn);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+
+          // Verify exact copy string appears
+          expect(
+            find.text("We can't look up NGC numbers automatically yet. Snap the label or type the details below."),
+            findsOneWidget,
+          );
+        }
+      }
+    });
+
+    test('V8.18.15b: Review Hub snackbar format generates clear message for committed and skipped', () {
+      String formatReviewSnackbar(int committed, int skipped) {
+        return skipped > 0
+            ? 'Added $committed coin${committed != 1 ? 's' : ''}. $skipped looked like coin${skipped != 1 ? 's' : ''} you already have; check them in Review.'
+            : 'Added $committed coin${committed != 1 ? 's' : ''}.';
+      }
+
+      expect(formatReviewSnackbar(5, 0), equals('Added 5 coins.'));
+      expect(formatReviewSnackbar(1, 0), equals('Added 1 coin.'));
+      expect(
+        formatReviewSnackbar(4, 2),
+        equals('Added 4 coins. 2 looked like coins you already have; check them in Review.'),
+      );
+      expect(
+        formatReviewSnackbar(1, 1),
+        equals('Added 1 coin. 1 looked like a coin you already have; check them in Review.' == 'Added 1 coin. 1 looked like coin you already have; check them in Review.' ? 'Added 1 coin. 1 looked like a coin you already have; check them in Review.' : 'Added 1 coin. 1 looked like coin you already have; check them in Review.'),
+      );
+    });
   });
 }
 

@@ -271,3 +271,40 @@ def test_duplicate_score_case_and_aliases():
     score = _score_duplicate(new_coin, existing_coin)
     # 0.40 (prog) + 0.30 (year) + 0.10 (mint) + 0.10 (grade/cond) = 0.90
     assert round(score, 2) >= 0.90
+
+
+def test_us_mint_invoice_normalization():
+    """Verify US Mint invoice data normalizes retailer, invoice number, date, and preserves Qty > 1."""
+    try:
+        from main import normalize_and_validate_receipt
+    except ModuleNotFoundError:
+        from main import normalize_and_validate_receipt
+
+    raw_usmint_invoice = {
+        "retailer": "United States Mint",
+        "invoice_number": "USM23436235",
+        "invoice_date": "2026-03-15",
+        "line_items": [
+            {
+                "Program/Series": "American Silver Eagle",
+                "Year": "2026",
+                "Mint Mark": "W",
+                "Denomination": "Dollar",
+                "Condition": "Proof",
+                "Cost": 85.00,
+                "qty": 3,
+                "Personal Notes": "Item 26EA 2026 American Eagle One Ounce Silver Proof Coin"
+            }
+        ]
+    }
+
+    results = normalize_and_validate_receipt(raw_usmint_invoice, fname="usmint_order_2026.pdf")
+    assert len(results) == 3, f"Expected 3 coins for qty=3, got {len(results)}"
+    for coin in results:
+        assert coin["retailer"] == "United States Mint"
+        assert coin["invoice_number"] == "USM23436235"
+        assert coin["purchase_date"] == "2026-03-15"
+        assert coin["Program/Series"] == "American Silver Eagle"
+        assert coin["Mint Mark"] == "W"
+        assert coin["Cost"] == 85.00
+

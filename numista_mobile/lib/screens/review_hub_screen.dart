@@ -53,8 +53,22 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
       if (response.statusCode == 200) {
         if (!mounted) return;
+        int committed = _selectedIds.length;
+        int skipped = 0;
+        try {
+          final resData = jsonDecode(response.body);
+          if (resData is Map) {
+            if (resData.containsKey('committed')) committed = (resData['committed'] as num).toInt();
+            if (resData.containsKey('skipped')) skipped = (resData['skipped'] as num).toInt();
+          }
+        } catch (_) {}
+
+        final snackText = skipped > 0
+            ? 'Added $committed coin${committed != 1 ? 's' : ''}. $skipped looked like coin${skipped != 1 ? 's' : ''} you already have; check them in Review.'
+            : 'Added $committed coin${committed != 1 ? 's' : ''}.';
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Successfully committed ${_selectedIds.length} items!')),
+          SnackBar(content: Text(snackText)),
         );
         setState(() => _selectedIds.clear());
       } else {
@@ -114,9 +128,23 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
       if (response.statusCode == 200) {
         if (!mounted) return;
+        int committed = highConfIds.length;
+        int skipped = 0;
+        try {
+          final resData = jsonDecode(response.body);
+          if (resData is Map) {
+            if (resData.containsKey('committed')) committed = (resData['committed'] as num).toInt();
+            if (resData.containsKey('skipped')) skipped = (resData['skipped'] as num).toInt();
+          }
+        } catch (_) {}
+
+        final snackText = skipped > 0
+            ? 'Added $committed coin${committed != 1 ? 's' : ''}. $skipped looked like coin${skipped != 1 ? 's' : ''} you already have; check them in Review.'
+            : 'Added $committed coin${committed != 1 ? 's' : ''}.';
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ Successfully committed ${highConfIds.length} items with 100% AI Confidence!'),
+            content: Text(snackText),
             backgroundColor: const Color(0xFF10B981),
           ),
         );

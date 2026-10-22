@@ -3750,7 +3750,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 const SizedBox(height: 8),
                 Text(
                   grader == 'NGC'
-                      ? 'Cert #$certNo (NGC) was not found. Direct NGC cert lookup is not supported. Please scan the slab photo or enter details manually below.'
+                      ? "We can't look up NGC numbers automatically yet. Snap the label or type the details below."
                       : 'Cert #$certNo ($grader) was not found. $grader cert lookup is not available. Please scan the slab photo or enter details manually below.',
                   style: const TextStyle(fontSize: 18, color: Color(0xFF78350F), height: 1.4),
                 ),

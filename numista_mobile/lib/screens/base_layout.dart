@@ -955,6 +955,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           foregroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          minimumSize: const Size(double.infinity, 48),
                           elevation: 0,
                         ),
                         icon: Icon(Icons.feedback_outlined, size: 14, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA)),
@@ -1029,6 +1030,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                           side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          minimumSize: const Size(double.infinity, 48),
                         ),
                         icon: const Icon(Icons.logout, size: 14),
                         label: Text(

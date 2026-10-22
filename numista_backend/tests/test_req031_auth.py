@@ -189,6 +189,123 @@ def test_review_commit_happy_path():
         assert resp.json()["status"] == "success"
 
 
+def test_review_commit_attribute_dupe_committed_with_flag():
+    """Verify that an attribute-based duplicate match is committed with possible_duplicate=True and NOT dropped."""
+    app.dependency_overrides[get_current_user] = _user_auth(email="alice@example.com")
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+
+    mock_queue_doc = MagicMock()
+    mock_queue_doc.exists = True
+    mock_queue_doc.to_dict.return_value = {
+        "Year": "1881",
+        "Mint Mark": "S",
+        "Denomination": "Dollar",
+        "Program/Series": "Morgan Dollar",
+        "Retailer Invoice #": "",
+        "Retailer Item No.": "",
+    }
+
+    mock_existing_coin = MagicMock()
+    mock_existing_coin.id = "existing-coin-1"
+
+    # Set up mock queries on coins collection:
+    mock_coins_col = MagicMock()
+    # Where query chain returning existing coin
+    mock_coins_col.where.return_value.where.return_value.where.return_value.limit.return_value.get.return_value = [mock_existing_coin]
+
+    mock_queue_col = MagicMock()
+    mock_queue_col.document.return_value.get.return_value = mock_queue_doc
+
+    def mock_collection(name):
+        if name == "coins":
+            return mock_coins_col
+        elif name == "review_queue":
+            return mock_queue_col
+        mock_sub = MagicMock()
+        mock_sub.document.return_value.collection = mock_collection
+        return mock_sub
+
+    mock_user_doc = MagicMock()
+    mock_user_doc.collection = mock_collection
+    mock_db.collection.return_value.document.return_value = mock_user_doc
+
+    with patch("main.db", mock_db):
+        client = TestClient(app)
+        resp = client.post("/api/review/commit", json={
+            "user_email": "alice@example.com",
+            "review_ids": ["rev-attr-dupe"]
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["committed"] == 1
+        assert data["skipped"] == 0
+        # Assert batch.set was called to commit the coin
+        assert mock_batch.set.called
+        saved_dict = mock_batch.set.call_args[0][1]
+        assert saved_dict["possible_duplicate"] is True
+def test_review_commit_split_invoice_qty_both_committed():
+    """Verify that multiple items with same invoice# and item# in the same review batch are both committed (Qty split rows)."""
+    app.dependency_overrides[get_current_user] = _user_auth(email="alice@example.com")
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+
+    mock_doc1 = MagicMock()
+    mock_doc1.exists = True
+    mock_doc1.to_dict.return_value = {
+        "Year": "2026",
+        "Retailer Invoice #": "INV-1234",
+        "Retailer Item No.": "26EA",
+        "Denomination": "Dollar",
+        "Program/Series": "American Silver Eagle",
+    }
+    mock_doc2 = MagicMock()
+    mock_doc2.exists = True
+    mock_doc2.to_dict.return_value = {
+        "Year": "2026",
+        "Retailer Invoice #": "INV-1234",
+        "Retailer Item No.": "26EA",
+        "Denomination": "Dollar",
+        "Program/Series": "American Silver Eagle",
+    }
+
+    mock_coins_col = MagicMock()
+    mock_coins_col.where.return_value.where.return_value.limit.return_value.get.return_value = []
+    mock_coins_col.where.return_value.where.return_value.where.return_value.limit.return_value.get.return_value = []
+
+    mock_queue_col = MagicMock()
+    mock_queue_col.document.side_effect = lambda doc_id: mock_doc1 if doc_id == "rev-split-1" else mock_doc2
+
+    def mock_collection(name):
+        if name == "coins":
+            return mock_coins_col
+        elif name == "review_queue":
+            return mock_queue_col
+        mock_sub = MagicMock()
+        mock_sub.document.return_value.collection = mock_collection
+        return mock_sub
+
+    mock_user_doc = MagicMock()
+    mock_user_doc.collection = mock_collection
+    mock_db.collection.return_value.document.return_value = mock_user_doc
+
+    with patch("main.db", mock_db):
+        client = TestClient(app)
+        resp = client.post("/api/review/commit", json={
+            "user_email": "alice@example.com",
+            "review_ids": ["rev-split-1", "rev-split-2"]
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["committed"] == 2
+        assert data["skipped"] == 0
+        assert mock_batch.set.call_count == 2
+
+
+
+
 # ─── Fix 4: /api/analyze_binder_scan ──────────────────────────────────────────
 
 def test_analyze_binder_scan_no_token():

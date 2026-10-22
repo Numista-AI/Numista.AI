@@ -3554,23 +3554,30 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
                 
                 # -- Hybrid Duplicate Detection --------------------------------------
                 # Primary: invoice-based (if invoice# matches + item# matches -> definite dupe)
-                # Fallback: attribute-based (Year + Mint + normalized Denomination)
+                # Fallback: attribute-based (Year + Mint + normalized Denomination -> flag possible_duplicate, NEVER drop)
                 inv_no  = (data.get('Retailer Invoice #') or '').strip()
                 item_no = (data.get('Retailer Item No.')  or '').strip()
-                is_dupe = False
+                is_definite_dupe = False
+                is_possible_dupe = False
 
-                if inv_no:
+                if inv_no and item_no:
+                    # Check if already exists in user's collection before this commit batch
+                    # Note: multiple split rows in the SAME import batch share (inv_no, item_no)
+                    # and must NOT be rejected as duplicates of each other.
                     try:
                         q = coins_ref \
                             .where('Retailer Invoice #', '==', inv_no) \
                             .where('Retailer Item No.',  '==', item_no) \
                             .limit(1).get()
-                        is_dupe = len(q) > 0
+                        # If a coin with this invoice + item already exists in the collection (not in current batch queue)
+                        if len(q) > 0 and q[0].id not in request.review_ids:
+                            is_definite_dupe = True
                     except Exception:
                         pass  # Index may be missing -- fall through to attribute check
 
-                if not is_dupe:
-                    # Attribute-based fallback: normalise denomination before compare
+                if not is_definite_dupe:
+                    # Attribute-based check: Year + Mint + normalized Denomination
+                    # MUST NEVER delete queue doc without committing! Flag as possible_duplicate.
                     raw_d  = (data.get('Denomination') or '').strip()
                     norm_d = raw_d.lstrip('$').strip()   # "$5" -> "5", "5" -> "5"
                     denom_variants = list({raw_d, norm_d, f'${norm_d}'})
@@ -3580,16 +3587,22 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
                             .where('Mint Mark', '==', data.get('Mint Mark', '')) \
                             .where('Denomination', 'in', denom_variants[:10]) \
                             .limit(1).get()
-                        is_dupe = len(q2) > 0
+                        if len(q2) > 0 and q2[0].id not in request.review_ids:
+                            is_possible_dupe = True
                     except Exception:
                         pass
 
-                if is_dupe:
+                if is_definite_dupe:
                     batch.delete(queue_ref.document(doc_id))
                     skipped_count += 1
                     batch_op_count += 1
                 else:
                     # (Field normalization already applied above, before dupe queries)
+
+                    # Mark attribute duplicates clearly without dropping
+                    if is_possible_dupe:
+                        data['possible_duplicate'] = True
+                        data['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)'
 
                     # Legal System of Record Golden Schema defaults
                     if not data.get('Condition'):
@@ -7526,9 +7539,9 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             "source":               "PDF Invoice",
             "is_demo":              False,
             "is_demo_cleared":      False,
-            "invoice_number":       (it.get("Retailer Invoice #") or data.get("invoice_number") or "").strip(),
-            "retailer":             (it.get("Retailer/Website") or data.get("retailer") or "").strip(),
-            "purchase_date":        (it.get("invoice_date") or data.get("invoice_date") or "").strip(),
+            "invoice_number":       (it.get("Retailer Invoice #") or it.get("invoice_number") or data.get("invoice_number") or "").strip(),
+            "retailer":             (it.get("Retailer/Website") or it.get("retailer") or data.get("retailer") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
+            "purchase_date":        (it.get("invoice_date") or it.get("Invoice Date") or it.get("Date") or data.get("invoice_date") or data.get("date") or "").strip(),
             "status":               "pending_review",
             "source_file":          fname,
             "import_session_id":    session_id,
@@ -7849,8 +7862,8 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
 
                     Required JSON output structure:
                     {{
-                        "retailer": "Dealer or store name",
-                        "invoice_number": "Invoice or order number",
+                        "retailer": "Dealer or store name (use 'United States Mint' if document is from US Mint / shop.usmint.gov)",
+                        "invoice_number": "Invoice, order, or customer reference number",
                         "invoice_date": "YYYY-MM-DD",
                         "subtotal": 0.00,
                         "shipping_fee": 0.00,
@@ -7867,14 +7880,16 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                                 "qty": 1,
                                 "is_supply": false,
                                 "Certification Number": "Cert number if graded",
-                                "Personal Notes": "Any item description or catalog number"
+                                "Personal Notes": "Any item description, catalog number, or stock item number (e.g. 26EA, 26XL)"
                             }}
                         ]
                     }}
                     Field Instructions:
+                    - "retailer": If document header or body indicates "United States Mint" or "www.usmint.gov", set to "United States Mint".
+                    - "invoice_number": Extract invoice number, order number, or packing slip number.
                     - "invoice_date": Output in ISO 8601 YYYY-MM-DD format.
                     - "Cost": Sticker price / unit price of the line item before global fees.
-                    - "qty": Integer quantity if more than 1 identical coin is on this line (default 1).
+                    - "qty": Integer quantity if more than 1 identical coin is on this line (default 1). Preserve quantity accurately.
                     - "is_supply": Set to true ONLY if the item is a non-coin accessory/supply (e.g., coin album, display box, storage capsule, insurance, or grading fee).
                     Output ONLY valid JSON.
                     """

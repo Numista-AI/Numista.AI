@@ -24,6 +24,8 @@ Auto-Detection Rules:
 """
 
 import re
+import json
+import concurrent.futures
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 import requests as _requests
@@ -411,7 +413,9 @@ def extract_cert_from_image(
             "You are examining an image of a certified coin grading slab label. "
             "Extract the certification number, grading company, and coin details printed on the label.\n\n"
             "Grading companies and their cert # formats:\n"
-            "- PCGS: 8-digit number (e.g. 53652580). Label says 'PCGS' or 'Professional Coin Grading Service'.\n"
+            "- PCGS: 8-digit number (e.g. 53652580). Label says 'PCGS' or 'Professional Coin Grading Service'. "
+            "  NOTE: On some PCGS slabs, the cert number and barcode are printed on the REVERSE side label. "
+            "  If the front label shows coin details but no cert number, extract the details and set cert_number to null.\n"
             "- NGC: 7-digit number, optionally with a dash suffix (e.g. 8321797 or 8321797-003). "
             "  Label says 'NGC' or 'Numismatic Guaranty Company'.\n"
             "- CAC / CACG: label says 'CAC' or 'CACG' or 'Certified Acceptance Corporation'. "
@@ -433,16 +437,32 @@ def extract_cert_from_image(
         )
 
         image_part = _genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
-        response = _scan_client.models.generate_content(
-            model=model_name,
-            contents=[prompt, image_part],
-            config=_genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                max_output_tokens=256,
-            ),
-        )
+
+        def _call_model():
+            return _scan_client.models.generate_content(
+                model=model_name,
+                contents=[prompt, image_part],
+                config=_genai_types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    max_output_tokens=1024,
+                ),
+            )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_call_model)
+            response = future.result(timeout=25.0)
+
         text = response.text.strip()
-        data = json.loads(text)
+        try:
+            data = json.loads(text)
+        except Exception:
+            try:
+                import json_repair
+                repaired = json_repair.repair_json(text)
+                data = json.loads(repaired) if isinstance(repaired, str) else repaired
+            except Exception as jerr:
+                logger.warning(f"json_repair failed: {jerr}")
+                data = {}
         cert_num = (data.get("cert_number") or "").strip() or None
         grader = (data.get("grader") or "").strip().upper() or None
         if grader not in ("PCGS", "NGC", "CAC", "CACG"):

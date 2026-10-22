@@ -148,3 +148,4 @@ qrcode[pil]>=8.0.0
 reportlab>=4.4.0
 
 flask-limiter>=4.1.1
+json-repair>=0.64.0

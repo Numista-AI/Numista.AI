@@ -859,3 +859,18 @@ def test_label_photo_fixture_cacg_rear_cert():
         assert res["cert_number"] == "1001234567"
         assert res["grader"] == "CACG"
         assert res["slab_side"] == "rear"
+
+
+def test_extract_cert_from_image_truncated_json_repair():
+    """extract_cert_from_image recovers gracefully from truncated JSON using json_repair."""
+    from routes.cert_routes import extract_cert_from_image
+    mock_response = MagicMock()
+    # Simulate a truncated JSON response cut off before closing quotes/braces
+    mock_response.text = '{"cert_number": "53652580", "grader": "PCGS", "confidence": "HIGH", "year": "1881'
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+    with patch("routes.cert_routes._genai.Client", return_value=mock_client):
+        res = extract_cert_from_image(b"fake_truncated_jpeg", mime_type="image/jpeg")
+        assert res["cert_number"] == "53652580"
+        assert res["grader"] == "PCGS"
+        assert res["confidence"] == "HIGH"

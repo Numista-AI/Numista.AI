@@ -1028,22 +1028,40 @@ function updateProgress(done, total, label) {
 
 function startPolling() {
   document.getElementById('progress-label').innerHTML = '<span class="pulse-dot"></span> AI processing...';
+  const startTime = Date.now();
+  const MAX_POLL_MS = 60000; // 60s timeout
   pollInterval = setInterval(async () => {
     try {
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= MAX_POLL_MS) {
+        clearInterval(pollInterval);
+        showError('Processing timed out after 60 seconds. Please check your Review Queue or try uploading again.', true);
+        document.getElementById('progress-label').textContent = 'Timed out (60s)';
+        return;
+      }
+
       const authHeaders = await getAuthHeader();
       const r = await fetch(
         API_BASE + '/api/import/status/' + sessionId + '?user_email=' + encodeURIComponent(USER_EMAIL),
         { headers: await getAuthHeader() }
       );
       if (r.status === 401 || r.status === 403) { clearInterval(pollInterval); showError(SIGN_IN_AGAIN_MSG); return; }
-      if (!r.ok) return;
+      if (!r.ok) {
+        let errDetail = 'Server returned ' + r.status;
+        try {
+          const ej = await r.json();
+          if (ej && (ej.detail || ej.message)) errDetail = ej.detail || ej.message;
+        } catch (_) {}
+        showError('Status check error: ' + errDetail, true);
+        return;
+      }
       const data = await r.json();
 
       (data.per_file || []).forEach((f, i) => {
         const sm = { done:'done', error:'error', review_needed:'review', skipped:'skipped', processing:'active' };
         if (f.status !== 'pending') {
           updateFileRow(i, sm[f.status] || 'active',
-            f.coins_added ? ('Done — ' + f.coins_added + ' coin' + (f.coins_added!==1?'s':'')) : null);
+            f.error ? ('Error: ' + f.error) : (f.coins_added ? ('Done — ' + f.coins_added + ' coin' + (f.coins_added!==1?'s':'')) : null));
         }
       });
       updateProgress(data.processed_files || 0, data.total_files || selectedFiles.length);
@@ -1052,10 +1070,21 @@ function startPolling() {
         clearInterval(pollInterval);
         showSummary(data.summary || {});
         loadReceipts();
+      } else if (data.status === 'error') {
+        clearInterval(pollInterval);
+        const errMsg = data.error || data.detail || 'AI processing encountered an error.';
+        showError(errMsg, true);
+        document.getElementById('progress-label').textContent = 'Processing error: ' + errMsg;
       } else if (data.status === 'linking') {
         document.getElementById('progress-label').textContent = 'Linking receipts to coins...';
+      } else {
+        const remainingSec = Math.max(0, Math.ceil((MAX_POLL_MS - elapsed) / 1000));
+        document.getElementById('progress-label').innerHTML =
+          '<span class="pulse-dot"></span> AI processing (' + remainingSec + 's remaining)...';
       }
-    } catch(e) { /* silent retry */ }
+    } catch(e) {
+      showError('Network/connection issue while checking status: ' + (e.message || e), true);
+    }
   }, 2500);
 }
 
