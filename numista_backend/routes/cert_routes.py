@@ -358,7 +358,7 @@ def cert_save(
     dup_flag = None
     if req.coin_data and isinstance(req.coin_data, dict):
         try:
-            from numista_backend.services.duplicate_check import check_and_flag_duplicate
+            from services.duplicate_check import check_and_flag_duplicate
             if check_and_flag_duplicate(coins_ref, req.coin_data):
                 possible_dup = True
                 dup_flag = req.coin_data.get("duplicate_flag")

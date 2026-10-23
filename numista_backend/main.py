@@ -3580,7 +3580,7 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
                 if not is_definite_dupe:
                     # Attribute-based check: Year + Mint + normalized Denomination
                     # MUST NEVER delete queue doc without committing! Flag as possible_duplicate.
-                    from numista_backend.services.duplicate_check import check_and_flag_duplicate
+                    from services.duplicate_check import check_and_flag_duplicate
                     if check_and_flag_duplicate(coins_ref, data, exclude_ids=request.review_ids):
                         is_possible_dupe = True
 
@@ -6540,7 +6540,7 @@ async def identify_coin_photo(
             "Added":                 firestore.SERVER_TIMESTAMP,
         }
 
-        from numista_backend.services.duplicate_check import check_and_flag_duplicate
+        from services.duplicate_check import check_and_flag_duplicate
         coins_ref = db.collection(f"users/{user_email}/coins")
         if check_and_flag_duplicate(coins_ref, coin_doc):
             ai_coin["possible_duplicate"] = True
