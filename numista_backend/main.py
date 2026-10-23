@@ -7051,6 +7051,8 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
 
         linked_coin_ids = []
         unlinked_items = []
+        coin_id_map = {c_id: c_data for c_id, c_data in coin_data}
+        used_coin_ids = set()
 
         for item in line_items:
             item_type = str(item.get("item_type", "coin")).lower()
@@ -7061,40 +7063,50 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
             matched_coin_id = None
             match_tier = "none"
 
-            retailer = str(rec.get("retailer", "")).lower().strip()
-            inv_no   = str(rec.get("invoice_number", "")).lower().strip()
+            direct_id = str(item.get("id") or "").strip()
+            if direct_id and direct_id in coin_id_map and direct_id not in used_coin_ids:
+                matched_coin_id = direct_id
+                match_tier = "exact"
+
+            retailer = str(item.get("Retailer/Website") or item.get("retailer") or rec.get("retailer", "")).lower().strip()
+            inv_no   = str(item.get("Retailer Invoice #") or item.get("invoice_number") or rec.get("invoice_number", "")).lower().strip()
             item_no  = str(item.get("Retailer Item No.", "")).lower().strip()
             item_yr  = str(item.get("Year", "")).strip()
             item_mm  = str(item.get("Mint Mark", "")).strip().upper()
             item_ser = str(item.get("Program/Series", "") or item.get("Denomination", "")).lower().strip()
 
-            for c_id, c_data in coin_data:
-                c_retailer = str(c_data.get("Retailer Name", "")).lower().strip()
-                c_inv      = str(c_data.get("Retailer Invoice #", "")).lower().strip()
-                c_item_no  = str(c_data.get("Retailer Item No.", "")).lower().strip()
-                c_yr       = str(c_data.get("Year", "")).strip()
-                c_mm       = str(c_data.get("Mint Mark", "")).strip().upper()
-                c_ser      = str(c_data.get("Program/Series", "")).lower().strip()
+            if not matched_coin_id:
+                for c_id, c_data in coin_data:
+                    if c_id in used_coin_ids:
+                        continue
+                    c_retailer = str(c_data.get("Retailer Name", "") or c_data.get("Retailer/Website", "")).lower().strip()
+                    c_inv      = str(c_data.get("Retailer Invoice #", "") or c_data.get("invoice_number", "")).lower().strip()
+                    c_item_no  = str(c_data.get("Retailer Item No.", "")).lower().strip()
+                    c_yr       = str(c_data.get("Year", "")).strip()
+                    c_mm       = str(c_data.get("Mint Mark", "")).strip().upper()
+                    c_ser      = str(c_data.get("Program/Series", "")).lower().strip()
 
-                if inv_no and c_inv == inv_no and retailer and c_retailer == retailer \
-                        and item_no and c_item_no == item_no:
-                    matched_coin_id = c_id
-                    match_tier = "exact"
-                    break
+                    if inv_no and c_inv == inv_no and retailer and c_retailer == retailer \
+                            and item_no and c_item_no == item_no:
+                        matched_coin_id = c_id
+                        match_tier = "exact"
+                        break
 
-                if item_yr and c_yr == item_yr \
-                        and c_mm == item_mm \
-                        and item_ser and c_ser and item_ser in c_ser:
-                    matched_coin_id = c_id
-                    match_tier = "strong"
-                    break
+                    if item_yr and c_yr == item_yr \
+                            and c_mm == item_mm \
+                            and item_ser and c_ser and item_ser in c_ser:
+                        matched_coin_id = c_id
+                        match_tier = "strong"
+                        break
 
             if matched_coin_id:
+                used_coin_ids.add(matched_coin_id)
                 linked_coin_ids.append(matched_coin_id)
                 linked_total += 1
                 purchase_date = (
                     item.get("Purchase Date") or
                     item.get("Invoice Date") or
+                    item.get("invoice_date") or
                     rec.get("invoice_date") or ""
                 )
                 purchase_price_raw = (
@@ -7109,19 +7121,28 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
                 except Exception:
                     purchase_price = 0.0
 
+                item_retailer = item.get("Retailer/Website") or item.get("retailer") or rec.get("retailer", "")
+                item_inv_no = item.get("Retailer Invoice #") or item.get("invoice_number") or rec.get("invoice_number", "")
+
                 db.collection("users").document(user_email)\
                   .collection("review_queue").document(matched_coin_id)\
                   .update({
                       "paper_trail": {
                           "receipt_id":       rec_id,
                           "receipt_filename": rec.get("original_filename", ""),
-                          "retailer":         rec.get("retailer", ""),
+                          "retailer":         item_retailer,
+                          "invoice_number":   item_inv_no,
                           "purchase_date":    purchase_date,
                           "purchase_price":   purchase_price,
                           "gcs_path":         rec.get("gcs_path", ""),
                           "match_tier":       match_tier,
                       },
                       "Purchase Date": purchase_date,
+                      "purchase_date": purchase_date,
+                      "Retailer/Website": item_retailer,
+                      "retailer": item_retailer,
+                      "Retailer Invoice #": item_inv_no,
+                      "invoice_number": item_inv_no,
                   })
                 item["linked_coin_id"] = matched_coin_id
                 item["match_tier"] = match_tier
@@ -7405,9 +7426,25 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
         first_d = dict_entries[0] if dict_entries else {}
         if dict_entries and any("line_items" in d for d in dict_entries):
             merged = dict(next(d for d in dict_entries if "line_items" in d))
-            merged["line_items"] = [li for d in dict_entries
-                                    for li in (d.get("line_items") or [])
-                                    if isinstance(li, dict)]
+            merged_items = []
+            for d in dict_entries:
+                d_ret = d.get("retailer") or d.get("Retailer/Website") or ""
+                d_inv = d.get("invoice_number") or d.get("Retailer Invoice #") or ""
+                d_dt  = d.get("invoice_date") or d.get("Purchase Date") or d.get("purchase_date") or d.get("Date") or ""
+                for li in (d.get("line_items") or []):
+                    if isinstance(li, dict):
+                        li_copy = dict(li)
+                        if d_ret and not (li_copy.get("Retailer/Website") or li_copy.get("retailer")):
+                            li_copy["retailer"] = d_ret
+                        if d_inv and not (li_copy.get("Retailer Invoice #") or li_copy.get("invoice_number")):
+                            li_copy["invoice_number"] = d_inv
+                        if d_dt and not (li_copy.get("invoice_date") or li_copy.get("Invoice Date") or li_copy.get("Purchase Date") or li_copy.get("purchase_date") or li_copy.get("Date")):
+                            li_copy["invoice_date"] = d_dt
+                        merged_items.append(li_copy)
+            merged["line_items"] = merged_items
+            for fee_k in ("subtotal", "shipping_fee", "tax_fee", "total_amount"):
+                if len(dict_entries) > 1:
+                    merged[fee_k] = sum(clean_valuation_value(d.get(fee_k) or 0.0) for d in dict_entries)
             data = merged
         else:
             data = {"line_items": dict_entries}
@@ -7431,8 +7468,10 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
 
     def _get_item_qty(item_dict):
         try:
-            val = item_dict.get("qty") or item_dict.get("quantity") or item_dict.get("Quantity") or item_dict.get("Qty") or 1
-            return max(1, min(int(val), 100))
+            raw_q = item_dict.get("qty") or item_dict.get("quantity") or item_dict.get("Quantity") or item_dict.get("Qty") or 1
+            if isinstance(raw_q, str):
+                raw_q = re.sub(r"[^\d.]", "", raw_q) or "1"
+            return max(1, min(int(float(raw_q)), 100))
         except Exception:
             return 1
 
@@ -7888,17 +7927,21 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                                 "Cost": 0.00,
                                 "qty": 1,
                                 "is_supply": false,
+                                "item_number": "Item number / catalog code if present",
+                                "invoice_number": "Invoice number from this page header",
+                                "invoice_date": "YYYY-MM-DD from this page header",
                                 "Certification Number": "Cert number if graded",
                                 "Personal Notes": "Any item description, catalog number, or stock item number (e.g. 26EA, 26XL)"
                             }}
                         ]
                     }}
                     Field Instructions:
+                    - Multi-Page / Multi-Invoice Invoices: A multi-page document may contain separate invoices or packing slips with different invoice numbers and dates on each page header. Stamp each line item with the "invoice_number" and "invoice_date" (ISO 8601 YYYY-MM-DD) from its own page header.
                     - "retailer": If document header or body indicates "United States Mint" or "www.usmint.gov", set to "United States Mint".
                     - "invoice_number": Extract invoice number, order number, or packing slip number.
                     - "invoice_date": Output in ISO 8601 YYYY-MM-DD format.
-                    - "Cost": Sticker price / unit price of the line item before global fees.
-                    - "qty": Integer quantity if more than 1 identical coin is on this line (default 1). Preserve quantity accurately.
+                    - "qty": Integer quantity from the Qty column (default 1). If more than 1 identical coin is on this line, preserve quantity accurately.
+                    - "Cost": Sticker price / per-unit price of the line item before global fees. If the line shows an extended Amount for qty > 1, divide Amount by qty so Cost is the unit price.
                     - "is_supply": Set to true ONLY if the item is a non-coin accessory/supply (e.g., coin album, display box, storage capsule, insurance, or grading fee).
                     Output ONLY valid JSON.
                     """
@@ -7953,11 +7996,11 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     for coin_doc in normalized_coins:
                         coin_doc["receipt_id"] = receipt_id
                         coin_doc["created_at"] = firestore.SERVER_TIMESTAMP
-                        coin_doc["Retailer/Website"] = retailer_val or coin_doc.get("Retailer/Website") or coin_doc.get("retailer") or ""
+                        coin_doc["Retailer/Website"] = coin_doc.get("Retailer/Website") or coin_doc.get("retailer") or retailer_val or ""
                         coin_doc["retailer"] = coin_doc["Retailer/Website"]
-                        coin_doc["Retailer Invoice #"] = invoice_num_val or coin_doc.get("Retailer Invoice #") or coin_doc.get("invoice_number") or ""
+                        coin_doc["Retailer Invoice #"] = coin_doc.get("Retailer Invoice #") or coin_doc.get("invoice_number") or invoice_num_val or ""
                         coin_doc["invoice_number"] = coin_doc["Retailer Invoice #"]
-                        coin_doc["Purchase Date"] = invoice_date_val or coin_doc.get("Purchase Date") or coin_doc.get("purchase_date") or ""
+                        coin_doc["Purchase Date"] = coin_doc.get("Purchase Date") or coin_doc.get("purchase_date") or invoice_date_val or ""
                         coin_doc["purchase_date"] = coin_doc["Purchase Date"]
 
                         doc_ref = col_ref.document(str(uuid.uuid4()))

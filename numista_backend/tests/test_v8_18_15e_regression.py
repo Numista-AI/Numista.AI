@@ -678,3 +678,141 @@ async def test_commit_reviews_argon_a4_invoice_empty_item_no_real():
     for qid in q_ids:
         assert mock_db.document(f"users/{user_email}/coins/{qid}").get().exists
         assert not mock_db.document(f"users/{user_email}/review_queue/{qid}").get().exists
+
+
+@pytest.mark.asyncio
+async def test_invoice_092052_multipage_per_page_metadata_qty_and_linking():
+    """
+    V8.18.15h regression test:
+    Multi-page invoice (e.g. 092052) where:
+    - Page 1 has invoice 67000011, date 2024-11-07
+    - Page 2 has invoice 67226944, date 2025-01-23 with item having Qty 2 (unit cost divided)
+    Validates:
+    1. normalize_and_validate_receipt preserves per-page invoice_number & invoice_date
+       on child line items when Gemini returns a list of page dicts.
+    2. _get_item_qty correctly parses quantity and unit cost.
+    3. _link_receipts_to_coins preserves per-item Retailer Invoice # and purchase_date
+       onto coins/review_queue without clobbering page 2 with page 1's header.
+    """
+    raw_multipage_gemini = [
+        {
+            "retailer": "Littleton Coin Company",
+            "invoice_number": "67000011",
+            "invoice_date": "2024-11-07",
+            "subtotal": 19.95,
+            "shipping_fee": 0.0,
+            "tax_fee": 0.0,
+            "total_amount": 19.95,
+            "line_items": [
+                {
+                    "description": "21st Century Penny and Nickel Transition Set",
+                    "Cost": 19.95,
+                    "quantity": 1,
+                    "item_number": "SET-01",
+                }
+            ],
+        },
+        {
+            "retailer": "Littleton Coin Company",
+            "invoice_number": "67226944",
+            "invoice_date": "2025-01-23",
+            "subtotal": 59.90,
+            "shipping_fee": 0.0,
+            "tax_fee": 0.0,
+            "total_amount": 59.90,
+            "line_items": [
+                {
+                    "description": "1936 Buffalo Nickel Choice Uncirculated",
+                    "Cost": 29.95,
+                    "quantity": 2,
+                    "item_number": "BUF-36",
+                }
+            ],
+        },
+    ]
+
+    coin_docs = main.normalize_and_validate_receipt(raw_multipage_gemini)
+    # Total returned should be 3 coins (1 from page 1, 2 from page 2 due to Qty 2)
+    assert len(coin_docs) == 3
+
+    # Coin 0 (Page 1)
+    assert coin_docs[0]["Retailer Invoice #"] == "67000011"
+    assert coin_docs[0]["Purchase Date"] == "2024-11-07"
+    assert coin_docs[0]["retailer"] == "Littleton Coin Company"
+    assert coin_docs[0]["Cost"] == 19.95
+
+    # Coin 1 (Page 2, copy 1)
+    assert coin_docs[1]["Retailer Invoice #"] == "67226944"
+    assert coin_docs[1]["Purchase Date"] == "2025-01-23"
+    assert coin_docs[1]["retailer"] == "Littleton Coin Company"
+    assert coin_docs[1]["Cost"] == 29.95
+
+    # Coin 2 (Page 2, copy 2)
+    assert coin_docs[2]["Retailer Invoice #"] == "67226944"
+    assert coin_docs[2]["Purchase Date"] == "2025-01-23"
+    assert coin_docs[2]["retailer"] == "Littleton Coin Company"
+    assert coin_docs[2]["Cost"] == 29.95
+
+    # Verify _link_receipts_to_coins updates coin documents with per-item metadata
+    mock_db = InMemoryFirestore()
+    user_email = "test_092052@numista.ai"
+    session_id = "sess_092052"
+
+    coin1_doc = {
+        "id": "coin_set_1",
+        "description": "21st Century Penny and Nickel Transition Set",
+        "Cost": 19.95,
+        "import_session_id": session_id,
+    }
+    coin2_doc = {
+        "id": "coin_buf_2",
+        "description": "1936 Buffalo Nickel Choice Uncirculated",
+        "Cost": 29.95,
+        "import_session_id": session_id,
+    }
+    mock_db.document(f"users/{user_email}/review_queue/coin_set_1").set(coin1_doc)
+    mock_db.document(f"users/{user_email}/review_queue/coin_buf_2").set(coin2_doc)
+
+    receipt_doc = {
+        "id": "rcpt_092052",
+        "session_id": session_id,
+        "retailer": "Littleton Coin Company",
+        "invoice_number": "67000011",
+        "invoice_date": "2024-11-07",
+        "line_items": [
+            {
+                "id": "coin_set_1",
+                "description": "21st Century Penny and Nickel Transition Set",
+                "invoice_number": "67000011",
+                "invoice_date": "2024-11-07",
+                "retailer": "Littleton Coin Company",
+                "total_price": 19.95,
+            },
+            {
+                "id": "coin_buf_2",
+                "description": "1936 Buffalo Nickel Choice Uncirculated",
+                "invoice_number": "67226944",
+                "invoice_date": "2025-01-23",
+                "retailer": "Littleton Coin Company",
+                "total_price": 29.95,
+            },
+        ],
+    }
+    mock_db.document(f"users/{user_email}/receipts/rcpt_092052").set(receipt_doc)
+
+    with patch.object(main, "db", mock_db):
+        link_res = main._link_receipts_to_coins(user_email, session_id)
+
+    assert link_res.get("linked") == 2
+    c1 = mock_db.document(f"users/{user_email}/review_queue/coin_set_1").get().to_dict()
+    c2 = mock_db.document(f"users/{user_email}/review_queue/coin_buf_2").get().to_dict()
+
+    # Coin 1 linked to page 1 invoice
+    assert c1.get("Retailer Invoice #") == "67000011"
+    assert c1.get("purchase_date") == "2024-11-07"
+    assert c1.get("paper_trail", {}).get("invoice_number") == "67000011"
+
+    # Coin 2 linked to page 2 invoice (not clobbered by page 1!)
+    assert c2.get("Retailer Invoice #") == "67226944"
+    assert c2.get("purchase_date") == "2025-01-23"
+    assert c2.get("paper_trail", {}).get("invoice_number") == "67226944"

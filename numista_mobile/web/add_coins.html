@@ -1029,17 +1029,12 @@ function updateProgress(done, total, label) {
 function startPolling() {
   document.getElementById('progress-label').innerHTML = '<span class="pulse-dot"></span> AI processing...';
   const startTime = Date.now();
-  const MAX_POLL_MS = 60000; // 60s timeout
+  let lastProgressTime = Date.now();
+  let lastProcessedCount = 0;
+  const MAX_POLL_MS = 180000; // 180s timeout for multi-page documents
   pollInterval = setInterval(async () => {
     try {
       const elapsed = Date.now() - startTime;
-      if (elapsed >= MAX_POLL_MS) {
-        clearInterval(pollInterval);
-        showError('Processing timed out after 60 seconds. Please check your Review Queue or try uploading again.', true);
-        document.getElementById('progress-label').textContent = 'Timed out (60s)';
-        return;
-      }
-
       const authHeaders = await getAuthHeader();
       const r = await fetch(
         API_BASE + '/api/import/status/' + sessionId + '?user_email=' + encodeURIComponent(USER_EMAIL),
@@ -1057,11 +1052,27 @@ function startPolling() {
       }
       const data = await r.json();
 
+      if ((data.processed_files || 0) > lastProcessedCount) {
+        lastProcessedCount = data.processed_files || 0;
+        lastProgressTime = Date.now();
+      }
+      if (data.status === 'linking') {
+        lastProgressTime = Date.now();
+      }
+
+      // Check timeout only if overall cap reached and no recent activity in 60s
+      if (elapsed >= MAX_POLL_MS && (Date.now() - lastProgressTime >= 60000)) {
+        clearInterval(pollInterval);
+        showError('Processing timed out. Please check your Review Queue or try uploading again.', true);
+        document.getElementById('progress-label').textContent = 'Timed out';
+        return;
+      }
+
       (data.per_file || []).forEach((f, i) => {
         const sm = { done:'done', error:'error', review_needed:'review', skipped:'skipped', processing:'active' };
         if (f.status !== 'pending') {
           updateFileRow(i, sm[f.status] || 'active',
-            f.error ? ('Error: ' + f.error) : (f.coins_added ? ('Done — ' + f.coins_added + ' coin' + (f.coins_added!==1?'s':'')) : null));
+            f.error ? ('Error: ' + f.error) : (f.coins_added ? ('Done ✓ ' + f.coins_added + ' coin' + (f.coins_added!==1?'s':'')) : null));
         }
       });
       updateProgress(data.processed_files || 0, data.total_files || selectedFiles.length);
