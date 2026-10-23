@@ -10,6 +10,7 @@ import io
 import uuid
 import json
 import base64
+import traceback
 from datetime import datetime, timezone
 import pandas as pd
 from google.cloud import firestore
@@ -3579,19 +3580,9 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
                 if not is_definite_dupe:
                     # Attribute-based check: Year + Mint + normalized Denomination
                     # MUST NEVER delete queue doc without committing! Flag as possible_duplicate.
-                    raw_d  = (data.get('Denomination') or '').strip()
-                    norm_d = raw_d.lstrip('$').strip()   # "$5" -> "5", "5" -> "5"
-                    denom_variants = list({raw_d, norm_d, f'${norm_d}'})
-                    try:
-                        q2 = coins_ref \
-                            .where('Year',      '==', data.get('Year', '')) \
-                            .where('Mint Mark', '==', data.get('Mint Mark', '')) \
-                            .where('Denomination', 'in', denom_variants[:10]) \
-                            .limit(1).get()
-                        if len(q2) > 0 and q2[0].id not in request.review_ids:
-                            is_possible_dupe = True
-                    except Exception:
-                        pass
+                    from numista_backend.services.duplicate_check import check_and_flag_duplicate
+                    if check_and_flag_duplicate(coins_ref, data, exclude_ids=request.review_ids):
+                        is_possible_dupe = True
 
                 if is_definite_dupe:
                     batch.delete(queue_ref.document(doc_id))
@@ -6549,7 +6540,13 @@ async def identify_coin_photo(
             "Added":                 firestore.SERVER_TIMESTAMP,
         }
 
-        db.collection(f"users/{user_email}/coins").document(coin_id).set(coin_doc)
+        from numista_backend.services.duplicate_check import check_and_flag_duplicate
+        coins_ref = db.collection(f"users/{user_email}/coins")
+        if check_and_flag_duplicate(coins_ref, coin_doc):
+            ai_coin["possible_duplicate"] = True
+            ai_coin["duplicate_flag"] = coin_doc.get("duplicate_flag")
+
+        coins_ref.document(coin_id).set(coin_doc)
         logger.info(f"Saved coin {coin_id}", extra={"user_email": user_email})
     else:
         # Preview mode -- return b64 images for the Flutter review screen
@@ -7405,6 +7402,7 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
     """
     if isinstance(data, list):
         dict_entries = [d for d in data if isinstance(d, dict)]
+        first_d = dict_entries[0] if dict_entries else {}
         if dict_entries and any("line_items" in d for d in dict_entries):
             merged = dict(next(d for d in dict_entries if "line_items" in d))
             merged["line_items"] = [li for d in dict_entries
@@ -7413,6 +7411,10 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             data = merged
         else:
             data = {"line_items": dict_entries}
+            # Copy top-level metadata from first dict entry if present
+            for meta_k in ("retailer", "Retailer/Website", "invoice_number", "Retailer Invoice #", "invoice_date", "purchase_date", "Date", "subtotal", "shipping_fee", "tax_fee", "total_amount"):
+                if meta_k in first_d and meta_k not in data:
+                    data[meta_k] = first_d[meta_k]
     elif not isinstance(data, dict):
         data = {"line_items": []}
 
@@ -7542,9 +7544,13 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             "source":               "PDF Invoice",
             "is_demo":              False,
             "is_demo_cleared":      False,
-            "invoice_number":       (it.get("Retailer Invoice #") or it.get("invoice_number") or data.get("invoice_number") or "").strip(),
-            "retailer":             (it.get("Retailer/Website") or it.get("retailer") or data.get("retailer") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
-            "purchase_date":        (it.get("invoice_date") or it.get("Invoice Date") or it.get("Date") or data.get("invoice_date") or data.get("date") or "").strip(),
+            "Retailer/Website":     (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
+            "retailer":             (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
+            "Retailer Invoice #":   (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip(),
+            "invoice_number":       (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip(),
+            "Purchase Date":        (it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or (data.get("invoice_date") if isinstance(data, dict) else "") or (data.get("date") if isinstance(data, dict) else "") or (data.get("Purchase Date") if isinstance(data, dict) else "") or "").strip(),
+            "purchase_date":        (it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or (data.get("invoice_date") if isinstance(data, dict) else "") or (data.get("date") if isinstance(data, dict) else "") or (data.get("Purchase Date") if isinstance(data, dict) else "") or "").strip(),
+            "Retailer Item No.":    (it.get("Retailer Item No.") or it.get("item_number") or it.get("item_no") or "").strip(),
             "status":               "pending_review",
             "source_file":          fname,
             "import_session_id":    session_id,
@@ -7927,10 +7933,33 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     line_items_out = []
 
                     normalized_coins = normalize_and_validate_receipt(data, fname=fname, gcs_path=gcs_path, session_id=session_id)
+                    total_val = sum(c.get("Cost", 0.0) for c in normalized_coins)
+
+                    hdr = data if isinstance(data, dict) else (data[0] if (isinstance(data, list) and data and isinstance(data[0], dict)) else {})
+                    subtotal_val = clean_valuation_value(hdr.get("subtotal") or 0.0)
+                    shipping_val = clean_valuation_value(hdr.get("shipping_fee") or hdr.get("shipping") or 0.0)
+                    tax_val      = clean_valuation_value(hdr.get("tax_fee") or hdr.get("tax") or 0.0)
+                    grand_total  = clean_valuation_value(hdr.get("total_amount") or hdr.get("grand_total") or 0.0)
+                    if subtotal_val <= 0.0:
+                        subtotal_val = total_val
+                    if grand_total <= 0.0:
+                        grand_total = (subtotal_val + shipping_val + tax_val) if (shipping_val + tax_val) > 0 else total_val
+
+                    first_c = normalized_coins[0] if normalized_coins else {}
+                    retailer_val = (hdr.get("retailer") or hdr.get("Retailer/Website") or first_c.get("Retailer/Website") or first_c.get("retailer") or "").strip()
+                    invoice_num_val = (hdr.get("invoice_number") or hdr.get("Retailer Invoice #") or first_c.get("Retailer Invoice #") or first_c.get("invoice_number") or "").strip()
+                    invoice_date_val = (hdr.get("invoice_date") or hdr.get("date") or hdr.get("Purchase Date") or first_c.get("Purchase Date") or first_c.get("purchase_date") or "").strip()
+
                     for coin_doc in normalized_coins:
                         coin_doc["receipt_id"] = receipt_id
                         coin_doc["created_at"] = firestore.SERVER_TIMESTAMP
-                        total_val += coin_doc.get("Cost", 0.0)
+                        coin_doc["Retailer/Website"] = retailer_val or coin_doc.get("Retailer/Website") or coin_doc.get("retailer") or ""
+                        coin_doc["retailer"] = coin_doc["Retailer/Website"]
+                        coin_doc["Retailer Invoice #"] = invoice_num_val or coin_doc.get("Retailer Invoice #") or coin_doc.get("invoice_number") or ""
+                        coin_doc["invoice_number"] = coin_doc["Retailer Invoice #"]
+                        coin_doc["Purchase Date"] = invoice_date_val or coin_doc.get("Purchase Date") or coin_doc.get("purchase_date") or ""
+                        coin_doc["purchase_date"] = coin_doc["Purchase Date"]
+
                         doc_ref = col_ref.document(str(uuid.uuid4()))
                         batch.set(doc_ref, coin_doc)
                         new_coin_ids.append(doc_ref.id)
@@ -7939,17 +7968,15 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         line_item_entry["id"] = doc_ref.id
                         line_items_out.append(line_item_entry)
 
-                    batch.commit()
-
                     receipt_doc = {
                         "receipt_id":          receipt_id,
                         "session_id":          session_id,
                         "import_session_id":   session_id,
                         "original_filename":   fname,
                         "gcs_path":            gcs_path,
-                        "retailer":            data.get("retailer", ""),
-                        "invoice_number":      data.get("invoice_number", ""),
-                        "invoice_date":        data.get("invoice_date", ""),
+                        "retailer":            retailer_val,
+                        "invoice_number":      invoice_num_val,
+                        "invoice_date":        invoice_date_val,
                         "subtotal":            subtotal_val,
                         "shipping_fee":        shipping_val,
                         "tax_fee":             tax_val,
@@ -7959,8 +7986,11 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         "unlinked_items":      [],
                         "uploaded_at":         firestore.SERVER_TIMESTAMP,
                     }
-                    db.collection("users").document(user_email)\
-                      .collection("receipts").document(receipt_id).set(receipt_doc)
+                    receipt_ref = db.collection("users").document(user_email)\
+                      .collection("receipts").document(receipt_id)
+                    batch.set(receipt_ref, receipt_doc)
+
+                    batch.commit()
 
                     summary["coins_identified"]     += added_this_file
                     summary["receipts_parsed"]      += 1
@@ -7975,7 +8005,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                 except Exception as e:
                     per_file[idx]["status"] = "error"
                     per_file[idx]["error"]  = str(e)
-                    logger.exception(f"Bulk import invoice error ({fname})")
+                    logger.error(f"Bulk import invoice error ({fname}): {e}\n{traceback.format_exc()}")
 
             elif ftype == "image":
                 # Skip this image if it was already handled as part of a pair
@@ -8151,8 +8181,9 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
         summary["duplicates_flagged"]  = dup_result["strong"] + dup_result["possible"]
         summary["unlinked_receipts"]   = link_result["unlinked"]
 
+        any_errors = any(f.get("status") == "error" for f in per_file)
         session_ref.update({
-            "status":           "done",
+            "status":           "done_with_errors" if any_errors else "done",
             "processed_files":  len(per_file),
             "summary":          summary,
             "per_file":         per_file,

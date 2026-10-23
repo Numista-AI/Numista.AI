@@ -487,7 +487,7 @@
 <!-- Session Summary -->
 <div class="card" id="summary-panel">
   <div class="card-header">
-    <h2>&#9989; Import Complete</h2>
+    <h2 id="summary-title">&#9989; Import Complete</h2>
     <span id="summary-date" style="font-size:0.82rem;color:var(--text-dim);"></span>
   </div>
   <div class="card-body">
@@ -1068,7 +1068,11 @@ function startPolling() {
 
       if (data.status === 'done') {
         clearInterval(pollInterval);
-        showSummary(data.summary || {});
+        showSummary(data.summary || {}, false);
+        loadReceipts();
+      } else if (data.status === 'done_with_errors') {
+        clearInterval(pollInterval);
+        showSummary(data.summary || {}, true);
         loadReceipts();
       } else if (data.status === 'error') {
         clearInterval(pollInterval);
@@ -1088,8 +1092,18 @@ function startPolling() {
   }, 2500);
 }
 
-function showSummary(s) {
+function showSummary(s, hasErrors = false) {
   document.getElementById('summary-panel').classList.add('show');
+  const titleEl = document.getElementById('summary-title');
+  if (titleEl) {
+    if (hasErrors) {
+      titleEl.innerHTML = '&#9888;&#65039; Import Finished with Errors';
+      titleEl.style.color = '#dc2626';
+    } else {
+      titleEl.innerHTML = '&#9989; Import Complete';
+      titleEl.style.color = '';
+    }
+  }
   document.getElementById('summary-date').textContent =
     new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
   document.getElementById('stat-coins').textContent    = s.coins_identified || 0;
@@ -1102,7 +1116,16 @@ function showSummary(s) {
     document.getElementById('unlinked-stat').style.display = 'block';
   }
   document.getElementById('overall-bar').style.width = '100%';
-  document.getElementById('progress-label').textContent = 'Complete';
+  const progLabel = document.getElementById('progress-label');
+  if (progLabel) {
+    if (hasErrors) {
+      progLabel.textContent = 'Finished with errors';
+      progLabel.style.color = '#dc2626';
+    } else {
+      progLabel.textContent = 'Complete';
+      progLabel.style.color = '';
+    }
+  }
 }
 
 async function loadReceipts() {

@@ -268,6 +268,8 @@ class CertSaveResponse(BaseModel):
     coin_id: Optional[str] = None
     duplicate_allowed: bool = False
     message: Optional[str] = None
+    possible_duplicate: bool = False
+    duplicate_flag: Optional[str] = None
 
 
 @router.get("/cert_exists", response_model=CertExistsResponse)
@@ -352,11 +354,24 @@ def cert_save(
         )
 
     # Return clear — Flutter does the single Firestore write.
+    possible_dup = False
+    dup_flag = None
+    if req.coin_data and isinstance(req.coin_data, dict):
+        try:
+            from numista_backend.services.duplicate_check import check_and_flag_duplicate
+            if check_and_flag_duplicate(coins_ref, req.coin_data):
+                possible_dup = True
+                dup_flag = req.coin_data.get("duplicate_flag")
+        except Exception as e:
+            logger.warning(f"Error checking attribute duplicate in cert_save: {e}")
+
     return CertSaveResponse(
         status="clear",
         coin_id=None,
         duplicate_allowed=req.allow_duplicate,
         message="OK to save",
+        possible_duplicate=possible_dup,
+        duplicate_flag=dup_flag,
     )
 
 

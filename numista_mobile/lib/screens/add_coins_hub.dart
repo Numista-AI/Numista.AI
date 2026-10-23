@@ -342,20 +342,47 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
   /// Used ONLY for Manual Entry — shows a snackbar since the coin is
   /// saved directly to the collection (not sent to the Review Hub).
-  void _showManualAddedSnackbar() {
+  static Future<bool> _checkAttributeDuplicate(Map<String, dynamic> coinData) async {
+    try {
+      final year = (coinData['Year'] ?? coinData['year'] ?? '').toString().trim();
+      final mint = (coinData['Mint Mark'] ?? coinData['mint'] ?? coinData['mint_mark'] ?? '').toString().trim();
+      final rawDenom = (coinData['Denomination'] ?? coinData['denomination'] ?? '').toString().trim();
+      if (year.isEmpty || rawDenom.isEmpty) return false;
+      final normDenom = rawDenom.replaceAll(RegExp(r'^\$'), '').trim();
+      final denomVariants = {rawDenom, normDenom, '\$$normDenom'}.where((s) => s.isNotEmpty).toList();
+
+      final query = await FirebaseFirestore.instance
+          .collection(AuthService.coinsPath)
+          .where('Year', isEqualTo: year)
+          .where('Mint Mark', isEqualTo: mint)
+          .where('Denomination', whereIn: denomVariants)
+          .limit(1)
+          .get();
+
+      return query.docs.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _showManualAddedSnackbar({bool isDuplicate = false}) {
     if (!mounted) return;
     final sw = MediaQuery.of(context).size.width;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.only(bottom: 24, right: 16, left: sw > 440 ? sw - 416 : 16),
-        content: const Row(children: [
-          Icon(Icons.check_circle, color: Colors.white, size: 20),
-          SizedBox(width: 10),
-          Text('Coin added to My Collection!',
-              style: TextStyle(fontWeight: FontWeight.w600)),
+        content: Row(children: [
+          Icon(isDuplicate ? Icons.warning_amber_rounded : Icons.check_circle, color: Colors.white, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              isDuplicate ? 'Added 1 coin, flagged as possible duplicate' : 'Coin added to My Collection!',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
         ]),
-        backgroundColor: const Color(0xFF22C55E),
+        backgroundColor: isDuplicate ? Colors.amber[800] : const Color(0xFF22C55E),
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'View Collection',
@@ -619,6 +646,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'is_demo_cleared': false,
       };
 
+      final isDupe = await _checkAttributeDuplicate(coinDoc);
+      if (isDupe) {
+        coinDoc['possible_duplicate'] = true;
+        coinDoc['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
+      }
+
       await FirebaseFirestore.instance
           .collection(AuthService.coinsPath)
           .add(coinDoc);
@@ -633,8 +666,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         behavior: SnackBarBehavior.floating,
         margin: EdgeInsets.only(bottom: 24, right: 16, left: sw > 440 ? sw - 416 : 16),
         duration: const Duration(seconds: 3),
-        content: const Text('✅ Coin added to your collection!'),
-        backgroundColor: const Color(0xFF10B981),
+        content: Text(isDupe ? 'Added 1 coin, flagged as possible duplicate' : '✅ Coin added to your collection!'),
+        backgroundColor: isDupe ? Colors.amber[800]! : const Color(0xFF10B981),
         action: widget.onNavigate != null
             ? SnackBarAction(
                 label: 'View',
@@ -2165,6 +2198,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     };
 
 
+                    final isDupe = await _checkAttributeDuplicate(coinDoc);
+                    if (isDupe) {
+                      coinDoc['possible_duplicate'] = true;
+                      coinDoc['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
+                    }
+
                     // ── Save to Firestore ────────────────────────────────────
                     await FirebaseFirestore.instance
                         .collection(AuthService.coinsPath)
@@ -2187,7 +2226,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     if (match != null && match.type == 'individual') {
                       _showWishlistMatchPrompt(match);
                     } else {
-                      _showManualAddedSnackbar();
+                      _showManualAddedSnackbar(isDuplicate: isDupe);
                     }
                   } catch (e) {
                     if (!mounted) return;
@@ -3741,7 +3780,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Cert #$certNo ($grader) not found',
+                        grader == 'NGC' ? 'NGC lookup coming soon' : 'Cert #$certNo ($grader) not found',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
                       ),
                     ),
@@ -4102,6 +4141,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       }
 
 
+      final isDupe = await _checkAttributeDuplicate(coinDoc);
+      if (isDupe) {
+        coinDoc['possible_duplicate'] = true;
+        coinDoc['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
+      }
+
       await FirebaseFirestore.instance
           .collection(AuthService.coinsPath)
           .add(coinDoc);
@@ -4122,8 +4167,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         _certManualNotes.clear();
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('✅ $grader coin added to your collection!'),
-        backgroundColor: const Color(0xFF10B981),
+        content: Text(isDupe ? 'Added 1 coin, flagged as possible duplicate' : '✅ $grader coin added to your collection!'),
+        backgroundColor: isDupe ? Colors.amber[800]! : const Color(0xFF10B981),
         action: widget.onNavigate != null
             ? SnackBarAction(
                 label: 'View',
@@ -4854,6 +4899,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       }
 
 
+      final isDupe = await _checkAttributeDuplicate(mapped);
+      if (isDupe) {
+        mapped['possible_duplicate'] = true;
+        mapped['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
+      }
+
       await FirebaseFirestore.instance.collection(AuthService.coinsPath).add(mapped);
       BetaChecklistService.autoCompleteTask('task_6_pcgs_cert');
       if (!mounted) return;
@@ -4863,8 +4914,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         _pcgsSingleCtrl.clear();
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('✅ Coin added to your collection!'),
-        backgroundColor: const Color(0xFF10B981),
+        content: Text(isDupe ? 'Added 1 coin, flagged as possible duplicate' : '✅ Coin added to your collection!'),
+        backgroundColor: isDupe ? Colors.amber[800]! : const Color(0xFF10B981),
         action: widget.onNavigate != null
             ? SnackBarAction(label: 'View', textColor: Colors.white, onPressed: () => widget.onNavigate!('My Collection'))
             : null,

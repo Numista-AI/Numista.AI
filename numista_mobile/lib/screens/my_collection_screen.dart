@@ -3368,7 +3368,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     tooltip: tip,
     color: _subtext,
     padding: EdgeInsets.zero,
-    constraints: BoxConstraints(maxWidth: 32, maxHeight: 32),
+    constraints: BoxConstraints(minWidth: 48, minHeight: 48, maxWidth: 48, maxHeight: 48),
     onPressed: onTap,
   );
 

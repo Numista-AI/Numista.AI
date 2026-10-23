@@ -292,6 +292,7 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
           debugShowCheckedModeBanner: false,
           themeMode: ThemeProvider.instance.themeMode,
           theme: ThemeData(
+            visualDensity: VisualDensity.standard,
             brightness: Brightness.light,
             scaffoldBackgroundColor: const Color(0xFFF4F4F2), // Premium parchment/platinum-silver bg
             primaryColor: const Color(0xFF8C7355), // Antique bronze
@@ -330,6 +331,7 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
             ),
           ),
           darkTheme: ThemeData(
+            visualDensity: VisualDensity.standard,
             brightness: Brightness.dark,
             scaffoldBackgroundColor: const Color(0xFF0B1120), // Deep navy-black bg
             primaryColor: const Color(0xFFC9A227), // Metallic gold
