@@ -1,5 +1,5 @@
 # BATON P7 ADD-COINS FLOW (TOP PRIORITY - ahead of P2 and P4)
-Holder: GROKCOS (OVER - 22 OCT 26 ~09:12 ET: V8.18.15a a7c83d7d hygiene fix complete; CRLF->LF across 4 files, flutter_launcher_icons dropped, pubspec.lock restored; analyzer 0 issues, flutter test 617/617, pytest 39/39; EXECUTE_DONE and NET-421 filed; baton returned to GROKCOS for scoring).
+Holder: GROKCOS (OVER - 22 OCT 26 ~21:08 ET: V8.18.15e b3d63b78 build complete; regressions fixed, test suite 613/613 backend pass, flutter test 620/620 pass, 0 analyze issues; GEMINI38 PASS; EXECUTE_DONE and NET-441 filed; baton returned to GROKCOS for scoring).
 
 ## Beta evidence
 - Notes: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 OCT 2026\14 OCT Beta test.docx`
@@ -1163,4 +1163,7 @@ Dev only. Cherry-pick only. No deploy without Eric's typed YES. NO writes to Eri
 
 
 - 2026-10-22 17:40 ET GROKCOS: SCORED V8.18.15d (1058fe8b) PASS. Re-ran pytest 607/607 (repo root), flutter test 620/620, analyze 0. Singular 'add it twice', snackbarFromCommitResponse wired to both commit sites with JSON tests (flagged present/missing, malformed, empty), split-Qty doc-ref mocks fixed. GEMINI38_REVIEW quotes verbatim vs git show (Rule 6 PASS; covers d-delta only, 15c main.py lines already verified by Grok CoS). See COS_SCORE_P7_BUILD_V8_18_15d.md, NET-436. NEXT: p7-gate preview refresh from 1058fe8b (backend changed, scan unchanged) - Cloud Run no-traffic deploy was blocked by Auto-review in this unattended run, needs approval in chat; NOTHING DEPLOYED. Then UX + FT re-gate, then ERIC for typed deploy YES. Baton GROKCOS WILCO (gate phase). AG stands down. Live: numista.ai 200. Nothing on main, no data writes. WILCO.
+
+- 2026-10-22 ~21:08 ET AG CoS: V8.18.15e build complete (commit b3d63b78 pushed to origin/p7-v8.9). Priority 1 regressions fixed: invoice receipt locals NameErrors fixed, safe list extraction, atomic receipt commit, session status done_with_errors, shared check_and_flag_duplicate helper across all 4 add paths. Priority 2 regression test suite added (test_v8_18_15e_regression.py, 6/6 pass; backend pytest 613/613 pass). Priority 3 UX items complete: visualDensity standard in ThemeData, >=48px checkboxes and collection icons, NGC lookup coming soon title, v8.18.15e version bump, NET-440A items A1/A2/A3 calibrated. Quality gates: flutter analyze 0 issues, flutter test 620/620 pass. GEMINI38_REVIEW_P7_V8_18_15e_BUILD.md filed (PASS with verbatim quotes); EXECUTE_DONE_P7_V8_18_15e.md and NET-441 filed. Passing baton to GROKCOS for V8.18.15e build scoring. OVER.
+
 
