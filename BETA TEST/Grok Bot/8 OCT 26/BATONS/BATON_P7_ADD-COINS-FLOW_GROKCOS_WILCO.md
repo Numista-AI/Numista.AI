@@ -1179,3 +1179,6 @@ Active order: NET-448 V8.18.15g (duplicate_check import path only). Each item be
 2. QUEUED - Melt totals: Home (screens/home_dashboard.dart:379-385, summed L414) calls MeltValueService.compute without qty/programSeries/themeSubject/coinData, so Home under-reports (grokbot: Home $2,146.58 vs My Collection $5,523.26). Same bug is LIVE on main. Match widgets/header_stats_bar.dart:114-129 at: home_dashboard.dart:379, coin_detail_screen.dart:1585, my_collection_screen.dart:552, :3316, :3830.
 3. QUEUED - 092052 multi-page invoice parser: all 17 rows get page 1's invoice # 67000011 and date 2024-11-07; 2x items import as QTY 1; 60s timeout. Needs tracing first.
 4. QUEUED - Snackbar "View Collection" does nothing: add_coins_hub.dart:388-392 and :1349-1351 depend on widget.onNavigate, which is likely null in the Navigator.push'd AddCoinsHub (L808). Pass onNavigate through, or pop and navigate.
+
+- 2026-10-23 13:30 ET GROKCOS WATCH: STALL FLAG. NET-448 (V8.18.15g one-fix, duplicate_check import path) ordered to AG CoS at 11:23; no EXECUTE_DONE, GEMINI38_REVIEW or NET reply after 2h07m (8 AM-9 PM window). AG CoS only wakes on a message or its own timer, so Eric asked to type 'check radio' to AG. NET-449 filed. Live: numista.ai 200. No deploys, nothing on main, no data writes. Next re-flag no sooner than 14:30 ET.
+
