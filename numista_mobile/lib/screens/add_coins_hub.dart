@@ -3881,6 +3881,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
             return SizedBox(
               width: double.infinity,
+              height: 48,
               child: OutlinedButton.icon(
                 onPressed: () async {
                   if (isNgc && !hasGrade) {
@@ -3914,6 +3915,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 label: Text(labelText),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
+                  visualDensity: VisualDensity.standard,
                   foregroundColor: const Color(0xFF2563EB),
                   side: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
                   backgroundColor: Colors.white,
@@ -3953,6 +3955,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
+          height: 48,
           child: OutlinedButton(
             onPressed: () {
               setState(() {
@@ -3962,6 +3965,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             },
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 48),
+              visualDensity: VisualDensity.standard,
               foregroundColor: const Color(0xFF64748B),
               side: const BorderSide(color: Color(0xFFCBD5E1)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -5517,22 +5521,30 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           alignment: WrapAlignment.center,
           spacing: 4,
           children: [
-            TextButton.icon(
-              onPressed: () => _pickCamImage(isObverse, ImageSource.camera),
-              icon: const Icon(Icons.photo_camera, size: 18, color: Color(0xFF4C8CDA)),
-              label: const Text('Take Photo', style: TextStyle(fontSize: 18, color: Color(0xFF4C8CDA))),
-              style: TextButton.styleFrom(
-                minimumSize: const Size(48, 48),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+            SizedBox(
+              height: 48,
+              child: TextButton.icon(
+                onPressed: () => _pickCamImage(isObverse, ImageSource.camera),
+                icon: const Icon(Icons.photo_camera, size: 18, color: Color(0xFF4C8CDA)),
+                label: const Text('Take Photo', style: TextStyle(fontSize: 18, color: Color(0xFF4C8CDA))),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  visualDensity: VisualDensity.standard,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
               ),
             ),
-            TextButton.icon(
-              onPressed: () => _pickCamImage(isObverse, ImageSource.gallery),
-              icon: const Icon(Icons.upload, size: 18, color: Color(0xFF64748B)),
-              label: const Text('Upload', style: TextStyle(fontSize: 18, color: Color(0xFF64748B))),
-              style: TextButton.styleFrom(
-                minimumSize: const Size(48, 48),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+            SizedBox(
+              height: 48,
+              child: TextButton.icon(
+                onPressed: () => _pickCamImage(isObverse, ImageSource.gallery),
+                icon: const Icon(Icons.upload, size: 18, color: Color(0xFF64748B)),
+                label: const Text('Upload', style: TextStyle(fontSize: 18, color: Color(0xFF64748B))),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  visualDensity: VisualDensity.standard,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
               ),
             ),
           ],
