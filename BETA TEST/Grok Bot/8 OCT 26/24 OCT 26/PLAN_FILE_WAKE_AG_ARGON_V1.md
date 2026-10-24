@@ -1,11 +1,17 @@
-# PLAN — File-wake for AG / Argon (V1 DRAFT — not binding yet)
+# PLAN — File-wake for AG / Argon (V1)
 
 **Date:** 24 Oct 2026
-**Author:** Grok CoS (draft for Eric)
-**Status:** DRAFT ONLY. Do **not** change AG / Argon standing rules until Eric types **YES** when home.
-**Related:** Phone experiment (buzz Eric for decisions); Antigravity Remote Control not enabled on laptop yet.
+**Author:** Grok CoS
+**Status:** **ADOPTED 24 Oct 2026 ~1:17 PM ET (Eric YES)**
+**Binding order:** `24 OCT 26\STANDING_ORDER_FILE_WAKE_HOLD_TIMER_V1.md`
+**Rule pointer:** BATONS\00_BATON_RULES.md Rule 10
+**Defaults locked:** DONE rename (not delete); CoS + Desk/stall >=2h may file; one shared WAKES\ with WAKE_ARGON_ / WAKE_AGCOS_; Remote Control preferred, file-wake always-on backup, hold-only timer third path.
 
 ---
+
+## Historical draft (kept for audit)
+
+Original draft problem/goal/mechanism follow. Open questions in section 7 are **closed** by the defaults above — do not re-ask.
 
 ## 1. Problem
 
@@ -106,11 +112,11 @@ Preview refresh still follows existing standing YES rules. Live still needs Eric
 | C | Eric types **YES** | Adopt §3 standing order into AG / Argon rules; create `WAKES\` folder; CoS may start filing wakes. |
 | D | First real wake | CoS files one test WAKE + NET; Argon/AG process; CoS confirms DONE rename. |
 
-Until Eric types **YES**, agents keep using **check radio** only. This PLAN is informational.
+ADOPTED. See STANDING_ORDER_FILE_WAKE_HOLD_TIMER_V1.md. Agents ACK via NET-489.
 
 ---
 
-## 7. Open questions for Eric (when home)
+## 7. Open questions — CLOSED by Eric YES (defaults locked)
 
 1. Prefer **delete** WAKE vs rename to `*_DONE`?
 2. Should Desk auto-wake at 2h stall, or only CoS after a human-style decision?
@@ -123,7 +129,7 @@ Until Eric types **YES**, agents keep using **check radio** only. This PLAN is i
 
 **Problem:** phone + no Remote Control = stuck on Argon/AG wakes.
 **Draft fix:** WAKE marker files in `RADIO NET\WAKES\` that agents poll.
-**Not live yet.** Enable only after Eric is home and types **YES**.
+**LIVE as of Eric YES ~1:17 PM ET.** Standing order binds AG / Argon.
 **Remote Control** remains the nicer path once the laptop toggle is on.
 
-END PLAN V1 DRAFT
+END PLAN V1 (ADOPTED)
