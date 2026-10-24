@@ -751,58 +751,69 @@ async def test_invoice_092052_multipage_per_page_metadata_qty_and_linking():
     assert coin_docs[1]["Quantity"] == 2
     assert coin_docs[1]["quantity"] == 2
 
-    # Part 2: End-to-end simulation on full 2-page receipt payload with supply folder and multiple qty=2 items
+    # Part 2: End-to-end simulation on full 2-page 092052 receipt payload (14 rows, 17 physical coins, $298.55 total)
     full_2page_payload = [
         {
             "retailer": "Littleton Coin Company",
             "invoice_number": "67000011",
             "invoice_date": "2024-11-07",
-            "subtotal": 150.00,
+            "subtotal": 203.80,
             "shipping_fee": 0.0,
             "tax_fee": 0.0,
-            "total_amount": 150.00,
+            "total_amount": 203.80,
             "line_items": [
-                {"description": "1964-D Kennedy Half Dollar", "Cost": 19.95, "qty": 2},
-                {"description": "1982-S George Washington 250th", "Cost": 29.95, "qty": 2},
-                {"description": "2001-P Kennedy Half Dollar", "Cost": 7.65, "qty": 2},
-                {"description": "1943 Mercury Dime", "Cost": 5.0, "qty": 1},
-                {"description": "1942-D Mercury Dime", "Cost": 5.0, "qty": 1},
-                {"description": "1963-D Roosevelt Dime", "Cost": 4.0, "qty": 1},
-                {"description": "1936-S Buffalo Nickel", "Cost": 8.0, "qty": 1},
-                {"description": "2017-P Native American Dollar", "Cost": 6.0, "qty": 1},
-                {"description": "2005-P Marine Corps $1", "Cost": 10.0, "qty": 1},
-            ]
+                {"Program/Series": "Kennedy Half Dollar", "Year": "1964", "Mint Mark": "D", "Denomination": "Half Dollar", "Cost": 19.95, "qty": 2},
+                {"Program/Series": "Kennedy Half Dollar", "Year": "1982", "Mint Mark": "S", "Denomination": "Half Dollar", "Cost": 29.95, "qty": 2},
+                {"Program/Series": "Kennedy Half Dollar", "Year": "2001", "Mint Mark": "P", "Denomination": "Half Dollar", "Cost": 7.65, "qty": 2},
+                {"Program/Series": "Mercury Dime", "Year": "1943", "Mint Mark": "", "Denomination": "Dime", "Cost": 9.95, "qty": 1},
+                {"Program/Series": "Mercury Dime", "Year": "1942", "Mint Mark": "D", "Denomination": "Dime", "Cost": 9.95, "qty": 1},
+                {"Program/Series": "Roosevelt Dime", "Year": "1963", "Mint Mark": "D", "Denomination": "Dime", "Cost": 6.95, "qty": 1},
+                {"Program/Series": "Buffalo Nickel", "Year": "1936", "Mint Mark": "S", "Denomination": "Nickel", "Cost": 14.95, "qty": 1},
+                {"Program/Series": "Native American Dollar", "Year": "2017", "Mint Mark": "P", "Denomination": "Dollar", "Cost": 4.95, "qty": 1},
+                {"Program/Series": "Marine Corps 230th Anniversary Silver Dollar", "Year": "2005", "Mint Mark": "P", "Denomination": "Dollar", "Cost": 41.95, "qty": 1},
+            ],
         },
         {
             "retailer": "Littleton Coin Company",
             "invoice_number": "67226944",
             "invoice_date": "2025-01-23",
-            "subtotal": 50.00,
+            "subtotal": 94.75,
             "shipping_fee": 0.0,
             "tax_fee": 0.0,
-            "total_amount": 50.00,
+            "total_amount": 94.75,
             "line_items": [
-                {"description": "Whitman Coin Album", "Cost": 15.0, "is_supply": True},
-                {"description": "1921 Morgan Dollar", "Cost": 35.0, "qty": 1},
-                {"description": "1922 Peace Dollar", "Cost": 30.0, "qty": 1},
-                {"description": "1954-D Franklin Half", "Cost": 16.0, "qty": 1},
-                {"description": "1943 Walking Liberty", "Cost": 18.0, "qty": 1},
-                {"description": "1909-S Lincoln Cent", "Cost": 12.0, "qty": 1},
-            ]
-        }
+                {"Program/Series": "Whitman Coin Album", "Year": "", "Cost": 15.00, "is_supply": True},
+                {"Program/Series": "Morgan Dollar", "Year": "1921", "Mint Mark": "", "Denomination": "Dollar", "Cost": 39.95, "qty": 1},
+                {"Program/Series": "Peace Dollar", "Year": "1922", "Mint Mark": "", "Denomination": "Dollar", "Cost": 34.95, "qty": 1},
+                {"Program/Series": "Franklin Half Dollar", "Year": "1954", "Mint Mark": "D", "Denomination": "Half Dollar", "Cost": 9.95, "qty": 1},
+                {"Program/Series": "Walking Liberty Half Dollar", "Year": "1943", "Mint Mark": "", "Denomination": "Half Dollar", "Cost": 4.95, "qty": 1},
+                {"Program/Series": "Lincoln Cent", "Year": "1909", "Mint Mark": "", "Denomination": "Cent", "Cost": 4.95, "qty": 1},
+            ],
+        },
     ]
 
     normalized_all = main.normalize_and_validate_receipt(full_2page_payload)
-    # 9 items from page 1 + 5 coin items from page 2 (supply folder excluded) = 14 rows
     assert len(normalized_all) == 14
-    # Total physical coins across the 14 documents should sum Quantity to 17
-    assert sum(d.get("Quantity", 1) for d in normalized_all) == 17
+    assert sum(int(d.get("Quantity") or 1) for d in normalized_all) == 17
 
-    # Test total valuation calculation in worker
+    p1_rows = [d for d in normalized_all if d.get("Retailer Invoice #") == "67000011"]
+    p2_rows = [d for d in normalized_all if d.get("Retailer Invoice #") == "67226944"]
+    assert len(p1_rows) == 9
+    assert len(p2_rows) == 5
+    assert all(d.get("Purchase Date") == "2024-11-07" for d in p1_rows)
+    assert all(d.get("Purchase Date") == "2025-01-23" for d in p2_rows)
+
+    k64 = [d for d in normalized_all if d.get("Year") == "1964" and d.get("Mint Mark") == "D"]
+    assert len(k64) == 1 and k64[0]["Quantity"] == 2 and k64[0]["quantity"] == 2 and k64[0]["Cost"] == 19.95
+
+    k82 = [d for d in normalized_all if d.get("Year") == "1982" and d.get("Mint Mark") == "S"]
+    assert len(k82) == 1 and k82[0]["Quantity"] == 2 and k82[0]["quantity"] == 2 and k82[0]["Cost"] == 29.95
+
+    k01 = [d for d in normalized_all if d.get("Year") == "2001" and d.get("Mint Mark") == "P"]
+    assert len(k01) == 1 and k01[0]["Quantity"] == 2 and k01[0]["quantity"] == 2 and k01[0]["Cost"] == 7.65
+
     total_val = round(sum(c.get("Cost", 0.0) * max(1, int(c.get("Quantity") or c.get("quantity") or 1)) for c in normalized_all), 2)
-    # Let's verify sum of Cost * Qty matches expected total or check individual items
-    # e.g., 1964-D (19.95 * 2 = 39.90) + 1982-S (29.95 * 2 = 59.90) + 2001-P (7.65 * 2 = 15.30) + ...
-    assert total_val > 0
+    assert total_val == 298.55
 
     # Verify _link_receipts_to_coins links all 14 documents
     mock_db = InMemoryFirestore()
