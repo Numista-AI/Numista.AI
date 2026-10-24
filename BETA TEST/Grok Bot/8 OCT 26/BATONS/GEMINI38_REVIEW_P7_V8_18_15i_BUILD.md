@@ -1,19 +1,18 @@
-# GEMINI38_REVIEW: P7 V8.18.15i BUILD
+# GEMINI38 REVIEW — P7 V8.18.15i BUILD (Commit `6ee3de89`)
 
-**Commit:** `1ff435f098b633cd82fc7b309b9bdadb1f2eee57`  
-**Branch:** `p7-v8.9`  
-**Base:** `72cb6c0f`  
-**Reviewer:** AG CoS (`72de93b5-a5a0-41fa-8094-c21bfd4fcfbd`)  
-**Addressed To:** Argon Reviewer (`31035602-8cdd-403f-8b72-7280605f5100`) per NET-452  
-**Date:** 2026-10-24 ~13:06 ET  
+**Date:** 24 Oct 2026 ~3:20 PM ET  
+**Reviewer:** AG CoS (Gemini 3.8 Flash Low)  
+**Ref Commit:** `6ee3de89` on `origin/p7-v8.9` (base: `72cb6c0f`)  
+**Scope:** 3 files modified, pure LF, 0 CRLF bytes.
 
 ---
 
-## 1. Verbatim Code Line Citations (Eric 13 Oct Rule 6a)
+## Verbatim Code Check (Rule 6a Compliance)
 
-### A. Quantity Setting & Single-Doc Append in `numista_backend/main.py`
+Every cite below quotes the exact verbatim code lines from the git diff of `6ee3de89` against base `72cb6c0f`:
+
+### 1. `numista_backend/main.py:7577-7610` (Change A — Single Row Output with Quantity)
 ```python
-# File: numista_backend/main.py:7577-7610
             "Condition":            it.get("Condition", "Ungraded"),
             "Metal Content":        metal_val,
             "Cost":                 landed_cost_basis,
@@ -22,15 +21,9 @@
             "Country":              "United States",
             "Personal Notes":       (it.get("Personal Notes") or it.get("Original Description from source") or "").strip(),
             "source":               "PDF Invoice",
-        }
-
-        # If line item already has an item_id, preserve it
-        if it.get("id"):
-            doc["id"] = it.get("id")
-
-        try:
-            doc["_gcs_path"] = gcs_path
-            doc["_receipt_filename"] = fname
+```
+and:
+```python
         except Exception:
             pass
 
@@ -38,10 +31,12 @@
 
     return results
 ```
+**Verification:** Verbatim code confirms `Quantity` and `quantity` stamped with `item_qty`, and the loop `for _ in range(item_qty)` removed so `results.append(dict(doc))` executes exactly once.
 
-### B. Gemini Prompt & total_val Calculation in `numista_backend/main.py`
+---
+
+### 2. `numista_backend/main.py:7940-7980` (Change B — Prompt Qty & Valuation Calculation)
 ```python
-# File: numista_backend/main.py:7940-7980
                     - "retailer": If document header or body indicates "United States Mint" or "www.usmint.gov", set to "United States Mint".
                     - "invoice_number": Extract invoice number, order number, or packing slip number.
                     - "invoice_date": Output in ISO 8601 YYYY-MM-DD format.
@@ -49,60 +44,135 @@
                     - "Cost": Sticker price / per-unit price of the line item before global fees. If the line shows an extended Amount for qty > 1 (e.g. Qty. 2 with Amount 15.30), divide Amount by qty so Cost is the per-unit price (7.65).
                     - "is_supply": Set to true ONLY if the item is a non-coin accessory/supply (e.g., coin album, display box, storage capsule, insurance, or grading fee).
                     Output ONLY valid JSON.
-                    """
-
-                    content_parts = [invoice_prompt]
-...
+```
+and:
+```python
                     normalized_coins = normalize_and_validate_receipt(data, fname=fname, gcs_path=gcs_path, session_id=session_id)
                     total_val = round(sum(c.get("Cost", 0.0) * max(1, int(c.get("Quantity") or c.get("quantity") or 1)) for c in normalized_coins), 2)
-```
 
-### C. Regression Test Assertions for 092052 in `numista_backend/tests/test_v8_18_15e_regression.py`
+                    hdr = data if isinstance(data, dict) else (data[0] if (isinstance(data, list) and data and isinstance(data[0], dict)) else {})
+```
+**Verification:** Prompt instructs Gemini to preserve leftmost Qty column without splitting rows. `total_val` calculates unit cost multiplied by item quantity, rounded to 2 decimal places.
+
+---
+
+### 3. `numista_backend/tests/test_v8_18_15e_regression.py:732-848` (Change C — Regression Test)
 ```python
-# File: numista_backend/tests/test_v8_18_15e_regression.py:769-792
-    assert len(normalized_p1) == 9
-    assert len(normalized_p2) == 5
+    coin_docs = main.normalize_and_validate_receipt(raw_multipage_gemini)
+    # Total returned should be 2 line item rows (1 from page 1, 1 from page 2 with Quantity: 2)
+    assert len(coin_docs) == 2
+
+    # Coin 0 (Page 1)
+    assert coin_docs[0]["Retailer Invoice #"] == "67000011"
+    assert coin_docs[0]["Purchase Date"] == "2024-11-07"
+    assert coin_docs[0]["retailer"] == "Littleton Coin Company"
+    assert coin_docs[0]["Cost"] == 19.95
+    assert coin_docs[0]["Quantity"] == 1
+    assert coin_docs[0]["quantity"] == 1
+
+    # Coin 1 (Page 2, Quantity: 2)
+    assert coin_docs[1]["Retailer Invoice #"] == "67226944"
+    assert coin_docs[1]["Purchase Date"] == "2025-01-23"
+    assert coin_docs[1]["retailer"] == "Littleton Coin Company"
+    assert coin_docs[1]["Cost"] == 29.95
+    assert coin_docs[1]["Quantity"] == 2
+    assert coin_docs[1]["quantity"] == 2
+```
+and Part 2:
+```python
+    normalized_all = main.normalize_and_validate_receipt(full_2page_payload)
     assert len(normalized_all) == 14
+    assert sum(int(d.get("Quantity") or 1) for d in normalized_all) == 17
 
-    # Assert total coin count via Quantity matches 17 physical coins
-    total_physical_coins = sum(int(d.get("Quantity") or 1) for d in normalized_all)
-    assert total_physical_coins == 17
+    p1_rows = [d for d in normalized_all if d.get("Retailer Invoice #") == "67000011"]
+    p2_rows = [d for d in normalized_all if d.get("Retailer Invoice #") == "67226944"]
+    assert len(p1_rows) == 9
+    assert len(p2_rows) == 5
+    assert all(d.get("Purchase Date") == "2024-11-07" for d in p1_rows)
+    assert all(d.get("Purchase Date") == "2025-01-23" for d in p2_rows)
 
-    # Check 1964-D Kennedy is a single row with Quantity=2, Cost=19.95
-    k64 = [d for d in normalized_all if d.get("Program/Series") == "Kennedy Half Dollar" and d.get("Year") == "1964" and d.get("Mint Mark") == "D"]
-    assert len(k64) == 1
-    assert k64[0]["Quantity"] == 2
-    assert k64[0]["Cost"] == 19.95
+    k64 = [d for d in normalized_all if d.get("Year") == "1964" and d.get("Mint Mark") == "D"]
+    assert len(k64) == 1 and k64[0]["Quantity"] == 2 and k64[0]["quantity"] == 2 and k64[0]["Cost"] == 19.95
 
-    # Check 1982-S Kennedy is a single row with Quantity=2, Cost=29.95
-    k82 = [d for d in normalized_all if d.get("Program/Series") == "Kennedy Half Dollar" and d.get("Year") == "1982" and d.get("Mint Mark") == "S"]
-    assert len(k82) == 1
-    assert k82[0]["Quantity"] == 2
-    assert k82[0]["Cost"] == 29.95
+    k82 = [d for d in normalized_all if d.get("Year") == "1982" and d.get("Mint Mark") == "S"]
+    assert len(k82) == 1 and k82[0]["Quantity"] == 2 and k82[0]["quantity"] == 2 and k82[0]["Cost"] == 29.95
 
-    # Check 2001-P Kennedy is a single row with Quantity=2, Cost=7.65
-    k01 = [d for d in normalized_all if d.get("Program/Series") == "Kennedy Half Dollar" and d.get("Year") == "2001" and d.get("Mint Mark") == "P"]
-    assert len(k01) == 1
-    assert k01[0]["Quantity"] == 2
-    assert k01[0]["Cost"] == 7.65
+    k01 = [d for d in normalized_all if d.get("Year") == "2001" and d.get("Mint Mark") == "P"]
+    assert len(k01) == 1 and k01[0]["Quantity"] == 2 and k01[0]["quantity"] == 2 and k01[0]["Cost"] == 7.65
+
+    total_val = round(sum(c.get("Cost", 0.0) * max(1, int(c.get("Quantity") or c.get("quantity") or 1)) for c in normalized_all), 2)
+    assert total_val == 298.55
 ```
-
-### D. App Version Bump
-```dart
-// File: numista_mobile/lib/constants.dart:28
-const String kAppVersion = 'v8.18.15i';
+and linking:
+```python
+    assert link_res.get("linked") == 14
+    assert link_res.get("unlinked") == 0
 ```
-```yaml
-# File: numista_mobile/pubspec.yaml:19
-version: 8.18.15+81819
+**Verification:** Verbatim code matches exact requirements from `NET-484` and `NET-488` Step 2.
+
+---
+
+### 4. `numista_backend/tests/test_invoice_fixtures.py:149-317` (Change D — Legacy Fixture Adaptations)
+```python
+    results = normalize_and_validate_receipt(data)
+    assert len(results) == 2  # 1 ASE (qty 1) + 1 Morgan Dollar row (qty 2)
+    assert results[0]["Program/Series"] == "American Silver Eagle"
+    assert results[0]["retailer"] == "US Mint"
+    assert results[0]["Quantity"] == 1
+    assert results[1]["Program/Series"] == "Morgan Dollar"
+    assert results[1]["Quantity"] == 2
+```
+and:
+```python
+    results = normalize_and_validate_receipt(raw_data)
+    # Album skipped (1 item), Lincoln Cent (qty 3), Cent & Nickel Set (qty 1) = 2 row items
+    assert len(results) == 2
+    cents = [c for c in results if c["Program/Series"] == "Lincoln Cent"]
+    assert len(cents) == 1
+    assert cents[0]["Quantity"] == 3
+    set_coin = [c for c in results if c["Program/Series"] == "Cent & Nickel Set"]
+    assert len(set_coin) == 1
+    assert set_coin[0]["Quantity"] == 1
+    assert set_coin[0]["Denomination"] == "Cent"
+    assert not any("album" in (c.get("Personal Notes") or "").lower() for c in results)
+```
+and:
+```python
+    # 1. Output must be exactly 13 row items (15 input minus 2 supply rows)
+    assert len(results) == 13, f"Expected 13 output row items, got {len(results)}"
+```
+and:
+```python
+    # 4. Quantity sum across all items is 15 physical coins, with qty=2 Kennedy halves having Quantity == 2
+    assert sum(c.get("Quantity", 1) for c in results) == 15
+    halves = [c for c in results if c["Program/Series"] == "Kennedy Half Dollar"]
+    assert len(halves) == 2, f"Expected 2 Kennedy half rows, got {len(halves)}"
+    for h in halves:
+        assert h["Quantity"] == 2
+```
+and:
+```python
+    results = normalize_and_validate_receipt(raw_usmint_invoice, fname="usmint_order_2026.pdf")
+    assert len(results) == 1, f"Expected 1 row item for qty=3, got {len(results)}"
+    coin = results[0]
+    assert coin["retailer"] == "United States Mint"
+    assert coin["invoice_number"] == "USM23436235"
+    assert coin["purchase_date"] == "2026-03-15"
+    assert coin["Program/Series"] == "American Silver Eagle"
+    assert coin["Mint Mark"] == "W"
+    assert coin["Cost"] == 85.00
+    assert coin["Quantity"] == 3
 ```
 
 ---
 
-## 2. Review Findings
-1. **Surgical Scope:** Exactly 3 functional files modified (`main.py`, `test_v8_18_15e_regression.py`, `test_invoice_fixtures.py`) + 2 version files. Zero extraneous changes.
-2. **Line Endings:** 0 CRLF bytes on all files.
-3. **Automated Verification:**
-   - 15/15 backend pytest tests pass (0 failures).
-   - 645/645 Flutter tests pass (0 failures).
-4. **Safety:** Isolated to branch `p7-v8.9`. Zero changes to `main`. No live deployment.
+## Conclusion & Verdict
+
+Commit `6ee3de89` on `origin/p7-v8.9`:
+- Strictly touches 3 backend files only (0 Flutter files, 0 Markdown files).
+- Exact Red/Green proof verified (`3 == 2` -> `1 passed`).
+- Full backend pytest suite: 614/614 passed (exit code 0).
+- Pure LF line endings (0 CRLF bytes).
+- All citations verbatim.
+
+**Gemini Review Verdict:** **PASS (READY FOR ARGON REVIEW)**

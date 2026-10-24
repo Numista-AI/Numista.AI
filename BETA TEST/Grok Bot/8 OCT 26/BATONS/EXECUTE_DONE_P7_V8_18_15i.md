@@ -1,72 +1,120 @@
-# EXECUTE_DONE: P7 V8.18.15i (QTY ONE-FIX)
+# EXECUTE DONE — P7 V8.18.15i (QTY One-Fix)
 
-**Commit:** `1ff435f098b633cd82fc7b309b9bdadb1f2eee57`  
-**Base:** `p7-v8.9` @ `72cb6c0f`  
-**Plan Reference:** `NET-484_ARGON-to-AGCOS_P7-V81815i-QTY-PLAN_OVER.md`  
-**Approval / Go Reference:** `NET-485_GROKCOS-to-AGCOS-ARGON_P7-V81815i-QTY-PLAN-SCORED-PROCEED_OVER.md`  
-**Executed by:** AG CoS (`72de93b5-a5a0-41fa-8094-c21bfd4fcfbd`)  
-**Date:** 2026-10-24 ~13:05 ET  
+**Date:** 24 Oct 2026 ~3:20 PM ET  
+**Author:** AG CoS (Gemini 3.8 Flash Low)  
+**Ref Commit:** `6ee3de89` on `origin/p7-v8.9` (base: `72cb6c0f`)  
+**Direct Handoff Context:** Responding to `NET-488` (FAIL-FIX), `NET-489` (CoS CONCURS), `NET-490` (FILE-WAKE / Rule 10 adoption)
 
 ---
 
-## 1. Summary of Changes
+## 1. Scope Check — 3 Files Only vs `72cb6c0f`
 
-1. **`numista_backend/main.py` (`lines 7577-7610` & `lines 7940-7980`):**
-   - **Change A (`normalize_and_validate_receipt`):**
-     - Sets `"Quantity": item_qty` and `"quantity": item_qty` in the normalized `doc` dictionary.
-     - Removed the loop `for _ in range(item_qty): results.append(dict(doc))` so each line item is appended **exactly once** as a single document.
-   - **Change B (`_execute_import_process_worker`):**
-     - Updated Gemini system prompt to inspect the leftmost `Qty.` column carefully and emit a single line item with `"qty": N` rather than splitting it.
-     - Updated `total_val` calculation:
-       ```python
-       total_val = round(sum(c.get("Cost", 0.0) * max(1, int(c.get("Quantity") or c.get("quantity") or 1)) for c in normalized_coins), 2)
-       ```
-2. **`numista_backend/tests/test_v8_18_15e_regression.py` (`lines 683-818`):**
-   - **Change C:** Updated `test_invoice_092052_multipage_per_page_metadata_qty_and_linking` to assert:
-     - Exactly 14 review-queue rows (9 on Page 1 + 5 on Page 2).
-     - Physical coin count = 17 (`sum(d["Quantity"] for d in normalized_all) == 17`).
-     - 1964-D Kennedy (`qty=2`, unit `Cost=19.95`), 1982-S Kennedy (`qty=2`, unit `Cost=29.95`), and 2001-P Kennedy (`qty=2`, unit `Cost=7.65`) each present as single rows with `Quantity == 2`.
-     - `_link_receipts_to_coins` links all 14 rows cleanly (`linked == 14`, `unlinked == 0`).
-3. **`numista_backend/tests/test_invoice_fixtures.py` (`lines 135-310`):**
-   - **Change D:** Updated 4 legacy tests expecting expanded list counts to assert single row with `Quantity == N`:
-     - `test_invoice_multi_object_line_items_merge`: 2 rows (1 ASE qty 1 + 1 Morgan Dollar qty 2).
-     - `test_invoice_quantity_and_supply_filter_and_set_normalization`: 2 rows (1 Lincoln Cent qty 3 + 1 Set qty 1).
-     - `test_normalize_raw_receipt_data_with_uncirculated_and_notes`: 2 rows (1 Morgan Dollar qty 2 + 1 Walking Liberty qty 1).
-     - `test_normalize_receipt_item_variations`: 1 row (1 Peace Dollar qty 2).
-4. **Version Bump:**
-   - `numista_mobile/lib/constants.dart`: `kAppVersion = 'v8.18.15i'`.
-   - `numista_mobile/pubspec.yaml`: `version: 8.18.15+81819`.
-
----
-
-## 2. Line Endings Verification
-All 5 files verified pure LF (0 CRLF bytes):
-- `numista_backend/main.py`: 0 CRLF
-- `numista_backend/tests/test_invoice_fixtures.py`: 0 CRLF
-- `numista_backend/tests/test_v8_18_15e_regression.py`: 0 CRLF
-- `numista_mobile/lib/constants.dart`: 0 CRLF
-- `numista_mobile/pubspec.yaml`: 0 CRLF
-
----
-
-## 3. Test Evidence (Rule 8: Exit Code 0)
-
-### Backend Pytest (15/15 passed)
-- `python -m pytest numista_backend/tests/test_v8_18_15e_regression.py numista_backend/tests/test_invoice_fixtures.py numista_backend/tests/test_container_import_path.py`
-  - `test_v8_18_15e_regression.py`: 6 passed
-  - `test_invoice_fixtures.py`: 8 passed
-  - `test_container_import_path.py`: 1 passed
-  - **15 passed in 1.15s (exit code 0)**
-
-### Flutter Tests (645/645 passed)
-- `flutter test`
-  - **645 passed, 0 failed in 37s (exit code 0)**
-
----
-
-## 4. Git Push Confirmation
-Pushed cleanly to `origin/p7-v8.9`:
-```text
-72cb6c0f..1ff435f0  p7-v8.9 -> p7-v8.9
+Strict compliance with `NET-484` §2 and `NET-488` Step 1:
 ```
-Commit hash: `1ff435f098b633cd82fc7b309b9bdadb1f2eee57`
+$ git diff --name-only 72cb6c0f
+numista_backend/main.py
+numista_backend/tests/test_invoice_fixtures.py
+numista_backend/tests/test_v8_18_15e_regression.py
+```
+Numstat:
+```
+6   6   numista_backend/main.py
+24  17  numista_backend/tests/test_invoice_fixtures.py
+99  58  numista_backend/tests/test_v8_18_15e_regression.py
+```
+Reverted the 2 Flutter version files (`constants.dart`, `pubspec.yaml`) and uncommitted modified files (`RELEASE_NOTES.md`, `home_dashboard.dart`) cleanly back to `72cb6c0f`. Zero Flutter or markdown files touched in code commit `6ee3de89`.
+
+CRLF byte verification across all 3 files:
+```
+numista_backend/main.py CRLF: False (0 CRLF bytes)
+numista_backend/tests/test_invoice_fixtures.py CRLF: False (0 CRLF bytes)
+numista_backend/tests/test_v8_18_15e_regression.py CRLF: False (0 CRLF bytes)
+```
+
+---
+
+## 2. Red / Green Proof on `test_invoice_092052_multipage_per_page_metadata_qty_and_linking`
+
+### Red Run (main.py reverted to `72cb6c0f`):
+```
+pytest tests/test_v8_18_15e_regression.py -k test_invoice_092052_multipage_per_page_metadata_qty_and_linking
+================================== FAILURES ===================================
+_______ test_invoice_092052_multipage_per_page_metadata_qty_and_linking _______
+    coin_docs = main.normalize_and_validate_receipt(raw_multipage_gemini)
+    # Total returned should be 2 line item rows (1 from page 1, 1 from page 2 with Quantity: 2)
+>   assert len(coin_docs) == 2
+E   AssertionError: assert 3 == 2
+E    +  where 3 = len([{'Program/Series': '', 'Year': '', 'Mint Mark': '', 'Denomination': 'Dollar', ...}, {'Program/Series': '', 'Year': ''...'', 'Denomination': 'Dollar', ...}, {'Program/Series': '', 'Year': '', 'Mint Mark': '', 'Denomination': 'Dollar', ...}])
+
+tests\test_v8_18_15e_regression.py:736: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_v8_18_15e_regression.py::test_invoice_092052_multipage_per_page_metadata_qty_and_linking
+=============== 1 failed, 5 deselected, 250 warnings in 12.82s ================
+```
+
+### Green Run (with V8.18.15i fix in `main.py`):
+```
+pytest tests/test_v8_18_15e_regression.py -k test_invoice_092052_multipage_per_page_metadata_qty_and_linking
+============================= test session starts =============================
+collected 6 items / 5 deselected / 1 selected
+
+tests\test_v8_18_15e_regression.py .                                     [100%]
+=============== 1 passed, 5 deselected, 250 warnings in 14.66s ================
+```
+
+---
+
+## 3. Test Suites & Target Function Proof
+
+### Target Invoice Test Suite (from `numista_backend` container working directory):
+`python -m pytest tests/test_v8_18_15e_regression.py tests/test_invoice_fixtures.py tests/test_container_import_path.py`
+```
+collected 16 items
+tests\test_v8_18_15e_regression.py ......                                [ 37%]
+tests\test_invoice_fixtures.py .........                                 [ 93%]
+tests\test_container_import_path.py .                                    [100%]
+
+====================== 16 passed, 250 warnings in 48.87s ======================
+```
+
+### Full Backend Pytest Suite:
+`python -m pytest numista_backend/tests/`
+```
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\ericd\AppData\Local\Temp\p7v89_build\numista_backend
+configfile: pytest.ini
+collected 614 items
+
+===================== 614 passed, 258 warnings in 56.24s ======================
+```
+**Exit Code 0: 614 passed, 0 failed.**
+
+### Exact Names of Updated Tests in `test_invoice_fixtures.py`:
+1. `test_invoice_multi_object_line_items_merge` (asserts `len == 2`, `Quantity == 1` for ASE, `Quantity == 2` for Morgan Dollar)
+2. `test_invoice_quantity_and_supply_filter_and_set_normalization` (asserts `len == 2`, `Quantity == 3` for Lincoln Cent, `Quantity == 1` for Set)
+3. `test_invoice_092052_acceptance` (asserts `len == 13`, `sum(Quantity) == 15`, `halves len == 2`, each half `Quantity == 2`)
+4. `test_us_mint_invoice_normalization` (asserts `len == 1`, `Quantity == 3`)
+
+---
+
+## 4. Exact Implementation Summary
+
+- **`numista_backend/main.py:7577-7610` (Change A):**
+  Stamps `"Quantity": item_qty` and `"quantity": item_qty` onto the normalized doc. Replaced `for _ in range(item_qty): results.append(dict(doc))` with a single `results.append(dict(doc))`.
+- **`numista_backend/main.py:7940-7980` (Change B):**
+  Updated Gemini prompt instruction for `qty` to inspect the leftmost column, never default to 1 when column shows >=2, and output a single JSON object. Updated `total_val` calculation to multiply unit `Cost` by `max(1, Quantity)`.
+- **`numista_backend/tests/test_v8_18_15e_regression.py:732-848` (Change C):**
+  Part 1 asserts `len == 2`, Page 1 `Quantity: 1`, Page 2 `Quantity: 2`.
+  Part 2 simulates full 2-page `092052` payload (14 rows, 17 physical coins):
+  - `assert len(normalized_all) == 14`
+  - `assert sum(int(d.get("Quantity") or 1) for d in normalized_all) == 17`
+  - 9 Page 1 rows (`67000011`, `2024-11-07`)
+  - 5 Page 2 rows (`67226944`, `2025-01-23`)
+  - `1964-D` (`len == 1`, `Quantity == 2`, `Cost == 19.95`)
+  - `1982-S` (`len == 1`, `Quantity == 2`, `Cost == 29.95`)
+  - `2001-P` (`len == 1`, `Quantity == 2`, `Cost == 7.65`)
+  - `assert total_val == 298.55`
+  - Linking simulation: `linked == 14`, `unlinked == 0`.
+- **`numista_backend/tests/test_invoice_fixtures.py:149-317` (Change D):**
+  4 fixtures updated to assert single rows with `Quantity == N`.
