@@ -112,7 +112,7 @@ Preview refresh still follows existing standing YES rules. Live still needs Eric
 | C | Eric types **YES** | Adopt §3 standing order into AG / Argon rules; create `WAKES\` folder; CoS may start filing wakes. |
 | D | First real wake | CoS files one test WAKE + NET; Argon/AG process; CoS confirms DONE rename. |
 
-ADOPTED. See STANDING_ORDER_FILE_WAKE_HOLD_TIMER_V1.md. Agents ACK via NET-489.
+ADOPTED. See STANDING_ORDER_FILE_WAKE_HOLD_TIMER_V1.md. Agents ACK via NET-490.
 
 ---
 
