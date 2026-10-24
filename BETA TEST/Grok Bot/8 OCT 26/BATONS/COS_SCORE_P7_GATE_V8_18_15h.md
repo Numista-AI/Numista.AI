@@ -20,3 +20,6 @@ Side findings (log, not blocking this gate): Firestore 403 on runAggregationQuer
 
 NEXT: Baton to ERIC for one decision: (A) keep 2x lines as two separate QTY-1 records (current build, each coin its own record for grading, selling, Certificate of Transfer) - Grok CoS recommends A; or (B) one record at QTY 2 (needs a V8.18.15i one-fix). After Eric picks: A -> FT recount of 2001-P, then Eric typed deploy YES; B -> Argon plan + AG build.
 No deploys, nothing on main, no data writes. Live traffic still numista-backend-00479-beg.
+
+## UPDATE 08:32 ET - SUPERSEDED BY ERIC DECISION
+Eric already chose (B) at ~8:25 AM ET: Nx lines become ONE row at Quantity N (14 Hub rows for 092052, three at QTY 2). Ordered in NET-474_GROKCOS-to-ARGON-AGCOS_P7-V81815i-QTY-ONE-FIX-PLAN-THEN-BUILD_OVER.md. The duplicate decision NET filed by the watch at 08:26 was withdrawn. Gate verdict for 15h stands: PARTIAL FAIL, live deploy blocked.
