@@ -149,11 +149,12 @@ def test_invoice_multi_object_line_items_merge():
     ]
 
     results = normalize_and_validate_receipt(data)
-    assert len(results) == 3  # 1 ASE + 2 Morgan Dollars
+    assert len(results) == 2  # 1 ASE (qty 1) + 1 Morgan Dollar row (qty 2)
     assert results[0]["Program/Series"] == "American Silver Eagle"
     assert results[0]["retailer"] == "US Mint"
+    assert results[0]["Quantity"] == 1
     assert results[1]["Program/Series"] == "Morgan Dollar"
-    assert results[2]["Program/Series"] == "Morgan Dollar"
+    assert results[1]["Quantity"] == 2
 
 
 def test_invoice_quantity_and_supply_filter_and_set_normalization():
@@ -172,12 +173,14 @@ def test_invoice_quantity_and_supply_filter_and_set_normalization():
     }
 
     results = normalize_and_validate_receipt(raw_data)
-    # Album skipped (1 item), Lincoln Cent repeated 3 times, Cent & Nickel Set repeated 1 time = 4 coins
-    assert len(results) == 4
+    # Album skipped (1 item), Lincoln Cent (qty 3), Cent & Nickel Set (qty 1) = 2 row items
+    assert len(results) == 2
     cents = [c for c in results if c["Program/Series"] == "Lincoln Cent"]
-    assert len(cents) == 3
+    assert len(cents) == 1
+    assert cents[0]["Quantity"] == 3
     set_coin = [c for c in results if c["Program/Series"] == "Cent & Nickel Set"]
     assert len(set_coin) == 1
+    assert set_coin[0]["Quantity"] == 1
     assert set_coin[0]["Denomination"] == "Cent"
     assert not any("album" in (c.get("Personal Notes") or "").lower() for c in results)
 
@@ -228,8 +231,8 @@ def test_invoice_092052_acceptance():
     results = normalize_and_validate_receipt(raw_invoice, fname="Receipt_2026-06-03_092052.pdf")
 
     # Output assertions:
-    # 1. Output must be exactly 15 coins
-    assert len(results) == 15, f"Expected 15 output coins, got {len(results)}"
+    # 1. Output must be exactly 13 row items (15 input minus 2 supply rows)
+    assert len(results) == 13, f"Expected 13 output row items, got {len(results)}"
 
     # 2. 0 supply rows in output
     for coin in results:
@@ -243,9 +246,12 @@ def test_invoice_092052_acceptance():
     assert len(sets) == 1, "Expected 1 mapped Cent & Nickel Set"
     assert sets[0]["Denomination"] == "Cent"
 
-    # 4. Quantity 2 coins expanded correctly
+    # 4. Quantity sum across all items is 15 physical coins, with qty=2 Kennedy halves having Quantity == 2
+    assert sum(c.get("Quantity", 1) for c in results) == 15
     halves = [c for c in results if c["Program/Series"] == "Kennedy Half Dollar"]
-    assert len(halves) == 4, f"Expected 4 Kennedy halves (2x 2001-P + 2x 1964-D), got {len(halves)}"
+    assert len(halves) == 2, f"Expected 2 Kennedy half rows, got {len(halves)}"
+    for h in halves:
+        assert h["Quantity"] == 2
 
 
 def test_duplicate_score_case_and_aliases():
@@ -299,12 +305,13 @@ def test_us_mint_invoice_normalization():
     }
 
     results = normalize_and_validate_receipt(raw_usmint_invoice, fname="usmint_order_2026.pdf")
-    assert len(results) == 3, f"Expected 3 coins for qty=3, got {len(results)}"
-    for coin in results:
-        assert coin["retailer"] == "United States Mint"
-        assert coin["invoice_number"] == "USM23436235"
-        assert coin["purchase_date"] == "2026-03-15"
-        assert coin["Program/Series"] == "American Silver Eagle"
-        assert coin["Mint Mark"] == "W"
-        assert coin["Cost"] == 85.00
+    assert len(results) == 1, f"Expected 1 row item for qty=3, got {len(results)}"
+    coin = results[0]
+    assert coin["retailer"] == "United States Mint"
+    assert coin["invoice_number"] == "USM23436235"
+    assert coin["purchase_date"] == "2026-03-15"
+    assert coin["Program/Series"] == "American Silver Eagle"
+    assert coin["Mint Mark"] == "W"
+    assert coin["Cost"] == 85.00
+    assert coin["Quantity"] == 3
 

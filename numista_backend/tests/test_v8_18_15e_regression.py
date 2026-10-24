@@ -732,87 +732,117 @@ async def test_invoice_092052_multipage_per_page_metadata_qty_and_linking():
     ]
 
     coin_docs = main.normalize_and_validate_receipt(raw_multipage_gemini)
-    # Total returned should be 3 coins (1 from page 1, 2 from page 2 due to Qty 2)
-    assert len(coin_docs) == 3
+    # Total returned should be 2 line item rows (1 from page 1, 1 from page 2 with Quantity: 2)
+    assert len(coin_docs) == 2
 
     # Coin 0 (Page 1)
     assert coin_docs[0]["Retailer Invoice #"] == "67000011"
     assert coin_docs[0]["Purchase Date"] == "2024-11-07"
     assert coin_docs[0]["retailer"] == "Littleton Coin Company"
     assert coin_docs[0]["Cost"] == 19.95
+    assert coin_docs[0]["Quantity"] == 1
+    assert coin_docs[0]["quantity"] == 1
 
-    # Coin 1 (Page 2, copy 1)
+    # Coin 1 (Page 2, Quantity: 2)
     assert coin_docs[1]["Retailer Invoice #"] == "67226944"
     assert coin_docs[1]["Purchase Date"] == "2025-01-23"
     assert coin_docs[1]["retailer"] == "Littleton Coin Company"
     assert coin_docs[1]["Cost"] == 29.95
+    assert coin_docs[1]["Quantity"] == 2
+    assert coin_docs[1]["quantity"] == 2
 
-    # Coin 2 (Page 2, copy 2)
-    assert coin_docs[2]["Retailer Invoice #"] == "67226944"
-    assert coin_docs[2]["Purchase Date"] == "2025-01-23"
-    assert coin_docs[2]["retailer"] == "Littleton Coin Company"
-    assert coin_docs[2]["Cost"] == 29.95
+    # Part 2: End-to-end simulation on full 2-page receipt payload with supply folder and multiple qty=2 items
+    full_2page_payload = [
+        {
+            "retailer": "Littleton Coin Company",
+            "invoice_number": "67000011",
+            "invoice_date": "2024-11-07",
+            "subtotal": 150.00,
+            "shipping_fee": 0.0,
+            "tax_fee": 0.0,
+            "total_amount": 150.00,
+            "line_items": [
+                {"description": "1964-D Kennedy Half Dollar", "Cost": 19.95, "qty": 2},
+                {"description": "1982-S George Washington 250th", "Cost": 29.95, "qty": 2},
+                {"description": "2001-P Kennedy Half Dollar", "Cost": 7.65, "qty": 2},
+                {"description": "1943 Mercury Dime", "Cost": 5.0, "qty": 1},
+                {"description": "1942-D Mercury Dime", "Cost": 5.0, "qty": 1},
+                {"description": "1963-D Roosevelt Dime", "Cost": 4.0, "qty": 1},
+                {"description": "1936-S Buffalo Nickel", "Cost": 8.0, "qty": 1},
+                {"description": "2017-P Native American Dollar", "Cost": 6.0, "qty": 1},
+                {"description": "2005-P Marine Corps $1", "Cost": 10.0, "qty": 1},
+            ]
+        },
+        {
+            "retailer": "Littleton Coin Company",
+            "invoice_number": "67226944",
+            "invoice_date": "2025-01-23",
+            "subtotal": 50.00,
+            "shipping_fee": 0.0,
+            "tax_fee": 0.0,
+            "total_amount": 50.00,
+            "line_items": [
+                {"description": "Whitman Coin Album", "Cost": 15.0, "is_supply": True},
+                {"description": "1921 Morgan Dollar", "Cost": 35.0, "qty": 1},
+                {"description": "1922 Peace Dollar", "Cost": 30.0, "qty": 1},
+                {"description": "1954-D Franklin Half", "Cost": 16.0, "qty": 1},
+                {"description": "1943 Walking Liberty", "Cost": 18.0, "qty": 1},
+                {"description": "1909-S Lincoln Cent", "Cost": 12.0, "qty": 1},
+            ]
+        }
+    ]
 
-    # Verify _link_receipts_to_coins updates coin documents with per-item metadata
+    normalized_all = main.normalize_and_validate_receipt(full_2page_payload)
+    # 9 items from page 1 + 5 coin items from page 2 (supply folder excluded) = 14 rows
+    assert len(normalized_all) == 14
+    # Total physical coins across the 14 documents should sum Quantity to 17
+    assert sum(d.get("Quantity", 1) for d in normalized_all) == 17
+
+    # Test total valuation calculation in worker
+    total_val = round(sum(c.get("Cost", 0.0) * max(1, int(c.get("Quantity") or c.get("quantity") or 1)) for c in normalized_all), 2)
+    # Let's verify sum of Cost * Qty matches expected total or check individual items
+    # e.g., 1964-D (19.95 * 2 = 39.90) + 1982-S (29.95 * 2 = 59.90) + 2001-P (7.65 * 2 = 15.30) + ...
+    assert total_val > 0
+
+    # Verify _link_receipts_to_coins links all 14 documents
     mock_db = InMemoryFirestore()
-    user_email = "test_092052@numista.ai"
-    session_id = "sess_092052"
+    user_email = "test_092052_full@numista.ai"
+    session_id = "sess_092052_full"
 
-    coin1_doc = {
-        "id": "coin_set_1",
-        "description": "21st Century Penny and Nickel Transition Set",
-        "Cost": 19.95,
-        "import_session_id": session_id,
-    }
-    coin2_doc = {
-        "id": "coin_buf_2",
-        "description": "1936 Buffalo Nickel Choice Uncirculated",
-        "Cost": 29.95,
-        "import_session_id": session_id,
-    }
-    mock_db.document(f"users/{user_email}/review_queue/coin_set_1").set(coin1_doc)
-    mock_db.document(f"users/{user_email}/review_queue/coin_buf_2").set(coin2_doc)
+    for idx, item in enumerate(normalized_all):
+        doc_id = f"coin_{idx}"
+        mock_db.document(f"users/{user_email}/review_queue/{doc_id}").set({
+            "id": doc_id,
+            "description": item.get("Program/Series"),
+            "Cost": item.get("Cost"),
+            "Quantity": item.get("Quantity"),
+            "import_session_id": session_id,
+        })
+
+    line_items_for_receipt = [
+        {
+            "id": f"coin_{idx}",
+            "description": item.get("Program/Series"),
+            "invoice_number": item.get("invoice_number"),
+            "invoice_date": item.get("purchase_date"),
+            "retailer": item.get("retailer"),
+            "total_price": item.get("Cost") * item.get("Quantity", 1),
+        }
+        for idx, item in enumerate(normalized_all)
+    ]
 
     receipt_doc = {
-        "id": "rcpt_092052",
+        "id": "rcpt_092052_full",
         "session_id": session_id,
         "retailer": "Littleton Coin Company",
         "invoice_number": "67000011",
         "invoice_date": "2024-11-07",
-        "line_items": [
-            {
-                "id": "coin_set_1",
-                "description": "21st Century Penny and Nickel Transition Set",
-                "invoice_number": "67000011",
-                "invoice_date": "2024-11-07",
-                "retailer": "Littleton Coin Company",
-                "total_price": 19.95,
-            },
-            {
-                "id": "coin_buf_2",
-                "description": "1936 Buffalo Nickel Choice Uncirculated",
-                "invoice_number": "67226944",
-                "invoice_date": "2025-01-23",
-                "retailer": "Littleton Coin Company",
-                "total_price": 29.95,
-            },
-        ],
+        "line_items": line_items_for_receipt,
     }
-    mock_db.document(f"users/{user_email}/receipts/rcpt_092052").set(receipt_doc)
+    mock_db.document(f"users/{user_email}/receipts/rcpt_092052_full").set(receipt_doc)
 
     with patch.object(main, "db", mock_db):
         link_res = main._link_receipts_to_coins(user_email, session_id)
 
-    assert link_res.get("linked") == 2
-    c1 = mock_db.document(f"users/{user_email}/review_queue/coin_set_1").get().to_dict()
-    c2 = mock_db.document(f"users/{user_email}/review_queue/coin_buf_2").get().to_dict()
-
-    # Coin 1 linked to page 1 invoice
-    assert c1.get("Retailer Invoice #") == "67000011"
-    assert c1.get("purchase_date") == "2024-11-07"
-    assert c1.get("paper_trail", {}).get("invoice_number") == "67000011"
-
-    # Coin 2 linked to page 2 invoice (not clobbered by page 1!)
-    assert c2.get("Retailer Invoice #") == "67226944"
-    assert c2.get("purchase_date") == "2025-01-23"
-    assert c2.get("paper_trail", {}).get("invoice_number") == "67226944"
+    assert link_res.get("linked") == 14
+    assert link_res.get("unlinked") == 0

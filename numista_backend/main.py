@@ -7577,7 +7577,8 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             "Condition":            it.get("Condition", "Ungraded"),
             "Metal Content":        metal_val,
             "Cost":                 landed_cost_basis,
-            "Quantity":             1,
+            "Quantity":             item_qty,
+            "quantity":             item_qty,
             "Country":              "United States",
             "Personal Notes":       (it.get("Personal Notes") or it.get("Original Description from source") or "").strip(),
             "source":               "PDF Invoice",
@@ -7605,8 +7606,7 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
         except Exception:
             pass
 
-        for _ in range(item_qty):
-            results.append(dict(doc))
+        results.append(dict(doc))
 
     return results
 
@@ -7940,8 +7940,8 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     - "retailer": If document header or body indicates "United States Mint" or "www.usmint.gov", set to "United States Mint".
                     - "invoice_number": Extract invoice number, order number, or packing slip number.
                     - "invoice_date": Output in ISO 8601 YYYY-MM-DD format.
-                    - "qty": Integer quantity from the Qty column (default 1). If more than 1 identical coin is on this line, preserve quantity accurately.
-                    - "Cost": Sticker price / per-unit price of the line item before global fees. If the line shows an extended Amount for qty > 1, divide Amount by qty so Cost is the unit price.
+                    - "qty": Integer quantity from the leftmost Qty / Qty. column on EVERY row (default 1). Inspect each row's Qty. column carefully (e.g., 1 vs 2) and never default qty to 1 when the Qty. column shows 2 or more. Do NOT split a qty > 1 line item into multiple JSON objects; emit a single line_item object with "qty": N.
+                    - "Cost": Sticker price / per-unit price of the line item before global fees. If the line shows an extended Amount for qty > 1 (e.g. Qty. 2 with Amount 15.30), divide Amount by qty so Cost is the per-unit price (7.65).
                     - "is_supply": Set to true ONLY if the item is a non-coin accessory/supply (e.g., coin album, display box, storage capsule, insurance, or grading fee).
                     Output ONLY valid JSON.
                     """
@@ -7976,7 +7976,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     line_items_out = []
 
                     normalized_coins = normalize_and_validate_receipt(data, fname=fname, gcs_path=gcs_path, session_id=session_id)
-                    total_val = sum(c.get("Cost", 0.0) for c in normalized_coins)
+                    total_val = round(sum(c.get("Cost", 0.0) * max(1, int(c.get("Quantity") or c.get("quantity") or 1)) for c in normalized_coins), 2)
 
                     hdr = data if isinstance(data, dict) else (data[0] if (isinstance(data, list) and data and isinstance(data[0], dict)) else {})
                     subtotal_val = clean_valuation_value(hdr.get("subtotal") or 0.0)
