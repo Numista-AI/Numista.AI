@@ -89,6 +89,155 @@ class BatchValuationService {
   bool _pauseRequested = false;
   bool _running        = false;
 
+  /// Resolves the Firestore collection path for a valuation task.
+  /// Banknotes ('currency') route to [AuthService.currencyPath]; coins/sets
+  /// route to [AuthService.coinsPath].
+  @visibleForTesting
+  static String collectionPathForTask(
+    String collection, {
+    String? coinsPathOverride,
+    String? currencyPathOverride,
+  }) =>
+      collection == 'currency'
+          ? (currencyPathOverride ?? AuthService.currencyPath)
+          : (coinsPathOverride ?? AuthService.coinsPath);
+
+  /// Extracts a [ValuationTask] from a coin/set document map, or returns `null`
+  /// if the document has already completed valuation (`ai_value_status == 'valued'`).
+  @visibleForTesting
+  static ValuationTask? buildCoinTask(String docId, Map<String, dynamic> data) {
+    final status = data['ai_value_status']?.toString() ?? '';
+    if (status == 'valued') return null;
+
+    final year    = data['Year']?.toString()           ?? '';
+    final denom   = data['Denomination']?.toString()   ?? '';
+    final mint    = data['Mint Mark']?.toString()      ?? '';
+    final cond    = data['Condition']?.toString()      ?? '';
+    final series  = data['Program/Series']?.toString() ?? '';
+    final metal   = data['Metal Content']?.toString()  ?? '';
+    final country = data['Country']?.toString()        ?? 'USA';
+    final isSet   = data['is_set'] == true || denom.toLowerCase() == 'set' || data['item_type'] == 'set';
+
+    final mintStr = mint.isNotEmpty && mint != 'None' ? '-$mint' : '';
+    final coinName = [
+      if (year.isNotEmpty) '$year$mintStr',
+      if (series.isNotEmpty && isSet) series else if (denom.isNotEmpty) denom,
+    ].join(' ').trim();
+
+    return ValuationTask(
+      collection: 'coins',
+      docId: docId,
+      itemType: isSet ? 'set' : 'coin',
+      name: coinName.isEmpty ? 'Unknown item' : coinName,
+      year: year,
+      denomination: denom,
+      condition: cond,
+      country: country,
+      details: 'Program: $series, Metal: $metal',
+      extraData: {
+        'mint_mark': mint,
+        'program_series': series,
+        'metal_content': metal,
+        'is_set': isSet,
+      },
+    );
+  }
+
+  /// Extracts a [ValuationTask] from a currency/banknote document map, or returns `null`
+  /// if the document has already completed valuation (`ai_value_status == 'valued'`).
+  @visibleForTesting
+  static ValuationTask? buildCurrencyTask(String docId, Map<String, dynamic> data) {
+    final status = data['ai_value_status']?.toString() ?? '';
+    if (status == 'valued') return null;
+
+    final year    = data['Year']?.toString()          ?? '';
+    final denom   = data['Denomination']?.toString()  ?? '';
+    final cond    = data['Condition']?.toString()     ?? '';
+    final country = data['Country']?.toString()       ?? 'USA';
+    final desc    = data['Description']?.toString()   ?? '';
+    final issuer  = data['Series/Issuer']?.toString()  ?? '';
+    final notes   = data['Personal Notes']?.toString() ?? '';
+
+    final name = desc.isNotEmpty ? desc : '$denom Banknote';
+
+    return ValuationTask(
+      collection: 'currency',
+      docId: docId,
+      itemType: 'banknote',
+      name: name,
+      year: year,
+      denomination: denom,
+      condition: cond,
+      country: country,
+      details: 'Issuer/Series: $issuer. Notes: $notes',
+    );
+  }
+
+  /// Builds the Firestore merge payload for a completed valuation response,
+  /// populating both legacy snake_case keys and Golden Schema `'AI Estimated Value'`.
+  @visibleForTesting
+  static Map<String, dynamic> buildValuationPayload(
+    Map<String, dynamic> result, {
+    DateTime? now,
+  }) {
+    final status = result['ai_value_status']?.toString() ?? 'valued';
+    final estimatedText = result['estimated_value'] ?? 'Pending';
+    final payload = <String, dynamic>{
+      'ai_value_status':     status,
+      'ai_estimated_value':  estimatedText,
+      'AI Estimated Value':  estimatedText,
+      'ai_value_source':     result['source'] ?? 'text_estimator',
+      'ai_value_basis':      result['basis'] ?? '',
+      'ai_value_confidence': result['confidence'] ?? 'LOW',
+      'ai_needs_photo':      result['needs_photo'] ?? true,
+      'ai_value_as_of':      (now ?? DateTime.now()).toUtc().toIso8601String(),
+    };
+
+    if (result['numeric_median'] != null) {
+      payload['estimated_value'] = (result['numeric_median'] as num).toDouble();
+    }
+    if (result['low'] != null) {
+      payload['ai_value_low'] = (result['low'] as num).toDouble();
+    }
+    if (result['high'] != null) {
+      payload['ai_value_high'] = (result['high'] as num).toDouble();
+    }
+    return payload;
+  }
+
+  /// Computes initial run progress when starting or resuming a batch.
+  /// When resuming a paused batch (`previous.isPaused && previous.completed > 0`),
+  /// already-valued items have been filtered out of `pendingTaskCount`, so `total`
+  /// is reconstructed as `previous.completed + pendingTaskCount` (preventing
+  /// `completed > total` overflow). Previously failed items are still included in
+  /// `pendingTaskCount` for retry, so `failed` resets to `0` at the start of the pass.
+  @visibleForTesting
+  static BatchValuationProgress computeInitialRunProgress({
+    required BatchValuationProgress previous,
+    required int pendingTaskCount,
+    required int totalCollectionCount,
+  }) {
+    if (pendingTaskCount == 0) {
+      return BatchValuationProgress(
+        total: totalCollectionCount,
+        completed: totalCollectionCount,
+        failed: 0,
+        isRunning: false,
+        isPaused: false,
+      );
+    }
+    final resuming = previous.isPaused && previous.completed > 0;
+    final completed = resuming ? previous.completed : 0;
+    final total = completed + pendingTaskCount;
+    return BatchValuationProgress(
+      total: total,
+      completed: completed,
+      failed: 0,
+      isRunning: true,
+      isPaused: false,
+    );
+  }
+
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
@@ -154,95 +303,34 @@ class BatchValuationService {
 
     // 1. Fetch unvalued coins
     final coinsSnap = await coinsRef.get();
-    final List<_ValuationTask> tasks = [];
+    final List<ValuationTask> tasks = [];
 
     for (final doc in coinsSnap.docs) {
-      final data   = doc.data();
-      final status = data['ai_value_status']?.toString() ?? '';
-      
-      // Skip only items that have completed valuation
-      if (status == 'valued') continue;
-
-      final year   = data['Year']?.toString()             ?? '';
-      final denom  = data['Denomination']?.toString()     ?? '';
-      final mint   = data['Mint Mark']?.toString()        ?? '';
-      final cond   = data['Condition']?.toString()        ?? '';
-      final series = data['Program/Series']?.toString()   ?? '';
-      final metal  = data['Metal Content']?.toString()    ?? '';
-      final country = data['Country']?.toString()         ?? 'USA';
-      final isSet  = data['is_set'] == true || denom.toLowerCase() == 'set' || data['item_type'] == 'set';
-
-      final mintStr = mint.isNotEmpty && mint != 'None' ? '-$mint' : '';
-      final coinName = [
-        if (year.isNotEmpty) '$year$mintStr',
-        if (series.isNotEmpty && isSet) series else if (denom.isNotEmpty) denom,
-      ].join(' ').trim();
-
-      tasks.add(_ValuationTask(
-        collection: 'coins',
-        docId: doc.id,
-        itemType: isSet ? 'set' : 'coin',
-        name: coinName.isEmpty ? 'Unknown item' : coinName,
-        year: year,
-        denomination: denom,
-        condition: cond,
-        country: country,
-        details: 'Program: $series, Metal: $metal',
-        extraData: {
-          'mint_mark': mint,
-          'program_series': series,
-          'metal_content': metal,
-          'is_set': isSet,
-        },
-      ));
+      final task = buildCoinTask(doc.id, doc.data());
+      if (task != null) tasks.add(task);
     }
 
     // 2. Fetch unvalued currency/banknotes
     final currencySnap = await currencyRef.get();
     for (final doc in currencySnap.docs) {
-      final data = doc.data();
-      final status = data['ai_value_status']?.toString() ?? '';
-      if (status == 'valued') continue;
-
-      final year   = data['Year']?.toString()             ?? '';
-      final denom  = data['Denomination']?.toString()     ?? '';
-      final cond   = data['Condition']?.toString()        ?? '';
-      final country = data['Country']?.toString()         ?? 'USA';
-      final desc   = data['Description']?.toString()       ?? '';
-      final issuer = data['Series/Issuer']?.toString()     ?? '';
-      final notes  = data['Personal Notes']?.toString()    ?? '';
-
-      final name = desc.isNotEmpty ? desc : '$denom Banknote';
-
-      tasks.add(_ValuationTask(
-        collection: 'currency',
-        docId: doc.id,
-        itemType: 'banknote',
-        name: name,
-        year: year,
-        denomination: denom,
-        condition: cond,
-        country: country,
-        details: 'Issuer/Series: $issuer. Notes: $notes',
-      ));
+      final task = buildCurrencyTask(doc.id, doc.data());
+      if (task != null) tasks.add(task);
     }
 
-    final total = tasks.length;
-    int completed = _progress.completed; // resume from last position
-    int failed    = _progress.failed;
+    final initialProgress = computeInitialRunProgress(
+      previous: _progress,
+      pendingTaskCount: tasks.length,
+      totalCollectionCount: coinsSnap.docs.length + currencySnap.docs.length,
+    );
+    final total   = initialProgress.total;
+    int completed = initialProgress.completed;
+    int failed    = initialProgress.failed;
 
-    _emit(BatchValuationProgress(
-      total: total, completed: completed, failed: failed,
-      isRunning: true, isPaused: false,
-    ));
+    _emit(initialProgress);
 
-    if (total == 0) {
+    if (tasks.isEmpty) {
       _running = false;
-      final totalItemsCount = coinsSnap.docs.length + currencySnap.docs.length;
-      _emit(BatchValuationProgress(
-        total: totalItemsCount, completed: totalItemsCount,
-        isRunning: false,
-      ));
+      clearPersisted();
       return;
     }
 
@@ -259,7 +347,7 @@ class BatchValuationService {
       ));
 
       final docRef = FirebaseFirestore.instance
-          .collection(AuthService.coinsPath)
+          .collection(collectionPathForTask(task.collection))
           .doc(task.docId);
 
       try {
@@ -292,27 +380,8 @@ class BatchValuationService {
           );
         }
 
-        // Step 2: Persist canonical status and values
-        final status = result['ai_value_status']?.toString() ?? 'valued';
-        final payload = <String, dynamic>{
-          'ai_value_status':    status,
-          'ai_estimated_value': result['estimated_value'] ?? 'Pending',
-          'ai_value_source':    result['source'] ?? 'text_estimator',
-          'ai_value_basis':     result['basis'] ?? '',
-          'ai_value_confidence': result['confidence'] ?? 'LOW',
-          'ai_needs_photo':     result['needs_photo'] ?? true,
-          'ai_value_as_of':     DateTime.now().toUtc().toIso8601String(),
-        };
-
-        if (result['numeric_median'] != null) {
-          payload['estimated_value'] = (result['numeric_median'] as num).toDouble();
-        }
-        if (result['low'] != null) {
-          payload['ai_value_low'] = (result['low'] as num).toDouble();
-        }
-        if (result['high'] != null) {
-          payload['ai_value_high'] = (result['high'] as num).toDouble();
-        }
+        // Step 2: Persist canonical status and values (including Golden Schema key)
+        final payload = buildValuationPayload(result);
 
         await docRef.set(payload, SetOptions(merge: true));
         completed++;
@@ -446,7 +515,8 @@ class BatchValuationService {
   void dispose() => _controller.close();
 }
 
-class _ValuationTask {
+@visibleForTesting
+class ValuationTask {
   final String collection; // 'coins' or 'currency'
   final String docId;
   final String itemType;
@@ -458,7 +528,7 @@ class _ValuationTask {
   final String details;
   final Map<String, dynamic>? extraData;
 
-  _ValuationTask({
+  ValuationTask({
     required this.collection,
     required this.docId,
     required this.itemType,
@@ -471,4 +541,3 @@ class _ValuationTask {
     this.extraData,
   });
 }
-

@@ -23,34 +23,106 @@ def _get_utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def sanitize_item_payload(item_data: Dict[str, Any], privacy_toggles: Dict[str, bool]) -> Dict[str, Any]:
+def sanitize_item_payload(
+    item_data: Dict[str, Any],
+    privacy_toggles: Optional[Dict[str, bool]] = None,
+    **kwargs: bool,
+) -> Dict[str, Any]:
     """
     Strips sensitive personal/financial fields from item payload based on User A's privacy preferences.
+    Covers legacy snake_case keys, Golden Schema keys, and nested paper_trail metadata.
     """
+    toggles: Dict[str, bool] = dict(privacy_toggles or {})
+    toggles.update(kwargs)
+
     sanitized = dict(item_data)
-    
+    paper_trail = dict(sanitized["paper_trail"]) if isinstance(sanitized.get("paper_trail"), dict) else None
+
     # Financial fields
-    if privacy_toggles.get("hide_cost_basis", False):
-        for field in ["purchase_price", "cost_basis", "price_paid", "purchase_date", "acquired_price", "Purchase Cost"]:
+    if toggles.get("hide_cost_basis", False):
+        for field in [
+            "purchase_price",
+            "cost_basis",
+            "price_paid",
+            "purchase_date",
+            "acquired_price",
+            "Purchase Cost",
+            "Cost",
+            "Purchase Date",
+            "cost",
+            "set_cost_label",
+            "unit_cost_basis_cents",
+            "allocated_cost_basis_cents",
+            "original_cost_basis",
+        ]:
             sanitized.pop(field, None)
-            
+        if paper_trail is not None:
+            for pt_field in ["purchase_price", "purchase_date", "cost", "price_paid"]:
+                paper_trail.pop(pt_field, None)
+
     # Private notes
-    if privacy_toggles.get("hide_private_notes", False):
-        for field in ["private_notes", "notes", "personal_notes", "user_notes", "Personal Notes I"]:
-            sanitized.pop(field, None)
-            
-    # Storage & inventory location
-    if privacy_toggles.get("hide_storage_location", False):
-        for field in ["storage_location", "vault_box", "safe_number", "bin_location", "location", "Storage Location"]:
-            sanitized.pop(field, None)
-            
-    # Invoice & vendor IDs
-    if privacy_toggles.get("hide_invoices", False):
-        for field in ["invoice_id", "invoice_num", "receipt_url", "vendor_name", "order_id", "Retailer Invoice #"]:
+    if toggles.get("hide_private_notes", False):
+        for field in [
+            "private_notes",
+            "notes",
+            "personal_notes",
+            "user_notes",
+            "Personal Notes I",
+            "Personal Notes",
+        ]:
             sanitized.pop(field, None)
 
+    # Storage & inventory location
+    if toggles.get("hide_storage_location", False):
+        for field in [
+            "storage_location",
+            "vault_box",
+            "vault_id",
+            "safe_number",
+            "safe_location",
+            "bin_location",
+            "box_number",
+            "location",
+            "Storage Location",
+        ]:
+            sanitized.pop(field, None)
+
+    # Invoice & vendor IDs
+    if toggles.get("hide_invoices", False):
+        for field in [
+            "invoice_id",
+            "invoice_num",
+            "receipt_url",
+            "vendor_name",
+            "order_id",
+            "Retailer Invoice #",
+            "Retailer/Website",
+            "Retailer/Dealer",
+            "Retailer Item No.",
+            "receipt_id",
+            "receipt_gcs_path",
+        ]:
+            sanitized.pop(field, None)
+        if paper_trail is not None:
+            for pt_field in [
+                "receipt_id",
+                "receipt_filename",
+                "retailer",
+                "gcs_path",
+                "invoice_id",
+                "order_id",
+                "receipt_url",
+            ]:
+                paper_trail.pop(pt_field, None)
+
+    if paper_trail is not None:
+        if paper_trail:
+            sanitized["paper_trail"] = paper_trail
+        else:
+            sanitized.pop("paper_trail", None)
+
     # Owner & user photos (Bug B4)
-    if privacy_toggles.get("hide_owner_photos", True):
+    if toggles.get("hide_owner_photos", True):
         for field in ["owner_photos", "user_photos", "images_user", "custom_images", "user_images"]:
             sanitized.pop(field, None)
 
@@ -279,7 +351,7 @@ def execute_claim_transaction(
     claimed_items = []
     now_iso = _get_utc_now().isoformat()
 
-    # Release unselected items back to sender (Bug B2)
+    # Release unselected items back to sender and remove their pending ghost archives (Bug B2)
     for item, sender_ref, sender_snap in unselected_item_snaps:
         if sender_snap.exists:
             transaction.update(sender_ref, {
@@ -287,6 +359,21 @@ def execute_claim_transaction(
                 "transferId": firestore.DELETE_FIELD,
                 "pendingTransferQty": firestore.DELETE_FIELD
             })
+        unselected_id = item.get("id") or item.get("item_id")
+        if unselected_id:
+            unselected_type = str(item.get("item_type") or item.get("category") or "").lower()
+            unselected_is_paper = (
+                unselected_type in ["paper_currency", "banknote", "currency", "paper_money", "note"]
+                or "FR-" in str(item.get("Variety", ""))
+            )
+            unselected_arch_col = "transferred_currency" if unselected_is_paper else "transferred_coins"
+            unselected_arch_ref = (
+                db.collection("users")
+                .document(clean_sender_id)
+                .collection(unselected_arch_col)
+                .document(unselected_id)
+            )
+            transaction.delete(unselected_arch_ref)
 
     for item, sender_ref, sender_snap in sender_item_snaps:
         item_id = item.get("id")
@@ -336,17 +423,30 @@ def execute_claim_transaction(
         is_paper_money = item_type in ["paper_currency", "banknote", "currency", "paper_money", "note"] or "FR-" in str(item.get("Variety", ""))
         archive_subcol = "transferred_currency" if is_paper_money else "transferred_coins"
 
-        # Archive copy in sender's transferred_coins/transferred_currency subcollection with legal provenance
+        # Archive copy in sender's transferred_coins/transferred_currency subcollection with legal provenance.
+        # Merge sender_data after item so privacy-stripped fields (Cost, Personal Notes, paper_trail, etc.)
+        # remain intact in the sender's private archive while staying stripped from recipient_ref.
         sender_archive_ref = db.collection("users").document(clean_sender_id).collection(archive_subcol).document(item_id)
         transaction.set(sender_archive_ref, {
             **item,
+            **sender_data,
             "original_item_id": item_id,
             "transfer_transaction_id": transfer_ref.id,
             "sender_email": clean_sender_id,
             "receiver_email": clean_user_b_id,
             "transfer_timestamp": now_iso,
-            "historical_valuation_at_transfer": item.get("AI Estimated Value") or item.get("estimated_value") or item.get("Cost") or 0.0,
+            "historical_valuation_at_transfer": (
+                item.get("AI Estimated Value")
+                or item.get("estimated_value")
+                or sender_data.get("AI Estimated Value")
+                or sender_data.get("estimated_value")
+                or sender_data.get("Cost")
+                or sender_data.get("Purchase Cost")
+                or item.get("Cost")
+                or 0.0
+            ),
             "transferStatus": "transferred",
+            "transfer_status": "transferred",
             "transferredTo": clean_user_b_id,
             "claimed_at": now_iso,
             "transferred_qty": transfer_qty
