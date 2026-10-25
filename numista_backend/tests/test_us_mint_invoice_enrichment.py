@@ -90,3 +90,33 @@ def test_enrich_us_mint_item_with_code_in_description():
     assert enriched["Retailer Item No."] == "26XL"
     assert enriched["Strike Type"] == "Reverse Proof"
     assert enriched["Denomination"] == "Dollar"
+
+
+def test_enrich_us_mint_item_26sqrp_expansion():
+    # 26SQRP is a 25-Coin Roll, Cost $61.00
+    raw_item = {
+        "item_type": "coin",
+        "Retailer Item No.": "26SQRP",
+        "Quantity": 1,
+        "Cost": 61.00
+    }
+    enriched = enrich_us_mint_item(raw_item)
+    assert enriched["_catalog_grounded"] is True
+    assert enriched["Quantity"] == 25
+    assert enriched["quantity"] == 25
+    assert enriched["pack_expanded"] is True
+    assert enriched["pack_quantity_multiplier"] == 25
+    assert enriched["unit_cost"] == 2.44  # 61.00 / 25
+
+def test_enrich_us_mint_item_26sqrp_idempotency():
+    # If the quantity is already a multiple of 25 (e.g. 25, 50) or already expanded, it shouldn't expand again
+    raw_item = {
+        "item_type": "coin",
+        "Retailer Item No.": "26SQRP",
+        "Quantity": 25,
+        "Cost": 61.00
+    }
+    enriched = enrich_us_mint_item(raw_item)
+    # Should stay 25, because 25 > 10 and 25 % 25 == 0, so it skips expansion.
+    assert enriched["Quantity"] == 25
+    assert enriched.get("pack_expanded") is None

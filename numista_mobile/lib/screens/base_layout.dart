@@ -1297,7 +1297,7 @@ class _BaseLayoutState extends State<BaseLayout> {
               ),
             ),
             if (badgeCount > 0) ...[
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(

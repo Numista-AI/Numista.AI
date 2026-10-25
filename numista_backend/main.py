@@ -7487,8 +7487,9 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     if subtotal_val <= 0.0:
                         subtotal_val = raw_item_sum
 
+                    # B4: Cap shipping offset to avoid phantom landed cost
                     total_global_fees = 0.0
-                    if grand_total > subtotal_val:
+                    if grand_total > subtotal_val and subtotal_val > 0:
                         total_global_fees = grand_total - subtotal_val
                     elif (shipping_val + tax_val) > 0:
                         total_global_fees = shipping_val + tax_val
@@ -7585,10 +7586,23 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         if not is_supply:
                             doc["item_type"] = _classify_item_type(doc)
 
+                        # B1: Call enrich_us_mint_item on doc to expand pack/roll quantity
+                        doc["Original Description from source"] = it.get("Original Description from source", "")
+                        doc["Retailer Item No."] = it.get("Retailer Item No.", "")
+                        doc["Quantity"] = it.get("Quantity") or it.get("quantity") or 1
+                        try:
+                            from services.us_mint_catalog_service import enrich_us_mint_item
+                            enrich_us_mint_item(doc)
+                        except Exception as e:
+                            logger.warning(f"Error enriching item in import worker: {e}")
+
                         doc_ref = col_ref.document(str(uuid.uuid4()))
                         batch.set(doc_ref, doc)
                         new_coin_ids.append(doc_ref.id)
-                        added_this_file += 1
+                        
+                        # B3: added_this_file += Quantity so the Done checkmark matches coins identified
+                        doc_qty = max(1, int(doc.get("Quantity") or doc.get("quantity") or 1))
+                        added_this_file += doc_qty
                         line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in doc.items()}
                         line_item_entry["id"] = doc_ref.id
                         line_items_out.append(line_item_entry)

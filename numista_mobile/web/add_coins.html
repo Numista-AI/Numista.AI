@@ -427,7 +427,7 @@
 <!-- Session Summary -->
 <div class="card" id="summary-panel">
   <div class="card-header">
-    <h2>&#9989; Import Complete</h2>
+    <h2>&#9989; All Files Processed</h2>
     <span id="summary-date" style="font-size:0.82rem;color:var(--text-dim);"></span>
   </div>
   <div class="card-body">
@@ -457,6 +457,7 @@
       <button class="btn btn-primary"   onclick="goToReviewQueue()">&#128203; Go to Review Queue</button>
       <button class="btn btn-secondary" onclick="showPaperTrail()">&#129534; View Paper Trail</button>
       <button class="btn btn-ghost"     onclick="resetImport()">&#11014;&#65039; Import More</button>
+      <button class="btn btn-ghost"     onclick="window.parent.postMessage({type:'NAVIGATE', route:'/'}, '*');">&#10060; Exit</button>
     </div>
   </div>
 </div>
