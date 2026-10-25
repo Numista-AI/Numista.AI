@@ -167,6 +167,7 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "title": "2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll",
         "formal_name": "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll (Philadelphia)",
         "year": 2026,
+        "pack_quantity": 25,
         "mint_mark": "",
         "mint_facility": "Philadelphia (P)",
         "denomination": "Dollar",
@@ -350,6 +351,32 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
             facility_note = f"Mint Facility: {facility}"
             if facility_note not in existing_notes:
                 item["Personal Notes"] = f"{existing_notes} | {facility_note}".strip(" |")
+
+        # Pack Quantity Expansion (C1, C2, B1, B2, B4)
+        pack_qty = catalog_match.get("pack_quantity")
+        if pack_qty and isinstance(pack_qty, int) and pack_qty > 1 and not item.get("pack_expanded"):
+            raw_qty = item.get("Quantity") or item.get("quantity") or 1
+            try:
+                curr_qty = int(raw_qty)
+            except (ValueError, TypeError):
+                curr_qty = 1
+                
+            # C2: Guard against expanding if quantity is already a multiple of pack_qty or > 10
+            if curr_qty <= 10 and (curr_qty % pack_qty != 0):
+                new_qty = curr_qty * pack_qty
+                item["Quantity"] = new_qty
+                item["quantity"] = new_qty
+                item["pack_expanded"] = True
+                item["pack_quantity_multiplier"] = pack_qty
+                
+                # B2/B4: Ensure unit_cost is calculated from lot total Cost
+                cost_val = item.get("Cost") or item.get("Purchase Cost") or item.get("cost") or 0.0
+                try:
+                    cost_float = float(cost_val)
+                    if cost_float > 0.0:
+                        item["unit_cost"] = round(cost_float / new_qty, 4)
+                except (ValueError, TypeError):
+                    pass
 
         item["_catalog_grounded"] = True
 
