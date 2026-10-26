@@ -1733,10 +1733,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v8.18.15h',
+    date: '2026-10-26',
+    description: 'Us_mint Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Us_mint: credit shipping on 26SQRP roll invoices to zero fee and set 25 @ .44 with stale row purge',
+      'Morgan-pilot: sync Batch B rows.py State Quarters definitions',
+      'Net: NET-537 preview ready 26sqrp retailer parse failfix verified on p7gate',
+      'Backend: use set(merge=True) in _link_receipts_to_coins to prevent slash key error',
+      'Net: NET-536 re-GO FT all-invoices gate on fixed p7-gate preview',
+      'Net: NET-535 preview ready p7-gate api backend failfix verified',
+      'Preview: route preview channel add_coins.html and api base to p7gate backend',
+      'Net: NET-533 GO FT all-Invoices gate on p7-gate preview + WAKE_FIELDTESTER',
+    ],
+  ),
+  _Release(
     version: 'v8.18.15',
     date: '2026-10-21',
     description: 'P7-v8.18.15 Android Camera Recovery, Landscape Scroll & Phone UX Gating',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'gated all phone-specific fixes behind isNativePhone to keep web 100% unchanged (NET-410)',
       'fixed landscape overflow with scrollable entry methods and safe area padding (NET-413p)',
