@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants.dart';
 
 class UpcomingRelease {
   final String itemNumber;
@@ -74,7 +75,7 @@ class UpcomingRelease {
 }
 
 class UpcomingReleasesService {
-  static const String _baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+  static const String _baseUrl = kApiBaseUrl;
 
   // Per-endpoint guard: only attempt a network fetch once per app session per endpoint.
   // Subsequent calls for the same endpoint return from cache to avoid server spam.

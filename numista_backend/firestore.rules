@@ -137,12 +137,12 @@ service cloud.firestore {
     // Client secrets (e.g. cert_id) are strictly prohibited and unreadable (REQ-023E M4).
     // Write access restricted to admin (backend service account bypasses rules).
     match /config/ebay {
-      allow read: if isAuthenticated() && !('cert_id' in resource.data);
+      allow read: if isAuthenticated() && (resource == null || !('cert_id' in resource.data));
       allow write: if false;  // backend service account only
     }
 
     match /config/{document=**} {
-      allow read: if isAuthenticated() && (!('cert_id' in resource.data));
+      allow read: if isAuthenticated() && (resource == null || !('cert_id' in resource.data));
       allow write: if false;  // backend service account only
     }
 

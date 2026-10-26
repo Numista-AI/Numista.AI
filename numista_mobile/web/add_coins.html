@@ -1,9 +1,18 @@
 <!DOCTYPE html>
+<!--
+  Backend API URL Strategy:
+  Dart --dart-define values are not available in standalone HTML files.
+  A '?api=<url>' query parameter override is honored ONLY when the current origin
+  matches *.run.app or is a recognized Firebase preview channel (numista-vault--*.web.app / *.firebaseapp.com).
+  The override is NEVER allowed on production origins (numista.ai or numista-vault.web.app without preview prefix).
+  On production origins, always use the hard-coded live URL.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Add Coins — Numista.AI</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <meta name="robots" content="noindex, nofollow" />
   <meta name="description" content="Upload invoices, spreadsheets, and coin images to Numista.AI. Drop a single file or an entire folder — the AI does the rest." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -27,6 +36,49 @@
       --radius:      12px;
       --radius-lg:   18px;
       --shadow:      0 8px 32px rgba(0,0,0,0.45);
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:          #f8fafc;
+        --surface:     #ffffff;
+        --surface2:    #f1f5f9;
+        --border:      #cbd5e1;
+        --accent:      #2563eb;
+        --accent-glow: rgba(37,99,235,0.12);
+        --gold:        #d97706;
+        --gold-glow:   rgba(217,119,6,0.15);
+        --green:       #059669;
+        --amber:       #d97706;
+        --red:         #dc2626;
+        --muted:       #64748b;
+        --text:        #0f172a;
+        --text-dim:    #475569;
+        --shadow:      0 8px 32px rgba(0,0,0,0.08);
+      }
+      #morgan-guide-card {
+        background: linear-gradient(135deg, #f0fdfa, #e0f2fe) !important;
+        border-color: rgba(13,148,136,0.3) !important;
+      }
+      #morgan-guide-card h3 {
+        color: #0f172a !important;
+      }
+      #morgan-guide-card p, #morgan-guide-card strong {
+        color: #1e293b !important;
+      }
+      /* Fix inner dark boxes inside morgan card in light mode */
+      #morgan-guide-card > div > div[style*='rgba(11'] {
+        background: rgba(13,148,136,0.06) !important;
+        border-color: rgba(13,148,136,0.2) !important;
+      }
+      #morgan-guide-card div[style*='background: rgba(11'] {
+        background: #F0F9FF !important;
+        border-color: #BAE6FD !important;
+      }
+      #dealer-help-box {
+        background: #F8FAFC !important;
+        border-color: #CBD5E1 !important;
+      }
     }
 
 
@@ -302,7 +354,7 @@
     <div id="morgan-guide-card" style="background: linear-gradient(135deg, #101c2e, #16253b); border: 1px solid rgba(45,212,191,0.35); border-radius: 14px; padding: 20px 22px; margin-bottom: 24px; box-shadow: 0 6px 20px rgba(0,0,0,0.35);">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
         <div style="display: flex; align-items: center; gap: 14px;">
-          <img src="assets/morgan_avatar.png" alt="Morgan the Owl" style="width: 46px; height: 46px; border-radius: 50%; border: 2px solid #D4A843; object-fit: cover; box-shadow: 0 0 16px rgba(212,168,67,0.4); flex-shrink: 0;">
+          <div style="width: 46px; height: 46px; border-radius: 50%; border: 2px solid #D4A843; background: linear-gradient(135deg, #1e293b, #0f172a); display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 0 16px rgba(212,168,67,0.4); flex-shrink: 0;" aria-label="Morgan the Owl">🦉</div>
           <div>
             <div style="display: flex; align-items: center; gap: 8px;">
               <h3 style="font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin: 0;">Morgan AI Assistant</h3>
@@ -392,6 +444,14 @@
       <div class="file-count-badge" id="file-count-badge"></div>
     </div>
 
+    <!-- Staged Files Preview (shown when files are dropped or selected) -->
+    <div id="staged-files-container" style="display: none; margin-top: 18px;">
+      <div style="font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 8px;">
+        Selected Files (<span id="staged-files-count">0</span>):
+      </div>
+      <div class="file-list" id="staged-file-list" style="max-height: 220px; overflow-y: auto;"></div>
+    </div>
+
     <div id="mode-row">
       <span id="mode-badge" class="mode-badge"></span>
       <span id="mode-desc" style="font-size:0.82rem;color:var(--text-dim);"></span>
@@ -427,7 +487,7 @@
 <!-- Session Summary -->
 <div class="card" id="summary-panel">
   <div class="card-header">
-    <h2>&#9989; All Files Processed</h2>
+    <h2 id="summary-title">&#9989; All Files Processed</h2>
     <span id="summary-date" style="font-size:0.82rem;color:var(--text-dim);"></span>
   </div>
   <div class="card-body">
@@ -457,7 +517,7 @@
       <button class="btn btn-primary"   onclick="goToReviewQueue()">&#128203; Go to Review Queue</button>
       <button class="btn btn-secondary" onclick="showPaperTrail()">&#129534; View Paper Trail</button>
       <button class="btn btn-ghost"     onclick="resetImport()">&#11014;&#65039; Import More</button>
-      <button class="btn btn-ghost"     onclick="window.parent.postMessage({type:'NAVIGATE', route:'/'}, '*');">&#10060; Exit</button>
+      <button class="btn btn-ghost"     onclick="exitAddCoins()" style="margin-left:auto;">&#10006;&#65039; Exit</button>
     </div>
   </div>
 </div>
@@ -498,12 +558,12 @@
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
   const firebaseConfig = {
-    apiKey: "AIzaSyDSM3pQl0oWdZgOw2vXCvhyRH899l-ZvcM",
+    apiKey: "AIzaSyCPGC879Tl1FaGucQmlw7qKL25b8v4ACF8",
     authDomain: "studio-9101802118-8c9a8.firebaseapp.com",
     projectId: "studio-9101802118-8c9a8",
     storageBucket: "studio-9101802118-8c9a8.firebasestorage.app",
     messagingSenderId: "568985927038",
-    appId: "1:568985927038:web:bf2a6f690b59e2148b072f"
+    appId: "1:568985927038:web:9ea56548eed27d5a8b072f"
   };
 
   const app = initializeApp(firebaseConfig);
@@ -512,16 +572,56 @@
   // Expose a promise that resolves to the current user (or null).
   // Non-module scripts below await window._fbUserReady to get the user.
   window._fbUserReady = new Promise(resolve => {
-    onAuthStateChanged(auth, user => resolve(user));
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        const injectBanner = () => {
+          if (document.getElementById('auth-required-banner')) return;
+          const banner = document.createElement('div');
+          banner.id = 'auth-required-banner';
+          banner.style.cssText = 'background:#FEF3C7;border:1px solid #F59E0B;color:#92400E;padding:14px 18px;border-radius:8px;margin:0 auto 16px;max-width:860px;font-size:18px;font-weight:500;text-align:center;';
+          banner.innerHTML = 'Please sign in to Numista.AI before using the importer. <a href="/" style="color:#1D4ED8;text-decoration:underline;font-weight:600;">Return to Numista.AI to sign in</a>';
+          const firstCard = document.querySelector('.card') || document.body.firstChild;
+          if (firstCard && firstCard.parentNode) { firstCard.parentNode.insertBefore(banner, firstCard); } else { document.body.insertBefore(banner, document.body.firstChild); }
+          const startBtn = document.getElementById('start-btn');
+          if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.4'; }
+        };
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', injectBanner); } else { injectBanner(); }
+      }
+      resolve(user);
+    });
   });
 </script>
 
 <script>
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? ''
-  : (window.location.origin.includes('numista.ai') || window.location.origin.includes('web.app')
-      ? 'https://numista-backend-568985927038.us-central1.run.app'
-      : '');
+function resolveApiBase(origin, search, liveUrl) {
+  if (origin === 'http://localhost' || origin === 'http://127.0.0.1' ||
+      origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+    return '';
+  }
+  var PREVIEW_ORIGIN_RE = /^https:\/\/(([^.]+\.run\.app)|(numista-vault--[^.]+\.(?:web\.app|firebaseapp\.com)))$/;
+  var isPreview = PREVIEW_ORIGIN_RE.test(origin);
+  if (!isPreview) { return liveUrl; }
+  try {
+    var params = new URLSearchParams(search);
+    var apiParam = params.get('api');
+    if (apiParam) {
+      var u = new URL(apiParam);
+      if (u.protocol !== 'https:') return liveUrl;
+      var ALLOWED_HOST_RE = /^(?:[a-z0-9-]+---)?numista-(?:backend|scan-service)-(?:568985927038\.us-central1\.run\.app|qntvrqvxma-uc\.a\.run\.app)$/;
+      if (!ALLOWED_HOST_RE.test(u.hostname)) return liveUrl;
+      return u.origin;
+    }
+  } catch (e) {}
+  return liveUrl;
+}
+
+function getApiBaseUrl() {
+  var LIVE_URL = 'https://numista-backend-568985927038.us-central1.run.app';
+  return resolveApiBase(window.location.origin, window.location.search, LIVE_URL);
+}
+window.resolveApiBase = resolveApiBase;
+window.getApiBaseUrl = getApiBaseUrl;
+const API_BASE = getApiBaseUrl();
 const _urlEmail = new URLSearchParams(window.location.search).get('email') || '';
 function getUserEmail() { return _urlEmail; }
 
@@ -551,12 +651,25 @@ async function getAuthHeader() {
   }
 }
 
-function showError(msg) {
+const SIGN_IN_AGAIN_MSG = 'Please sign in again. Your sign-in has expired - go back to Numista.AI, sign in, then reopen Bulk Import.';
+class AuthError extends Error {}
+
+/** Waits for Firebase sign-in; throws AuthError if no signed-in user/token. */
+async function requireAuthHeader() {
+  const h = await getAuthHeader();
+  if (!h.Authorization) throw new AuthError(SIGN_IN_AGAIN_MSG);
+  return h;
+}
+function checkAuthResp(resp) {
+  if (resp && (resp.status === 401 || resp.status === 403)) throw new AuthError(SIGN_IN_AGAIN_MSG);
+}
+
+function showError(msg, showRetry = false) {
   let errBox = document.getElementById('error-banner');
   if (!errBox) {
     errBox = document.createElement('div');
     errBox.id = 'error-banner';
-    errBox.style.cssText = 'background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #f87171; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;';
+    errBox.style.cssText = 'background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #f87171; padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;';
     const progressPanel = document.getElementById('progress-panel');
     if (progressPanel) {
       progressPanel.insertBefore(errBox, progressPanel.firstChild);
@@ -564,8 +677,17 @@ function showError(msg) {
       document.body.insertBefore(errBox, document.body.firstChild);
     }
   }
-  errBox.innerHTML = '<span>&#9888;&#65039; ' + escHtml(msg) + '</span><button style="background:none;border:none;color:#f87171;cursor:pointer;font-weight:bold;" onclick="this.parentElement.remove()">✕</button>';
+  const retryBtnHtml = showRetry
+    ? '<button type="button" id="retry-btn" onclick="retryImport()" style="background:#ef4444;color:white;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.8rem;">Retry Upload</button>'
+    : '';
+  errBox.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><span>&#9888;&#65039; ' + escHtml(msg) + '</span>' + retryBtnHtml + '</div><button style="background:none;border:none;color:#f87171;cursor:pointer;font-weight:bold;font-size:1.1rem;" onclick="this.parentElement.remove()">✕</button>';
   errBox.style.display = 'flex';
+}
+
+function retryImport() {
+  const errBox = document.getElementById('error-banner');
+  if (errBox) errBox.remove();
+  startImport();
 }
 
 function resetImportUIState() {
@@ -595,25 +717,134 @@ const TYPE_LABEL = { spreadsheet:'Spreadsheet', invoice:'Invoice / Receipt', ima
 const dropZone = document.getElementById('drop-zone');
 ['dragenter','dragover'].forEach(ev =>
   dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('drag-over'); }));
-['dragleave','drop'].forEach(ev =>
+['dragleave'].forEach(ev =>
   dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); }));
-dropZone.addEventListener('drop', e => { e.preventDefault(); handleFileList(e.dataTransfer.files); });
+
+dropZone.addEventListener('drop', async e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const files = await extractFilesFromDataTransfer(e.dataTransfer);
+  handleFileList(files, true);
+});
+
 dropZone.addEventListener('click', e => {
   if (!e.target.closest('button')) document.getElementById('file-input').click();
 });
-document.getElementById('file-input').addEventListener('change',   e => handleFileList(e.target.files));
+document.getElementById('file-input').addEventListener('change', e => {
+  handleFileList(e.target.files, true);
+});
 
-function handleFileList(fileList) {
+async function extractFilesFromDataTransfer(dataTransfer) {
+  if (!dataTransfer) return [];
+  const results = [];
+  const items = dataTransfer.items;
+  if (items && items.length > 0) {
+    const entries = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.webkitGetAsEntry) {
+        const entry = item.webkitGetAsEntry();
+        if (entry) entries.push(entry);
+      }
+    }
+    if (entries.length > 0) {
+      async function traverseEntry(entry) {
+        if (entry.isFile) {
+          return new Promise(resolve => {
+            entry.file(f => resolve([f]), () => resolve([]));
+          });
+        } else if (entry.isDirectory) {
+          const dirReader = entry.createReader();
+          return new Promise(resolve => {
+            dirReader.readEntries(async subEntries => {
+              const subFiles = [];
+              for (const sub of subEntries) {
+                const fList = await traverseEntry(sub);
+                subFiles.push(...fList);
+              }
+              resolve(subFiles);
+            }, () => resolve([]));
+          });
+        }
+        return [];
+      }
+      for (const entry of entries) {
+        const subFiles = await traverseEntry(entry);
+        results.push(...subFiles);
+      }
+    }
+  }
+  if (!results.length && dataTransfer.files && dataTransfer.files.length > 0) {
+    results.push(...Array.from(dataTransfer.files));
+  }
+  return results;
+}
+
+function renderStagedFiles(files) {
+  const container = document.getElementById('staged-files-container');
+  const list = document.getElementById('staged-file-list');
+  const countEl = document.getElementById('staged-files-count');
+  if (!container || !list) return;
+  if (!files || !files.length) {
+    container.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+  if (countEl) countEl.textContent = files.length;
+  list.innerHTML = '';
+  files.forEach((f, i) => {
+    const ftype = classifyFile(f.name);
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    row.innerHTML =
+      '<span class="file-type-icon">' + TYPE_ICON[ftype] + '</span>' +
+      '<div style="overflow:hidden;"><div class="file-name">' + escHtml(f.name) + '</div>' +
+      '<div class="file-name-sub">' + TYPE_LABEL[ftype] + ' &middot; ' + formatBytes(f.size) + '</div></div>' +
+      '<span class="file-status-chip chip-pending">Ready</span>';
+    list.appendChild(row);
+  });
+  container.style.display = 'block';
+}
+
+function clearSelectedFiles(e) {
+  if (e) e.stopPropagation();
+  selectedFiles = [];
+  const badge = document.getElementById('file-count-badge');
+  badge.textContent = '';
+  badge.classList.remove('show');
+  dropZone.classList.remove('has-files');
+  document.getElementById('mode-row').classList.remove('show');
+  document.getElementById('start-btn').classList.remove('show');
+  document.getElementById('file-input').value = '';
+  renderStagedFiles([]);
+}
+
+function handleFileList(fileList, append = true) {
   const allowed = ['pdf','xlsx','xls','csv','ods','jpg','jpeg','png','webp','heic','bmp','tiff','tif'];
-  selectedFiles = Array.from(fileList).filter(f => {
+  const incoming = Array.from(fileList || []).filter(f => {
     const ext = f.name.split('.').pop().toLowerCase();
     return allowed.includes(ext);
   });
+  if (!incoming.length && !selectedFiles.length) return;
+
+  if (append && selectedFiles.length > 0) {
+    const existingKeys = new Set(selectedFiles.map(f => f.name + '_' + f.size));
+    for (const f of incoming) {
+      const key = f.name + '_' + f.size;
+      if (!existingKeys.has(key)) {
+        selectedFiles.push(f);
+        existingKeys.add(key);
+      }
+    }
+  } else {
+    selectedFiles = incoming;
+  }
   if (!selectedFiles.length) return;
 
   const n = selectedFiles.length;
   const badge = document.getElementById('file-count-badge');
-  badge.textContent = n + ' file' + (n !== 1 ? 's' : '') + ' selected and ready';
+  badge.innerHTML = n + ' file' + (n !== 1 ? 's' : '') + ' selected and ready ' +
+    '<button type="button" onclick="clearSelectedFiles(event)" style="background:none;border:none;color:#94a3b8;cursor:pointer;text-decoration:underline;margin-left:8px;font-size:0.75rem;">Clear</button>';
   badge.classList.add('show');
   dropZone.classList.add('has-files');
 
@@ -631,6 +862,7 @@ function handleFileList(fileList) {
     modeDesc.textContent = n + ' files — live progress bar will appear';
   }
   document.getElementById('start-btn').classList.add('show');
+  renderStagedFiles(selectedFiles);
 }
 
 async function startImport() {
@@ -646,6 +878,7 @@ async function startImport() {
 
   const progressPanel = document.getElementById('progress-panel');
   progressPanel.classList.add('show');
+  progressPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   const compressImagesEnabled = document.getElementById('compress-images-checkbox').checked;
   const maskPiiEnabled = document.getElementById('mask-pii-checkbox').checked;
@@ -673,6 +906,8 @@ async function startImport() {
 
     buildFileListUI(filesToUpload);
 
+    const authHeaders = await getAuthHeader();
+
     for (let i = 0; i < filesToUpload.length; i++) {
       const f = filesToUpload[i];
       updateFileRow(i, 'active', 'Uploading...');
@@ -683,10 +918,28 @@ async function startImport() {
       formData.append('user_email', USER_EMAIL);
       formData.append('session_id', sessionId);
 
-      const resp = await fetch(API_BASE + '/api/import/upload', {
-        method: 'POST',
-        body: formData
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
+
+      let resp;
+      try {
+        resp = await fetch(API_BASE + '/api/import/upload', {
+          method: 'POST',
+          headers: await requireAuthHeader(),
+          body: formData,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        if (fetchErr instanceof AuthError) throw fetchErr;
+        updateFileRow(i, 'error', 'Upload failed');
+        if (fetchErr.name === 'AbortError') {
+          throw new Error('Upload timed out. Try fewer files or a smaller PDF.');
+        }
+        throw new Error('Upload blocked or network connection lost. Please ensure you are signed in and try again.');
+      }
+      checkAuthResp(resp);
 
       if (!resp.ok) {
         let errMsg = 'Upload failed';
@@ -695,6 +948,9 @@ async function startImport() {
           errMsg = errData.detail || errMsg;
         } catch(e) {}
         updateFileRow(i, 'error', 'Upload failed');
+        if (resp.status === 413) {
+          throw new Error('File too large: "' + f.name + '" exceeds the 32 MB limit.');
+        }
         throw new Error(errMsg);
       }
 
@@ -705,9 +961,11 @@ async function startImport() {
     startPolling();
 
     const procResp = await fetch(API_BASE + '/api/import/process', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST',
+      headers: Object.assign({'Content-Type':'application/json'}, await requireAuthHeader()),
       body: JSON.stringify({ user_email: USER_EMAIL, session_id: sessionId, mask_pii: maskPiiEnabled }),
     });
+    checkAuthResp(procResp);
 
     if (!procResp.ok) {
       const procData = await procResp.json();
@@ -715,7 +973,15 @@ async function startImport() {
     }
   } catch(err) {
     console.error('Import failure:', err);
-    showError('Import Error: ' + err.message);
+    if (err instanceof AuthError) {
+      clearInterval(pollInterval);
+      showError(SIGN_IN_AGAIN_MSG);
+    } else if (err instanceof TypeError) {
+      showError('Could not reach Numista.AI. If this keeps happening, please sign in again and retry.');
+    } else {
+      showError(err.message, true);
+    }
+    document.getElementById('progress-label').textContent = 'Upload halted — see error above.';
   } finally {
     resetImportUIState();
   }
@@ -763,36 +1029,93 @@ function updateProgress(done, total, label) {
 
 function startPolling() {
   document.getElementById('progress-label').innerHTML = '<span class="pulse-dot"></span> AI processing...';
+  const startTime = Date.now();
+  let lastProgressTime = Date.now();
+  let lastProcessedCount = 0;
+  const MAX_POLL_MS = 180000; // 180s timeout for multi-page documents
   pollInterval = setInterval(async () => {
     try {
+      const elapsed = Date.now() - startTime;
+      const authHeaders = await getAuthHeader();
       const r = await fetch(
-        API_BASE + '/api/import/status/' + sessionId + '?user_email=' + encodeURIComponent(USER_EMAIL)
+        API_BASE + '/api/import/status/' + sessionId + '?user_email=' + encodeURIComponent(USER_EMAIL),
+        { headers: await getAuthHeader() }
       );
-      if (!r.ok) return;
+      if (r.status === 401 || r.status === 403) { clearInterval(pollInterval); showError(SIGN_IN_AGAIN_MSG); return; }
+      if (!r.ok) {
+        let errDetail = 'Server returned ' + r.status;
+        try {
+          const ej = await r.json();
+          if (ej && (ej.detail || ej.message)) errDetail = ej.detail || ej.message;
+        } catch (_) {}
+        showError('Status check error: ' + errDetail, true);
+        return;
+      }
       const data = await r.json();
+
+      if ((data.processed_files || 0) > lastProcessedCount) {
+        lastProcessedCount = data.processed_files || 0;
+        lastProgressTime = Date.now();
+      }
+      if (data.status === 'linking') {
+        lastProgressTime = Date.now();
+      }
+
+      // Check timeout only if overall cap reached and no recent activity in 60s
+      if (elapsed >= MAX_POLL_MS && (Date.now() - lastProgressTime >= 60000)) {
+        clearInterval(pollInterval);
+        showError('Processing timed out. Please check your Review Queue or try uploading again.', true);
+        document.getElementById('progress-label').textContent = 'Timed out';
+        return;
+      }
 
       (data.per_file || []).forEach((f, i) => {
         const sm = { done:'done', error:'error', review_needed:'review', skipped:'skipped', processing:'active' };
         if (f.status !== 'pending') {
           updateFileRow(i, sm[f.status] || 'active',
-            f.coins_added ? ('Done — ' + f.coins_added + ' coin' + (f.coins_added!==1?'s':'')) : null);
+            f.error ? ('Error: ' + f.error) : (f.coins_added ? ('Done ✓ ' + f.coins_added + ' coin' + (f.coins_added!==1?'s':'')) : null));
         }
       });
       updateProgress(data.processed_files || 0, data.total_files || selectedFiles.length);
 
       if (data.status === 'done') {
         clearInterval(pollInterval);
-        showSummary(data.summary || {});
+        showSummary(data.summary || {}, false);
         loadReceipts();
+      } else if (data.status === 'done_with_errors') {
+        clearInterval(pollInterval);
+        showSummary(data.summary || {}, true);
+        loadReceipts();
+      } else if (data.status === 'error') {
+        clearInterval(pollInterval);
+        const errMsg = data.error || data.detail || 'AI processing encountered an error.';
+        showError(errMsg, true);
+        document.getElementById('progress-label').textContent = 'Processing error: ' + errMsg;
       } else if (data.status === 'linking') {
         document.getElementById('progress-label').textContent = 'Linking receipts to coins...';
+      } else {
+        const remainingSec = Math.max(0, Math.ceil((MAX_POLL_MS - elapsed) / 1000));
+        document.getElementById('progress-label').innerHTML =
+          '<span class="pulse-dot"></span> AI processing (' + remainingSec + 's remaining)...';
       }
-    } catch(e) { /* silent retry */ }
+    } catch(e) {
+      showError('Network/connection issue while checking status: ' + (e.message || e), true);
+    }
   }, 2500);
 }
 
-function showSummary(s) {
+function showSummary(s, hasErrors = false) {
   document.getElementById('summary-panel').classList.add('show');
+  const titleEl = document.getElementById('summary-title');
+  if (titleEl) {
+    if (hasErrors) {
+      titleEl.innerHTML = '&#9888;&#65039; Import Finished with Errors';
+      titleEl.style.color = '#dc2626';
+    } else {
+      titleEl.innerHTML = '&#9989; Import Complete';
+      titleEl.style.color = '';
+    }
+  }
   document.getElementById('summary-date').textContent =
     new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
   document.getElementById('stat-coins').textContent    = s.coins_identified || 0;
@@ -805,7 +1128,16 @@ function showSummary(s) {
     document.getElementById('unlinked-stat').style.display = 'block';
   }
   document.getElementById('overall-bar').style.width = '100%';
-  document.getElementById('progress-label').textContent = 'Complete';
+  const progLabel = document.getElementById('progress-label');
+  if (progLabel) {
+    if (hasErrors) {
+      progLabel.textContent = 'Finished with errors';
+      progLabel.style.color = '#dc2626';
+    } else {
+      progLabel.textContent = 'Complete';
+      progLabel.style.color = '';
+    }
+  }
 }
 
 async function loadReceipts() {
@@ -815,6 +1147,7 @@ async function loadReceipts() {
       API_BASE + '/api/receipts/' + encodeURIComponent(USER_EMAIL) + '?session_id=' + sessionId,
       { headers: authHeader }
     );
+    if (r.status === 401 || r.status === 403) { showError(SIGN_IN_AGAIN_MSG); return; }
     if (!r.ok) return;
     const data = await r.json();
     if (!(data.receipts || []).length) return;
@@ -878,6 +1211,7 @@ async function viewReceipt(receiptId, e) {
       API_BASE + '/api/receipts/' + encodeURIComponent(USER_EMAIL) + '/' + receiptId + '/view_url',
       { headers: authHeader }
     );
+    if (r.status === 401 || r.status === 403) { showError(SIGN_IN_AGAIN_MSG); return; }
     const data = await r.json();
     if (data.signed_url) window.open(data.signed_url, '_blank');
     else alert('Could not retrieve receipt URL.');
@@ -892,8 +1226,16 @@ function showPaperTrail() {
   document.getElementById('paper-trail-panel').scrollIntoView({ behavior:'smooth' });
 }
 function goToReviewQueue() { window.location.href = '/?route=Review%20Hub&email=' + encodeURIComponent(getUserEmail()); }
+function exitAddCoins() {
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ type: 'ADD_COINS_CLOSE' }, '*');
+  } else {
+    window.location.href = '/';
+  }
+}
 function resetImport() {
   selectedFiles = []; sessionId = null; clearInterval(pollInterval);
+  renderStagedFiles([]);
   ['upload-card','progress-panel','summary-panel','paper-trail-panel'].forEach(id => {
     const el = document.getElementById(id);
     el.style.opacity=''; el.style.pointerEvents=''; el.classList.remove('show');
@@ -1006,6 +1348,27 @@ function toggleDealerHelp() {
 
 // Kick off the count fetch on page load
 if (typeof initDangerZone === 'function') initDangerZone();
+</script>
+<script>
+// V8.17 self-test: resolveApiBase() security checks.
+// These run silently in prod; any failure throws to the browser console.
+(function selfTest() {
+  var LIVE = 'https://numista-backend-568985927038.us-central1.run.app';
+  // Accept
+  console.assert(resolveApiBase('https://p7gate---numista-backend-qntvrqvxma-uc.a.run.app', '', LIVE) === LIVE, 'a1: preview origin no ?api= -> live');
+  console.assert(resolveApiBase('https://numista-vault--abc123.web.app', '?api=' + encodeURIComponent('https://p7gate---numista-backend-568985927038.us-central1.run.app'), LIVE) === 'https://p7gate---numista-backend-568985927038.us-central1.run.app', 'a2: us-central1 form accepted');
+  console.assert(resolveApiBase('https://numista-vault--abc123.web.app', '?api=' + encodeURIComponent('https://p7gate---numista-backend-qntvrqvxma-uc.a.run.app'), LIVE) === 'https://p7gate---numista-backend-qntvrqvxma-uc.a.run.app', 'a3: uc.a form accepted');
+  console.assert(resolveApiBase('http://localhost:8080', '', LIVE) === '', 'a4: localhost -> empty');
+  // Reject
+  console.assert(resolveApiBase('https://numista.ai', '?api=' + encodeURIComponent('https://p7gate---numista-backend-568985927038.us-central1.run.app'), LIVE) === LIVE, 'r1: prod origin rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://evil.example/x.run.app', LIVE) === LIVE, 'r2: evil path rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://attacker.run.app', LIVE) === LIVE, 'r3: foreign run.app rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=http://p7gate---numista-backend-568985927038.us-central1.run.app', LIVE) === LIVE, 'r4: http rejected');
+  console.assert(resolveApiBase('https://numista-vault.web.app', '?api=' + encodeURIComponent('https://p7gate---numista-backend-568985927038.us-central1.run.app'), LIVE) === LIVE, 'r5: prod firebase rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://numista-backend-123456789012.us-central1.run.app', LIVE) === LIVE, 'r6: wrong project number rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://numista-backend-568985927038.europe-west1.run.app', LIVE) === LIVE, 'r7: wrong region rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://numista-backend-attackerxyz-uc.a.run.app', LIVE) === LIVE, 'r8: wrong hash rejected');
+})();
 </script>
 </body>
 </html>

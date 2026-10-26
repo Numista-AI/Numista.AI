@@ -215,7 +215,7 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
     // Run US Mint data normalization silently in background for all accounts.
     // Only processes coins that haven't been normalized yet.
-    if (!AuthService.isGuest) {
+    if (!AuthService.isGuest && !widget.isDemoMode && !GuestSeedService.isBrowseDemoMode && AuthService.isSignedIn) {
       CoinNormalizerService.runForUser();
     }
     // Auto-start the guided wizard for first-time Guest users.
@@ -382,6 +382,13 @@ class _BaseLayoutState extends State<BaseLayout> {
           onNavigate: _navigateTo,
           initialTabName: tabName,
         );
+      case 'Take a photo':
+      case 'AI Photo Identification':
+        return AddCoinsHub(
+          onNavigate: _navigateTo,
+          initialTabName: 'camera',
+          showCameraFullScreen: true,
+        );
       case 'World & Specialty':
         return AddWorldItemScreen(
           onNavigate: _navigateTo,
@@ -452,6 +459,8 @@ class _BaseLayoutState extends State<BaseLayout> {
     final double maxWidth;
     switch (route) {
       case 'Add New Coins':
+      case 'Take a photo':
+      case 'AI Photo Identification':
         maxWidth = 1100.0;
         break;
       case 'My Collection':
@@ -704,16 +713,21 @@ class _BaseLayoutState extends State<BaseLayout> {
                       else
                         Image.asset('assets/logo_owl.png',
                             height: 36, fit: BoxFit.contain),
-                      IconButton(
-                        icon: Icon(
-                          _isSidebarCollapsed
-                              ? Icons.chevron_right
-                              : Icons.chevron_left,
-                          color: isDark ? Colors.white70 : Colors.black54,
-                          size: 20,
+                      SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: IconButton(
+                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                          icon: Icon(
+                            _isSidebarCollapsed
+                                ? Icons.chevron_right
+                                : Icons.chevron_left,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                            size: 20,
+                          ),
+                          tooltip: _isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
+                          onPressed: _toggleSidebar,
                         ),
-                        tooltip: _isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
-                        onPressed: _toggleSidebar,
                       ),
                     ],
                   ),
@@ -850,7 +864,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                                 );
                               }),
 
-                            _buildNavItem('Microscope Scanner', icon: Icons.camera_alt_outlined),
+                            _buildNavItem('Take a photo', icon: Icons.camera_alt_outlined),
+                            _buildNavItem('Microscope Scanner', icon: Icons.biotech_outlined),
                             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                               stream: email.isNotEmpty
                                   ? FirebaseFirestore.instance
@@ -940,6 +955,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                           foregroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          minimumSize: const Size(double.infinity, 48),
+                          visualDensity: VisualDensity.standard,
                           elevation: 0,
                         ),
                         icon: Icon(Icons.feedback_outlined, size: 14, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA)),
@@ -1014,6 +1031,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                           side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          minimumSize: const Size(double.infinity, 48),
+                          visualDensity: VisualDensity.standard,
                         ),
                         icon: const Icon(Icons.logout, size: 14),
                         label: Text(
@@ -1097,6 +1116,8 @@ class _BaseLayoutState extends State<BaseLayout> {
             onTap: _showMorganDialog,
             borderRadius: BorderRadius.circular(8),
             child: Container(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              alignment: Alignment.center,
               padding: const EdgeInsets.all(10),
               child: Image.asset('assets/logo_owl.png', height: 20),
             ),
@@ -1105,6 +1126,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       );
     }
     return ListTile(
+      minVerticalPadding: 14,
       leading: Image.asset('assets/logo_owl.png', height: 20),
       title: const Text('Help & Ask Morgan',
           style: TextStyle(fontSize: NumistaTheme.textBody)),
@@ -1133,6 +1155,8 @@ class _BaseLayoutState extends State<BaseLayout> {
             'My Collection',
             'Currency Collection',
             'Review Hub',
+            'Take a photo',
+            'AI Photo Identification',
             'Microscope Scanner',
             'Coin Programs',
             'Coin Search',
@@ -1174,6 +1198,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                       });
                     } else if (title == 'Add new coins/notes/etc.') {
                       setState(() => _activeRoute = 'Add New Coins');
+                    } else if (title == 'Take a photo') {
+                      setState(() => _activeRoute = 'Take a photo');
                     } else if (title == 'Admin Grade Flags') {
                       setState(() => _activeRoute = 'Admin: Grade Flags');
                     } else if (title == '🔍 Numista Lookup' || title == 'Numista Lookup') {
@@ -1196,6 +1222,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                 : null,
             borderRadius: BorderRadius.circular(8),
             child: Container(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              alignment: Alignment.center,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: isActive
@@ -1228,6 +1256,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                   });
                 } else if (title == 'Add new coins/notes/etc.') {
                   setState(() => _activeRoute = 'Add New Coins');
+                } else if (title == 'Take a photo') {
+                  setState(() => _activeRoute = 'Take a photo');
                 } else if (title == 'Admin Grade Flags') {
                   setState(() => _activeRoute = 'Admin: Grade Flags');
                 } else if (title == '🔍 Numista Lookup' || title == 'Numista Lookup') {
@@ -1250,6 +1280,8 @@ class _BaseLayoutState extends State<BaseLayout> {
             : null,
         borderRadius: BorderRadius.circular(6),
         child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          alignment: Alignment.centerLeft,
           padding: EdgeInsets.symmetric(vertical: 8, horizontal: isSubItem ? 16 : 8),
           decoration: BoxDecoration(
             color: isActive
@@ -1350,6 +1382,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       ),
     );
     if (confirm == true) {
+      AuthGate.resetWelcome();
       if (isDemo) {
         GuestSeedService.deactivateBrowseDemo();
         UiVariantService.reset();

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'auth_service.dart';
+import 'guest_seed_service.dart';
 
 class BetaTaskItem {
   final String id;
@@ -168,11 +169,17 @@ class BetaChecklistService {
 
   /// Stream of checklist state from `users/{identifier}/settings/beta_checklist`.
   static Stream<DocumentSnapshot<Map<String, dynamic>>> getChecklistStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (GuestSeedService.isBrowseDemoMode || user == null || user.isAnonymous) {
+      return const Stream.empty();
+    }
     return _getDocRef().snapshots();
   }
 
   /// Toggle task completed state manually from the modal UI.
   static Future<void> toggleTaskCompleted(String taskId, bool isCompleted) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (GuestSeedService.isBrowseDemoMode || user == null || user.isAnonymous) return;
     try {
       final docRef = _getDocRef();
       final doc = await docRef.get();
@@ -225,6 +232,8 @@ class BetaChecklistService {
 
   /// Toggle task skipped state (for N/A hardware tasks).
   static Future<void> toggleTaskSkipped(String taskId, bool isSkipped) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (GuestSeedService.isBrowseDemoMode || user == null || user.isAnonymous) return;
     try {
       final docRef = _getDocRef();
       final doc = await docRef.get();
@@ -268,6 +277,8 @@ class BetaChecklistService {
   /// Auto-detect helper: Marks task as completed if not already done.
   /// If [evidenceDocPath] is provided, verifies that document exists before dispatching write.
   static Future<void> autoCompleteTask(String taskId, {String? evidenceDocPath}) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (GuestSeedService.isBrowseDemoMode || user == null || user.isAnonymous) return;
     try {
       final task = allTasks.cast<BetaTaskItem?>().firstWhere(
         (t) => t?.id == taskId,
@@ -327,10 +338,12 @@ class BetaChecklistService {
   /// document atomically without duplicate reads or polling loops.
   static Future<void> syncExistingAccountProgress() async {
     if (_hasSyncedThisSession) return;
+    if (GuestSeedService.isBrowseDemoMode) return;
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null || user.isAnonymous) return;
 
     final uid = _userIdentifier;
+    if (uid.contains('unknown') || uid.contains('guest_demo_user')) return;
     final docRef = _getDocRef();
 
     try {

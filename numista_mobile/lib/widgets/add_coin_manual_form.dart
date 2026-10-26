@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/denomination_canon.dart';
@@ -22,14 +21,6 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
   final _formKey = GlobalKey<FormState>();
 
   // ── Persistent controllers (created in initState, disposed in dispose) ──────
-  // One controller per field. This ensures text survives any parent rebuild
-  // (tab switch, IndexedStack rebuild, setState on _isProcessing, keyboard
-  // appearance changes) without losing the first character or blanking Year.
-  // The real observed trigger: the ManualEntry screen is pushed as a full-screen
-  // Scaffold route via showManualFullScreen in add_coins_hub.dart. If the route
-  // is popped and re-pushed (e.g. user goes back and re-enters), the State is
-  // remounted and _formData defaults are used. Controllers keep values stable
-  // within a single mount.
   late final TextEditingController _yearCtrl;
   late final TextEditingController _mintCtrl;
   late final TextEditingController _denomCtrl;
@@ -43,16 +34,26 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
   late final TextEditingController _invoiceCtrl;
   late final TextEditingController _storageCtrl;
   late final TextEditingController _notesCtrl;
+  late final TextEditingController _certCtrl;
 
-  // V8.7 FIX Item 3: FocusNodes for numeric fields.
-  // On web, Flutter's engine sets inputmode via go9() (go9(){return"numeric"}
-  // for integer, go9(){return"decimal"} for decimal per built main.dart.js).
-  // However, the DOM setup code (b2p()) explicitly removes inputmode for all
-  // non-email/password types. We re-inject it on focus using WebInputHelper.
+  // ── Dedicated persistent FocusNodes for all fields to prevent focus detach
+  // and dropped first character during rebuilds.
   late final FocusNode _yearFocus;
+  late final FocusNode _mintFocus;
+  late final FocusNode _denomFocus;
+  late final FocusNode _programFocus;
+  late final FocusNode _themeFocus;
+  late final FocusNode _varietyFocus;
+  late final FocusNode _conditionFocus;
   late final FocusNode _costFocus;
   late final FocusNode _qtyFocus;
+  late final FocusNode _retailerFocus;
+  late final FocusNode _invoiceFocus;
+  late final FocusNode _storageFocus;
+  late final FocusNode _notesFocus;
+  late final FocusNode _certFocus;
 
+  String _gradingService = 'None';
 
   static const _accent = Color(0xFF3B82F6);
   Color get _border => Theme.of(context).brightness == Brightness.dark
@@ -65,9 +66,6 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     letterSpacing: 0.3,
   );
 
-  // Condition is pre-populated; Quantity is intentionally absent so _qtyCtrl
-  // starts empty (hintText '1' shows). Submitting an empty Quantity defaults to
-  // '1' in _submit(). This prevents the "typing 3 gives 13" regression.
   final _formData = <String, dynamic>{'Condition': 'Ungraded'};
 
   @override
@@ -86,27 +84,28 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _invoiceCtrl   = TextEditingController(text: _formData['Retailer Invoice #'] as String? ?? '');
     _storageCtrl   = TextEditingController(text: _formData['Storage Location'] as String? ?? '');
     _notesCtrl     = TextEditingController(text: _formData['Notes'] as String? ?? '');
+    _certCtrl      = TextEditingController(text: _formData['Cert #'] as String? ?? '');
 
-    // V8.7 FIX Item 3: inputmode injection on web.
-    // Flutter web b2p() removes inputmode for all non-email/password types.
-    // We re-set it on focus so the UX gate DOM shows inputmode="numeric" /
-    // inputmode="decimal" immediately when the user taps a field.
-    _yearFocus = FocusNode();
-    _costFocus = FocusNode();
-    _qtyFocus  = FocusNode();
-    if (kIsWeb) {
-      _yearFocus.addListener(() {
-        if (_yearFocus.hasFocus) WebInputHelper.setActiveInputMode('numeric');
-      });
-      _costFocus.addListener(() {
-        if (_costFocus.hasFocus) WebInputHelper.setActiveInputMode('decimal');
-      });
-      _qtyFocus.addListener(() {
-        if (_qtyFocus.hasFocus) WebInputHelper.setActiveInputMode('numeric');
-      });
-    }
+    _yearFocus      = FocusNode();
+    _mintFocus      = FocusNode();
+    _denomFocus     = FocusNode();
+    _programFocus   = FocusNode();
+    _themeFocus     = FocusNode();
+    _varietyFocus   = FocusNode();
+    _conditionFocus = FocusNode();
+    _costFocus      = FocusNode();
+    _qtyFocus       = FocusNode();
+    _retailerFocus  = FocusNode();
+    _invoiceFocus   = FocusNode();
+    _storageFocus   = FocusNode();
+    _notesFocus     = FocusNode();
+    _certFocus      = FocusNode();
+
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WebInputHelper.applyStaticInputModes();
+    });
   }
-
 
   @override
   void dispose() {
@@ -123,9 +122,23 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     _invoiceCtrl.dispose();
     _storageCtrl.dispose();
     _notesCtrl.dispose();
+    _certCtrl.dispose();
+
     _yearFocus.dispose();
+    _mintFocus.dispose();
+    _denomFocus.dispose();
+    _programFocus.dispose();
+    _themeFocus.dispose();
+    _varietyFocus.dispose();
+    _conditionFocus.dispose();
     _costFocus.dispose();
     _qtyFocus.dispose();
+    _retailerFocus.dispose();
+    _invoiceFocus.dispose();
+    _storageFocus.dispose();
+    _notesFocus.dispose();
+    _certFocus.dispose();
+
     super.dispose();
   }
 
@@ -151,6 +164,11 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 isRequired: true,
                 keyboardType: const TextInputType.numberWithOptions(decimal: false),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (val) {
+                  if (RegExp(r'^\d{4}$').hasMatch(val.trim())) {
+                    _formKey.currentState?.validate();
+                  }
+                },
               ),
             ),
             const SizedBox(width: 12),
@@ -164,7 +182,13 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             'Denomination',
             'e.g. Quarter Dollar, Dime, Cent',
             controller: _denomCtrl,
+            focusNode: _denomFocus,
             isRequired: true,
+            onChanged: (val) {
+              if (val.trim().isNotEmpty) {
+                _formKey.currentState?.validate();
+              }
+            },
           ),
           const SizedBox(height: 12),
           _buildField(
@@ -172,22 +196,82 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             'Program/Series',
             'e.g. Morgan Silver Dollar',
             controller: _programCtrl,
+            focusNode: _programFocus,
             isRequired: true,
+            onChanged: (val) {
+              if (val.trim().isNotEmpty) {
+                _formKey.currentState?.validate();
+              }
+            },
           ),
           _buildField(context, 'Theme/Subject', 'e.g. Liberty Head',
-              controller: _themeCtrl),
+              controller: _themeCtrl, focusNode: _themeFocus),
           _buildField(context, 'Variety', 'e.g. Double Die, Over Mint Mark',
-              controller: _varietyCtrl),
+              controller: _varietyCtrl, focusNode: _varietyFocus),
 
           const SizedBox(height: 8),
           // ── Section: Condition ────────────────────────────────────────────
           _sectionHeader('Condition & Grading', Icons.grade),
           const SizedBox(height: 12),
           _buildField(context, 'Condition', 'e.g. MS65, AU58, Ungraded',
-              controller: _conditionCtrl),
+              controller: _conditionCtrl, focusNode: _conditionFocus),
+
+          // ── Grading Service + Cert # (Fix 10) ────────────────────────────
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Grading Service',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  initialValue: _gradingService,
+                  decoration: InputDecoration(
+                    hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
+                    filled: true,
+                    fillColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: _border)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: _border)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: _accent, width: 1.5)),
+                  ),
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white : const Color(0xFF1E293B),
+                    fontSize: 16,
+                  ),
+                  dropdownColor: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E293B) : Colors.white,
+                  items: ['None', 'NGC', 'PCGS', 'CAC', 'CACG', 'ANACS', 'ICG']
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
+                  onChanged: (val) => setState(() => _gradingService = val ?? 'None'),
+                  onSaved: (val) => _formData['Grading Service'] = val ?? 'None',
+                ),
+              ],
+            ),
+          ),
+          _buildField(context, 'Cert #', 'e.g. 8321797-003',
+              controller: _certCtrl, focusNode: _certFocus),
 
           const SizedBox(height: 8),
           // ── Section: Purchase ─────────────────────────────────────────────
+
           _sectionHeader('Purchase Details', Icons.receipt_long),
           const SizedBox(height: 12),
           Row(children: [
@@ -197,7 +281,7 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 'Cost',
                 '25.00',
                 controller: _costCtrl,
-                focusNode: _costFocus,  // V8.7: inputmode="decimal" on web focus
+                focusNode: _costFocus,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
                 prefixText: '\$ ',
@@ -210,26 +294,25 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
                 'Quantity',
                 '1',
                 controller: _qtyCtrl,
-                focusNode: _qtyFocus,  // V8.7: inputmode="numeric" on web focus
+                focusNode: _qtyFocus,
                 keyboardType: const TextInputType.numberWithOptions(decimal: false),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-
               ),
             ),
           ]),
           _buildField(context, 'Retailer/Website', 'e.g. APMEX, eBay',
-              controller: _retailerCtrl),
+              controller: _retailerCtrl, focusNode: _retailerFocus),
           _buildField(context, 'Retailer Invoice #', 'e.g. INV-9988',
-              controller: _invoiceCtrl),
+              controller: _invoiceCtrl, focusNode: _invoiceFocus),
 
           const SizedBox(height: 8),
           // ── Section: Storage ──────────────────────────────────────────────
           _sectionHeader('Storage & Notes', Icons.inventory_2_outlined),
           const SizedBox(height: 12),
           _buildField(context, 'Storage Location', 'e.g. Safe Box A, Folder 2',
-              controller: _storageCtrl),
+              controller: _storageCtrl, focusNode: _storageFocus),
           _buildField(context, 'Notes', 'Any additional notes',
-              controller: _notesCtrl, maxLines: 3),
+              controller: _notesCtrl, focusNode: _notesFocus, maxLines: 3),
 
           const SizedBox(height: 32),
 
@@ -267,7 +350,9 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
       // Read values from controllers (controllers are the source of truth).
       final formData = <String, dynamic>{
         'Year':               _yearCtrl.text.trim(),
-        'Mint Mark':          _mintCtrl.text.toUpperCase(),
+                'Mint Mark':          (_mintCtrl.text.trim().toUpperCase() == 'W (WEST POINT)' || _mintCtrl.text.trim().toUpperCase() == 'W')
+            ? 'W'
+            : _mintCtrl.text.trim().toUpperCase(),
         'Denomination':       DenominationCanon.normalize(_denomCtrl.text.trim()),
         'Program/Series':     _programCtrl.text.trim(),
         'Theme/Subject':      _themeCtrl.text.trim(),
@@ -279,11 +364,39 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
         'Retailer Invoice #': _invoiceCtrl.text.trim(),
         'Storage Location':   _storageCtrl.text.trim(),
         'Notes':              _notesCtrl.text.trim(),
+        // Fix 10: Grading service + cert # — same field names as scan path
+        'Grading Service':    _gradingService,
+        'grading_service':    _gradingService,
+        'Cert #':             _certCtrl.text.trim(),
+        'cert_number':        _certCtrl.text.trim(),
       };
 
+
       widget.onSubmit(formData);
+      _resetForm();
     }
   }
+
+  void _resetForm() {
+    _formKey.currentState?.reset();
+    _yearCtrl.clear();
+    _mintCtrl.clear();
+    _denomCtrl.clear();
+    _programCtrl.clear();
+    _themeCtrl.clear();
+    _varietyCtrl.clear();
+    _conditionCtrl.clear();
+    _costCtrl.clear();
+    _qtyCtrl.text = '1';
+    _retailerCtrl.clear();
+    _invoiceCtrl.clear();
+    _storageCtrl.clear();
+    _notesCtrl.clear();
+    _certCtrl.clear();
+    _formData.clear();
+    if (mounted) setState(() => _gradingService = 'None');
+  }
+
 
   Widget _sectionHeader(String title, IconData icon) {
     return Padding(
@@ -317,12 +430,18 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             ),
           ),
           const SizedBox(height: 6),
-          TextFormField(
-            controller: _mintCtrl,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [UpperCaseTextFormatter()],
-            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
-            decoration: _inputDeco(context, 'D, S, P, W'),
+          Semantics(
+            label: 'Mint Mark',
+            textField: true,
+            child: TextFormField(
+              key: const ValueKey('manual_field_Mint Mark'),
+              controller: _mintCtrl,
+              focusNode: _mintFocus,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [UpperCaseTextFormatter()],
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
+              decoration: _inputDeco(context, 'D, S, P, W (West Point)'),
+            ),
           ),
         ],
       ),
@@ -335,11 +454,12 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
     String hint, {
     TextEditingController? controller,
     bool isRequired = false,
-    FocusNode? focusNode,          // V8.7: for web inputmode injection
+    FocusNode? focusNode,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
     String? prefixText,
     int maxLines = 1,
+    ValueChanged<String>? onChanged,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final labelColor = isDark ? Colors.white : const Color(0xFF0F172A);
@@ -372,19 +492,25 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
             ),
           ),
           const SizedBox(height: 6),
-          TextFormField(
-            controller: controller,
-            focusNode: focusNode,  // V8.7: triggers inputmode injection on focus
-            initialValue: controller == null
-                ? (_formData[key]?.toString().isNotEmpty == true ? _formData[key].toString() : null)
-                : null,
-            keyboardType: keyboardType,
-            inputFormatters: inputFormatters,
-            maxLines: maxLines,
-            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
-            decoration: _inputDeco(context, hint, prefixText: prefixText),
-            validator: isRequired ? (val) => _validatorFor(key, val) : null,
-            onSaved: (val) => _formData[key] = val ?? '',
+          Semantics(
+            label: key,
+            textField: true,
+            child: TextFormField(
+              key: ValueKey('manual_field_$key'),
+              controller: controller,
+              focusNode: focusNode,
+              initialValue: controller == null
+                  ? (_formData[key]?.toString().isNotEmpty == true ? _formData[key].toString() : null)
+                  : null,
+              keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
+              maxLines: maxLines,
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
+              decoration: _inputDeco(context, hint, prefixText: prefixText),
+              validator: isRequired ? (val) => _validatorFor(key, val) : null,
+              onSaved: (val) => _formData[key] = val ?? '',
+              onChanged: onChanged,
+            ),
           ),
         ],
       ),
@@ -456,6 +582,9 @@ class UpperCaseTextFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
-    return newValue.copyWith(text: newValue.text.toUpperCase());
+    return newValue.copyWith(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+    );
   }
 }

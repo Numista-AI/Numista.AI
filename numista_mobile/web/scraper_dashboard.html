@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!--
+  Backend API URL Strategy:
+  Dart --dart-define values are not available in standalone HTML files.
+  A '?api=<url>' query parameter override is honored ONLY when the current origin
+  matches *.run.app or is a recognized Firebase preview channel (numista-vault--*.web.app / *.firebaseapp.com).
+  The override is NEVER allowed on production origins (numista.ai or numista-vault.web.app without preview prefix).
+  On production origins, always use the hard-coded live URL.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -511,7 +519,33 @@
   </div>
 
   <script>
-    const API_BASE = 'https://numista-backend-568985927038.us-central1.run.app';
+    function resolveApiBase(origin, search, liveUrl) {
+      if (origin === 'http://localhost' || origin === 'http://127.0.0.1' ||
+          origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        return '';
+      }
+      var PREVIEW_ORIGIN_RE = /^https:\/\/(([^.]+\.run\.app)|(numista-vault--[^.]+\.(?:web\.app|firebaseapp\.com)))$/;
+      var isPreview = PREVIEW_ORIGIN_RE.test(origin);
+      if (!isPreview) { return liveUrl; }
+      try {
+        var params = new URLSearchParams(search);
+        var apiParam = params.get('api');
+        if (apiParam) {
+          var u = new URL(apiParam);
+          if (u.protocol !== 'https:') return liveUrl;
+          var ALLOWED_HOST_RE = /^(?:[a-z0-9-]+---)?numista-(?:backend|scan-service)-(?:568985927038\.us-central1\.run\.app|qntvrqvxma-uc\.a\.run\.app)$/;
+          if (!ALLOWED_HOST_RE.test(u.hostname)) return liveUrl;
+          return u.origin;
+        }
+      } catch (e) {}
+      return liveUrl;
+    }
+
+    function getApiBaseUrl() {
+      var LIVE_URL = 'https://numista-scan-service-568985927038.us-central1.run.app';
+      return resolveApiBase(window.location.origin, window.location.search, LIVE_URL);
+    }
+    const API_BASE = getApiBaseUrl();
     const consoleEl = document.getElementById('console');
     const triggerBtn = document.getElementById('btn-trigger');
 
@@ -867,5 +901,26 @@
     }, 30000);
 
   </script>
+<script>
+// V8.17 self-test: resolveApiBase() security checks.
+// These run silently in prod; any failure throws to the browser console.
+(function selfTest() {
+  var LIVE = 'https://numista-scan-service-568985927038.us-central1.run.app';
+  // Accept
+  console.assert(resolveApiBase('https://p7gate---numista-scan-service-qntvrqvxma-uc.a.run.app', '', LIVE) === LIVE, 'a1: preview origin no ?api= -> live');
+  console.assert(resolveApiBase('https://numista-vault--abc123.web.app', '?api=' + encodeURIComponent('https://p7gate---numista-scan-service-568985927038.us-central1.run.app'), LIVE) === 'https://p7gate---numista-scan-service-568985927038.us-central1.run.app', 'a2: us-central1 form accepted');
+  console.assert(resolveApiBase('https://numista-vault--abc123.web.app', '?api=' + encodeURIComponent('https://p7gate---numista-scan-service-qntvrqvxma-uc.a.run.app'), LIVE) === 'https://p7gate---numista-scan-service-qntvrqvxma-uc.a.run.app', 'a3: uc.a form accepted');
+  console.assert(resolveApiBase('http://localhost:8080', '', LIVE) === '', 'a4: localhost -> empty');
+  // Reject
+  console.assert(resolveApiBase('https://numista.ai', '?api=' + encodeURIComponent('https://p7gate---numista-scan-service-568985927038.us-central1.run.app'), LIVE) === LIVE, 'r1: prod origin rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://evil.example/x.run.app', LIVE) === LIVE, 'r2: evil path rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://attacker.run.app', LIVE) === LIVE, 'r3: foreign run.app rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=http://p7gate---numista-scan-service-568985927038.us-central1.run.app', LIVE) === LIVE, 'r4: http rejected');
+  console.assert(resolveApiBase('https://numista-vault.web.app', '?api=' + encodeURIComponent('https://p7gate---numista-scan-service-568985927038.us-central1.run.app'), LIVE) === LIVE, 'r5: prod firebase rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://numista-scan-service-123456789012.us-central1.run.app', LIVE) === LIVE, 'r6: wrong project number rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://numista-scan-service-568985927038.europe-west1.run.app', LIVE) === LIVE, 'r7: wrong region rejected');
+  console.assert(resolveApiBase('https://numista-vault--abc.web.app', '?api=https://numista-scan-service-attackerxyz-uc.a.run.app', LIVE) === LIVE, 'r8: wrong hash rejected');
+})();
+</script>
 </body>
 </html>

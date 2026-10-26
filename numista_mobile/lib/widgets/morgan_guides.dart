@@ -305,6 +305,7 @@ class MorganGuides {
       case 'invoice':
         return invoice;
       case 'photo':
+      case 'camera_scanner':
         return photo;
       case 'microscope':
         return microscope;

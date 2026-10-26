@@ -13,6 +13,78 @@ import '../widgets/grade_badge_widget.dart';
 class ReviewHubScreen extends StatefulWidget {
   const ReviewHubScreen({super.key});
 
+  /// Format user-facing snackbar message after committing review items
+  static String formatCommitSnackbar({
+    required int committed,
+    int skipped = 0,
+    int flagged = 0,
+  }) {
+    final List<String> parts = [];
+    if (committed > 0) {
+      parts.add('Added $committed coin${committed != 1 ? 's' : ''}.');
+    }
+    if (skipped > 0) {
+      if (skipped == 1) {
+        parts.add('1 was already in your collection from the same invoice, so we didn\'t add it twice.');
+      } else {
+        parts.add('$skipped were already in your collection from the same invoice, so we didn\'t add them twice.');
+      }
+    }
+    if (flagged > 0) {
+      final subject = flagged == 1 ? '1 might be a coin' : '$flagged might be coins';
+      parts.add('$subject you already have; look for the yellow \'Possible duplicate\' tag.');
+    }
+    if (parts.isEmpty) {
+      return 'No coins were added.';
+    }
+    return parts.join(' ');
+  }
+
+  /// Parse backend commit response JSON and return user-facing snackbar message.
+  static String snackbarFromCommitResponse(String responseBody, int fallbackCommitted) {
+    int committed = fallbackCommitted;
+    int skipped = 0;
+    int flagged = 0;
+
+    try {
+      final decoded = jsonDecode(responseBody);
+      if (decoded is Map) {
+        if (decoded.containsKey('committed') && decoded['committed'] != null) {
+          committed = (decoded['committed'] as num).toInt();
+        }
+        if (decoded.containsKey('skipped') && decoded['skipped'] != null) {
+          skipped = (decoded['skipped'] as num).toInt();
+        }
+        if (decoded.containsKey('flagged') && decoded['flagged'] != null) {
+          flagged = (decoded['flagged'] as num).toInt();
+        }
+      }
+    } catch (_) {
+      // Gracefully fall back to fallbackCommitted, 0, 0
+    }
+
+    return formatCommitSnackbar(
+      committed: committed,
+      skipped: skipped,
+      flagged: flagged,
+    );
+  }
+
+  /// Predicate for 100% AI Confidence items eligible for auto-commit.
+  static bool isHighConfidenceItem(Map<String, dynamic> data) {
+    final status = (data['status'] ?? 'staged').toString().toLowerCase();
+    final reviewNeeded = data['review_needed'] == true;
+    if (status == 'quarantined' || status == 'aborted' || status == 'superseded' || status == 'committed' || reviewNeeded) {
+      return false;
+    }
+    double conf = 1.0;
+    try {
+      final raw = data['confidence_score'] ?? data['composite_confidence'];
+      if (raw != null) conf = (raw as num).toDouble();
+    } catch (_) {}
+    return conf >= 0.999;
+  }
+
   @override
   State<ReviewHubScreen> createState() => _ReviewHubScreenState();
 }
@@ -53,8 +125,13 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
       if (response.statusCode == 200) {
         if (!mounted) return;
+        final snackText = ReviewHubScreen.snackbarFromCommitResponse(
+          response.body,
+          _selectedIds.length,
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Successfully committed ${_selectedIds.length} items!')),
+          SnackBar(content: Text(snackText)),
         );
         setState(() => _selectedIds.clear());
       } else {
@@ -76,18 +153,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   // ─── Commit 100% AI Confidence items ──────────────────────────────────────
   Future<void> _commitHighConfidence(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
     final highConfIds = docs
-        .where((d) {
-          final data = d.data();
-          final status = (data['status'] ?? 'staged').toString().toLowerCase();
-          final reviewNeeded = data['review_needed'] == true;
-          if (status == 'quarantined' || status == 'aborted' || reviewNeeded) return false;
-          double conf = 1.0;
-          try {
-            final raw = data['confidence_score'] ?? data['composite_confidence'];
-            if (raw != null) conf = (raw as num).toDouble();
-          } catch (_) {}
-          return conf >= 0.95;
-        })
+        .where((d) => ReviewHubScreen.isHighConfidenceItem(d.data()))
         .map((d) => d.id)
         .toList();
 
@@ -114,9 +180,14 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
       if (response.statusCode == 200) {
         if (!mounted) return;
+        final snackText = ReviewHubScreen.snackbarFromCommitResponse(
+          response.body,
+          highConfIds.length,
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ Successfully committed ${highConfIds.length} items with 100% AI Confidence!'),
+            content: Text(snackText),
             backgroundColor: const Color(0xFF10B981),
           ),
         );
@@ -958,7 +1029,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               try {
                                 final updates = <String, dynamic>{};
                                 controllers.forEach((key, ctrl) {
-                                  if (ctrl.text.isNotEmpty) updates[key] = ctrl.text;
+                                  updates[key] = ctrl.text.trim();
                                 });
                                 // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
                                 final rawQty = controllers['Quantity']?.text.trim() ?? '';
@@ -1020,7 +1091,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               try {
                                 final updates = <String, dynamic>{};
                                 controllers.forEach((key, ctrl) {
-                                  if (ctrl.text.isNotEmpty) updates[key] = ctrl.text;
+                                  updates[key] = ctrl.text.trim();
                                 });
                                 // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
                                 final rawQty2 = controllers['Quantity']?.text.trim() ?? '';
@@ -1062,8 +1133,12 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 if (!mounted) return;
                                 nav.pop();
                                 if (response.statusCode == 200) {
+                                  final snackText = ReviewHubScreen.snackbarFromCommitResponse(
+                                    response.body,
+                                    1,
+                                  );
                                   messenger.showSnackBar(
-                                    const SnackBar(content: Text('Coin saved and committed to collection!')),
+                                    SnackBar(content: Text(snackText)),
                                   );
                                 } else {
                                   messenger.showSnackBar(
@@ -1203,18 +1278,23 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   return Row(
                     children: [
                       const Text('Select All', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      Checkbox(
-                        value: allSelected,
-                        activeColor: const Color(0xFFF63366),
-                        onChanged: (val) {
-                          setState(() {
-                            if (val == true) {
-                              _selectedIds.addAll(docs.map((d) => d.id));
-                            } else {
-                              _selectedIds.clear();
-                            }
-                          });
-                        },
+                      SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Checkbox(
+                          materialTapTargetSize: MaterialTapTargetSize.padded,
+                          value: allSelected,
+                          activeColor: const Color(0xFFF63366),
+                          onChanged: (val) {
+                            setState(() {
+                              if (val == true) {
+                                _selectedIds.addAll(docs.map((d) => d.id));
+                              } else {
+                                _selectedIds.clear();
+                              }
+                            });
+                          },
+                        ),
                       ),
                     ],
                   );
@@ -1240,15 +1320,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
                 return status != 'aborted' && status != 'superseded' && status != 'committed';
               }).toList();
-              final highConfCount = docs.where((d) {
-                final data = d.data();
-                double conf = 1.0;
-                try {
-                  final raw = data['confidence_score'];
-                  if (raw != null) conf = (raw as num).toDouble();
-                } catch (_) {}
-                return conf >= 0.999;
-              }).length;
+              final highConfCount = docs.where((d) => ReviewHubScreen.isHighConfidenceItem(d.data())).length;
 
               if (highConfCount == 0) return const SizedBox.shrink();
 
@@ -1497,15 +1569,20 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
             // ── Title row ──────────────────────────────────────────────
             Row(
               children: [
-                Checkbox(
-                  value: isSelected,
-                  activeColor: const Color(0xFFF63366),
-                  onChanged: (val) {
-                    setState(() {
-                      if (val == true) { _selectedIds.add(id); }
-                      else { _selectedIds.remove(id); }
-                    });
-                  },
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Checkbox(
+                    materialTapTargetSize: MaterialTapTargetSize.padded,
+                    value: isSelected,
+                    activeColor: const Color(0xFFF63366),
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) { _selectedIds.add(id); }
+                        else { _selectedIds.remove(id); }
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(width: 4),
                 _buildBadge('🗂️ SET', const Color(0xFF2563EB)),
@@ -1744,18 +1821,23 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Checkbox(
-              value: isSelected,
-              activeColor: const Color(0xFFF63366),
-              onChanged: (val) {
-                setState(() {
-                  if (val == true) {
-                    _selectedIds.add(id);
-                  } else {
-                    _selectedIds.remove(id);
-                  }
-                });
-              },
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: Checkbox(
+                materialTapTargetSize: MaterialTapTargetSize.padded,
+                value: isSelected,
+                activeColor: const Color(0xFFF63366),
+                onChanged: (val) {
+                  setState(() {
+                    if (val == true) {
+                      _selectedIds.add(id);
+                    } else {
+                      _selectedIds.remove(id);
+                    }
+                  });
+                },
+              ),
             ),
             const SizedBox(width: 8),
             Expanded(

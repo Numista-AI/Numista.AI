@@ -10,6 +10,7 @@ import io
 import uuid
 import json
 import base64
+import traceback
 from datetime import datetime, timezone
 import pandas as pd
 from google.cloud import firestore
@@ -50,6 +51,7 @@ ALLOWED_ORIGINS = [
     "https://www.numista.ai",
     "https://numista-vault.web.app",      # Firebase Hosting (production)
     "https://numista-vault.firebaseapp.com",  # Firebase Hosting (alt URL)
+    "https://numista-vault--p7-gate-8avtpz22.web.app",  # P7 test channel
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "http://localhost:5000",
@@ -57,7 +59,7 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 
-ALLOWED_ORIGIN_REGEX = r"^https://numista-vault--[a-z0-9-]+\.web\.app$"
+ALLOWED_ORIGIN_REGEX = r"^https://numista-vault--[a-z0-9-]+\.(web\.app|firebaseapp\.com)$"
 _allowed_origin_re = re.compile(ALLOWED_ORIGIN_REGEX)
 
 def _is_allowed_origin(origin: str) -> bool:
@@ -69,14 +71,26 @@ def _is_allowed_origin(origin: str) -> bool:
         return True
     return False
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+def _cors_headers(request: Request) -> dict:
+    origin = request.headers.get("origin", "")
+    headers = {}
+    if _is_allowed_origin(origin):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    return headers
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
+    # Do NOT return str(exc) — friendly message only
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Something went wrong. Please try again."},
+        headers=_cors_headers(request),
+    )
+
 
 
 from routes.subaccount_routes import router as subaccount_router
@@ -98,7 +112,7 @@ from routes.support_routes import router as support_router
 from routes.telemetry_routes import router as telemetry_router   # ITEM 4: silent error telemetry
 from routes.sandbox_routes import router as sandbox_router         # ITEM 8: demo coin clear
 from routes.attorney_routes import router as attorney_router        # ITEM B: attorney token issuance + snapshot
-from routes.cert_routes import router as cert_router   # P7: unified cert lookup
+from routes.cert_routes import router as cert_router, extract_cert_from_image   # P7: unified cert lookup
 from routes.morgan_routes import morgan_router, NOTES_DELIMITER, wrap_user_data, create_proposal
 from routes.deps import get_current_user, require_admin_user, _check_and_increment_rate_cap
 
@@ -267,6 +281,22 @@ async def observability_middleware(request: Request, call_next):
                "user_email": user_email, "request_id": rid}
     )
     return response
+ 
+# --- CORS MIDDLEWARE (outermost) ----------------------------------------------
+# In Starlette / FastAPI, middlewares are built in reverse order: the LAST middleware
+# added via add_middleware becomes the OUTERMOST middleware in the stack (runs first on
+# incoming requests, runs last on outgoing responses).
+# Placing CORSMiddleware here (after default_deny_auth_middleware and observability_middleware)
+# ensures it is outermost and attaches Access-Control-Allow-* headers to ALL responses,
+# including 401 unauthenticated errors returned by default_deny_auth_middleware.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- VERTEX AI SEARCH -- Coin Reference Library -------------------------------
 # Registers GET /api/coin_search -- open endpoint, no auth required.
@@ -711,6 +741,14 @@ LOCAL_HEADER_MAP: dict[str, str] = {
     "personal reference #": "Personal Reference #",
     # Storage Location
     "storage location": "Storage Location", "location": "Storage Location",
+    # Retailer / Dealer / Website
+    "retailer": "Retailer/Website", "retailer/website": "Retailer/Website", "website": "Retailer/Website",
+    "dealer": "Retailer/Website", "seller": "Retailer/Website", "vendor": "Retailer/Website", "source": "Retailer/Website",
+    "store": "Retailer/Website",
+    # Retailer Invoice #
+    "retailer invoice #": "Retailer Invoice #", "invoice #": "Retailer Invoice #", "invoice no": "Retailer Invoice #",
+    "invoice number": "Retailer Invoice #", "invoice": "Retailer Invoice #", "order #": "Retailer Invoice #",
+    "order number": "Retailer Invoice #", "receipt #": "Retailer Invoice #",
 }
 
 
@@ -751,7 +789,7 @@ def _fast_map_spreadsheet_headers(headers: list[str], is_currency: bool = False)
     try:
         mapping_prompt = f"""Map user spreadsheet headers to standard numismatic schema keys.
 Golden Schema keys: ["Country", "Year", "Mint Mark", "Denomination", "Quantity", "Program/Series",
- "Theme/Subject", "Condition", "Cost", "Purchase Date", "Certification Number", "Personal Notes", "Storage Location", "item_type"]
+ "Theme/Subject", "Condition", "Cost", "Purchase Date", "Certification Number", "Personal Notes", "Storage Location", "item_type", "Retailer/Website", "Retailer Invoice #"]
 Headers to map: {unmapped}
 Output ONLY raw JSON object: {{"user_header": "schema_key"}}"""
 
@@ -2215,7 +2253,7 @@ async def process_invoice(
             "Condition": "e.g. MS-65, Average Circ, Ch Proof-63",
             "Strike Type": "e.g. Business, Proof, Special Mint Set, Uncirculated",
             "Holder Type": "e.g. Raw, Slabs, Folder",
-            "Grading Service": "e.g. PCGS, NGC, PMG, None",
+            "Grading Service": "e.g. PCGS, NGC, CACG, CAC, ANACS, ICG, PMG, None",
             "Certification Number": "if present",
             "Metal Content": "e.g. 90% Silver, Cupro-Nickel, 35% Silver Wartime",
             "Cost": "formatted price like $10.00",
@@ -2338,7 +2376,7 @@ async def process_invoice(
               "Year": "year from description",
               "Denomination": "coin type (e.g. Liberty Seated Quarter, Morgan Dollar)",
               "Condition": "grade -- complete any truncated words",
-              "Grading Service": "PCGS / NGC / ANACS / ICG / or empty",
+              "Grading Service": "PCGS / NGC / CACG / CAC / ANACS / ICG / or empty",
               "Cost": "dollar amount formatted like $432.00",
               "Retailer/Website": "seller name",
               "Retailer Item No.": "item or stock number if present",
@@ -2709,10 +2747,11 @@ def execute_add_coin(
             "created_at": firestore.SERVER_TIMESTAMP,
         }
         if dry_run:
+            snap = {k: v for k, v in coin_data.items() if k not in ("greysheet_bid", "greysheet_ask", "greysheetBid", "greysheetAsk")}
             return {
                 "action": "add_coin",
                 "status": "prepared",
-                "coin_snapshot": coin_data,
+                "coin_snapshot": snap,
                 "year": str(year),
                 "mint_mark": clean_mint,
                 "denomination": norm_denom,
@@ -3491,6 +3530,7 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
         batch_op_count = 0
         committed_count = 0
         skipped_count = 0
+        flagged_count = 0
         
         for doc_id in request.review_ids:
             doc_snapshot = queue_ref.document(doc_id).get()
@@ -3516,42 +3556,46 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
                 
                 # -- Hybrid Duplicate Detection --------------------------------------
                 # Primary: invoice-based (if invoice# matches + item# matches -> definite dupe)
-                # Fallback: attribute-based (Year + Mint + normalized Denomination)
+                # Fallback: attribute-based (Year + Mint + normalized Denomination -> flag possible_duplicate, NEVER drop)
                 inv_no  = (data.get('Retailer Invoice #') or '').strip()
                 item_no = (data.get('Retailer Item No.')  or '').strip()
-                is_dupe = False
+                is_definite_dupe = False
+                is_possible_dupe = False
 
-                if inv_no:
+                if inv_no and item_no:
+                    # Check if already exists in user's collection before this commit batch
+                    # Note: multiple split rows in the SAME import batch share (inv_no, item_no)
+                    # and must NOT be rejected as duplicates of each other.
                     try:
                         q = coins_ref \
                             .where('Retailer Invoice #', '==', inv_no) \
                             .where('Retailer Item No.',  '==', item_no) \
                             .limit(1).get()
-                        is_dupe = len(q) > 0
+                        # If a coin with this invoice + item already exists in the collection (not in current batch queue)
+                        if len(q) > 0 and q[0].id not in request.review_ids:
+                            is_definite_dupe = True
                     except Exception:
                         pass  # Index may be missing -- fall through to attribute check
 
-                if not is_dupe:
-                    # Attribute-based fallback: normalise denomination before compare
-                    raw_d  = (data.get('Denomination') or '').strip()
-                    norm_d = raw_d.lstrip('$').strip()   # "$5" -> "5", "5" -> "5"
-                    denom_variants = list({raw_d, norm_d, f'${norm_d}'})
-                    try:
-                        q2 = coins_ref \
-                            .where('Year',      '==', data.get('Year', '')) \
-                            .where('Mint Mark', '==', data.get('Mint Mark', '')) \
-                            .where('Denomination', 'in', denom_variants[:10]) \
-                            .limit(1).get()
-                        is_dupe = len(q2) > 0
-                    except Exception:
-                        pass
+                if not is_definite_dupe:
+                    # Attribute-based check: Year + Mint + normalized Denomination
+                    # MUST NEVER delete queue doc without committing! Flag as possible_duplicate.
+                    from services.duplicate_check import check_and_flag_duplicate
+                    if check_and_flag_duplicate(coins_ref, data, exclude_ids=request.review_ids):
+                        is_possible_dupe = True
 
-                if is_dupe:
+                if is_definite_dupe:
                     batch.delete(queue_ref.document(doc_id))
                     skipped_count += 1
                     batch_op_count += 1
                 else:
                     # (Field normalization already applied above, before dupe queries)
+
+                    # Mark attribute duplicates clearly without dropping
+                    if is_possible_dupe:
+                        data['possible_duplicate'] = True
+                        data['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)'
+                        flagged_count += 1
 
                     # Legal System of Record Golden Schema defaults
                     if not data.get('Condition'):
@@ -3584,9 +3628,10 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
             batch.commit()
         return {
             "status": "success", 
-            "message": f"Committed {committed_count} items. Skipped {skipped_count} duplicates.",
+            "message": f"Committed {committed_count} items. Skipped {skipped_count} duplicates. Flagged {flagged_count} possible duplicates.",
             "committed": committed_count,
-            "skipped": skipped_count
+            "skipped": skipped_count,
+            "flagged": flagged_count
         }
     except Exception as e:
         logger.exception("Review commit error")
@@ -5460,11 +5505,23 @@ def _normalize_country_metadata(raw_country: str) -> tuple:
 # +==============================================================================+
 
 PHOTO_ID_PASS1_PROMPT = """
-You are a professional numismatist examining two coin images uploaded by a collector.
+You are a professional numismatist examining coin images uploaded by a collector.
 Image A and Image B are provided -- the collector may have uploaded them in any order.
 
+SLAB / CERTIFIED HOLDER DETECTION (CRITICAL FIRST STEP):
+Check immediately whether either image shows a third-party grading service slab/holder (PCGS, NGC, CAC, or CACG).
+If a certified slab label is visible:
+1. THE SLAB LABEL WINS over any visual coin design impression. Read Year, Denomination, Grade, Grading Service, and Certification Number directly from the label!
+2. Grading Service MUST be one of: "PCGS", "NGC", "CACG", "CAC", or "None".
+3. Certification Number format:
+   - NGC: Typically 7 digits with a 3-digit line item, e.g. "8321797-003" or "1234567-001" or 7 digits.
+   - PCGS: 8 digits, or the digits after the slash on the barcode (e.g. "986403.70/53652580" -> "53652580").
+   - CACG: Format is <type>.<grade> / <cert>, where cert number is the digits after the slash.
+4. Dealer stickers or inventory labels (such as "Witter Coin WC110080" or barcode stickers) are NOT certification numbers — ignore them.
+5. NEVER flag "counterfeit", "fake", "holder mismatch", or "mislabeled holder" from a single photo or inverted coin orientation. If there is genuine ambiguity, note it softly in variety_notes as "Please confirm year: label indicates XXXX" without accusing the coin or slab of being counterfeit or mislabeled.
+
 YOUR TASKS:
-1. SIDE DETECTION: Determine which image is the OBVERSE (portrait/date side) and which is the REVERSE.
+1. SIDE DETECTION: Determine which image is the OBVERSE (portrait/date side) and which is the REVERSE. Note: images may be rotated or inverted.
 2. IDENTIFICATION: Identify the coin precisely -- Year, Country, Denomination, Program/Series, Theme/Subject.
    - For Presidential $1 Coins:
      - "program_series" MUST be exactly "Presidential $1 Coin Program".
@@ -5473,7 +5530,7 @@ YOUR TASKS:
    Common locations: below the date, near the portrait neck, near "IN GOD WE TRUST", along the lower rim.
    US Mint codes: P=Philadelphia, D=Denver, S=San Francisco, W=West Point, CC=Carson City, O=New Orleans.
    Report any visible letter, even faint. If genuinely absent, return "None (P)".
-4. GRADE: Estimate the Sheldon scale grade (e.g. "G-4", "VF-30", "XF-45", "AU-55", "MS-63", "PR-65").
+4. GRADE & SERVICE: If a slab is present, use the exact grade from the slab (e.g. "PF 67", "MS 65"). Otherwise estimate the Sheldon scale grade (e.g. "G-4", "VF-30", "XF-45", "AU-55", "MS-63", "PR-65").
 5. METAL COMPOSITION (apply these rules exactly):
    - Pre-1965 US dimes, quarters, halves = 90% Silver, 10% Copper
    - Half dollars 1965-1970 = 40% Silver, 60% Copper
@@ -5484,7 +5541,7 @@ YOUR TASKS:
    - Modern clad (post-1964 quarters, post-1970 halves) = NO silver, cupro-nickel
    - Set is_silver=true/false and is_gold=true/false accordingly.
 6. NUMISMATIC REPORT: Write 2-4 sentences on the coin's historical significance and collectibility.
-7. VARIETY NOTES: Note any obvious doubled dies, RPMs, off-center strikes, or other mint anomalies.
+7. VARIETY NOTES: Note any obvious doubled dies, RPMs, off-center strikes, or other mint anomalies. Never accuse certified slabs of being counterfeit.
 
 Return ONLY valid JSON -- no markdown fences, no commentary:
 {
@@ -5496,6 +5553,8 @@ Return ONLY valid JSON -- no markdown fences, no commentary:
   "theme_subject": string,
   "mint_mark": string,
   "grade": string,
+  "grading_service": "PCGS" | "NGC" | "CACG" | "CAC" | "None",
+  "cert_number": string,
   "is_silver": boolean,
   "is_gold": boolean,
   "metal_content": string,
@@ -5510,14 +5569,15 @@ You are a senior grading expert performing a VERIFICATION PASS on a coin already
   Year: {year} | Country: {country} | Denomination: {denomination}
   Program/Series: {program_series} | Mint Mark: {mint_mark}
   Initial Grade: {grade} | Metal: {metal_content}
+  Grading Service: {grading_service} | Cert Number: {cert_number}
 
 You are looking at the same two images (A and B) again.
 
 YOUR TASKS:
-1. VERIFY the identification -- correct year, denomination, or series if wrong.
-2. REFINE the grade to a precise Sheldon number (e.g. "VF-30", "MS-63", "PR-65").
-3. CHECK for mint errors: doubled dies, repunched mint marks (RPM), off-center strikes,
-   die cracks, cuds, lamination errors, rotated dies, or any other varieties.
+1. VERIFY the identification -- if a slab label is visible, the slab label MUST govern over coin design. Confirm or correct year, denomination, or series.
+2. REFINE the grade -- if certified in a slab, retain the certified grade. Otherwise refine to a precise Sheldon number (e.g. "VF-30", "MS-63", "PR-65").
+3. CHECK for genuine mint errors: doubled dies, repunched mint marks (RPM), off-center strikes, die cracks, cuds, lamination errors.
+   IMPORTANT: NEVER classify a coin as a counterfeit slab, fantasy marriage, or holder mismatch simply because an image is rotated or upside down.
 4. ESTIMATE retail value in USD based on current market for this grade.
 5. Write a brief condition note describing the coin's surfaces and strike quality.
 
@@ -5528,6 +5588,8 @@ Return ONLY valid JSON:
   "corrected_denomination": string or null,
   "corrected_series": string or null,
   "refined_grade": string,
+  "grading_service": string or null,
+  "cert_number": string or null,
   "errors_detected": [string],
   "estimated_value_usd": string,
   "condition_notes": string,
@@ -5839,7 +5901,6 @@ async def preview_cost_split(
                 "cost": f"${int_cents[i] / 100:.2f}",
                 "cost_cents": int_cents[i],
                 "share_pct": round(pct, 2),
-                "greysheet_bid": greysheet_values[i],
             })
     else:
         split_method = "even_split"
@@ -5855,7 +5916,6 @@ async def preview_cost_split(
                 "cost": f"${cents / 100:.2f}",
                 "cost_cents": cents,
                 "share_pct": round(100.0 / n, 2),
-                "greysheet_bid": greysheet_values[i] if i < len(greysheet_values) else 0.0,
             })
 
     return JSONResponse(content={
@@ -6023,7 +6083,6 @@ async def commit_group_photo(
                             "coin_id": cid,
                             "cost": cost_str,
                             "share_pct": round(pct, 2),
-                            "greysheet_bid": greysheet_values[idx],
                             "denomination": request.coins[orig_i].denomination if orig_i < len(request.coins) else "",
                         })
                         try:
@@ -6054,7 +6113,6 @@ async def commit_group_photo(
                             "coin_id": cid,
                             "cost": cost_str,
                             "share_pct": round(100.0 / n_ids, 2),
-                            "greysheet_bid": greysheet_values[idx] if idx < len(greysheet_values) else 0.0,
                             "denomination": request.coins[orig_i].denomination if orig_i < len(request.coins) else "",
                         })
                         try:
@@ -6103,6 +6161,56 @@ async def commit_group_photo(
     })
 
 
+GEMINI_IDENTIFY_TIMEOUT = float(os.environ.get("GEMINI_IDENTIFY_TIMEOUT", "25.0"))
+# Pass-1 cap: 20 s leaves 8 s for pass 2 within a 28 s request budget.
+GEMINI_IDENTIFY_PASS1_TIMEOUT = float(os.environ.get("GEMINI_IDENTIFY_PASS1_TIMEOUT", "20.0"))
+# Whole-request budget: pass 1 + pass 2 + overhead must stay under 30 s.
+GEMINI_IDENTIFY_BUDGET = float(os.environ.get("GEMINI_IDENTIFY_BUDGET", "28.0"))
+
+
+async def call_gemini_identify(contents, model=PRIMARY_MODEL):
+    """
+    Executes Gemini generate_content call in a worker thread to keep the asyncio event loop unblocked.
+    """
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None,
+        lambda: genai_client.models.generate_content(
+            model=model,
+            contents=contents,
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.1,
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            ),
+        ),
+    )
+
+
+async def _extract_cert_with_budget(
+    image_bytes: bytes,
+    mime_type: str = "image/jpeg",
+    timeout: float = 10.0,
+) -> Dict[str, Any]:
+    """
+    Executes extract_cert_from_image in a worker thread with timeout,
+    keeping the event loop unblocked and respecting the request budget.
+    """
+    if timeout <= 0.1 or not image_bytes:
+        return {}
+    try:
+        return await asyncio.wait_for(
+            asyncio.to_thread(extract_cert_from_image, image_bytes, mime_type=mime_type),
+            timeout=timeout,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(f"Shared cert extractor timed out after {timeout:.1f}s")
+        return {}
+    except Exception as exc:
+        logger.warning(f"Shared cert extractor error: {exc}")
+        return {}
+
+
 @app.post("/api/identify_coin_photo")
 async def identify_coin_photo(
     user_email:    str        = Form(...),
@@ -6120,6 +6228,8 @@ async def identify_coin_photo(
     override_cost:    Optional[str] = Form(None),
     override_storage: Optional[str] = Form(None),
     override_notes:   Optional[str] = Form(None),
+    override_grading_service: Optional[str] = Form(None),
+    override_cert_number:     Optional[str] = Form(None),
     authorization:    Optional[str] = Header(None),
     _user:            dict = Depends(get_current_user),
 ):
@@ -6139,6 +6249,7 @@ async def identify_coin_photo(
     """
     owner_key = _authenticate_request(authorization, user_email, current_user=_user)
     user_email = owner_key
+    _req_start = time.monotonic()  # whole-request budget clock (FIX: 28s cap)
 
     logger.info(f"Identify coin photo: save={save_to_collection}", extra={"user_email": user_email})
 
@@ -6167,10 +6278,19 @@ async def identify_coin_photo(
         part_b_img = None
         label_b = None
 
+    # -- 2. Start shared cert reader concurrently with Pass 1 (NET-357 / Item 2)
+    _elapsed_so_far = time.monotonic() - _req_start
+    _cert_budget_a = max(0.0, GEMINI_IDENTIFY_BUDGET - _elapsed_so_far)
+    cert_task: Optional[asyncio.Task] = None
+    if _cert_budget_a > 0.5:
+        cert_task = asyncio.create_task(
+            _extract_cert_with_budget(bytes_a, mime_type=mime_a, timeout=_cert_budget_a)
+        )
+
     # -- 2. PASS 1 -- Identification --------------------------------------------
     try:
         if single_image_mode:
-            single_note = "\nNOTE: Only a single photo of the coin was provided ([Image A]). The reverse/obverse is unobserved. Identify the coin from this single face, estimate the grade based on visible details, set obverse_image to 'A', and note that the other side is unobserved."
+            single_note = "\nNOTE: Only a single photo of the coin was provided ([Image A]). The back of the coin was not photographed. Identify the coin from this single face, estimate the grade based on visible details, set obverse_image to 'A', and note that the other side was not photographed."
             pass1_contents = [
                 label_a, part_a_img,
                 genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT + single_note),
@@ -6181,64 +6301,82 @@ async def identify_coin_photo(
                 label_b, part_b_img,
                 genai_types.Part.from_text(text=PHOTO_ID_PASS1_PROMPT),
             ]
-        resp1 = genai_client.models.generate_content(
-            model=PRIMARY_MODEL,
-            contents=pass1_contents,
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
-            ),
-        )
-        raw1 = resp1.text.strip()
-        if raw1.startswith("```"):
-            raw1 = raw1.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        pass1: dict = json.loads(raw1)
+        call_res = call_gemini_identify(pass1_contents, PRIMARY_MODEL)
+        if asyncio.iscoroutine(call_res) or isinstance(call_res, asyncio.Future):
+            resp1 = await asyncio.wait_for(call_res, timeout=GEMINI_IDENTIFY_PASS1_TIMEOUT)
+        else:
+            resp1 = call_res
+        if isinstance(resp1, dict):
+            pass1 = resp1
+        else:
+            raw1 = resp1.text.strip()
+            if raw1.startswith("```"):
+                raw1 = raw1.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+            pass1 = json.loads(raw1)
         logger.info(f"Coin ID pass 1: {pass1.get('year')} {pass1.get('denomination')} conf={pass1.get('confidence')}")
+    except asyncio.TimeoutError:
+        if cert_task and not cert_task.done():
+            cert_task.cancel()
+        raise HTTPException(status_code=408, detail="Image identification timed out. Please try again.")
+    except HTTPException:
+        if cert_task and not cert_task.done():
+            cert_task.cancel()
+        raise
     except Exception as e:
+        if cert_task and not cert_task.done():
+            cert_task.cancel()
         logger.exception("Coin ID pass 1 error")
-        raise HTTPException(status_code=500, detail=f"AI identification failed: {e}")
+        raise HTTPException(status_code=500, detail="AI identification failed. Please try again.")
 
     # -- 3. PASS 2 -- Verification ----------------------------------------------
     pass2: dict = {}
-    try:
-        pass2_prompt = PHOTO_ID_PASS2_PROMPT_TEMPLATE.format(
-            year          = pass1.get("year", ""),
-            country       = pass1.get("country", ""),
-            denomination  = pass1.get("denomination", ""),
-            program_series= pass1.get("program_series", ""),
-            mint_mark     = pass1.get("mint_mark", ""),
-            grade         = pass1.get("grade", ""),
-            metal_content = pass1.get("metal_content", ""),
-        )
-        if single_image_mode:
-            pass2_contents = [
-                label_a, part_a_img,
-                genai_types.Part.from_text(text=pass2_prompt + "\nNOTE: Single photo provided ([Image A]). Reverse unobserved."),
-            ]
-        else:
-            pass2_contents = [
-                label_a, part_a_img,
-                label_b, part_b_img,
-                genai_types.Part.from_text(text=pass2_prompt),
-            ]
-        resp2 = genai_client.models.generate_content(
-            model=PRIMARY_MODEL,
-            contents=pass2_contents,
-            config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
-            ),
-        )
-        raw2 = resp2.text.strip()
-        if raw2.startswith("```"):
-            raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        pass2 = json.loads(raw2)
-        logger.info(f"Coin ID pass 2: grade={pass2.get('refined_grade')} val={pass2.get('estimated_value_usd')}")
-    except Exception as e:
-        # Non-fatal -- continue with Pass 1 results only
-        logger.warning(f"Coin ID pass 2 error (non-fatal): {e}")
+    _elapsed = time.monotonic() - _req_start
+    _pass2_budget = GEMINI_IDENTIFY_BUDGET - _elapsed
+    if _pass2_budget < 3.0:
+        logger.info(f"Skipping pass 2: only {_pass2_budget:.1f}s left of {GEMINI_IDENTIFY_BUDGET}s budget")
+    else:
+        try:
+            pass2_prompt = PHOTO_ID_PASS2_PROMPT_TEMPLATE.format(
+                year          = pass1.get("year", ""),
+                country       = pass1.get("country", ""),
+                denomination  = pass1.get("denomination", ""),
+                program_series= pass1.get("program_series", ""),
+                mint_mark     = pass1.get("mint_mark", ""),
+                grade         = pass1.get("grade", ""),
+                metal_content = pass1.get("metal_content", ""),
+                grading_service = pass1.get("grading_service", "None"),
+                cert_number   = pass1.get("cert_number", ""),
+            )
+            if single_image_mode:
+                pass2_contents = [
+                    label_a, part_a_img,
+                    genai_types.Part.from_text(text=pass2_prompt + "\nNOTE: Single photo provided ([Image A]). Back of coin not photographed."),
+                ]
+            else:
+                pass2_contents = [
+                    label_a, part_a_img,
+                    label_b, part_b_img,
+                    genai_types.Part.from_text(text=pass2_prompt),
+                ]
+            call_res2 = call_gemini_identify(pass2_contents, PRIMARY_MODEL)
+            if asyncio.iscoroutine(call_res2) or isinstance(call_res2, asyncio.Future):
+                resp2 = await asyncio.wait_for(call_res2, timeout=min(_pass2_budget, 10.0))
+            else:
+                resp2 = call_res2
+            if isinstance(resp2, dict):
+                pass2 = resp2
+            else:
+                raw2 = resp2.text.strip()
+                if raw2.startswith("```"):
+                    raw2 = raw2.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                pass2 = json.loads(raw2)
+            logger.info(f"Coin ID pass 2: grade={pass2.get('refined_grade')} val={pass2.get('estimated_value_usd')}")
+        except asyncio.TimeoutError:
+            logger.warning("Coin ID pass 2 timed out (non-fatal)")
+        except Exception as e:
+            # Non-fatal -- continue with Pass 1 results only
+            logger.warning(f"Coin ID pass 2 error (non-fatal): {e}")
+
 
     # -- 4. Merge Pass 1 + Pass 2 results -------------------------------------
     final_year   = str(pass2.get("corrected_year")  or pass1.get("year",  ""))
@@ -6286,7 +6424,49 @@ async def identify_coin_photo(
 
     notes = override_notes or pass1.get("personal_notes", "") or ""
     if single_image_mode:
-        notes = (notes + " [Single photo scan - reverse unobserved]").strip()
+        notes = (notes + " [Single photo scan - back of coin not photographed]").strip()
+
+    # Shared cert reader integration (NET-357 / Item 2):
+    # Await concurrent cert reader (Image A), query Image B only if no cert and budget >= 3s.
+    # Shared reader cert wins over Pass 1/Pass 2 cert (pass 1/2 is fallback only).
+    cert_read: Dict[str, Any] = {}
+    if cert_task:
+        _elapsed_now = time.monotonic() - _req_start
+        _rem_cert_budget = max(0.0, GEMINI_IDENTIFY_BUDGET - _elapsed_now)
+        try:
+            if not cert_task.done():
+                cert_read = await asyncio.wait_for(cert_task, timeout=_rem_cert_budget)
+            else:
+                cert_read = await cert_task
+        except (asyncio.TimeoutError, Exception) as _e:
+            logger.warning(f"Shared cert reader await non-fatal error: {_e}")
+            cert_read = {}
+
+    # Image B only if Image A found no cert and >= 3.0s budget remains
+    if not cert_read.get("cert_number") and not single_image_mode and bytes_b:
+        _rem_b = GEMINI_IDENTIFY_BUDGET - (time.monotonic() - _req_start)
+        if _rem_b >= 3.0:
+            logger.info(f"Image A had no cert; running shared cert reader on Image B ({_rem_b:.1f}s budget left)")
+            cert_read = await _extract_cert_with_budget(bytes_b, mime_type=mime_b, timeout=_rem_b)
+        else:
+            logger.info(f"Skipping Image B cert extraction: only {_rem_b:.1f}s left of {GEMINI_IDENTIFY_BUDGET}s budget")
+
+    pass_cert = pass2.get("cert_number") or pass1.get("cert_number") or ""
+    pass_service = pass2.get("grading_service") or pass1.get("grading_service") or ""
+
+    shared_cert = (cert_read.get("cert_number") or "").strip()
+    shared_service = (cert_read.get("grader") or "").strip()
+
+    if shared_cert:
+        final_cert = shared_cert
+        final_service = shared_service or pass_service
+    else:
+        # Fallback to Pass 1 / Pass 2 if shared reader returned no cert
+        final_cert = pass_cert
+        final_service = pass_service
+
+    if str(final_service).strip().lower() == "none":
+        final_service = ""
 
     ai_coin = {
         "Year":           override_year    or final_year,
@@ -6302,6 +6482,9 @@ async def identify_coin_photo(
         "Theme/Subject":  resolved_theme,
         "Mint Mark":      override_mint    or pass1.get("mint_mark", ""),
         "Condition":      override_grade   or final_grade,
+        "Grading Service": override_grading_service or final_service,
+        "Certification Number": override_cert_number or final_cert,
+        "cert_number":    override_cert_number or final_cert,
         "Metal Content":  override_metal   or pass1.get("metal_content", ""),
         "Variety":        variety_str,
         "AI Estimated Value": est_value,
@@ -6357,7 +6540,13 @@ async def identify_coin_photo(
             "Added":                 firestore.SERVER_TIMESTAMP,
         }
 
-        db.collection(f"users/{user_email}/coins").document(coin_id).set(coin_doc)
+        from services.duplicate_check import check_and_flag_duplicate
+        coins_ref = db.collection(f"users/{user_email}/coins")
+        if check_and_flag_duplicate(coins_ref, coin_doc):
+            ai_coin["possible_duplicate"] = True
+            ai_coin["duplicate_flag"] = coin_doc.get("duplicate_flag")
+
+        coins_ref.document(coin_id).set(coin_doc)
         logger.info(f"Saved coin {coin_id}", extra={"user_email": user_email})
     else:
         # Preview mode -- return b64 images for the Flutter review screen
@@ -6715,27 +6904,43 @@ def _score_duplicate(new_coin: dict, existing_coin: dict) -> float:
     < 0.60   -> Unique
     """
     score = 0.0
-    def _norm(v):
-        return str(v or "").strip().lower()
+    def _val(coin, *keys):
+        for k in keys:
+            v = coin.get(k)
+            if v is not None and str(v).strip():
+                return str(v).strip().lower()
+        return ""
 
-    if _norm(new_coin.get("Program/Series")) == _norm(existing_coin.get("Program/Series")) \
-            and _norm(new_coin.get("Program/Series")):
+    new_prog = _val(new_coin, "Program/Series", "program_series", "series", "CoinName")
+    ex_prog  = _val(existing_coin, "Program/Series", "program_series", "series", "CoinName")
+    if new_prog and ex_prog and new_prog == ex_prog:
         score += 0.40
-    if _norm(new_coin.get("Year")) == _norm(existing_coin.get("Year")) \
-            and _norm(new_coin.get("Year")):
+
+    new_yr = _val(new_coin, "Year", "year")
+    ex_yr  = _val(existing_coin, "Year", "year")
+    if new_yr and ex_yr and new_yr == ex_yr:
         score += 0.30
-    if _norm(new_coin.get("Mint Mark")) == _norm(existing_coin.get("Mint Mark")):
+
+    new_mm = _val(new_coin, "Mint Mark", "mint_mark", "mintMark")
+    ex_mm  = _val(existing_coin, "Mint Mark", "mint_mark", "mintMark")
+    if new_mm == ex_mm:
         score += 0.10
-    if _norm(new_coin.get("Condition")) == _norm(existing_coin.get("Condition")) \
-            and _norm(new_coin.get("Condition")):
+
+    new_cond = _val(new_coin, "Condition", "condition", "Grade", "grade")
+    ex_cond  = _val(existing_coin, "Condition", "condition", "Grade", "grade")
+    if new_cond and ex_cond and new_cond == ex_cond:
         score += 0.10
-    # Purchase date + cost exact match adds a lot of confidence
-    if _norm(new_coin.get("Purchase Date")) == _norm(existing_coin.get("Purchase Date")) \
-            and _norm(new_coin.get("Purchase Date")):
+
+    new_date = _val(new_coin, "Purchase Date", "purchase_date", "purchaseDate")
+    ex_date  = _val(existing_coin, "Purchase Date", "purchase_date", "purchaseDate")
+    if new_date and ex_date and new_date == ex_date:
         score += 0.05
-    if _norm(new_coin.get("Cost")) == _norm(existing_coin.get("Cost")) \
-            and _norm(new_coin.get("Cost")):
+
+    new_cost = _val(new_coin, "Cost", "cost", "Purchase Cost", "purchase_cost")
+    ex_cost  = _val(existing_coin, "Cost", "cost", "Purchase Cost", "purchase_cost")
+    if new_cost and ex_cost and new_cost == ex_cost:
         score += 0.05
+
     return min(score, 1.0)
 
 
@@ -6748,9 +6953,9 @@ def _run_duplicate_sweep(user_email: str, session_id: str, new_coin_ids: list[st
     if not new_coin_ids:
         return {"strong": 0, "possible": 0}
 
-    # Load existing coins (collection + review_queue minus this session)
+    # Load existing coins (coins + collection + review_queue minus this session)
     existing = []
-    for coll_name in ("collection", "review_queue"):
+    for coll_name in ("coins", "collection", "review_queue"):
         docs = db.collection("users").document(user_email).collection(coll_name)\
                  .where("import_session_id", "!=", session_id)\
                  .limit(2000).stream()
@@ -6846,6 +7051,8 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
 
         linked_coin_ids = []
         unlinked_items = []
+        coin_id_map = {c_id: c_data for c_id, c_data in coin_data}
+        used_coin_ids = set()
 
         for item in line_items:
             item_type = str(item.get("item_type", "coin")).lower()
@@ -6856,40 +7063,50 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
             matched_coin_id = None
             match_tier = "none"
 
-            retailer = str(rec.get("retailer", "")).lower().strip()
-            inv_no   = str(rec.get("invoice_number", "")).lower().strip()
+            direct_id = str(item.get("id") or "").strip()
+            if direct_id and direct_id in coin_id_map and direct_id not in used_coin_ids:
+                matched_coin_id = direct_id
+                match_tier = "exact"
+
+            retailer = str(item.get("Retailer/Website") or item.get("retailer") or rec.get("retailer", "")).lower().strip()
+            inv_no   = str(item.get("Retailer Invoice #") or item.get("invoice_number") or rec.get("invoice_number", "")).lower().strip()
             item_no  = str(item.get("Retailer Item No.", "")).lower().strip()
             item_yr  = str(item.get("Year", "")).strip()
             item_mm  = str(item.get("Mint Mark", "")).strip().upper()
             item_ser = str(item.get("Program/Series", "") or item.get("Denomination", "")).lower().strip()
 
-            for c_id, c_data in coin_data:
-                c_retailer = str(c_data.get("Retailer Name", "")).lower().strip()
-                c_inv      = str(c_data.get("Retailer Invoice #", "")).lower().strip()
-                c_item_no  = str(c_data.get("Retailer Item No.", "")).lower().strip()
-                c_yr       = str(c_data.get("Year", "")).strip()
-                c_mm       = str(c_data.get("Mint Mark", "")).strip().upper()
-                c_ser      = str(c_data.get("Program/Series", "")).lower().strip()
+            if not matched_coin_id:
+                for c_id, c_data in coin_data:
+                    if c_id in used_coin_ids:
+                        continue
+                    c_retailer = str(c_data.get("Retailer Name", "") or c_data.get("Retailer/Website", "")).lower().strip()
+                    c_inv      = str(c_data.get("Retailer Invoice #", "") or c_data.get("invoice_number", "")).lower().strip()
+                    c_item_no  = str(c_data.get("Retailer Item No.", "")).lower().strip()
+                    c_yr       = str(c_data.get("Year", "")).strip()
+                    c_mm       = str(c_data.get("Mint Mark", "")).strip().upper()
+                    c_ser      = str(c_data.get("Program/Series", "")).lower().strip()
 
-                if inv_no and c_inv == inv_no and retailer and c_retailer == retailer \
-                        and item_no and c_item_no == item_no:
-                    matched_coin_id = c_id
-                    match_tier = "exact"
-                    break
+                    if inv_no and c_inv == inv_no and retailer and c_retailer == retailer \
+                            and item_no and c_item_no == item_no:
+                        matched_coin_id = c_id
+                        match_tier = "exact"
+                        break
 
-                if item_yr and c_yr == item_yr \
-                        and c_mm == item_mm \
-                        and item_ser and c_ser and item_ser in c_ser:
-                    matched_coin_id = c_id
-                    match_tier = "strong"
-                    break
+                    if item_yr and c_yr == item_yr \
+                            and c_mm == item_mm \
+                            and item_ser and c_ser and item_ser in c_ser:
+                        matched_coin_id = c_id
+                        match_tier = "strong"
+                        break
 
             if matched_coin_id:
+                used_coin_ids.add(matched_coin_id)
                 linked_coin_ids.append(matched_coin_id)
                 linked_total += 1
                 purchase_date = (
                     item.get("Purchase Date") or
                     item.get("Invoice Date") or
+                    item.get("invoice_date") or
                     rec.get("invoice_date") or ""
                 )
                 purchase_price_raw = (
@@ -6904,19 +7121,28 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
                 except Exception:
                     purchase_price = 0.0
 
+                item_retailer = item.get("Retailer/Website") or item.get("retailer") or rec.get("retailer", "")
+                item_inv_no = item.get("Retailer Invoice #") or item.get("invoice_number") or rec.get("invoice_number", "")
+
                 db.collection("users").document(user_email)\
                   .collection("review_queue").document(matched_coin_id)\
                   .update({
                       "paper_trail": {
                           "receipt_id":       rec_id,
                           "receipt_filename": rec.get("original_filename", ""),
-                          "retailer":         rec.get("retailer", ""),
+                          "retailer":         item_retailer,
+                          "invoice_number":   item_inv_no,
                           "purchase_date":    purchase_date,
                           "purchase_price":   purchase_price,
                           "gcs_path":         rec.get("gcs_path", ""),
                           "match_tier":       match_tier,
                       },
                       "Purchase Date": purchase_date,
+                      "purchase_date": purchase_date,
+                      "Retailer/Website": item_retailer,
+                      "retailer": item_retailer,
+                      "Retailer Invoice #": item_inv_no,
+                      "invoice_number": item_inv_no,
                   })
                 item["linked_coin_id"] = matched_coin_id
                 item["match_tier"] = match_tier
@@ -6954,6 +7180,12 @@ def _save_to_gcs(user_email: str, session_id: str, filename: str,
 
 
 # ── POST /api/import/upload ───────────────────────────────────────────────────
+
+@app.options("/api/import/upload")
+async def import_upload_preflight():
+    """Explicit CORS preflight handler for multipart batch import file uploads."""
+    from fastapi.responses import Response as FastAPIResponse
+    return FastAPIResponse(status_code=200)
 
 @app.post("/api/import/upload")
 async def import_upload(
@@ -7059,7 +7291,14 @@ class ImportStartRequest(BaseModel):
     file_manifest: list[dict]   # [{name, size, mime}]
 
 @app.post("/api/import/start")
-def import_start(req: ImportStartRequest):
+def import_start(req: ImportStartRequest, _user: dict = Depends(get_current_user)):
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if req.user_email.strip().lower() != caller_email and req.user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     session_ref = db.collection("users").document(req.user_email)\
                     .collection("import_sessions").document(req.session_id)
     session_ref.set({
@@ -7127,18 +7366,39 @@ def import_status(
 
 class ImportProcessRequest(BaseModel):
     user_email: str
-    session_id: str
+    session_id: Optional[str] = None
+    import_id:  Optional[str] = None
     mask_pii:   bool = False
+
+    @model_validator(mode="before")
+    def populate_session_or_import_id(cls, data):
+        if isinstance(data, dict):
+            if not data.get("session_id") and data.get("import_id"):
+                data["session_id"] = data["import_id"]
+            elif not data.get("import_id") and data.get("session_id"):
+                data["import_id"] = data["session_id"]
+        return data
 
 # ── POST /api/import/process ───────────────────────────────────────────────────
 @app.post("/api/import/process", status_code=202)
-async def import_process(req: ImportProcessRequest, background_tasks: BackgroundTasks):
+async def import_process(
+    req: ImportProcessRequest,
+    background_tasks: BackgroundTasks,
+    _user: dict = Depends(get_current_user),
+):
     """
     Orchestrates AI processing of every file in the session asynchronously.
     Returns 202 Accepted immediately so frontend polling tracks status without event-loop blocking.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if req.user_email.strip().lower() != caller_email and req.user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     user_email = req.user_email
-    session_id = req.session_id
+    session_id = req.session_id or req.import_id or ""
     mask_pii   = req.mask_pii
 
     session_ref = db.collection("users").document(user_email)\
@@ -7150,6 +7410,213 @@ async def import_process(req: ImportProcessRequest, background_tasks: Background
     session_ref.update({"status": "processing"})
     background_tasks.add_task(_execute_import_process_worker, user_email, session_id, mask_pii)
     return {"status": "processing", "session_id": session_id}
+
+
+def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "", session_id: str = "") -> list[dict]:
+    """
+    Production receipt normalization pipeline (NET-394, NET-400a, NET-400b, NET-400c).
+    - Merges line_items across multiple dict entries if Gemini returns a list (NET-400a).
+    - Handles quantities, multiplying out items by quantity (NET-400b).
+    - Filters out supply / album / folder rows (NET-400c).
+    - Normalizes set denominations and programs (NET-400c).
+    - Allocates landed cost if subtotal / shipping / tax / grand_total present.
+    """
+    if isinstance(data, list):
+        dict_entries = [d for d in data if isinstance(d, dict)]
+        first_d = dict_entries[0] if dict_entries else {}
+        if dict_entries and any("line_items" in d for d in dict_entries):
+            merged = dict(next(d for d in dict_entries if "line_items" in d))
+            merged_items = []
+            for d in dict_entries:
+                d_ret = d.get("retailer") or d.get("Retailer/Website") or ""
+                d_inv = d.get("invoice_number") or d.get("Retailer Invoice #") or ""
+                d_dt  = d.get("invoice_date") or d.get("Purchase Date") or d.get("purchase_date") or d.get("Date") or ""
+                for li in (d.get("line_items") or []):
+                    if isinstance(li, dict):
+                        li_copy = dict(li)
+                        if d_ret and not (li_copy.get("Retailer/Website") or li_copy.get("retailer")):
+                            li_copy["retailer"] = d_ret
+                        if d_inv and not (li_copy.get("Retailer Invoice #") or li_copy.get("invoice_number")):
+                            li_copy["invoice_number"] = d_inv
+                        if d_dt and not (li_copy.get("invoice_date") or li_copy.get("Invoice Date") or li_copy.get("Purchase Date") or li_copy.get("purchase_date") or li_copy.get("Date")):
+                            li_copy["invoice_date"] = d_dt
+                        merged_items.append(li_copy)
+            merged["line_items"] = merged_items
+            for fee_k in ("subtotal", "shipping_fee", "tax_fee", "total_amount"):
+                if len(dict_entries) > 1:
+                    merged[fee_k] = sum(clean_valuation_value(d.get(fee_k) or 0.0) for d in dict_entries)
+            data = merged
+        else:
+            data = {"line_items": dict_entries}
+            # Copy top-level metadata from first dict entry if present
+            for meta_k in ("retailer", "Retailer/Website", "invoice_number", "Retailer Invoice #", "invoice_date", "purchase_date", "Date", "subtotal", "shipping_fee", "tax_fee", "total_amount"):
+                if meta_k in first_d and meta_k not in data:
+                    data[meta_k] = first_d[meta_k]
+    elif not isinstance(data, dict):
+        data = {"line_items": []}
+
+    items = data.get("line_items")
+    if not isinstance(items, list) or not items:
+        for fallback_key in ("items", "coins", "results", "data"):
+            candidate = data.get(fallback_key)
+            if isinstance(candidate, list) and candidate:
+                items = candidate
+                break
+    if not isinstance(items, list):
+        items = []
+    items = [it for it in items if isinstance(it, dict)]
+
+    def _get_item_qty(item_dict):
+        try:
+            raw_q = item_dict.get("qty") or item_dict.get("quantity") or item_dict.get("Quantity") or item_dict.get("Qty") or 1
+            if isinstance(raw_q, str):
+                raw_q = re.sub(r"[^\d.]", "", raw_q) or "1"
+            return max(1, min(int(float(raw_q)), 100))
+        except Exception:
+            return 1
+
+    subtotal_val = clean_valuation_value(data.get("subtotal") or 0.0)
+    shipping_val = clean_valuation_value(data.get("shipping_fee") or 0.0)
+    tax_val      = clean_valuation_value(data.get("tax_fee") or 0.0)
+    grand_total  = clean_valuation_value(data.get("total_amount") or 0.0)
+
+    raw_item_sum = sum(clean_valuation_value(it.get("Cost") or 0.0) * _get_item_qty(it) for it in items)
+    if subtotal_val <= 0.0:
+        subtotal_val = raw_item_sum
+
+    total_global_fees = 0.0
+    if grand_total > subtotal_val and subtotal_val > 0:
+        total_global_fees = grand_total - subtotal_val
+    elif grand_total <= 0 and (shipping_val + tax_val) > 0:
+        total_global_fees = shipping_val + tax_val
+
+    results = []
+    for it in items:
+        item_qty = _get_item_qty(it)
+        sticker_price = clean_valuation_value(it.get("Cost") or 0.0)
+
+        # Proportional Landed Cost Allocation
+        if raw_item_sum > 0.0 and total_global_fees > 0.0:
+            allocated_fee = round(total_global_fees * (sticker_price / raw_item_sum), 2)
+        elif len(items) == 1 and total_global_fees > 0.0:
+            allocated_fee = round(total_global_fees, 2)
+        else:
+            allocated_fee = 0.0
+
+        landed_cost_basis = round(sticker_price + allocated_fee, 2)
+
+        is_supply = bool(it.get("is_supply", False))
+        prog_val = (it.get("Program/Series") or "").strip()
+        raw_desc = (it.get("Personal Notes") or "") + " " + fname + " " + prog_val + " " + (it.get("Denomination") or "")
+        raw_lower = raw_desc.lower()
+
+        # Supply / Folder Filter (NET-400c):
+        # Never import supply/folder rows as coins
+        supply_kws = ("folder", "supply", "album", "holder", "capsule", "supplies", "binder", "display box")
+        has_year = bool(re.search(r"\b(1[789]\d\d|20[0-2]\d)\b", raw_desc))
+        if is_supply or (any(kw in raw_lower for kw in supply_kws) and not has_year and not it.get("Year")):
+            logger.info(f"Skipping supply/accessory item: {raw_desc[:60]}")
+            continue
+
+        # Set & Denomination Normalization (NET-400c):
+        denom_val = (it.get("Denomination") or "").strip()
+        denom_lower = denom_val.lower()
+        if "unknown cent/nickel" in denom_lower or denom_lower in ("cent/nickel", "cent / nickel", "unknown cent / nickel"):
+            denom_val = "Cent"
+            if not prog_val:
+                prog_val = "Cent & Nickel Set"
+        elif "quarter set" in raw_lower and ("unknown" in denom_lower or not denom_val):
+            denom_val = "Quarter"
+        elif not denom_val:
+            denom_val = "Dollar"
+
+        # Smart Program/Series & Metal Content Normalization
+        metal_val = (it.get("Metal Content") or "").strip()
+
+        if "gold eagle" in raw_lower or "american gold eagle" in raw_lower:
+            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                prog_val = "American Gold Eagle"
+            if not metal_val:
+                metal_val = "Gold"
+        elif "platinum eagle" in raw_lower or "american platinum eagle" in raw_lower:
+            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                prog_val = "American Platinum Eagle"
+            if not metal_val:
+                metal_val = "Platinum"
+        elif "palladium eagle" in raw_lower or "american palladium eagle" in raw_lower:
+            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                prog_val = "American Palladium Eagle"
+            if not metal_val:
+                metal_val = "Palladium"
+        elif "silver eagle" in raw_lower or "american silver eagle" in raw_lower or "26ea" in raw_lower or ("american eagle" in raw_lower and "gold" not in raw_lower and "platinum" not in raw_lower):
+            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                prog_val = "American Silver Eagle"
+            if not metal_val:
+                metal_val = "Silver"
+
+        if not metal_val:
+            if "silver" in raw_lower or "morgan" in raw_lower or "peace" in raw_lower:
+                metal_val = "Silver"
+            elif "gold" in raw_lower or "saint-gaudens" in raw_lower or "krugerrand" in raw_lower or "sovereign" in raw_lower:
+                metal_val = "Gold"
+            elif "nickel" in raw_lower or "jefferson" in raw_lower or "buffalo nickel" in raw_lower:
+                metal_val = "Cupronickel"
+            elif "cent" in raw_lower or "lincoln" in raw_lower or "penny" in raw_lower or "indian head" in raw_lower:
+                metal_val = "Copper"
+
+        mint_mark_val = (it.get("Mint Mark") or "").strip()
+        notes_str = (it.get("Personal Notes") or "") + " " + fname
+        if not mint_mark_val and ("26ea" in notes_str.lower() or "west point" in notes_str.lower() or "26ea" in fname.lower()):
+            mint_mark_val = "W"
+
+        doc = {
+            "Program/Series":       prog_val,
+            "Year":                 it.get("Year", ""),
+            "Mint Mark":            mint_mark_val,
+            "Denomination":         denom_val,
+            "Condition":            it.get("Condition", "Ungraded"),
+            "Metal Content":        metal_val,
+            "Cost":                 landed_cost_basis,
+            "Quantity":             item_qty,
+            "quantity":             item_qty,
+            "Country":              "United States",
+            "Personal Notes":       (it.get("Personal Notes") or it.get("Original Description from source") or "").strip(),
+            "source":               "PDF Invoice",
+            "is_demo":              False,
+            "is_demo_cleared":      False,
+            "Retailer/Website":     (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
+            "retailer":             (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
+            "Retailer Invoice #":   (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip(),
+            "invoice_number":       (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip(),
+            "Purchase Date":        (it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or (data.get("invoice_date") if isinstance(data, dict) else "") or (data.get("date") if isinstance(data, dict) else "") or (data.get("Purchase Date") if isinstance(data, dict) else "") or "").strip(),
+            "purchase_date":        (it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or (data.get("invoice_date") if isinstance(data, dict) else "") or (data.get("date") if isinstance(data, dict) else "") or (data.get("Purchase Date") if isinstance(data, dict) else "") or "").strip(),
+            "Retailer Item No.":    (it.get("Retailer Item No.") or it.get("item_number") or it.get("item_no") or "").strip(),
+            "status":               "pending_review",
+            "source_file":          fname,
+            "import_session_id":    session_id,
+            "source_type":          "invoice",
+            "deep_dive_status":     "PENDING",
+            "upload_method":        "pdf_invoice_import",
+            "item_type":            "coin",
+        }
+        if gcs_path:
+            doc["gcs_path"] = gcs_path
+        try:
+            doc["item_type"] = _classify_item_type(doc)
+        except Exception:
+            pass
+
+        # B1: Call enrich_us_mint_item on doc to expand pack/roll quantity (e.g. 26SQRP)
+        try:
+            from services.us_mint_catalog_service import enrich_us_mint_item
+            enrich_us_mint_item(doc)
+            doc["Purchase Cost"] = doc.get("Cost")
+        except Exception as e:
+            logger.warning(f"Error enriching item in normalize_and_validate_receipt: {e}")
+
+        results.append(dict(doc))
+
+    return results
 
 
 def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: bool):
@@ -7244,6 +7711,8 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             "Cost":                 None,
                             "Purchase Cost":        None,
                             "Purchase Date":        "",
+                            "Retailer/Website":     "",
+                            "Retailer Invoice #":   "",
                             "Country":              "United States",
                             "deep_dive_status":     "PENDING",
                             "upload_method":        "spreadsheet_import",
@@ -7330,16 +7799,30 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             doc['Personal Notes'] = notes_val
                             doc['Personal Notes I'] = notes_val
 
+                        retailer_val = doc.get('Retailer/Website') or doc.get('Retailer') or doc.get('Dealer') or doc.get('Website') or doc.get('Vendor') or doc.get('Seller')
+                        if retailer_val is not None:
+                            doc['Retailer/Website'] = str(retailer_val).strip()
+                        invoice_val = doc.get('Retailer Invoice #') or doc.get('Invoice #') or doc.get('Invoice Number') or doc.get('Invoice') or doc.get('Order #')
+                        if invoice_val is not None:
+                            doc['Retailer Invoice #'] = str(invoice_val).strip()
+
                         if not is_currency:
                             doc['item_type'] = _classify_item_type(doc)
 
-                        doc_ref = col_ref.document(str(uuid.uuid4()))
-                        batch.set(doc_ref, doc)
-                        new_coin_ids.append(doc_ref.id)
-                        count += 1
-                        if count % 490 == 0:
-                            batch.commit()
-                            batch = db.batch()
+                        doc_qty = 1
+                        try:
+                            doc_qty = max(1, min(int(doc.get("Quantity") or doc.get("quantity") or doc.get("Qty") or doc.get("qty") or 1), 100))
+                        except Exception:
+                            doc_qty = 1
+
+                        for _ in range(doc_qty):
+                            doc_ref = col_ref.document(str(uuid.uuid4()))
+                            batch.set(doc_ref, dict(doc))
+                            new_coin_ids.append(doc_ref.id)
+                            count += 1
+                            if count % 490 == 0:
+                                batch.commit()
+                                batch = db.batch()
                     if count % 490 != 0:
                         batch.commit()
 
@@ -7404,9 +7887,11 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                                 "filename": fname,
                                 "gcs_path": gcs_path,
                                 "document_type": "checklist",
+                                "session_id": session_id,
                                 "import_session_id": session_id,
                                 "coins_extracted": added_this_file,
                                 "created_at": firestore.SERVER_TIMESTAMP,
+                                "uploaded_at": firestore.SERVER_TIMESTAMP,
                             }
                             db.collection("users").document(user_email).collection("receipts").document(receipt_id).set(rec_doc)
 
@@ -7433,8 +7918,8 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
 
                     Required JSON output structure:
                     {{
-                        "retailer": "Dealer or store name",
-                        "invoice_number": "Invoice or order number",
+                        "retailer": "Dealer or store name (use 'United States Mint' if document is from US Mint / shop.usmint.gov)",
+                        "invoice_number": "Invoice, order, or customer reference number",
                         "invoice_date": "YYYY-MM-DD",
                         "subtotal": 0.00,
                         "shipping_fee": 0.00,
@@ -7448,26 +7933,47 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                                 "Denomination": "Denomination (e.g. Dollar, Quarter, Cent)",
                                 "Condition": "Grade or condition if mentioned (e.g. MS-65, VF-20, Ungraded)",
                                 "Cost": 0.00,
+                                "qty": 1,
                                 "is_supply": false,
+                                "item_number": "Item number / catalog code if present",
+                                "invoice_number": "Invoice number from this page header",
+                                "invoice_date": "YYYY-MM-DD from this page header",
                                 "Certification Number": "Cert number if graded",
-                                "Personal Notes": "Any item description or catalog number"
+                                "Personal Notes": "Any item description, catalog number, or stock item number (e.g. 26EA, 26XL)"
                             }}
                         ]
                     }}
                     Field Instructions:
+                    - Multi-Page / Multi-Invoice Invoices: A multi-page document may contain separate invoices or packing slips with different invoice numbers and dates on each page header. Stamp each line item with the "invoice_number" and "invoice_date" (ISO 8601 YYYY-MM-DD) from its own page header.
+                    - "retailer": If document header or body indicates "United States Mint" or "www.usmint.gov", set to "United States Mint".
+                    - "invoice_number": Extract invoice number, order number, or packing slip number.
                     - "invoice_date": Output in ISO 8601 YYYY-MM-DD format.
-                    - "Cost": Sticker price / unit price of the line item before global fees.
+                    - "qty": Integer quantity from the leftmost Qty / Qty. column on EVERY row (default 1). Inspect each row's Qty. column carefully (e.g., 1 vs 2) and never default qty to 1 when the Qty. column shows 2 or more. Do NOT split a qty > 1 line item into multiple JSON objects; emit a single line_item object with "qty": N.
+                    - "Cost": Sticker price / per-unit price of the line item before global fees. If the line shows an extended Amount for qty > 1 (e.g. Qty. 2 with Amount 15.30), divide Amount by qty so Cost is the per-unit price (7.65).
                     - "is_supply": Set to true ONLY if the item is a non-coin accessory/supply (e.g., coin album, display box, storage capsule, insurance, or grading fee).
                     Output ONLY valid JSON.
                     """
 
-                    resp = genai_client.models.generate_content(
-                        model=PRIMARY_MODEL,
-                        contents=[pdf_part, genai_types.Part.from_text(text=invoice_prompt)],
-                        config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
-                    )
-                    data = json.loads(resp.text)
-                    items = data.get("line_items", [])
+                    data = None
+                    last_gen_err = None
+                    for attempt in range(3):
+                        try:
+                            resp = genai_client.models.generate_content(
+                                model=PRIMARY_MODEL,
+                                contents=[pdf_part, genai_types.Part.from_text(text=invoice_prompt)],
+                                config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+                            )
+                            raw_text = resp.text.strip()
+                            if raw_text.startswith("```"):
+                                raw_text = raw_text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                            data = json.loads(raw_text)
+                            break
+                        except Exception as g_err:
+                            last_gen_err = g_err
+                            time.sleep(1.0 * (2 ** attempt))
+                    if data is None:
+                        raise last_gen_err or RuntimeError("Failed to parse invoice with AI")
+
                     added_this_file = 0
                     total_val = 0.0
                     col_ref = db.collection("users").document(user_email).collection("review_queue")
@@ -7477,149 +7983,58 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     receipt_id = f"rec_{safe_file_stem}"
                     line_items_out = []
 
-                    subtotal_val = float(data.get("subtotal") or 0.0)
-                    shipping_val = float(data.get("shipping_fee") or 0.0)
-                    tax_val      = float(data.get("tax_fee") or 0.0)
-                    grand_total  = float(data.get("total_amount") or 0.0)
+                    normalized_coins = normalize_and_validate_receipt(data, fname=fname, gcs_path=gcs_path, session_id=session_id)
+                    total_val = round(sum(
+                        c.get("Cost", 0.0) * (
+                            (max(1, int(c.get("Quantity") or c.get("quantity") or 1)) // max(1, int(c.get("pack_quantity_multiplier") or 1)))
+                            if c.get("pack_expanded")
+                            else max(1, int(c.get("Quantity") or c.get("quantity") or 1))
+                        ) for c in normalized_coins
+                    ), 2)
 
-                    # Compute aggregate item price if subtotal missing
-                    raw_item_sum = sum(clean_valuation_value(it.get("Cost") or 0.0) for it in items)
+                    hdr = data if isinstance(data, dict) else (data[0] if (isinstance(data, list) and data and isinstance(data[0], dict)) else {})
+                    subtotal_val = clean_valuation_value(hdr.get("subtotal") or 0.0)
+                    shipping_val = clean_valuation_value(hdr.get("shipping_fee") or hdr.get("shipping") or 0.0)
+                    tax_val      = clean_valuation_value(hdr.get("tax_fee") or hdr.get("tax") or 0.0)
+                    grand_total  = clean_valuation_value(hdr.get("total_amount") or hdr.get("grand_total") or 0.0)
                     if subtotal_val <= 0.0:
-                        subtotal_val = raw_item_sum
+                        subtotal_val = total_val
+                    if grand_total <= 0.0:
+                        grand_total = (subtotal_val + shipping_val + tax_val) if (shipping_val + tax_val) > 0 else total_val
 
-                    # B4: Cap shipping offset to avoid phantom landed cost
-                    # When grand_total <= subtotal (shipping credited / included), fees MUST stay 0.
-                    # Do NOT fall through to shipping_val+tax_val — that lands $70.95 instead of $61.00.
-                    total_global_fees = 0.0
-                    if grand_total > subtotal_val and subtotal_val > 0:
-                        total_global_fees = grand_total - subtotal_val
-                    elif grand_total <= 0 and (shipping_val + tax_val) > 0:
-                        # Invoice total missing — fall back to explicit fee fields only
-                        total_global_fees = shipping_val + tax_val
+                    first_c = normalized_coins[0] if normalized_coins else {}
+                    retailer_val = (hdr.get("retailer") or hdr.get("Retailer/Website") or first_c.get("Retailer/Website") or first_c.get("retailer") or "").strip()
+                    invoice_num_val = (hdr.get("invoice_number") or hdr.get("Retailer Invoice #") or first_c.get("Retailer Invoice #") or first_c.get("invoice_number") or "").strip()
+                    invoice_date_val = (hdr.get("invoice_date") or hdr.get("date") or hdr.get("Purchase Date") or first_c.get("Purchase Date") or first_c.get("purchase_date") or "").strip()
 
-                    for it in items:
-                        sticker_price = clean_valuation_value(it.get("Cost") or 0.0)
-                        
-                        # Proportional Landed Cost Allocation
-                        if raw_item_sum > 0.0 and total_global_fees > 0.0:
-                            allocated_fee = round(total_global_fees * (sticker_price / raw_item_sum), 2)
-                        elif len(items) == 1 and total_global_fees > 0.0:
-                            allocated_fee = round(total_global_fees, 2)
-                        else:
-                            allocated_fee = 0.0
-
-                        landed_cost_basis = round(sticker_price + allocated_fee, 2)
-                        total_val += landed_cost_basis
-
-                        is_supply = bool(it.get("is_supply", False))
-                        item_type_val = "supply" if is_supply else "coin"
-
-                        prog_val = (it.get("Program/Series") or "").strip()
-                        raw_desc = (it.get("Personal Notes") or "") + " " + fname + " " + prog_val
-                        raw_lower = raw_desc.lower()
-
-                        # Smart Program/Series & Metal Content Normalization
-                        metal_val = (it.get("Metal Content") or "").strip()
-
-                        if "gold eagle" in raw_lower or "american gold eagle" in raw_lower:
-                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                                prog_val = "American Gold Eagle"
-                            if not metal_val:
-                                metal_val = "Gold"
-                        elif "platinum eagle" in raw_lower or "american platinum eagle" in raw_lower:
-                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                                prog_val = "American Platinum Eagle"
-                            if not metal_val:
-                                metal_val = "Platinum"
-                        elif "palladium eagle" in raw_lower or "american palladium eagle" in raw_lower:
-                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                                prog_val = "American Palladium Eagle"
-                            if not metal_val:
-                                metal_val = "Palladium"
-                        elif "silver eagle" in raw_lower or "american silver eagle" in raw_lower or "26ea" in raw_lower or ("american eagle" in raw_lower and "gold" not in raw_lower and "platinum" not in raw_lower):
-                            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                                prog_val = "American Silver Eagle"
-                            if not metal_val:
-                                metal_val = "Silver"
-
-                        # General metal fallbacks if still empty:
-                        if not metal_val:
-                            if "silver" in raw_lower or "morgan" in raw_lower or "peace" in raw_lower:
-                                metal_val = "Silver"
-                            elif "gold" in raw_lower or "saint-gaudens" in raw_lower or "krugerrand" in raw_lower or "sovereign" in raw_lower:
-                                metal_val = "Gold"
-                            elif "nickel" in raw_lower or "jefferson" in raw_lower or "buffalo nickel" in raw_lower:
-                                metal_val = "Cupronickel"
-                            elif "cent" in raw_lower or "lincoln" in raw_lower or "penny" in raw_lower or "indian head" in raw_lower:
-                                metal_val = "Copper"
-
-                        mint_mark_val = (it.get("Mint Mark") or "").strip()
-                        notes_str = (it.get("Personal Notes") or "") + " " + fname
-                        if not mint_mark_val and ("26ea" in notes_str.lower() or "west point" in notes_str.lower() or "26ea" in fname.lower()):
-                            mint_mark_val = "W"
-
-                        doc = {
-                            "Program/Series":       prog_val,
-                            "Year":                 it.get("Year", ""),
-                            "Mint Mark":            mint_mark_val,
-                            "Denomination":         it.get("Denomination", "Dollar"),
-                            "Condition":            it.get("Condition", "Ungraded"),
-                            "Metal Content":        metal_val,
-                            "Cost":                 landed_cost_basis,
-                            "Purchase Cost":        landed_cost_basis,
-                            "Sticker Price":        sticker_price,
-                            "Allocated Fees":       allocated_fee,
-                            "Purchase Date":        data.get("invoice_date", ""),
-                            "Retailer/Website":     data.get("retailer", ""),
-                            "Retailer Invoice #":   data.get("invoice_number", ""),
-                            "Personal Reference #": data.get("invoice_number", ""),
-                            "Certification Number": it.get("Certification Number", ""),
-                            "Personal Notes":       it.get("Personal Notes", ""),
-                            "Country":              "United States",
-                            "deep_dive_status":     "PENDING",
-                            "upload_method":        "pdf_invoice_import",
-                            "source_file":          fname,
-                            "import_session_id":    session_id,
-                            "source_type":          "invoice",
-                            "receipt_id":           receipt_id,
-                            "gcs_path":             gcs_path,
-                            "created_at":           firestore.SERVER_TIMESTAMP,
-                            "item_type":            item_type_val,
-                        }
-                        if not is_supply:
-                            doc["item_type"] = _classify_item_type(doc)
-
-                        # B1: Call enrich_us_mint_item on doc to expand pack/roll quantity
-                        doc["Original Description from source"] = it.get("Original Description from source", "")
-                        doc["Retailer Item No."] = it.get("Retailer Item No.", "")
-                        doc["Quantity"] = it.get("Quantity") or it.get("quantity") or 1
-                        try:
-                            from services.us_mint_catalog_service import enrich_us_mint_item
-                            enrich_us_mint_item(doc)
-                        except Exception as e:
-                            logger.warning(f"Error enriching item in import worker: {e}")
+                    for coin_doc in normalized_coins:
+                        coin_doc["receipt_id"] = receipt_id
+                        coin_doc["created_at"] = firestore.SERVER_TIMESTAMP
+                        coin_doc["Retailer/Website"] = coin_doc.get("Retailer/Website") or coin_doc.get("retailer") or retailer_val or ""
+                        coin_doc["retailer"] = coin_doc["Retailer/Website"]
+                        coin_doc["Retailer Invoice #"] = coin_doc.get("Retailer Invoice #") or coin_doc.get("invoice_number") or invoice_num_val or ""
+                        coin_doc["invoice_number"] = coin_doc["Retailer Invoice #"]
+                        coin_doc["Purchase Date"] = coin_doc.get("Purchase Date") or coin_doc.get("purchase_date") or invoice_date_val or ""
+                        coin_doc["purchase_date"] = coin_doc["Purchase Date"]
 
                         doc_ref = col_ref.document(str(uuid.uuid4()))
-                        batch.set(doc_ref, doc)
+                        batch.set(doc_ref, coin_doc)
                         new_coin_ids.append(doc_ref.id)
-                        
-                        # B3: added_this_file += Quantity so the Done checkmark matches coins identified
-                        doc_qty = max(1, int(doc.get("Quantity") or doc.get("quantity") or 1))
+                        doc_qty = max(1, int(coin_doc.get("Quantity") or coin_doc.get("quantity") or 1))
                         added_this_file += doc_qty
-                        line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in doc.items()}
+                        line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in coin_doc.items()}
                         line_item_entry["id"] = doc_ref.id
                         line_items_out.append(line_item_entry)
-
-                    batch.commit()
 
                     receipt_doc = {
                         "receipt_id":          receipt_id,
                         "session_id":          session_id,
+                        "import_session_id":   session_id,
                         "original_filename":   fname,
                         "gcs_path":            gcs_path,
-                        "retailer":            data.get("retailer", ""),
-                        "invoice_number":      data.get("invoice_number", ""),
-                        "invoice_date":        data.get("invoice_date", ""),
+                        "retailer":            retailer_val,
+                        "invoice_number":      invoice_num_val,
+                        "invoice_date":        invoice_date_val,
                         "subtotal":            subtotal_val,
                         "shipping_fee":        shipping_val,
                         "tax_fee":             tax_val,
@@ -7629,8 +8044,11 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         "unlinked_items":      [],
                         "uploaded_at":         firestore.SERVER_TIMESTAMP,
                     }
-                    db.collection("users").document(user_email)\
-                      .collection("receipts").document(receipt_id).set(receipt_doc)
+                    receipt_ref = db.collection("users").document(user_email)\
+                      .collection("receipts").document(receipt_id)
+                    batch.set(receipt_ref, receipt_doc)
+
+                    batch.commit()
 
                     summary["coins_identified"]     += added_this_file
                     summary["receipts_parsed"]      += 1
@@ -7645,7 +8063,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                 except Exception as e:
                     per_file[idx]["status"] = "error"
                     per_file[idx]["error"]  = str(e)
-                    logger.exception(f"Bulk import invoice error ({fname})")
+                    logger.error(f"Bulk import invoice error ({fname}): {e}\n{traceback.format_exc()}")
 
             elif ftype == "image":
                 # Skip this image if it was already handled as part of a pair
@@ -7803,7 +8221,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
 
             else:
                 per_file[idx]["status"] = "skipped"
-            per_file[idx]["note"]   = "File type not recognized"
+                per_file[idx]["note"]   = "File type not recognized"
 
         # Push progress after each file
         session_ref.update({
@@ -7821,8 +8239,9 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
         summary["duplicates_flagged"]  = dup_result["strong"] + dup_result["possible"]
         summary["unlinked_receipts"]   = link_result["unlinked"]
 
+        any_errors = any(f.get("status") == "error" for f in per_file)
         session_ref.update({
-            "status":           "done",
+            "status":           "done_with_errors" if any_errors else "done",
             "processed_files":  len(per_file),
             "summary":          summary,
             "per_file":         per_file,
@@ -7848,9 +8267,28 @@ def list_receipts(
 
     col = db.collection("users").document(user_email).collection("receipts")
     if session_id:
-        col = col.where("session_id", "==", session_id)
-    docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
-              .limit(limit).stream()
+        # Avoid composite index requirement by not ordering by uploaded_at in Firestore when filtering by session_id
+        doc_map = {}
+        for d in col.where("session_id", "==", session_id).stream():
+            doc_map[d.id] = d
+        for d in col.where("import_session_id", "==", session_id).stream():
+            doc_map[d.id] = d
+        docs = list(doc_map.values())
+        def _get_sort_key(doc_snap):
+            data = doc_snap.to_dict() or {}
+            uat = data.get("uploaded_at")
+            if hasattr(uat, "timestamp"):
+                return uat.timestamp()
+            elif isinstance(uat, (int, float)):
+                return float(uat)
+            elif isinstance(uat, str):
+                return uat
+            return 0
+        docs.sort(key=_get_sort_key, reverse=True)
+        docs = docs[:limit]
+    else:
+        docs = col.order_by("uploaded_at", direction=firestore.Query.DESCENDING)\
+                  .limit(limit).stream()
 
     # Query active coin IDs and review_queue IDs to prune deleted coins
     active_ids = set()
@@ -8780,6 +9218,8 @@ def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
     # 3. Load reference catalog from SQLite
     if not os.path.exists(DB_PATH):
         logger.warning(f"get_user_owned_doc_ids: DB not found at {DB_PATH}")
+        if return_raw_counts:
+            return set(), len(user_coins) + len(user_notes)
         return set()
         
     try:
@@ -8791,6 +9231,8 @@ def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
         conn.close()
     except Exception as e:
         logger.error(f"get_user_owned_doc_ids: SQLite error: {e}")
+        if return_raw_counts:
+            return set(), len(user_coins) + len(user_notes)
         return set()
 
     ref_rows_dict = {r["doc_id"]: r for r in ref_rows}
@@ -8959,7 +9401,12 @@ def reference_stats():
     Returns counts of all active items in the reference catalog.
     """
     if not os.path.exists(DB_PATH):
-        raise HTTPException(status_code=404, detail="Reference database not found")
+        return {
+            "coins": 0,
+            "banknotes": 0,
+            "medals": 0,
+            "total": 0
+        }
         
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -8996,7 +9443,17 @@ def collection_completion_stats(request: Request, current_user: Dict[str, Any] =
     if not user_email:
         raise HTTPException(status_code=401, detail="User email not present in authentication token.")
     if not os.path.exists(DB_PATH):
-        raise HTTPException(status_code=404, detail="Reference database not found")
+        return {
+            "completion_percentage": 0.0,
+            "owned_count": 0,
+            "total_count": 0,
+            "user_collection_count": 0,
+            "breakdown": {
+                "coin": {"owned": 0, "total": 0, "percentage": 0.0},
+                "banknote": {"owned": 0, "total": 0, "percentage": 0.0},
+                "medal": {"owned": 0, "total": 0, "percentage": 0.0},
+            }
+        }
         
     try:
         owned_ids, raw_count = _get_user_owned_doc_ids(user_email, return_raw_counts=True)
@@ -9055,7 +9512,12 @@ def reference_search(request: Request, q: Optional[str] = "", page_size: int = 1
     if not user_email:
         raise HTTPException(status_code=401, detail="User email not present in authentication token.")
     if not os.path.exists(DB_PATH):
-        raise HTTPException(status_code=404, detail="Reference database not found")
+        return {
+            "query": q,
+            "total": 0,
+            "offset": offset,
+            "results": []
+        }
         
     q = q.strip() if q else ""
     try:
@@ -9470,6 +9932,13 @@ async def littleton_sync(request: Request, payload: LittletonSyncRequest, curren
     user_email = current_user.get("email", "").strip()
     if not user_email:
         raise HTTPException(status_code=401, detail="User email not present in authentication token.")
+
+    caller_uid = current_user.get("uid") or current_user.get("user_id") or ""
+    caller_email = (current_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not current_user.get("admin") and not is_dev_guest:
+        if payload.user_email.strip().lower() != caller_email and payload.user_email.strip() != caller_uid:
+            raise HTTPException(status_code=403, detail="Forbidden")
 
     orders = payload.orders or []
     if not orders:
@@ -10296,15 +10765,13 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
                         "greysheetName": f"{coin_data.get('name', 'Coin Set')} (Aggregate {valid_coins_count}-Coin Sum)",
                         "priceLastUpdated": firestore.SERVER_TIMESTAMP,
                         "greysheet_aggregate_basis": f"Calculated by summing Greysheet values across {valid_coins_count} constituent coins.",
-                        "ai_value_basis": f"Greysheet aggregate sum of {valid_coins_count} uncirculated coins: Bid ${agg_bid:.2f} / Ask ${agg_ask:.2f} / Retail ${agg_retail:.2f}.",
-                        "AI Estimated Value": f"${agg_bid:.2f} - ${agg_retail:.2f}"
+                        "ai_value_basis": f"Greysheet aggregate sum of {valid_coins_count} uncirculated coins: Retail ${agg_retail:.2f}.",
+                        "AI Estimated Value": f"${agg_retail:.2f}"
                     }
                     coin_ref.update(update_payload)
                     return {
                         "status": "success",
                         "cpgRetail": round(agg_retail, 2),
-                        "greysheetBid": round(agg_bid, 2),
-                        "greysheetAsk": round(agg_ask, 2),
                         "greysheetGrade": "Uncirculated Set",
                         "greysheetName": f"{coin_data.get('name', 'Coin Set')} (Aggregate {valid_coins_count}-Coin Sum)",
                         "gradeMatched": "Uncirculated Set"
@@ -10659,15 +11126,11 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
         return {
             "status": "success",
             "cpg_retail": cpg_retail,
-            "greysheet_bid": greysheet_bid,
-            "greysheet_ask": greysheet_ask,
             "pcgs_value": pcgs_val,
             "ngc_value": ngc_val,
             "blue_book_value": blue_book_val,
             "cac_premium_flag": has_cac_flag,
             "cpgRetail": cpg_retail,
-            "greysheetBid": greysheet_bid,
-            "greysheetAsk": greysheet_ask,
             "greysheetGrade": grade_label,
             "greysheetName": cached_gs_name,
             "gradeMatched": grade_label,
@@ -10719,8 +11182,7 @@ DEALS_DB = [
         "shipping": 4.00,
         "gsid": 429,
         "grade": "MS64",
-        "greysheet_bid": 95.00,
-        "net_margin": 16.00,
+        "cpg_retail": 95.00,
         "margin_percent": 16.8
     },
     {
@@ -10732,8 +11194,7 @@ DEALS_DB = [
         "shipping": 3.50,
         "gsid": 429,
         "grade": "MS63",
-        "greysheet_bid": 52.00,
-        "net_margin": 6.50,
+        "cpg_retail": 52.00,
         "margin_percent": 12.5
     }
 ]
@@ -10756,7 +11217,7 @@ async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user
             "shipping": 4.00,
             "gsid": 429,
             "grade": "MS64",
-            "greysheet_bid": 95.00,
+            "cpg_retail": 95.00,
         },
         {
             "id": f"ebay_{random.randint(10000000000, 99999999999)}",
@@ -10767,7 +11228,7 @@ async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user
             "shipping": 3.50,
             "gsid": 429,
             "grade": "MS63",
-            "greysheet_bid": 52.00,
+            "cpg_retail": 52.00,
         },
         {
             "id": f"ebay_{random.randint(10000000000, 99999999999)}",
@@ -10778,14 +11239,14 @@ async def refresh_arbitrage_deals(_current_user: dict = Depends(get_current_user
             "shipping": 12.00,
             "gsid": 420,
             "grade": "VF30",
-            "greysheet_bid": 1250.00,
+            "cpg_retail": 1250.00,
         }
     ]
     
-    # Calculate margins
+    # Calculate margins against CPG Retail benchmark
     for d in new_deals:
-        d["net_margin"] = d["greysheet_bid"] - d["price"] - d["shipping"]
-        d["margin_percent"] = round((d["net_margin"] / (d["price"] + d["shipping"])) * 100, 1)
+        margin = d["cpg_retail"] - d["price"] - d["shipping"]
+        d["margin_percent"] = round((margin / (d["price"] + d["shipping"])) * 100, 1) if (d["price"] + d["shipping"]) > 0 else 0.0
     
     global DEALS_DB
     DEALS_DB = new_deals
@@ -10835,8 +11296,8 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest, _admin: dic
             except Exception:
                 pass
             
-            # Default to Bid value as standard valuation
-            val = float(coin.get("greysheetBid") or 0.0)
+            # Default to CPG value as standard valuation (NET-372: bid removed)
+            val = float(coin.get("cpgRetail") or 0.0)
             if val == 0.0:
                 # Fallback to AI Value -- use clean_valuation_value() which
                 # correctly handles range strings like "$1,150 - $1,350"
@@ -11315,9 +11776,8 @@ async def search_ebay_deals(
                 "shipping": shipping_val,
                 "gsid": 429,  # Default / fallback mapped GSID
                 "grade": "MS64",
-                "greysheet_bid": 95.00,
-                "net_margin": 95.00 - price_val - shipping_val,
-                "margin_percent": round(((95.00 - price_val - shipping_val) / (price_val + shipping_val)) * 100, 1) if price_val > 0 else 0,
+                "cpg_retail": 95.00,
+                "margin_percent": round(((95.00 - price_val - shipping_val) / (price_val + shipping_val)) * 100, 1) if (price_val + shipping_val) > 0 else 0,
             })
         return {"deals": deals}
     except HTTPException:
@@ -11499,8 +11959,8 @@ async def get_user_wishlist_deals(
         service = DealSpotterService(db=db)
         
         default_items = [
-            {"year": "1909", "mint": "S", "series": "Lincoln Cents", "greysheetBid": 95.0},
-            {"year": "1881", "mint": "S", "series": "Morgan Dollars", "greysheetBid": 125.0}
+            {"year": "1909", "mint": "S", "series": "Lincoln Cents", "cpgRetail": 95.0},
+            {"year": "1881", "mint": "S", "series": "Morgan Dollars", "cpgRetail": 125.0}
         ]
         
         deals = service.match_wishlist_items(default_items)

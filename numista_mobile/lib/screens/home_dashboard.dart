@@ -21,6 +21,7 @@ import '../services/market_news_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../widgets/beta_checklist_widget.dart';
 import '../services/beta_checklist_service.dart';
+import '../utils/platform_gate.dart';
 import '../widgets/beta_welcome_dialog.dart';
 import 'ai_chat_screen.dart';
 import '../services/upcoming_releases_service.dart';
@@ -339,6 +340,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             return FutureBuilder<bool>(
               future: ValuationModeService.isAdvancedMode(),
               builder: (context, modeSnap) {
+                // ignore: unused_local_variable (NET-372: bid/advanced mode removed)
                 final advanced = modeSnap.data ?? false;
 
                 // ── Compute portfolio metrics ──────────────────────────────────
@@ -348,8 +350,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 final int totalCoins = expansion.totalCoins;
                 final int totalItems = totalCoins + currency.length + worldItems.length;
             double cpgTotal = 0;
-            double bidTotal = 0;
-            double askTotal = 0;
             double acquisitionCost = 0;
             double meltValue       = 0;
             double faceValue       = 0;
@@ -403,19 +403,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 }
               }
 
-              // Greysheet fields
+              // Valuation fields (NET-372: CPG Retail only, bid removed)
               final coinCpg = _parseCurrency(data['cpgRetail']);
-              final coinBid = _parseCurrency(data['greysheetBid']);
-              final coinAsk = _parseCurrency(data['greysheetAsk']);
-
               final finalCpg = coinCpg > 0 ? coinCpg : finalVal;
-              final finalBid = coinBid > 0 ? coinBid : finalVal * 0.80;
-              final finalAsk = coinAsk > 0 ? coinAsk : finalVal * 0.92;
 
               if (!isPending) {
                 cpgTotal += finalCpg;
-                bidTotal += finalBid;
-                askTotal += finalAsk;
               }
               acquisitionCost += _parseCurrency(data['Cost']);
               meltValue       += liveMelt;
@@ -439,12 +432,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
               }
 
               final curCpg = _parseCurrency(data['cpgRetail']);
-              final curBid = _parseCurrency(data['greysheetBid']);
-              final curAsk = _parseCurrency(data['greysheetAsk']);
 
               cpgTotal += curCpg > 0 ? curCpg : finalVal;
-              bidTotal += curBid > 0 ? curBid : finalVal * 0.80;
-              askTotal += curAsk > 0 ? curAsk : finalVal * 0.92;
 
               currencyVal += finalVal;
               acquisitionCost += _parseCurrency(data['Cost']);
@@ -472,12 +461,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
               }
 
               final wCpg = _parseCurrency(data['cpgRetail']);
-              final wBid = _parseCurrency(data['greysheetBid']);
-              final wAsk = _parseCurrency(data['greysheetAsk']);
 
               cpgTotal += wCpg > 0 ? wCpg : finalVal;
-              bidTotal += wBid > 0 ? wBid : finalVal * 0.80;
-              askTotal += wAsk > 0 ? wAsk : finalVal * 0.92;
 
               acquisitionCost += purchPrice;
               final spotEntry = _parseCurrency(data['spot_value_at_entry']);
@@ -487,8 +472,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
               faceValue += _computeFaceValue(data['denomination']?.toString() ?? '');
             }
 
-            final portfolioValue = advanced ? cpgTotal : bidTotal;
-            final effectiveCoinsVal = advanced ? cpgTotal : bidTotal;
+            final portfolioValue = cpgTotal;
+            final effectiveCoinsVal = cpgTotal;
 
             // ── Portfolio snapshot (fire-and-forget) ───────────────────────
             if (totalCoins > 0 || totalItems > 0) {
@@ -524,7 +509,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             final fmt = intl.NumberFormat.currency(symbol: '\$');
 
             final mainContent = SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, isNativePhone ? 88 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -571,28 +556,47 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Flexible(
-                              child: Row(
-                                children: [
-                                   const Text('👋 Welcome Beta Tester!',
-                                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF166534),
-                                      borderRadius: BorderRadius.circular(4),
+                              child: isNativePhone
+                                  ? Wrap(
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      children: [
+                                        const Text('👋 Welcome Beta Tester!',
+                                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF166534),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text('FOUNDING BETA ⭐ FREE FOREVER',
+                                              style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9, fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        const Text('👋 Welcome Beta Tester!',
+                                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF166534),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text('FOUNDING BETA ⭐ FREE FOREVER',
+                                              style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9, fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
                                     ),
-                                    child: const Text('FOUNDING BETA ⭐ FREE FOREVER',
-                                        style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9, fontWeight: FontWeight.bold)),
-                                  ),
-                                ],
-                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 6),
-                        const Text(
-                          'Thank you for helping us test Numista.AI! Please use our 18-step checklist to test coin scanning, cert lookups, and collection tools.',
+                        Text(
+                          'Thank you for helping us test Numista.AI! Please use our ${BetaChecklistService.allTasks.length}-step checklist to test coin scanning, cert lookups, and collection tools.',
                           style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.4),
                         ),
                         const SizedBox(height: 12),
@@ -620,53 +624,100 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   const SizedBox(height: 16),
 
                   // ── Header: title + portfolio value ──────────────────────
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Flexible(
-                        child: Column(
+                  isNativePhone
+                      ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('DASHBOARD',
-                                style: TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w900,
-                                    fontStyle: FontStyle.italic,
-                                    color: Color(0xFF31333F))),
-                            Text('AI POWERED COLLECTION MANAGER',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF5A5C69))),
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text('DASHBOARD',
+                                      style: TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w900,
+                                          fontStyle: FontStyle.italic,
+                                          color: Color(0xFF31333F))),
+                                ),
+                                Text('AI POWERED COLLECTION MANAGER',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF5A5C69))),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            FutureBuilder<bool>(
+                              future: ValuationModeService.isAdvancedMode(),
+                              builder: (context, modeSnap) {
+                                final advanced = modeSnap.data ?? false;
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildPortfolioValueSection(cpgTotal, fmt, totalCoins, advanced: advanced),
+                                    if (pendingValueCount > 0)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          '($pendingValueCount item(s) pending valuation)',
+                                          style: const TextStyle(fontSize: 10, color: Color(0xFFE53935), fontStyle: FontStyle.italic),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Flexible(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('DASHBOARD',
+                                      style: TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w900,
+                                          fontStyle: FontStyle.italic,
+                                          color: Color(0xFF31333F))),
+                                  Text('AI POWERED COLLECTION MANAGER',
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF5A5C69))),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Flexible(
+                              child: FutureBuilder<bool>(
+                                future: ValuationModeService.isAdvancedMode(),
+                                builder: (context, modeSnap) {
+                                  final advanced = modeSnap.data ?? false;
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _buildPortfolioValueSection(cpgTotal, fmt, totalCoins, advanced: advanced),
+                                      if (pendingValueCount > 0)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            '($pendingValueCount item(s) pending valuation)',
+                                            style: const TextStyle(fontSize: 10, color: Color(0xFFE53935), fontStyle: FontStyle.italic),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: FutureBuilder<bool>(
-                          future: ValuationModeService.isAdvancedMode(),
-                          builder: (context, modeSnap) {
-                            final advanced = modeSnap.data ?? false;
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildPortfolioValueSection(cpgTotal, bidTotal, askTotal, fmt, totalCoins, advanced: advanced),
-                                if (pendingValueCount > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      '($pendingValueCount item(s) pending valuation)',
-                                      style: const TextStyle(fontSize: 10, color: Color(0xFFE53935), fontStyle: FontStyle.italic),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 24),
 
                   // ── Category Breakdown ─────────────────────────────────────
@@ -751,8 +802,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                               final series = data['Program/Series']?.toString() ?? '';
                               final theme  = data['Theme/Subject']?.toString() ?? '';
                               final coinCpg = _parseCurrency(data['cpgRetail']);
-                              final coinBid = _parseCurrency(data['greysheetBid']);
-                              final gVal = advanced ? coinCpg : coinBid;
+                              final gVal = coinCpg;
                               final estVal = gVal > 0 
                                   ? fmt.format(gVal)
                                   : (data['AI Estimated Value']?.toString() ?? '—');
@@ -817,8 +867,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                   const Divider(height: 1, color: Color(0xFFE2E6E9)),
                                 ListTile(
                                   dense: true,
+                                  minVerticalPadding: 8,
                                   contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 4),
+                                      horizontal: 16, vertical: 6),
                                   leading: _CoinThumbnail(
                                     imageUrl: data['image_url_obverse']?.toString()
                                         ?? data['imageUrlObverse']?.toString(),
@@ -1256,9 +1307,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   // ── Portfolio value section with batch valuation progress ───────────────────
   Widget _buildPortfolioValueSection(
-      double cpgTotal, double bidTotal, double askTotal, intl.NumberFormat fmt, int totalCoins, {bool advanced = false}) {
+      double cpgTotal, intl.NumberFormat fmt, int totalCoins, {bool advanced = false}) {
     final v = _valuation;
-    final displayVal  = advanced ? cpgTotal : bidTotal;
+    final displayVal  = cpgTotal;
     final hasValue    = displayVal > 0;
     final isRunning   = v.isRunning;
     final isPaused    = v.isPaused;
@@ -1267,7 +1318,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(advanced ? 'EST. PORTFOLIO VALUE (RETAIL)' : 'EST. PORTFOLIO VALUE (ESTATE/LIQ)',
+        Text('EST. PORTFOLIO VALUE (RETAIL)',
             style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
@@ -1289,7 +1340,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ),
           ),
           Text(
-            advanced ? 'CPG Retail Market basis' : 'Wholesale / Greysheet Bid basis',
+            'CPG Retail Market basis',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w500,
@@ -1318,26 +1369,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: _subtext)),
-
-        if (hasValue && advanced) ...[
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text('Bid: ${fmt.format(bidTotal)}',
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF4A5568))),
-              const SizedBox(width: 8),
-              Text('Ask: ${fmt.format(askTotal)}',
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF4A5568))),
-            ],
-          ),
-        ],
 
         const SizedBox(height: 6),
 
@@ -1702,10 +1733,111 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v8.18.15',
+    date: '2026-10-21',
+    description: 'P7-v8.18.15 Android Camera Recovery, Landscape Scroll & Phone UX Gating',
+    isLatest: true,
+    changes: [
+      'gated all phone-specific fixes behind isNativePhone to keep web 100% unchanged (NET-410)',
+      'fixed landscape overflow with scrollable entry methods and safe area padding (NET-413p)',
+      'repaired low-RAM Android camera death with CameraRecoveryService and safe byte handling (NET-413q)',
+      'fixed Morgan guide and greeter routing so onboarding Take Photo opens the camera (NET-404g)',
+      'resolved microscope scanner retry overflow and feedback fab occlusion (NET-404h, NET-406)',
+      'fixed founding beta badge overflow and dashboard single-column layout on phones (NET-406j,l)',
+      'made checklist count data-driven and prevented title text wrapping mid-word (NET-406k,m)',
+      'restored clean line endings on add_coins_hub.dart and verified PCGS server messages (NET-411)',
+    ],
+  ),
+  _Release(
+    version: 'v8.18.14',
+    date: '2026-10-21',
+    description: 'P7-v8.18.14 Invoice Rows Merge, Qty, Sets, Graded Condition & PCGS Lookup Fix',
+    isLatest: false,
+    changes: [
+      'invoice line items merged across all dict entries in Gemini list responses (NET-400a)',
+      'quantity respected across invoice and spreadsheet imports adding N coin docs (NET-400b)',
+      'supply and accessory rows skipped, sets and unknown denominations normalized (NET-400c)',
+      'manual and add-another copies preserve condition, grade, and cert data (NET-400d,e)',
+      'duplicate sweep checks coins, collection, and review_queue with case-insensitive keys (NET-400f)',
+      'older-user sizing audit: 48px touch targets, 18px body font across cert screens (NET-401.3)',
+      'NGC and CAC friendly not-found card with retry and manual entry actions (NET-401.4)',
+      'PCGS lookup proxy handles IsValidRequest False with 404/503 and normalized detail (NET-401.4-CRIT)',
+      'slab photo reader preserves label coin details when cert # is not visible (NET-401.5)',
+    ],
+  ),
+  _Release(
+    version: 'v8.18.13',
+    date: '2026-10-20',
+    description: 'P7-v8.18.13 UX Gate V5 Fixes, Webcam Fallback & Older-User Tap Sizing',
+    isLatest: false,
+    changes: [
+      'P7-v8.18.13: neutral cert heading stays \'Certification Number\' when grader is Not sure',
+      'P7-v8.18.13: webcam dialog friendly copy and direct file picker photo upload fallback',
+      'P7-v8.18.13: older-user tap targets >=48px (Cancel 56px, Scan Another 48px, cert help 48x48, sidebar >=48px)',
+      'P7-v8.18.13: cert not-found error specifically names cert # and grader searched + direct manual entry',
+      'P7-v8.18.13: CACG clear-slab OCR investigation, prompt enhancements, and label data fallback',
+    ],
+  ),
+  _Release(
+    version: 'v8.18.12',
+    date: '2026-10-20',
+    description: 'P7-v8.18.12 Add-Coins Flow, Resilient Parser & Older-User Sizing',
+    changes: [
+      'P7-v8.18.12: invoice parser list/dict normalization, test fixtures & live alignment',
+      'P7-v8.18.12: add-coins cert fallback in-app dialogs, neutral cert headers, blurred photo error card',
+      'P7-v8.18.12: camera friendly error & photo file chooser fallback',
+      'P7-v8.18.12: older-user sizing (>=48px chips, >=56px confirm, >=16px text, multi-line variety)',
+      'P7-v8.18.12: manual form input debounce & selection-preserving uppercase formatter',
+      'P7-v8.18.12: importer auth header support in add_coins.html (NET-389)',
+      'P7-v8.18.12: EPN firestore permission-denied rule and client credential fallback',
+      'P7-v8.18.12: settings toggle rename to Estate / Liquidation View',
+    ],
+  ),
+  _Release(
+    version: 'v8.18.11',
+    date: '2026-10-20',
+    description: 'P7-v8.18.11 Enhancements & Platform Updates',
+    changes: [
+      'P7-v8.18.11: \'Mint Mark\' save key (space), preserve preset mint, test, version bump',
+      'P7-v8.18.10+: port greysheet bid display removal from hotfix branch',
+      'P7-v8.18.10: real cert# dialog, widget tests, backend test assert, mint visible, no coin_name, version 8.18.10',
+      'P7-v8.18.9: label photo reader prefills confirm screen, photo_scan banner, safe path logging, bump v8.18.9',
+      'P7-v8.18.8: delete fake cert data, remove cert_cache, honest NGC UI, safe exception handler, invoice proof, tests',
+    ],
+  ),
+  _Release(
+    version: 'v8.18.10',
+    date: '2026-10-20',
+    description: 'P7-v8.18.10 Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'P7-v8.18.10: real cert# dialog, widget tests, backend test assert, mint visible, no coin_name, version 8.18.10',
+      'NET-372 / NET-376: Greysheet bid/wholesale display and data stripped across app, retail market basis only',
+      'P7-v8.18.9: label photo reader prefills confirm screen, photo_scan banner, safe path logging, bump v8.18.9',
+      'P7-v8.18.8: delete fake cert data, remove cert_cache, honest NGC UI, safe exception handler, invoice proof, tests',
+    ],
+  ),
+  _Release(
+    version: 'v8.18.9',
+    date: '2026-10-20',
+    description: 'P7-v8.18.9 Enhancements & Platform Updates',
+    isLatest: false,
+    changes: [
+      'P7-v8.18.9: label photo reader prefills confirm screen, photo_scan banner, safe path logging, bump v8.18.9',
+      'P7-v8.18.8: delete fake cert data, remove cert_cache, honest NGC UI, safe exception handler, invoice proof, tests',
+      'P7: V8.18.7 resolve FT gate V3 blockers for cert lookup, CORS, caching, and mapping',
+      'P7-v8.18.6: concurrent shared cert reader with budget, precedence over pass1/2, friendly error message',
+      'P7-v8.18.5: one error card, cert reader unified, morgan avatar HTML fix, ValueKey finders, camera=(self), localhost proof, config test glob',
+      'P7-v8.18.4: test fixes, Photo ID error card, same cert reader, image pin, morgan avatar, importer banner, firebase config test, localhost proof',
+      'P7-v8.18.3: firebase config align, scan guards, 18px+56px, camera fallback, manual cert fields, pubspec image pin',
+      'P7-v8.18.2: cert_routes project-id code fix, scan 28s cap, 314vs312 doc IDs',
+    ],
+  ),
+  _Release(
     version: 'v4.403',
     date: '2026-10-01',
     description: 'Security Hardening — Auth on Grade Reviews, Admin Access, Beta Status Fix',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'Security: grade review submit now requires a sign-in token — the server reads the user from the token',
       'Security: the admin grade review dashboard now requires an admin-level token; others receive 403',

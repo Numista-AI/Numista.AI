@@ -71,4 +71,36 @@ async def pcgs_cert_lookup(cert_no: str, current_user: Dict[str, Any] = Depends(
     if not isinstance(data, dict):
         raise HTTPException(status_code=502, detail="Unexpected response structure from PCGS API.")
 
-    return data
+    is_valid = data.get("IsValidRequest")
+    server_msg = str(data.get("ServerMessage") or "").strip()
+    logger.info(f"PCGS cert {cert_no} response: IsValidRequest={is_valid}, ServerMessage='{server_msg}'")
+
+    if is_valid is False:
+        msg_lower = server_msg.lower()
+        if any(term in msg_lower for term in ("quota", "limit", "rate", "auth", "token", "unauthorized", "exceeded", "unavailable")):
+            raise HTTPException(
+                status_code=503,
+                detail={"error": "quota", "message": "PCGS lookup unavailable right now. Try again later or type the coin in instead."}
+            )
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "not_found", "message": f"Cert not found: {server_msg}"}
+        )
+
+    # Normalize coinDetail for frontend
+    coin_detail = None
+    if isinstance(data.get("CoinDetails"), list) and data["CoinDetails"]:
+        coin_detail = data["CoinDetails"][0]
+    elif isinstance(data.get("CoinDetail"), dict):
+        coin_detail = data["CoinDetail"]
+    elif isinstance(data.get("coinDetail"), dict):
+        coin_detail = data["coinDetail"]
+    else:
+        coin_detail = data
+
+    return {
+        **data,
+        "found": True,
+        "coinDetail": coin_detail,
+        "CoinDetail": coin_detail,
+    }

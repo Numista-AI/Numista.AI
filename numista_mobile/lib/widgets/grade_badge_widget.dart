@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../utils/numista_error_helper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/guest_seed_service.dart';
 import '../services/http_auth_client.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants.dart';
@@ -192,6 +194,11 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
   }
 
   Future<void> _fetchDetails() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || GuestSeedService.isBrowseDemoMode) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     try {
       final code = Uri.encodeComponent(widget.gradeCode);
       final response = await HttpAuthClient.get(Uri.parse('$kApiBaseUrl/api/reference/grade/$code'));

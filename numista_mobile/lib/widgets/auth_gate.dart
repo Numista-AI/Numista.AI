@@ -53,19 +53,42 @@ class AuthGate extends StatefulWidget {
     );
   }
 
+  /// Resets the welcome screen completion state (e.g. upon user sign-out).
+  static void resetWelcome() => _AuthGateState.resetWelcome();
+  static bool get welcomeDone => _AuthGateState._welcomeDone;
+  static set welcomeDone(bool val) => _AuthGateState._welcomeDone = val;
+
   @override
   State<AuthGate> createState() => _AuthGateState();
 }
 
 class _AuthGateState extends State<AuthGate> {
-  bool _welcomeDone = false;
+  static bool _cachedDemoActive = false;
+  static bool _welcomeDone = false;
+  static void resetWelcome() {
+    _welcomeDone = false;
+  }
   Future<bool>? _shouldShowWelcome;
 
   @override
   void initState() {
     super.initState();
-    if (widget.isDemo) {
+    if (widget.isDemo || GuestSeedService.isBrowseDemoMode) {
+      _cachedDemoActive = true;
       GuestSeedService.activateBrowseDemo();
+    }
+  }
+
+  @override
+  void didUpdateWidget(AuthGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isDemo || _cachedDemoActive || GuestSeedService.isBrowseDemoMode) {
+      _cachedDemoActive = true;
+      if (!GuestSeedService.isBrowseDemoMode) {
+        GuestSeedService.activateBrowseDemo().then((_) {
+          if (mounted) setState(() {});
+        });
+      }
     }
   }
 
@@ -81,12 +104,19 @@ class _AuthGateState extends State<AuthGate> {
 
         // Signed in -> show welcome screen on first launch, then main app
         if (snapshot.hasData && snapshot.data != null) {
+          final isRealUser = !snapshot.data!.isAnonymous;
           // INVARIANT: a real Firebase user must never see demo data.
-          if (GuestSeedService.isBrowseDemoMode) {
+          if (isRealUser && (GuestSeedService.isBrowseDemoMode || _cachedDemoActive)) {
+            _cachedDemoActive = false;
             GuestSeedService.deactivateBrowseDemo();
             debugPrint(
                 '[AUTH] Demo mode cleared for real user ${snapshot.data!.uid}');
           }
+
+          if (GuestSeedService.isBrowseDemoMode || _cachedDemoActive) {
+            return const BaseLayout(isDemoMode: true);
+          }
+
           assert(!GuestSeedService.isBrowseDemoMode,
               'INTEGRITY: Browse Demo still active after deactivateBrowseDemo(). '
               'User: ${snapshot.data!.uid}. deactivateBrowseDemo() has a logic defect.');
@@ -129,7 +159,8 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         // 2. If demo mode requested or active, show BaseLayout in demo mode
-        if (widget.isDemo || GuestSeedService.isBrowseDemoMode) {
+        if (widget.isDemo || GuestSeedService.isBrowseDemoMode || _cachedDemoActive) {
+          _cachedDemoActive = true;
           return const BaseLayout(isDemoMode: true);
         }
 

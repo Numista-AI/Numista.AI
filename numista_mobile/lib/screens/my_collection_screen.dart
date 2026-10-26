@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:intl/intl.dart' as intl;
 import '../utils/numista_error_helper.dart';
+import '../utils/text_sanitizer.dart';
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -255,7 +256,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     // Listen to Firebase Auth state before binding collection stream
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user != null) {
+      if (user != null || GuestSeedService.isBrowseDemoMode) {
         _subscribeCoinsStream();
       } else {
         if (mounted) {
@@ -267,6 +268,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         }
       }
     });
+
+    // If demo mode or user already present, kick off stream subscription immediately
+    if (GuestSeedService.isBrowseDemoMode || FirebaseAuth.instance.currentUser != null) {
+      _subscribeCoinsStream();
+    }
+
 
     // Listen to batch valuation progress for the live badge in _buildFiltersRow
     _valuationSub = BatchValuationService.instance.progressStream.listen((p) {
@@ -418,10 +425,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     final isRealUser = authUser != null && !authUser.isAnonymous;
 
     if (!isRealUser && GuestSeedService.isBrowseDemoMode) {
-      return GuestSeedService.getDemoCoinsStream();
+      return GuestSeedService.getDemoCoinsStream().asBroadcastStream();
     }
     if (AuthService.coinsPath.contains('unknown')) {
-      throw StateError('Cannot query unauthenticated coinsPath');
+      return const Stream.empty();
     }
     Query<Map<String, dynamic>> q =
         FirebaseFirestore.instance.collection(AuthService.coinsPath);
@@ -430,14 +437,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     } else if (_limitMode == CollectionLimitMode.last100) {
       q = q.limit(100);
     }
-    return q.snapshots();
+    return q.snapshots().asBroadcastStream();
   }
 
   void _subscribeCoinsStream() {
     _coinsSnapSub?.cancel();
     _coinsTimeoutTimer?.cancel();
 
-    if (AuthService.coinsPath.contains('unknown')) {
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+    if (!isRealUser && !GuestSeedService.isBrowseDemoMode && AuthService.coinsPath.contains('unknown')) {
       if (mounted) {
         setState(() {
           _coinsError = 'Unauthenticated access attempt';
@@ -455,7 +464,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
 
     try {
-      final stream = _buildCoinsStream();
+      final stream = _buildCoinsStream().asBroadcastStream();
       _coinsStream = stream;
 
       // 6-second fallback timer if no first event arrives
@@ -519,13 +528,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Comparable _sortKey(String field, Map<String, dynamic> m) {
     switch (field) {
       // ── AI Value ────────────────────────────────────────────────────────────
-      // Display logic (in _getCellValue) prefers greysheetBid / cpgRetail over
-      // the raw AI Estimated Value string.  Sort must use the same hierarchy.
+      // NET-372: Display logic prefers cpgRetail over raw AI Estimated Value.
+      // Greysheet bid is removed from display and sorting.
       case _F.aiValue:
         final cpg = _parseNumber(m['cpgRetail']);
-        final bid = _parseNumber(m['greysheetBid']);
-        // CPG Retail is the collector/market price (default); bid is dealer-wholesale (advanced)
-        final gVal = cpg > 0 ? cpg : bid;
+        final gVal = cpg;
         if (gVal > 0) return gVal;
         final av = m[_F.aiValue]?.toString() ?? '';
         return _parseAiValue(av); // strips ~, $, commas → double (0 if empty)
@@ -1379,27 +1386,42 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   Widget _buildUnifiedDashboard(String email) {
+    final isUnauthOrDemo = GuestSeedService.isBrowseDemoMode ||
+        email.isEmpty ||
+        AuthService.statsDocPath.contains('unknown');
+
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.doc(AuthService.statsDocPath).snapshots(),
+      stream: isUnauthOrDemo
+          ? const Stream.empty()
+          : FirebaseFirestore.instance.doc(AuthService.statsDocPath).snapshots(),
       builder: (context, statsSnap) {
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: _coinsStream,
+          initialData: _cachedCoinsDocs.isNotEmpty
+              ? DemoQuerySnapshot(_cachedCoinsDocs)
+              : (GuestSeedService.isBrowseDemoMode ? GuestSeedService.cachedDemoSnapshot : null),
           builder: (context, coinsSnap) {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: email.isNotEmpty
+              stream: (!isUnauthOrDemo && email.isNotEmpty)
                   ? FirebaseFirestore.instance.collection(AuthService.currencyPath).snapshots()
-                  : Stream.empty(),
+                  : const Stream.empty(),
               builder: (context, currencySnap) {
                 return StreamBuilder<List<WorldItem>>(
-                  stream: WorldItemService.worldItemsStream(),
+                  stream: (email.isEmpty && !GuestSeedService.isBrowseDemoMode)
+                      ? const Stream.empty()
+                      : WorldItemService.worldItemsStream(),
+                  initialData: GuestSeedService.isBrowseDemoMode
+                      ? WorldItemService.cachedDemoWorldItems
+                      : null,
                   builder: (context, worldSnap) {
                     return FutureBuilder<bool>(
                       future: ValuationModeService.isAdvancedMode(),
                       builder: (context, modeSnap) {
+                        // ignore: unused_local_variable (NET-372: bid/advanced mode removed)
                         final advanced = modeSnap.data ?? false;
                         // Use _cachedCoinsDocs (same data source as Coins tab)
-                        // instead of coinsSnap which races stream assignment on first mount
-                        final coinsDocs = _cachedCoinsDocs;
+                        // falling back to coinsSnap which resolves stream data
+                        final coinsDocs = _cachedCoinsDocs.isNotEmpty ? _cachedCoinsDocs : (coinsSnap.data?.docs ?? []);
                         final currencyDocs = currencySnap.data?.docs ?? [];
                         final worldDocs = worldSnap.data ?? [];
 
@@ -1414,8 +1436,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             final data = doc.data();
                             if (data['item_type'] == 'supply' || data['is_supply'] == true) continue;
                             final coinCpg = _parseNumber(data['cpgRetail']);
-                            final coinBid = _parseNumber(data['greysheetBid']);
-                            final gVal = advanced ? coinCpg : coinBid;
+                            final gVal = coinCpg;
                             if (gVal > 0) {
                               fallbackCoinsValue += gVal;
                             } else {
@@ -1463,13 +1484,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           } else if (addedTs is String) {
                             addedDate = DateTime.tryParse(addedTs);
                           }
-                          final denom = data['Denomination']?.toString() ?? '';
+                          final denom = TextSanitizer.fixMojibake(data['Denomination']?.toString() ?? '');
                           final year = data['Year']?.toString() ?? '';
-                          final title = '$year $denom'.trim();
+                          final title = TextSanitizer.fixMojibake('$year $denom'.trim());
 
                           final coinCpg = _parseNumber(data['cpgRetail']);
-                          final coinBid = _parseNumber(data['greysheetBid']);
-                          final gVal = advanced ? coinCpg : coinBid;
+                          final gVal = coinCpg;
                           final displayValue = gVal > 0 
                               ? gVal 
                               : _parseAiValue(data['AI Estimated Value']?.toString() ?? '');
@@ -2994,8 +3014,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             : (themeStartsYear ? label : '$yearMint $label').trim();
         
         final valCpg = _parseNumber(m['cpgRetail']);
-        final valBid = _parseNumber(m['greysheetBid']);
-        final finalVal = advanced ? valCpg : valBid;
+        final finalVal = valCpg;
         
         final fmt = intl.NumberFormat.currency(symbol: '\$');
         final valueText = finalVal > 0 
@@ -3317,9 +3336,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         return n != null ? _currencyFmt.format(n) : rawC;
       case _F.aiValue:
         final coinCpg = _parseNumber(m['cpgRetail']);
-        final coinBid = _parseNumber(m['greysheetBid']);
-        // Default: CPG Retail (collector/market price).  Advanced: Greysheet Bid (dealer wholesale).
-        final gVal = advanced ? coinBid : (coinCpg > 0 ? coinCpg : coinBid);
+        // NET-372: CPG Retail only, bid removed from display
+        final gVal = coinCpg;
         if (gVal > 0) {
           return _currencyFmt.format(gVal);
         }
@@ -3350,7 +3368,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     tooltip: tip,
     color: _subtext,
     padding: EdgeInsets.zero,
-    constraints: BoxConstraints(maxWidth: 32, maxHeight: 32),
+    constraints: BoxConstraints(minWidth: 48, minHeight: 48, maxWidth: 48, maxHeight: 48),
     onPressed: onTap,
   );
 
@@ -3948,6 +3966,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ['Theme/Subject', data[_F.themeSubject]?.toString()],
         ['Variety',       data[_F.variety]?.toString()],
         ['Metal',         data[_F.metalContent]?.toString()],
+        ['Quantity',      (data['Quantity'] ?? data['quantity'] ?? '1').toString()],
       ]),
       section('CONDITION & AUTHENTICATION', [
         ['Condition',    data[_F.condition]?.toString()],
@@ -3967,7 +3986,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ['Invoice #',   data[_F.retailerInvoice]?.toString()],
         ['Storage',     data[_F.storageLocation]?.toString()],
         ['Ref #',       data[_F.personalRef]?.toString()],
-        ['Notes',       data[_F.personalNotes]?.toString()],
+        ['Notes',       (data['Notes'] ?? data['notes'] ?? data[_F.personalNotes] ?? data['personalNotes'])?.toString()],
       ]),
     ]);
   }
@@ -6044,7 +6063,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
         state: state,
         includePhotos: true,
       ).timeout(
-        const Duration(seconds: 45),
+        const Duration(seconds: 60),
         onTimeout: () => throw Exception('Report generation timed out. Please try again.'),
       );
 

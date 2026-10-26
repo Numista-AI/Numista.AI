@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../constants.dart';
 import 'http_auth_client.dart';
 
 class SubAccountModel {
@@ -44,7 +45,7 @@ class SubAccountModel {
 }
 
 class FamilySubaccountService {
-  static const String baseUrl = 'https://numista-backend-568985927038.us-central1.run.app/api/v1/family';
+  static const String baseUrl = '$kApiBaseUrl/api/v1/family';
 
   /// Create a new sub-account under parent email. Enforces Pro tier limit (5) vs Estate tier (Unlimited).
   Future<SubAccountModel> createSubAccount({

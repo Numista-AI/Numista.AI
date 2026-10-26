@@ -16,6 +16,7 @@ Requirements:
 """
 
 import os
+import json
 import sys
 from unittest.mock import patch, MagicMock
 import pytest
@@ -375,3 +376,501 @@ def test_ngc_verify_url_numeric_grade():
     assert _ngc_url("8321797-003", "PR65") == "https://www.ngccoin.com/certlookup/8321797-003/65/"
     # Edge: plain numeric grade passed as-is
     assert _ngc_url("1234567", "67") == "https://www.ngccoin.com/certlookup/1234567/67/"
+
+
+def test_same_cert_reader_both_paths_match(monkeypatch):
+    """
+    NET-354 Item 2: Same cert reader for both endpoints.
+    Verifies that the same slab image fixture passed through:
+      1) POST /api/scan_cert_number_upload
+      2) POST /api/identify_coin_photo
+    uses the shared extract_cert_from_image function and extracts the exact same cert number.
+    """
+    import io
+    import json
+
+    fixture_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xdb\x00C\x00" + b"\x00" * 80
+    expected_cert = "53652580"
+    expected_grader = "PCGS"
+
+    # Mock extract_cert_from_image / genai Client for cert_routes
+    mock_genai_resp = MagicMock()
+    mock_genai_resp.text = json.dumps({
+        "cert_number": expected_cert,
+        "grader": expected_grader,
+        "confidence": "HIGH"
+    })
+
+    with patch("routes.cert_routes._genai") as mock_genai_mod:
+        mock_client = MagicMock()
+        mock_genai_mod.Client.return_value = mock_client
+        mock_client.models.generate_content.return_value = mock_genai_resp
+
+        # Path 1: /api/scan_cert_number_upload
+        resp1 = client.post(
+            "/api/scan_cert_number_upload",
+            files={"file": ("slab.jpg", io.BytesIO(fixture_bytes), "image/jpeg")},
+        )
+        assert resp1.status_code == 200, f"Path 1 failed: {resp1.status_code} {resp1.text}"
+        data1 = resp1.json()
+        cert_from_path1 = data1.get("cert_number")
+        assert cert_from_path1 == expected_cert
+
+        # Mock Gemini call in identify_coin_photo for pass1/pass2
+        mock_id_resp1 = MagicMock()
+        mock_id_resp1.text = json.dumps({
+            "year": "1881",
+            "denomination": "Dollar",
+            "country": "United States",
+            "program_series": "Morgan Dollars",
+            "mint_mark": "S",
+            "grade": "MS-65",
+            "confidence": "HIGH",
+            "obverse_image": "A"
+        })
+        mock_id_resp2 = MagicMock()
+        mock_id_resp2.text = json.dumps({
+            "refined_grade": "MS-65",
+            "estimated_value_usd": "$150.00",
+            "confidence": "HIGH"
+        })
+        mock_models = MagicMock()
+        mock_models.generate_content.side_effect = [mock_id_resp1, mock_id_resp2]
+        mock_id_client = MagicMock()
+        mock_id_client.models = mock_models
+        monkeypatch.setattr(app_main, "genai_client", mock_id_client)
+        monkeypatch.setattr(app_main, "_authenticate_request", lambda auth, email=None, **kw: "test_user@numista.ai")
+
+        # Path 2: /api/identify_coin_photo
+        resp2 = client.post(
+            "/api/identify_coin_photo",
+            data={"user_email": "test_user@numista.ai"},
+            files={"image_a": ("slab.jpg", io.BytesIO(fixture_bytes), "image/jpeg")},
+        )
+        assert resp2.status_code == 200, f"Path 2 failed: {resp2.status_code} {resp2.text}"
+        data2 = resp2.json()
+        coin2 = data2.get("coin", {})
+        cert_from_path2 = coin2.get("Certification Number") or coin2.get("cert_number")
+        assert cert_from_path2 == expected_cert
+
+        # Both paths must match!
+        assert cert_from_path1 == cert_from_path2 == expected_cert
+
+
+def test_shared_cert_reader_wins_over_pass1(monkeypatch):
+    """
+    NET-357 Item 2 (a):
+    Pass 1 mock returns cert X ("PASS1-CERT-11111"),
+    Shared reader mock returns cert Y ("53652580").
+    Both /api/scan_cert_number_upload and /api/identify_coin_photo must return Y.
+    """
+    import io
+    import json
+
+    fixture_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xdb\x00C\x00" + b"\x00" * 80
+    expected_cert = "53652580"
+    expected_grader = "PCGS"
+    pass1_old_cert = "PASS1-CERT-11111"
+
+    # Shared cert reader mock: returns expected_cert Y
+    mock_genai_resp = MagicMock()
+    mock_genai_resp.text = json.dumps({
+        "cert_number": expected_cert,
+        "grader": expected_grader,
+        "confidence": "HIGH"
+    })
+
+    with patch("routes.cert_routes._genai") as mock_genai_mod:
+        mock_client = MagicMock()
+        mock_genai_mod.Client.return_value = mock_client
+        mock_client.models.generate_content.return_value = mock_genai_resp
+
+        # Path 1: /api/scan_cert_number_upload -> must return Y
+        resp1 = client.post(
+            "/api/scan_cert_number_upload",
+            files={"file": ("slab.jpg", io.BytesIO(fixture_bytes), "image/jpeg")},
+        )
+        assert resp1.status_code == 200, f"Path 1 failed: {resp1.status_code} {resp1.text}"
+        data1 = resp1.json()
+        assert data1.get("cert_number") == expected_cert
+
+        # Pass 1 returns cert X ("PASS1-CERT-11111")
+        mock_id_resp1 = MagicMock()
+        mock_id_resp1.text = json.dumps({
+            "year": "1921",
+            "denomination": "Dollar",
+            "country": "United States",
+            "program_series": "Morgan Dollars",
+            "mint_mark": "S",
+            "grade": "MS-65",
+            "cert_number": pass1_old_cert,
+            "grading_service": "NGC",
+            "confidence": "HIGH",
+            "obverse_image": "A"
+        })
+        mock_id_resp2 = MagicMock()
+        mock_id_resp2.text = json.dumps({
+            "refined_grade": "MS-65",
+            "estimated_value_usd": "$150.00",
+            "confidence": "HIGH"
+        })
+        mock_models = MagicMock()
+        mock_models.generate_content.side_effect = [mock_id_resp1, mock_id_resp2]
+        mock_id_client = MagicMock()
+        mock_id_client.models = mock_models
+        monkeypatch.setattr(app_main, "genai_client", mock_id_client)
+        monkeypatch.setattr(app_main, "_authenticate_request", lambda auth, email=None, **kw: "test_user@numista.ai")
+
+        # Path 2: /api/identify_coin_photo -> shared reader Y must win over pass 1 X
+        resp2 = client.post(
+            "/api/identify_coin_photo",
+            data={"user_email": "test_user@numista.ai"},
+            files={"image_a": ("slab.jpg", io.BytesIO(fixture_bytes), "image/jpeg")},
+        )
+        assert resp2.status_code == 200, f"Path 2 failed: {resp2.status_code} {resp2.text}"
+        data2 = resp2.json()
+        coin2 = data2.get("coin", {})
+        assert coin2.get("cert_number") == expected_cert
+        assert coin2.get("Certification Number") == expected_cert
+        assert coin2.get("Grading Service") == expected_grader
+
+        # Both endpoints return Y
+        assert data1.get("cert_number") == coin2.get("cert_number") == expected_cert
+
+
+def test_shared_cert_reader_budget_timeout_no_500(monkeypatch):
+    """
+    NET-357 Item 2 (b):
+    Shared reader sleeps past budget -> identify returns < 28 s, no cert, no 500.
+    """
+    import io
+    import json
+    import time
+
+    fixture_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xdb\x00C\x00" + b"\x00" * 80
+
+    def slow_extract(*args, **kwargs):
+        # Sleeps longer than the configured budget
+        time.sleep(1.5)
+        return {
+            "cert_number": "LATE-CERT",
+            "grader": "PCGS",
+            "confidence": "HIGH",
+            "message": "OK",
+        }
+
+    # Set budget to 0.4s so the timeout triggers quickly and cleanly
+    monkeypatch.setattr(app_main, "GEMINI_IDENTIFY_BUDGET", 0.4)
+    monkeypatch.setattr(app_main, "extract_cert_from_image", slow_extract)
+
+    mock_id_resp1 = MagicMock()
+    mock_id_resp1.text = json.dumps({
+        "year": "1881",
+        "denomination": "Dollar",
+        "country": "United States",
+        "program_series": "Morgan Dollars",
+        "mint_mark": "S",
+        "grade": "MS-65",
+        "confidence": "HIGH",
+        "obverse_image": "A"
+    })
+    mock_models = MagicMock()
+    mock_models.generate_content.return_value = mock_id_resp1
+    mock_id_client = MagicMock()
+    mock_id_client.models = mock_models
+    monkeypatch.setattr(app_main, "genai_client", mock_id_client)
+    monkeypatch.setattr(app_main, "_authenticate_request", lambda auth, email=None, **kw: "test_user@numista.ai")
+
+    t0 = time.monotonic()
+    resp = client.post(
+        "/api/identify_coin_photo",
+        data={"user_email": "test_user@numista.ai"},
+        files={"image_a": ("slab.jpg", io.BytesIO(fixture_bytes), "image/jpeg")},
+    )
+    elapsed = time.monotonic() - t0
+
+    # Must return cleanly in < 28 s without 500
+    assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+    assert elapsed < 28.0, f"Took too long: {elapsed}s >= 28s"
+    coin = resp.json().get("coin", {})
+    # No cert extracted (timed out)
+    assert not coin.get("cert_number")
+    assert not coin.get("Certification Number")
+
+
+def test_cert_lookup_never_found_without_real_lookup():
+    """cert_lookup must not return found=True for NGC/CACG/CAC certs (no real API available)."""
+    response = client.post(
+        "/api/cert_lookup",
+        json={"cert_num": "8321797-003", "grader": "NGC"}
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["grader"] == "NGC"
+    assert data["found"] is False
+    assert data.get("source") != "api"
+
+
+def test_list_receipts_no_composite_index_required():
+    """list_receipts with session_id must not call order_by (which needs a composite index)."""
+    from main import list_receipts
+
+    mock_db = MagicMock()
+    mock_coll = MagicMock()
+    user_ref = MagicMock()
+    mock_db.collection.return_value.document.return_value = user_ref
+    user_ref.collection.side_effect = lambda name: mock_coll if name == "receipts" else MagicMock(select=lambda _: MagicMock(stream=lambda: []))
+
+    doc1 = MagicMock()
+    doc1.id = "rec1"
+    doc1.to_dict.return_value = {"uploaded_at": 100, "session_id": "sess_123", "linked_coin_ids": []}
+
+    doc2 = MagicMock()
+    doc2.id = "rec2"
+    doc2.to_dict.return_value = {"uploaded_at": 200, "import_session_id": "sess_123", "linked_coin_ids": []}
+
+    where_q1 = MagicMock()
+    where_q1.stream.return_value = [doc1]
+    where_q2 = MagicMock()
+    where_q2.stream.return_value = [doc2]
+
+    def mock_where(field, op, val):
+        if field == "session_id":
+            return where_q1
+        if field == "import_session_id":
+            return where_q2
+        return MagicMock(stream=lambda: [])
+
+    mock_coll.where.side_effect = mock_where
+
+    with patch("main.db", mock_db):
+        res = list_receipts(user_email="test_user@numista.ai", session_id="sess_123", _user={"email": "test_user@numista.ai"})
+
+    assert mock_coll.order_by.call_count == 0, "order_by must NOT be called when session_id is provided"
+    receipts = res.get("receipts", res) if isinstance(res, dict) else res
+    assert len(receipts) == 2
+    assert receipts[0]["receipt_id"] == "rec2"
+    assert receipts[1]["receipt_id"] == "rec1"
+
+
+def test_list_receipts_cors_headers_on_p7gate_origin():
+    """GET /api/receipts must return Access-Control-Allow-Origin for the p7gate preview origin."""
+    with patch("main.db") as mock_db:
+        mock_coll = MagicMock()
+        mock_db.collection.return_value.document.return_value.collection.return_value = mock_coll
+        mock_coll.order_by.return_value.limit.return_value.stream.return_value = []
+        response = client.get(
+            "/api/receipts?user_email=test_user@numista.ai",
+            headers={"Origin": "https://numista-vault--p7-gate-8avtpz22.web.app"}
+        )
+        assert response.headers.get("access-control-allow-origin") == "https://numista-vault--p7-gate-8avtpz22.web.app"
+
+def test_scan_cert_number_upload_returns_label_fields_not_api_source():
+    """scan_cert_number_upload must return optional label fields (year/denom/grade)
+    and must NEVER return source='api' (that is a cert lookup concern, not a scan concern).
+    Also verifies no Firestore write occurs.
+    """
+    # Mock extract_cert_from_image to return label fields
+    with patch("routes.cert_routes.extract_cert_from_image") as mock_scan:
+        mock_scan.return_value = {
+            "cert_number": "8321797",
+            "grader": "NGC",
+            "confidence": "HIGH",
+            "message": "OK",
+            "year": "1881",
+            "denomination": "Morgan Dollar",
+            "grade": "MS-65",
+            "mint": "S",
+            "variety": None,
+        }
+        # Also mock _check_cert_rate_limit to be a no-op and db to assert no Firestore write
+        with patch("routes.cert_routes._check_cert_rate_limit"), patch("routes.cert_routes.db") as mock_db:
+            # Use the test client - match the existing fixture pattern
+            resp = client.post(
+                "/api/scan_cert_number_upload",
+                files={"file": ("test.jpg", b"fakejpeg", "image/jpeg")},
+                headers={"Authorization": "Bearer test_token"},
+            )
+            mock_db.collection.assert_not_called()
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["cert_number"] == "8321797"
+    assert data["year"] == "1881"
+    assert data["denomination"] == "Morgan Dollar"
+    assert "source" not in data, "scan endpoint must never return source field"
+
+
+def test_pcgs_cert_route_200_valid():
+    """GET /api/pcgs/cert/{cert_no} returns 200 with coinDetail and found=True when PCGS returns IsValidRequest=True."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "IsValidRequest": True,
+        "ServerMessage": "Success",
+        "CoinDetail": {
+            "FullName": "1881-S $1 Morgan",
+            "Year": "1881",
+            "MintMark": "S",
+            "Grade": "MS65",
+            "Denomination": "Dollar",
+        }
+    }
+    with patch("routes.pcgs_routes._get_pcgs_token", return_value="mock_token"), \
+         patch("routes.pcgs_routes._requests.get", return_value=mock_resp):
+        response = client.get("/api/pcgs/cert/53652580")
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["found"] is True
+        assert data["coinDetail"]["FullName"] == "1881-S $1 Morgan"
+        assert data["coinDetail"]["Grade"] == "MS65"
+
+
+def test_pcgs_cert_route_200_invalid_no_data_mapped_to_404():
+    """GET /api/pcgs/cert/{cert_no} maps IsValidRequest=False + 'No data found' to 404 not_found."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "IsValidRequest": False,
+        "ServerMessage": "No data found for this certification number."
+    }
+    with patch("routes.pcgs_routes._get_pcgs_token", return_value="mock_token"), \
+         patch("routes.pcgs_routes._requests.get", return_value=mock_resp):
+        response = client.get("/api/pcgs/cert/53652580")
+        assert response.status_code == 404, response.text
+        data = response.json()
+        assert data["detail"]["error"] == "not_found"
+        assert "No data found" in data["detail"]["message"]
+
+
+def test_pcgs_cert_route_200_quota_limit_mapped_to_503():
+    """GET /api/pcgs/cert/{cert_no} maps IsValidRequest=False + 'Rate limit exceeded' to 503 quota."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "IsValidRequest": False,
+        "ServerMessage": "Rate limit quota exceeded"
+    }
+    with patch("routes.pcgs_routes._get_pcgs_token", return_value="mock_token"), \
+         patch("routes.pcgs_routes._requests.get", return_value=mock_resp):
+        response = client.get("/api/pcgs/cert/53652580")
+        assert response.status_code == 503, response.text
+        data = response.json()
+        assert data["detail"]["error"] == "quota"
+
+
+def test_label_photo_fixture_pcgs_front():
+    """extract_cert_from_image extracts PCGS front label cert number, grader, and coin details."""
+    from routes.cert_routes import extract_cert_from_image
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "cert_number": "53652580",
+        "grader": "PCGS",
+        "confidence": "HIGH",
+        "slab_side": "front",
+        "year": "1881",
+        "denomination": "Morgan Dollar",
+        "grade": "MS65",
+        "mint": "S",
+        "variety": None,
+    })
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+    with patch("routes.cert_routes._genai.Client", return_value=mock_client):
+        res = extract_cert_from_image(b"fake_front_jpeg", mime_type="image/jpeg")
+        assert res["cert_number"] == "53652580"
+        assert res["grader"] == "PCGS"
+        assert res["confidence"] == "HIGH"
+        assert res["slab_side"] == "front"
+        assert res["year"] == "1881"
+        assert res["grade"] == "MS65"
+
+
+def test_label_photo_fixture_pcgs_rear():
+    """extract_cert_from_image extracts PCGS rear cert number and side."""
+    from routes.cert_routes import extract_cert_from_image
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "cert_number": "53652580",
+        "grader": "PCGS",
+        "confidence": "HIGH",
+        "slab_side": "rear",
+        "year": None,
+        "denomination": None,
+        "grade": None,
+        "mint": None,
+        "variety": None,
+    })
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+    with patch("routes.cert_routes._genai.Client", return_value=mock_client):
+        res = extract_cert_from_image(b"fake_rear_jpeg", mime_type="image/jpeg")
+        assert res["cert_number"] == "53652580"
+        assert res["grader"] == "PCGS"
+        assert res["confidence"] == "HIGH"
+        assert res["slab_side"] == "rear"
+
+
+def test_label_photo_fixture_cacg_front_hint():
+    """extract_cert_from_image returns hint to photo rear when CACG front has details but no cert #."""
+    from routes.cert_routes import extract_cert_from_image
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "cert_number": None,
+        "grader": "CACG",
+        "confidence": "HIGH",
+        "slab_side": "front",
+        "year": "1921",
+        "denomination": "Morgan Dollar",
+        "grade": "MS-64",
+        "mint": None,
+        "variety": None,
+    })
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+    with patch("routes.cert_routes._genai.Client", return_value=mock_client):
+        res = extract_cert_from_image(b"fake_cacg_front", mime_type="image/jpeg")
+        assert res["cert_number"] is None
+        assert res["grader"] == "CACG"
+        assert res["year"] == "1921"
+        assert res["grade"] == "MS-64"
+        assert res["slab_side"] == "front"
+        assert "photograph the back" in res["message"].lower()
+
+
+def test_label_photo_fixture_cacg_rear_cert():
+    """extract_cert_from_image extracts CACG rear cert number."""
+    from routes.cert_routes import extract_cert_from_image
+    mock_response = MagicMock()
+    mock_response.text = json.dumps({
+        "cert_number": "1001234567",
+        "grader": "CACG",
+        "confidence": "HIGH",
+        "slab_side": "rear",
+        "year": None,
+        "denomination": None,
+        "grade": None,
+        "mint": None,
+        "variety": None,
+    })
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+    with patch("routes.cert_routes._genai.Client", return_value=mock_client):
+        res = extract_cert_from_image(b"fake_cacg_rear", mime_type="image/jpeg")
+        assert res["cert_number"] == "1001234567"
+        assert res["grader"] == "CACG"
+        assert res["slab_side"] == "rear"
+
+
+def test_extract_cert_from_image_truncated_json_repair():
+    """extract_cert_from_image recovers gracefully from truncated JSON using json_repair."""
+    from routes.cert_routes import extract_cert_from_image
+    mock_response = MagicMock()
+    # Simulate a truncated JSON response cut off before closing quotes/braces
+    mock_response.text = '{"cert_number": "53652580", "grader": "PCGS", "confidence": "HIGH", "year": "1881'
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = mock_response
+    with patch("routes.cert_routes._genai.Client", return_value=mock_client):
+        res = extract_cert_from_image(b"fake_truncated_jpeg", mime_type="image/jpeg")
+        assert res["cert_number"] == "53652580"
+        assert res["grader"] == "PCGS"
+        assert res["confidence"] == "HIGH"

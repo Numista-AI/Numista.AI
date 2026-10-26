@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'ui_variant_service.dart';
+import '../widgets/auth_gate.dart';
 
 /// Wraps Firebase Auth for Numista.AI.
 /// PIN authentication uses Firebase email/password where the PIN IS the password.
@@ -12,6 +13,7 @@ class AuthService {
   static User? get currentUser => _auth.currentUser;
 
   static bool get isGuest => _auth.currentUser?.isAnonymous == true;
+  static bool get isSignedIn => _auth.currentUser != null && !_auth.currentUser!.isAnonymous;
 
   /// Pure helper — testable without Firebase. Used by isBetaTester getter.
   static bool isBetaFor({required DateTime? creationUtc, required bool isAnonymous}) {
@@ -200,6 +202,7 @@ class AuthService {
   static Future<void> signOut() async {
     _isAdminCached = false;
     UiVariantService.reset();
+    AuthGate.resetWelcome();
     await _auth.signOut();
   }
 

@@ -62,8 +62,9 @@ void main() {
     await tester.enterText(certInput, '53652580');
     await tester.pump();
 
-    // Verify label shows 'PCGS Certification Number'
-    expect(find.text('PCGS Certification Number'), findsOneWidget);
+    // V8.18.13 / NET-393 Fix 1: When grader defaults to 'Not sure', heading stays neutral
+    expect(find.text('Certification Number'), findsOneWidget);
+    expect(find.text('PCGS Certification Number'), findsNothing);
   });
 
   testWidgets('certFlowNgcAutoDetect', (WidgetTester tester) async {
@@ -75,8 +76,9 @@ void main() {
     await tester.enterText(certInput, '1234567');
     await tester.pump();
 
-    // Verify label shows 'NGC Certification Number'
-    expect(find.text('NGC Certification Number'), findsOneWidget);
+    // V8.18.13 / NET-393 Fix 1: When grader defaults to 'Not sure', heading stays neutral
+    expect(find.text('Certification Number'), findsOneWidget);
+    expect(find.text('NGC Certification Number'), findsNothing);
   });
 
   testWidgets('certFlowCacPrefix', (WidgetTester tester) async {
@@ -88,8 +90,9 @@ void main() {
     await tester.enterText(certInput, 'CAC12345');
     await tester.pump();
 
-    // Verify label shows 'CAC Certification Number'
-    expect(find.text('CAC Certification Number'), findsOneWidget);
+    // V8.18.13 / NET-393 Fix 1: When grader defaults to 'Not sure', heading stays neutral
+    expect(find.text('Certification Number'), findsOneWidget);
+    expect(find.text('CAC Certification Number'), findsNothing);
   });
 
   testWidgets('certFlowManualGraderSelect', (WidgetTester tester) async {
@@ -158,7 +161,7 @@ void main() {
     // Assert dialog appears with "Add another copy anyway?"
     expect(find.text('This cert # is already in your collection. Add another copy anyway?'), findsOneWidget);
     expect(find.text('Add anyway'), findsOneWidget);
-    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
   });
 
   testWidgets('certFlowNavFromTopLevel', (WidgetTester tester) async {

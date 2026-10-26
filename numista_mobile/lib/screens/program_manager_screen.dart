@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/http_auth_client.dart';
@@ -19,12 +19,16 @@ import '../utils/slot_resolver.dart';
 import '../services/set_expansion_helper.dart';
 import 'add_coins_hub.dart';
 import '../utils/numista_error_helper.dart';
+import '../constants.dart';
 
 
 
 class ProgramManagerScreen extends StatefulWidget {
   final String? initialProgramId;
   const ProgramManagerScreen({super.key, this.initialProgramId});
+
+  @visibleForTesting
+  static EdgeInsets floatingSnackBarMargin(BuildContext context) => _ProgramManagerScreenState._floatingSnackBarMargin(context);
 
   @override
   State<ProgramManagerScreen> createState() => _ProgramManagerScreenState();
@@ -292,7 +296,12 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   }
 
   Future<void> _loadTotalReferenceCount() async {
-    if (FirebaseAuth.instance.currentUser == null) return;
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+    if (!isRealUser || GuestSeedService.isBrowseDemoMode) {
+      if (mounted) setState(() => _totalReferenceCount = 2834);
+      return;
+    }
     try {
       final snap = await FirebaseFirestore.instance
           .collection('coins_reference')
@@ -914,8 +923,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                       child: Text(
                         program.name,
                         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                        maxLines: 3,
-                        overflow: TextOverflow.clip,
+                        softWrap: true,
+                        overflow: TextOverflow.visible,
                       ),
                     ),
                   ],
@@ -925,39 +934,45 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: _generatingProgramId == program.id
-                          ? null
-                          : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
-                      icon: _generatingProgramId == program.id
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.print, size: 16),
-                      label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF63366),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        minimumSize: const Size(0, 48),
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: _generatingProgramId == program.id
+                            ? null
+                            : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
+                        icon: _generatingProgramId == program.id
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.print, size: 16),
+                        label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF63366),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          minimumSize: const Size(0, 48),
+                        ),
                       ),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: _generatingProgramId == program.id
-                          ? null
-                          : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
-                      icon: const Icon(Icons.download_rounded, size: 16),
-                      label: const Text('Download PDF'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF2563EB),
-                        side: const BorderSide(color: Color(0xFF2563EB)),
-                        elevation: 0,
-                        minimumSize: const Size(0, 48),
+                    SizedBox(
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: _generatingProgramId == program.id
+                            ? null
+                            : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
+                        icon: const Icon(Icons.download_rounded, size: 16),
+                        label: const Text('Download PDF'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF2563EB),
+                          side: const BorderSide(color: Color(0xFF2563EB)),
+                          elevation: 0,
+                          minimumSize: const Size(0, 48),
+                        ),
                       ),
                     ),
                   ],
@@ -986,47 +1001,53 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   child: Text(
                     program.name,
                     style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
                   ),
                 ),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: _generatingProgramId == program.id
-                          ? null
-                          : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
-                      icon: _generatingProgramId == program.id
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.print, size: 16),
-                      label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF63366),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        minimumSize: const Size(0, 48),
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: _generatingProgramId == program.id
+                            ? null
+                            : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
+                        icon: _generatingProgramId == program.id
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.print, size: 16),
+                        label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF63366),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          minimumSize: const Size(0, 48),
+                        ),
                       ),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: _generatingProgramId == program.id
-                          ? null
-                          : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
-                      icon: const Icon(Icons.download_rounded, size: 16),
-                      label: const Text('Download PDF'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF2563EB),
-                        side: const BorderSide(color: Color(0xFF2563EB)),
-                        elevation: 0,
-                        minimumSize: const Size(0, 48),
+                    SizedBox(
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: _generatingProgramId == program.id
+                            ? null
+                            : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
+                        icon: const Icon(Icons.download_rounded, size: 16),
+                        label: const Text('Download PDF'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF2563EB),
+                          side: const BorderSide(color: Color(0xFF2563EB)),
+                          elevation: 0,
+                          minimumSize: const Size(0, 48),
+                        ),
                       ),
                     ),
                   ],
@@ -1391,8 +1412,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0F172A),
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.clip,
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -1437,8 +1458,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                               child: Text(
                                 coin.name,
                                 softWrap: true,
-                                maxLines: 2,
-                                overflow: TextOverflow.clip,
+                                overflow: TextOverflow.visible,
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
@@ -1481,87 +1501,99 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
                                 if (isOwned) {
                                   // ── Owned + Add-Another (NET-087) ──────
-                                  return Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFD1FAE5),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.check,
-                                                size: 16,
-                                                color: Color(0xFF10B981)),
-                                            const SizedBox(width: 4),
-                                            Text(chipLabel,
-                                                softWrap: true,
-                                                style: const TextStyle(
-                                                  fontSize: 18,
-                                                  color: Color(0xFF065F46),
-                                                  fontWeight: FontWeight.w600,
-                                                )),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      // NET-087 / P7-V6: 48px labeled add-another button navigating to plain confirm card
-                                      OutlinedButton(
-                                        onPressed: () => Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => AddCoinsHub(
-                                              showAddAnotherConfirm: true,
-                                              initialCoinPreset: {
-                                                'name': coinName.contains('||')
-                                                    ? coinName.split('||').where((s) => s.isNotEmpty).join(' ')
-                                                    : coinName,
-                                                'year': coin.year ?? '',
-                                                'mint': variety.id,
-                                              },
+                                  return ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 380),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFD1FAE5),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.check,
+                                                    size: 16,
+                                                    color: Color(0xFF10B981)),
+                                                const SizedBox(width: 4),
+                                                Flexible(
+                                                  child: Text(chipLabel,
+                                                      softWrap: true,
+                                                      overflow: TextOverflow.visible,
+                                                      style: const TextStyle(
+                                                        fontSize: 18,
+                                                        color: Color(0xFF065F46),
+                                                        fontWeight: FontWeight.w600,
+                                                      )),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
-                                        style: OutlinedButton.styleFrom(
-                                          minimumSize: const Size(0, 48),
-                                          foregroundColor: const Color(0xFF065F46),
-                                          side: const BorderSide(color: Color(0xFF10B981)),
-                                          backgroundColor: const Color(0xFFD1FAE5),
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        const SizedBox(width: 6),
+                                        // NET-087 / P7-V6: 48px labeled add-another button navigating to plain confirm card
+                                        OutlinedButton(
+                                          onPressed: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => AddCoinsHub(
+                                                showAddAnotherConfirm: true,
+                                                initialCoinPreset: {
+                                                  'name': coinName.contains('||')
+                                                      ? coinName.split('||').where((s) => s.isNotEmpty).join(' ')
+                                                      : coinName,
+                                                  'year': coin.year ?? '',
+                                                  'mint': variety.id,
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            minimumSize: const Size(0, 48),
+                                            foregroundColor: const Color(0xFF065F46),
+                                            side: const BorderSide(color: Color(0xFF10B981)),
+                                            backgroundColor: const Color(0xFFD1FAE5),
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          ),
+                                          child: const Text('+ Add another copy',
+                                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                                         ),
-                                        child: const Text('+ Add another copy',
-                                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   );
                                 } else if (isPending) {
                                   // ── Pending / Unreleased ───────────────
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFEF3C7),
-                                      borderRadius: BorderRadius.circular(6),
+                                  return ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 380),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF3C7),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(chipLabel,
+                                          softWrap: true,
+                                          overflow: TextOverflow.visible,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            color: Color(0xFFD97706),
+                                            fontStyle: FontStyle.italic,
+                                            fontWeight: FontWeight.w600,
+                                          )),
                                     ),
-                                    child: Text(chipLabel,
-                                        softWrap: true,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          color: Color(0xFFD97706),
-                                          fontStyle: FontStyle.italic,
-                                          fontWeight: FontWeight.w600,
-                                        )),
                                   );
                                 } else {
                                   // ── Missing — selectable with 48px touch target ───────────────
                                   final isSelected =
                                       _selectedToAdd.contains(coinName);
                                   return ConstrainedBox(
-                                    constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+                                    constraints: const BoxConstraints(minHeight: 48, minWidth: 48, maxWidth: 380),
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(6),
                                       onTap: () {
@@ -1599,13 +1631,16 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                               ),
                                             ),
                                             const SizedBox(width: 6),
-                                            Text(
-                                              chipLabel,
-                                              softWrap: true,
-                                              style: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFF0F172A),
+                                            Flexible(
+                                              child: Text(
+                                                chipLabel,
+                                                softWrap: true,
+                                                overflow: TextOverflow.visible,
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF0F172A),
+                                                ),
                                               ),
                                             ),
                                           ],
@@ -1635,6 +1670,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
+              height: 52,
               child: _isSavingCoins
                   ? const SizedBox(
                       height: 52,
@@ -1917,15 +1953,22 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     );
   }
 
+  static EdgeInsets _floatingSnackBarMargin(BuildContext context) {
+    final sw = MediaQuery.of(context).size.width;
+    return EdgeInsets.only(top: 80, bottom: 120, right: 16, left: sw > 440 ? sw - 416 : 16);
+  }
+
   Future<void> _confirmAddSelectedCoins() async {
     final authUser = FirebaseAuth.instance.currentUser;
     final isRealUser = authUser != null && !authUser.isAnonymous;
     if (!isRealUser || GuestSeedService.isBrowseDemoMode) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Browse Demo Mode: Create a free account to save coins to your collection.'),
-            backgroundColor: Color(0xFFF59E0B),
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
+            content: const Text('Browse Demo Mode: Create a free account to save coins to your collection.'),
+            backgroundColor: const Color(0xFFF59E0B),
           ),
         );
       }
@@ -1943,9 +1986,46 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           'Add Selected Coins?',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        content: Text(
-          'Save ${_selectedToAdd.length} coin(s) from "${_selectedProgram?.name ?? 'Program'}" to your collection?',
-          style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 15),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Save ${_selectedToAdd.length} coin(s) from "${_selectedProgram?.name ?? 'Program'}" to your collection:',
+                style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 15),
+              ),
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 180),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: _selectedToAdd.map((coinName) {
+                      final parts = coinName.split('||');
+                      final yr = parts.isNotEmpty ? parts[0] : '';
+                      final varId = parts.length > 1 ? parts[1] : '';
+                      final nm = parts.length > 2 ? parts[2] : coinName;
+                      final displayLabel = [
+                        yr,
+                        nm,
+                        if (varId.isNotEmpty && varId != 'P') '($varId)',
+                      ].where((s) => s.isNotEmpty).join(' ');
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '• $displayLabel',
+                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -1953,6 +2033,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 16)),
           ),
           ElevatedButton(
+            autofocus: true,
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF3B82F6),
@@ -1966,6 +2047,14 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     );
 
     if (confirmed == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: _floatingSnackBarMargin(context),
+          content: const Text('Saving selected coins to collection...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
       await _addSelectedCoins();
     }
   }
@@ -1979,9 +2068,11 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     if (!isRealUser || GuestSeedService.isBrowseDemoMode) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Browse Demo Mode: Create a free account to save coins to your collection.'),
-            backgroundColor: Color(0xFFF59E0B),
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
+            content: const Text('Browse Demo Mode: Create a free account to save coins to your collection.'),
+            backgroundColor: const Color(0xFFF59E0B),
           ),
         );
       }
@@ -1995,7 +2086,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     final idempotencyKey = const Uuid().v4();
 
     // Build slot payloads from the pipe-delimited key: "YEAR||VARIETY_ID||SERIES_NAME"
-    final List<Map<String, String>> slots = [];
+    final List<Map<String, dynamic>> slots = [];
     for (final coinName in _selectedToAdd) {
       final parts = coinName.split('||');
       final parsedYear    = parts.isNotEmpty ? parts[0] : '';
@@ -2036,6 +2127,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         'mint_mark':    parsedMint,
         'denomination': parsedDenom,
         'variety_id':   varietyId,
+        'quantity':     1,
+        'Quantity':     1,
       });
     }
 
@@ -2044,7 +2137,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     final selectedCount = _selectedToAdd.length;
 
     try {
-      const baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+      const baseUrl = kApiBaseUrl;
       // HttpAuthClient.post injects the Firebase Bearer token — bare http.post returned 401
       final response = await HttpAuthClient.post(
         Uri.parse('$baseUrl/api/checklist/add_coins'),
@@ -2089,6 +2182,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
             content: Text('Successfully added $coinsWritten coin${coinsWritten == 1 ? '' : 's'}!'),
             backgroundColor: Colors.green,
           ),
@@ -2101,6 +2196,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
             content: Text(NumistaErrorHelper.toUserFriendly(response.body, statusCode: response.statusCode)),
             backgroundColor: Colors.red,
           ),
@@ -2111,6 +2208,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         final coinWord = selectedCount == 1 ? '1 coin' : '$selectedCount coins';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
             content: Text(NumistaErrorHelper.toUserFriendlyWithContext(
               e,
               action: 'add your $coinWord',

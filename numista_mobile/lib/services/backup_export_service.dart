@@ -5,6 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'backup_export_stub.dart'
     if (dart.library.js_interop) 'backup_export_web.dart' as dl_impl;
 import 'auth_service.dart';
+import 'package:intl/intl.dart';
+import '../utils/text_sanitizer.dart';
+import '../constants.dart' show kAppVersion;
 
 /// Handles exporting the user's Firestore collection into a schemaVersion: 1 JSON bundle
 /// or a companion CSV spreadsheet for legal estate planning and offline backup.
@@ -13,10 +16,62 @@ class BackupExportService {
 
   /// Generates schemaVersion: 2 full-fidelity JSON export bundle.
   /// Includes coins, currency, world items, transfers, estate, and preferences.
-  static Future<Map<String, dynamic>> generateExportPayload() async {
+  static Future<Map<String, dynamic>> generateExportPayload({
+    List<Map<String, dynamic>>? mockCoins,
+  }) async {
+    if (mockCoins != null) {
+      final coins = mockCoins;
+      final setCount = coins.where((c) => c['is_set'] == true || c['Denomination'] == 'Set').length;
+      return {
+        'schemaVersion': 2,
+        'exported_at': DateTime.now().toUtc().toIso8601String(),
+        'user_email': 'test@numista.ai',
+        'app_version': kAppVersion.replaceFirst('v', ''),
+        'collections': {
+          'coins': coins,
+          'currency': <Map<String, dynamic>>[],
+          'world_items': <Map<String, dynamic>>[],
+          'transferred_coins': <Map<String, dynamic>>[],
+          'transferred_currency': <Map<String, dynamic>>[],
+        },
+        'estate': {
+          'profile': null,
+          'coin_data': <Map<String, dynamic>>[],
+        },
+        'preferences': {
+          'program_preferences': <Map<String, dynamic>>[],
+          'beta_checklist': null,
+        },
+        'metadata': {
+          'coin_count': coins.length,
+          'currency_count': 0,
+          'world_item_count': 0,
+          'transferred_coin_count': 0,
+          'transferred_currency_count': 0,
+          'set_count': setCount,
+          'estate_data_count': 0,
+          'program_preference_count': 0,
+        },
+        // Legacy compat: flat 'coins' key for schemaVersion: 1 consumers
+        'coins': coins,
+        'item_count': coins.length,
+      };
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     final email = user?.email ?? 'guest@numista.ai';
     final fs = FirebaseFirestore.instance;
+
+    // Helper: strip non-exportable bid/ask fields per NET-372
+    Map<String, dynamic> sanitizeDoc(Map<String, dynamic> doc) {
+      final copy = Map<String, dynamic>.from(doc);
+      copy.remove('greysheetBid');
+      copy.remove('greysheet_bid');
+      copy.remove('greysheetAsk');
+      copy.remove('greysheet_ask');
+      copy.remove('bid_total');
+      return copy;
+    }
 
     // Helper: query a subcollection under the user doc and return list of maps
     Future<List<Map<String, dynamic>>> fetchCollection(String subcollection) async {
@@ -24,7 +79,7 @@ class BackupExportService {
       try {
         final snap = await fs.doc(AuthService.userDocPath).collection(subcollection).get();
         for (final doc in snap.docs) {
-          results.add({'_id': doc.id, ...doc.data()});
+          results.add(sanitizeDoc({'_id': doc.id, ...doc.data()}));
         }
       } catch (e) {
         debugPrint('[BackupExportService] Error fetching $subcollection: $e');
@@ -37,7 +92,7 @@ class BackupExportService {
       try {
         final docSnap = await fs.doc(AuthService.userDocPath).collection(subcollection).doc(docId).get();
         if (docSnap.exists && docSnap.data() != null) {
-          return {'_id': docSnap.id, ...docSnap.data()!};
+          return sanitizeDoc({'_id': docSnap.id, ...docSnap.data()!});
         }
       } catch (e) {
         debugPrint('[BackupExportService] Error fetching $subcollection/$docId: $e');
@@ -87,7 +142,7 @@ class BackupExportService {
       'schemaVersion': 2,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'user_email': email,
-      'app_version': '4.339',
+      'app_version': kAppVersion.replaceFirst('v', ''),
       'collections': {
         'coins': coins,
         'currency': currency,
@@ -121,15 +176,74 @@ class BackupExportService {
     return payload;
   }
 
-  /// Triggers JSON file download in browser or web target.
-  static Future<void> exportJsonDownload() async {
-    final payload = await generateExportPayload();
+  static String _formatDate(dynamic val) {
+    if (val == null) return '';
+    if (val is Timestamp) return DateFormat('yyyy-MM-dd').format(val.toDate());
+    if (val is DateTime) return DateFormat('yyyy-MM-dd').format(val);
+    final str = val.toString().trim();
+    if (str.isEmpty) return '';
+    if (str.contains('Timestamp(seconds=')) {
+      final match = RegExp(r'seconds=(\d+)').firstMatch(str);
+      if (match != null) {
+        final sec = int.tryParse(match.group(1)!) ?? 0;
+        return DateFormat('yyyy-MM-dd').format(DateTime.fromMillisecondsSinceEpoch(sec * 1000));
+      }
+    }
+    if (str.contains('T')) {
+      final parsed = DateTime.tryParse(str);
+      if (parsed != null) return DateFormat('yyyy-MM-dd').format(parsed);
+    }
+    return str;
+  }
+
+  static String _formatYear(dynamic val) {
+    if (val == null) return '';
+    if (val is num) {
+      final intVal = val.toInt();
+      return intVal > 0 ? intVal.toString() : '';
+    }
+    final s = val.toString().trim();
+    final parsed = double.tryParse(s)?.toInt() ?? int.tryParse(s);
+    if (parsed != null && parsed > 0) return parsed.toString();
+    return s.replaceAll(RegExp(r'\.0$'), '');
+  }
+
+  static String _formatCost(dynamic val) {
+    if (val == null) return '\$0.00';
+    if (val is num) {
+      return '\$${val.toDouble().toStringAsFixed(2)}';
+    }
+    final raw = val.toString().replaceAll(r'$', '').replaceAll(',', '').trim();
+    final d = double.tryParse(raw);
+    if (d == null) return '\$0.00';
+    return '\$${d.toStringAsFixed(2)}';
+  }
+
+  static int _formatQuantity(dynamic val) {
+    if (val == null) return 1;
+    if (val is num) {
+      final i = val.toInt();
+      return i > 0 ? i : 1;
+    }
+    final s = val.toString().trim();
+    final i = int.tryParse(s) ?? double.tryParse(s)?.toInt() ?? 1;
+    return i > 0 ? i : 1;
+  }
+
+  /// Generates full-fidelity JSON string from an export payload map.
+  static String generateJsonStringFromPayload(Map<String, dynamic> payload) {
     final jsonEncoder = JsonEncoder.withIndent('  ', (object) {
       if (object is Timestamp) return object.toDate().toIso8601String();
       if (object is DateTime) return object.toIso8601String();
       return object.toString();
     });
-    final jsonStr = jsonEncoder.convert(payload);
+    return jsonEncoder.convert(payload);
+  }
+
+  /// Triggers JSON file download in browser or web target.
+  static Future<void> exportJsonDownload() async {
+    final payload = await generateExportPayload();
+    final jsonStr = generateJsonStringFromPayload(payload);
     final filename = 'numista_collection_backup_${DateTime.now().millisecondsSinceEpoch}.json';
 
     if (kIsWeb) {
@@ -139,38 +253,57 @@ class BackupExportService {
     }
   }
 
-  /// Triggers CSV file download in browser or web target.
-  static Future<void> exportCsvDownload() async {
-    final payload = await generateExportPayload();
-    final List coins = payload['coins'] as List;
+  /// Generates the CSV string from an export payload map.
+  static String generateCsvStringFromPayload(Map<String, dynamic> payload) {
+    final List coins = payload['coins'] as List? ?? (payload['collections'] as Map?)?['coins'] as List? ?? [];
 
     final StringBuffer csv = StringBuffer();
-    csv.writeln('Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Condition,Cost,AI Estimated Value,Certification Number,Storage Location,Owner Photo URLs,Added');
+    csv.writeln('Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Condition,Qty,Cost,AI Estimated Value,Certification Number,Retailer,Invoice,Storage Location,Notes,Owner Photo URLs,Added');
 
     for (final c in coins) {
       final map = c as Map<String, dynamic>;
       csv.writeln([
-        _cleanCsvCell(map['Year']),
-        _cleanCsvCell(map['Mint Mark']),
-        _cleanCsvCell(map['Denomination']),
-        _cleanCsvCell(map['Program/Series']),
-        _cleanCsvCell(map['Theme/Subject']),
-        _cleanCsvCell(map['Condition']),
-        _cleanCsvCell(map['Cost']),
-        _cleanCsvCell(map['AI Estimated Value']),
-        _cleanCsvCell(map['Certification Number']),
-        _cleanCsvCell(map['Storage Location']),
+        _cleanCsvCell(_formatYear(map['Year'] ?? map['year'])),
+        _cleanCsvCell(map['Mint Mark'] ?? map['mint_mark']),
+        _cleanCsvCell(map['Denomination'] ?? map['denomination']),
+        _cleanCsvCell(map['Program/Series'] ?? map['program_series']),
+        _cleanCsvCell(map['Theme/Subject'] ?? map['theme_subject']),
+        _cleanCsvCell((() {
+          final cond = map['Condition'] ?? map['condition'];
+          final grd = map['Grade'] ?? map['grade'];
+          if (cond != null && cond.toString().trim().isNotEmpty && cond.toString().trim() != 'Ungraded') {
+            return cond;
+          }
+          if (grd != null && grd.toString().trim().isNotEmpty) {
+            return grd;
+          }
+          return cond ?? 'Ungraded';
+        })()),
+        _cleanCsvCell(_formatQuantity(map['Quantity'] ?? map['quantity'] ?? map['qty'])),
+        _cleanCsvCell(_formatCost(map['Cost'] ?? map['cost'] ?? map['purchase_cost'])),
+        _cleanCsvCell(map['AI Estimated Value'] ?? map['ai_estimated_value']),
+        _cleanCsvCell(map['Certification Number'] ?? map['cert_number'] ?? map['certNo'] ?? map['Cert #'] ?? ''),
+        _cleanCsvCell(map['Retailer/Website'] ?? map['Retailer'] ?? map['retailer'] ?? map['Dealer'] ?? map['dealer']),
+        _cleanCsvCell(map['Retailer Invoice #'] ?? map['Invoice #'] ?? map['Invoice'] ?? map['invoice']),
+        _cleanCsvCell(map['Storage Location'] ?? map['storage_location'] ?? map['Location'] ?? map['location']),
+        _cleanCsvCell(map['Notes'] ?? map['notes'] ?? map['Personal Notes']),
         _cleanCsvCell(_extractOwnerPhotoUrls(map)),
-        _cleanCsvCell(map['Added']),
+        _cleanCsvCell(_formatDate(map['Added'] ?? map['timestamp'] ?? map['created_at'])),
       ].join(','));
     }
+    return csv.toString();
+  }
 
+  /// Triggers CSV file download in browser or web target.
+  static Future<void> exportCsvDownload() async {
+    final payload = await generateExportPayload();
+    final csvStr = generateCsvStringFromPayload(payload);
     final filename = 'numista_collection_${DateTime.now().millisecondsSinceEpoch}.csv';
 
     if (kIsWeb) {
-      _triggerWebDownload(csv.toString(), filename, 'text/csv');
+      _triggerWebDownload(csvStr, filename, 'text/csv');
     } else {
-      debugPrint('[BackupExportService] CSV non-web export length: ${csv.length}');
+      debugPrint('[BackupExportService] CSV non-web export length: ${csvStr.length}');
     }
   }
 
@@ -212,7 +345,7 @@ class BackupExportService {
 
   static String cleanCsvCell(dynamic val) {
     if (val == null) return '""';
-    var str = val.toString().replaceAll('"', '""');
+    var str = TextSanitizer.fixMojibake(val.toString()).replaceAll('"', '""');
     if (str.isNotEmpty && '=+-@\t\r'.contains(str[0])) {
       str = "'$str";
     }

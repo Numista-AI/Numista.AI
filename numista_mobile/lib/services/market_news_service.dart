@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:numista_ai/constants.dart';
 import 'package:numista_ai/services/http_auth_client.dart';
+import 'guest_seed_service.dart';
 
 class MarketNewsArticle {
   final String title;
@@ -40,13 +40,27 @@ class MarketNewsArticle {
 }
 
 class MarketNewsService {
-  static const String _baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+  static const String _baseUrl = kApiBaseUrl;
   static const String _cacheKey = 'cached_numismatic_news_v1';
 
   /// Fetches news articles from backend /api/news/feed proxy with local SharedPreferences fallback.
   static Future<List<MarketNewsArticle>> fetchNewsFeed() async {
+    if (GuestSeedService.isBrowseDemoMode) {
+      return _loadCachedNews();
+    }
+    if (kIsWeb) {
+      final origin = Uri.base.origin.toLowerCase();
+      final isAllowed = origin.contains('numista.ai') ||
+          origin.contains('numista-vault.web.app') ||
+          origin.contains('localhost') ||
+          origin.contains('127.0.0.1');
+      if (!isAllowed) {
+        // Preview channel / non-production web domain: avoid CORS block, serve cached/bundled news
+        return _loadCachedNews();
+      }
+    }
     try {
-      final response = await http
+      final response = await HttpAuthClient
           .get(Uri.parse('$_baseUrl/api/news/feed'))
           .timeout(const Duration(seconds: 8));
 
@@ -96,7 +110,7 @@ class MarketNewsService {
         link: "https://www.greysheet.com",
         source: "Greysheet",
         published: "Sun, 26 Jul 2026",
-        summary: "Wholesale prices across MS63 to MS66 grades hold steady amid strong collector demand.",
+        summary: "Market prices across MS63 to MS66 grades hold steady amid strong collector demand.",
       )
     ];
   }

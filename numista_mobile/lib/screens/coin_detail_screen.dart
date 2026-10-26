@@ -41,6 +41,7 @@ import '../models/mint_error.dart';
 import 'mint_error_detail_screen.dart';
 import '../widgets/coin_set_viewer.dart';
 import '../widgets/set_contents_panel.dart';
+import '../utils/text_sanitizer.dart';
 
 // ─── Design tokens — theme-aware via BuildContext ───────────────────────────
 const _kBrand    = Color(0xFFF63366);
@@ -65,7 +66,7 @@ Color _kBorder(BuildContext c) => _isDarkCtx(c) ? const Color(0xFF2D3143) : cons
 /// Formats a raw denomination string for display.
 /// "5"  → "$5"   |  "25" → "$25"  |  "$5" → "$5"  |  "Half Dollar" → "Half Dollar"
 String _fmtDenomination(String raw) {
-  final s = raw.replaceAll('Â£', '£').replaceAll('Â', '').trim();
+  final s = TextSanitizer.fixMojibake(raw).trim();
   if (s.isEmpty) return s;
   // Already has a currency symbol or is non-numeric — pass through
   if (s.startsWith(r'$') || s.startsWith('£') || s.startsWith('€') ||
@@ -1000,23 +1001,23 @@ class _HeroHeader extends StatelessWidget {
     ];
     final base = parts.join(' ');
     // Always show themeSubject if present
-    final theme = coin.themeSubject.trim();
+    final theme = TextSanitizer.fixMojibake(coin.themeSubject.trim());
     if (theme.isNotEmpty) {
       if (coin.programSeries.isNotEmpty && !theme.toLowerCase().contains(coin.programSeries.toLowerCase())) {
-        return '$base — $theme';
+        return TextSanitizer.fixMojibake('$base — $theme');
       }
-      return '$base — $theme';
+      return TextSanitizer.fixMojibake('$base — $theme');
     }
-    if (coin.programSeries.isNotEmpty) return '$base — ${coin.programSeries}';
-    return base.isEmpty ? 'Coin' : base;
+    if (coin.programSeries.isNotEmpty) return TextSanitizer.fixMojibake('$base — ${coin.programSeries}');
+    return TextSanitizer.fixMojibake(base.isEmpty ? 'Coin' : base);
   }
 
   String _buildSubtitle() {
     final parts = <String>[
-      if (coin.programSeries.isNotEmpty) coin.programSeries,
+      if (coin.programSeries.isNotEmpty) TextSanitizer.fixMojibake(coin.programSeries),
       if (coin.metalContent.isNotEmpty && coin.metalContent != 'Unknown')
-        coin.metalContent,
-      if (coin.country.isNotEmpty && coin.country != 'USA') coin.country,
+        TextSanitizer.fixMojibake(coin.metalContent),
+      if (coin.country.isNotEmpty && coin.country != 'USA') TextSanitizer.fixMojibake(coin.country),
       if (coin.strikeType.isNotEmpty) coin.strikeType,
     ];
     return parts.join(' · ');
@@ -1523,7 +1524,8 @@ class _DetailsTab extends StatelessWidget {
       ('Metal Content', coin.metalContent),
       ('Country', coin.country),
       ('Storage Location', coin.storageLocation),
-      ('Quantity', coin.quantity == '1' || coin.quantity.isEmpty ? '' : coin.quantity),
+      ('Quantity', coin.quantity.isNotEmpty ? coin.quantity : '1'),
+      ('Notes', coin.personalNotes),
     ].where((f) => f.$2.trim().isNotEmpty &&
         f.$2 != 'null' && f.$2 != 'N/A' && f.$2 != 'Ungraded').toList();
 
@@ -1642,13 +1644,10 @@ class _FinancialsTab extends StatelessWidget {
     );
 
 
-    // ── EST. VALUE: same greysheet-first priority as the collection grid ─────
-    // EST. VALUE: CPG Retail (collector/market price) first, then greysheet bid
-    // (dealer wholesale floor), then raw AI Estimated Value string.
-    // This matches what Greysheet.com labels as "CPG Value (Retail)".
-    final gBid = coin.greysheetBid;
+    // ── EST. VALUE: CPG Retail first, then raw AI Estimated Value string ─────
+    // NET-372: GreySheet bid removed from display and fallback. CPG Retail only.
     final gCpg = coin.cpgRetail;
-    final greysheetVal = gCpg > 0 ? gCpg : (gBid > 0 ? gBid : 0.0);
+    final greysheetVal = gCpg > 0 ? gCpg : 0.0;
     final aiDisplay = greysheetVal > 0
         ? '\$${greysheetVal.toStringAsFixed(2)}'
         : (coin.aiEstimatedValue.isEmpty || coin.aiEstimatedValue == 'Pending'
@@ -1842,7 +1841,7 @@ class _FinancialsTab extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Does this physical NGC/PCGS holder have a green or gold CAC sticker? (Adds a 20%-50%+ premium to market Bid/Retail values).',
+                          'Does this physical NGC/PCGS holder have a green or gold CAC sticker? (Adds a 20%-50%+ premium to market Retail values).',
                           style: TextStyle(
                             fontSize: 12,
                             color: _kSubtext(context),

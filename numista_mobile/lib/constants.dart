@@ -10,16 +10,20 @@
 // Project:  studio-9101802118-8c9a8
 // Service:  numista-backend  (revision 00061-lbh, Jun 14 2026)
 // Region:   us-central1
-const String kApiBaseUrl =
-    'https://numista-backend-568985927038.us-central1.run.app';
+const String kApiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'https://numista-backend-568985927038.us-central1.run.app',
+);
 
 // Dedicated Cloud Run service for layout recognition, checklist scan, and PDF generation
-const String kScanServiceUrl =
-    'https://numista-scan-service-568985927038.us-central1.run.app';
+const String kScanServiceUrl = String.fromEnvironment(
+  'SCAN_SERVICE_URL',
+  defaultValue: 'https://numista-scan-service-568985927038.us-central1.run.app',
+);
 
 // Primary Public Domain for Numista.AI web & desktop app
 const String kAppPublicDomain = 'numista.ai';
 
 // App display version shown in the UI and About dialog
-const String kAppVersion = 'v4.403';
+const String kAppVersion = 'v8.18.15h';
 

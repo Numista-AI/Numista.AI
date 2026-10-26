@@ -400,6 +400,85 @@
 
 
 
+
+
+
+
+## v8.18.15 — 2026-10-21
+**P7-v8.18.15 Android Camera Recovery, Landscape Scroll & Phone UX Gating**
+
+- gated all phone-specific fixes behind isNativePhone to keep web 100% unchanged (NET-410)
+- fixed landscape overflow with scrollable entry methods and safe area padding (NET-413p)
+- repaired low-RAM Android camera death with CameraRecoveryService and safe byte handling (NET-413q)
+- fixed Morgan guide and greeter routing so onboarding Take Photo opens the camera (NET-404g)
+- resolved microscope scanner retry overflow and feedback fab occlusion (NET-404h, NET-406)
+- fixed founding beta badge overflow and dashboard single-column layout on phones (NET-406j,l)
+- made checklist count data-driven and prevented title text wrapping mid-word (NET-406k,m)
+- restored clean line endings on add_coins_hub.dart and verified PCGS server messages (NET-411)
+
+## v8.18.14 — 2026-10-21
+**P7-v8.18.14 Invoice Rows Merge, Qty, Sets, Graded Condition & PCGS Lookup Fix**
+
+- invoice line items merged across all dict entries in Gemini list responses (NET-400a)
+- quantity respected across invoice and spreadsheet imports adding N coin docs (NET-400b)
+- supply and accessory rows skipped, sets and unknown denominations normalized (NET-400c)
+- manual and add-another copies preserve condition, grade, and cert data (NET-400d,e)
+- duplicate sweep checks coins, collection, and review_queue with case-insensitive keys (NET-400f)
+- older-user sizing audit: 48px touch targets, 18px body font across cert screens (NET-401.3)
+- NGC and CAC friendly not-found card with retry and manual entry actions (NET-401.4)
+- PCGS lookup proxy handles IsValidRequest False with 404/503 and normalized detail (NET-401.4-CRIT)
+- slab photo reader preserves label coin details when cert # is not visible (NET-401.5)
+
+## v8.18.13 — 2026-10-20
+**P7-v8.18.13 UX Gate V5 Fixes, Webcam Fallback & Older-User Tap Sizing**
+
+- Fix 1: Cert heading stays neutral ('Certification Number') when grader is 'Not sure' after Look Up
+- Fix 2: Webcam dialog displays friendly copy ('We couldn\'t find a camera on this device.') with >=48px file picker upload button
+- Fix 3: Tap targets >=48px (Cancel 56px, Scan Another 48px, back arrows 48x48, cert help 48x48, sidebar >=48px) and body text >=18px
+- Fix 4: Not-found message specifically names cert # and grader searched + check digits and direct manual entry options
+- Fix 5: CACG clear-slab photo OCR investigation, prompt enhancements, and label data fallback preservation
+
+## v8.18.12 — 2026-10-20
+**P7-v8.18.12 Add-Coins Flow, Resilient Parser & Older-User Sizing**
+
+- P7-v8.18.12: invoice parser list/dict normalization, test fixtures & live alignment
+- P7-v8.18.12: add-coins cert fallback in-app dialogs, neutral cert headers, blurred photo error card
+- P7-v8.18.12: camera friendly error & photo file chooser fallback
+- P7-v8.18.12: older-user sizing (>=48px chips, >=56px confirm, >=16px text, multi-line variety)
+- P7-v8.18.12: manual form input debounce & selection-preserving uppercase formatter
+- P7-v8.18.12: importer auth header support in add_coins.html (NET-389)
+- P7-v8.18.12: EPN firestore permission-denied rule and client credential fallback
+- P7-v8.18.12: settings toggle rename to Estate / Liquidation View
+
+## v8.18.11 — 2026-10-20
+**P7-v8.18.11 Enhancements & Platform Updates**
+
+- P7-v8.18.11: 'Mint Mark' save key (space), preserve preset mint, test, version bump
+- P7-v8.18.10+: port greysheet bid display removal from hotfix branch
+- P7-v8.18.10: real cert# dialog, widget tests, backend test assert, mint visible, no coin_name, version 8.18.10
+- P7-v8.18.9: label photo reader prefills confirm screen, photo_scan banner, safe path logging, bump v8.18.9
+- P7-v8.18.8: delete fake cert data, remove cert_cache, honest NGC UI, safe exception handler, invoice proof, tests
+
+## v8.18.10 — 2026-10-20
+**P7-v8.18.10 Enhancements & Platform Updates**
+
+- P7-v8.18.10: real cert# dialog, widget tests, backend test assert, mint visible, no coin_name, version 8.18.10
+- NET-372 / NET-376: Greysheet bid/wholesale display and data stripped across app, retail market basis only
+- P7-v8.18.9: label photo reader prefills confirm screen, photo_scan banner, safe path logging, bump v8.18.9
+- P7-v8.18.8: delete fake cert data, remove cert_cache, honest NGC UI, safe exception handler, invoice proof, tests
+
+## v8.18.9 — 2026-10-20
+**P7-v8.18.9 Enhancements & Platform Updates**
+
+- P7-v8.18.9: label photo reader prefills confirm screen, photo_scan banner, safe path logging, bump v8.18.9
+- P7-v8.18.8: delete fake cert data, remove cert_cache, honest NGC UI, safe exception handler, invoice proof, tests
+- P7: V8.18.7 resolve FT gate V3 blockers for cert lookup, CORS, caching, and mapping
+- P7-v8.18.6: concurrent shared cert reader with budget, precedence over pass1/2, friendly error message
+- P7-v8.18.5: one error card, cert reader unified, morgan avatar HTML fix, ValueKey finders, camera=(self), localhost proof, config test glob
+- P7-v8.18.4: test fixes, Photo ID error card, same cert reader, image pin, morgan avatar, importer banner, firebase config test, localhost proof
+- P7-v8.18.3: firebase config align, scan guards, 18px+56px, camera fallback, manual cert fields, pubspec image pin
+- P7-v8.18.2: cert_routes project-id code fix, scan 28s cap, 314vs312 doc IDs
+
 ## v4.403 — 2026-10-01
 **Security Hardening — Auth on Grade Reviews, Admin Access, Beta Status Fix**
 
