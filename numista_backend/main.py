@@ -7488,10 +7488,13 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         subtotal_val = raw_item_sum
 
                     # B4: Cap shipping offset to avoid phantom landed cost
+                    # When grand_total <= subtotal (shipping credited / included), fees MUST stay 0.
+                    # Do NOT fall through to shipping_val+tax_val — that lands $70.95 instead of $61.00.
                     total_global_fees = 0.0
                     if grand_total > subtotal_val and subtotal_val > 0:
                         total_global_fees = grand_total - subtotal_val
-                    elif (shipping_val + tax_val) > 0:
+                    elif grand_total <= 0 and (shipping_val + tax_val) > 0:
+                        # Invoice total missing — fall back to explicit fee fields only
                         total_global_fees = shipping_val + tax_val
 
                     for it in items:

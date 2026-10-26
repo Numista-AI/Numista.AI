@@ -120,3 +120,59 @@ def test_enrich_us_mint_item_26sqrp_idempotency():
     # Should stay 25, because 25 > 10 and 25 % 25 == 0, so it skips expansion.
     assert enriched["Quantity"] == 25
     assert enriched.get("pack_expanded") is None
+
+
+def test_b4_shipping_credit_cap_and_unit_cost():
+    """
+    OC1 / B4 regression test:
+    When grand_total == subtotal (shipping credited / included) while shipping_fee is reported as 9.95,
+    fees must NOT be added on top. Landed Cost must remain 61.00 (not 70.95),
+    and after enrich_us_mint_item, Quantity == 25, unit_cost == 2.44.
+    """
+    data = {
+        "subtotal": 61.00,
+        "shipping_fee": 9.95,
+        "tax_fee": 0.0,
+        "total_amount": 61.00,
+    }
+    items = [{
+        "item_type": "coin",
+        "Retailer Item No.": "26SQRP",
+        "Quantity": 1,
+        "Cost": 61.00,
+    }]
+
+    subtotal_val = float(data.get("subtotal") or 0.0)
+    shipping_val = float(data.get("shipping_fee") or 0.0)
+    tax_val      = float(data.get("tax_fee") or 0.0)
+    grand_total  = float(data.get("total_amount") or 0.0)
+
+    raw_item_sum = sum(float(it.get("Cost") or 0.0) for it in items)
+    if subtotal_val <= 0.0:
+        subtotal_val = raw_item_sum
+
+    # B4 logic from main.py
+    total_global_fees = 0.0
+    if grand_total > subtotal_val and subtotal_val > 0:
+        total_global_fees = grand_total - subtotal_val
+    elif grand_total <= 0 and (shipping_val + tax_val) > 0:
+        total_global_fees = shipping_val + tax_val
+
+    for it in items:
+        sticker_price = float(it.get("Cost") or 0.0)
+        if raw_item_sum > 0.0 and total_global_fees > 0.0:
+            allocated_fee = round(total_global_fees * (sticker_price / raw_item_sum), 2)
+        elif len(items) == 1 and total_global_fees > 0.0:
+            allocated_fee = round(total_global_fees, 2)
+        else:
+            allocated_fee = 0.0
+
+        landed_cost_basis = round(sticker_price + allocated_fee, 2)
+        it["Cost"] = landed_cost_basis
+
+        # Enrich with US Mint catalog
+        enriched = enrich_us_mint_item(it)
+        assert enriched["Cost"] == 61.00, f"Expected Cost 61.00, got {enriched['Cost']}"
+        assert enriched["Quantity"] == 25, f"Expected Quantity 25, got {enriched['Quantity']}"
+        assert enriched["unit_cost"] == 2.44, f"Expected unit_cost 2.44, got {enriched['unit_cost']}"
+
