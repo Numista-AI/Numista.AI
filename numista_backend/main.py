@@ -3615,7 +3615,11 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
 
                     new_coin_ref = coins_ref.document(doc_id)
                     batch.set(new_coin_ref, data)
-                    batch.delete(queue_ref.document(doc_id))
+                    # Plan 4.1 §3.1 item 4: Eliminate commit .delete() — soft-set status committed
+                    batch.set(queue_ref.document(doc_id), {
+                        "status": "committed",
+                        "committed_at": firestore.SERVER_TIMESTAMP
+                    }, merge=True)
                     committed_count += 1
                     batch_op_count += 2
                     
@@ -6954,13 +6958,24 @@ def _run_duplicate_sweep(user_email: str, session_id: str, new_coin_ids: list[st
         return {"strong": 0, "possible": 0}
 
     # Load existing coins (coins + collection + review_queue minus this session)
+    # Plan 4.1 §3.1 item 3: Skip non-actionable older review rows and exclude current write batch IDs
     existing = []
+    excluded_ids = set(new_coin_ids or [])
+    non_actionable_statuses = {"superseded", "aborted", "committed", "dismissed"}
+
     for coll_name in ("coins", "collection", "review_queue"):
         docs = db.collection("users").document(user_email).collection(coll_name)\
                  .where("import_session_id", "!=", session_id)\
                  .limit(2000).stream()
         for d in docs:
-            existing.append((d.id, coll_name, d.to_dict()))
+            if d.id in excluded_ids:
+                continue
+            d_dict = d.to_dict()
+            if coll_name == "review_queue":
+                st = str(d_dict.get("status") or "").strip().lower()
+                if st in non_actionable_statuses:
+                    continue
+            existing.append((d.id, coll_name, d_dict))
 
     strong_count = 0
     possible_count = 0
@@ -7137,12 +7152,11 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
                           "gcs_path":         rec.get("gcs_path", ""),
                           "match_tier":       match_tier,
                       },
-                      "Purchase Date": purchase_date,
                       "purchase_date": purchase_date,
-                      "Retailer/Website": item_retailer,
                       "retailer": item_retailer,
-                      "Retailer Invoice #": item_inv_no,
+                      "retailer_website": item_retailer,
                       "invoice_number": item_inv_no,
+                      "retailer_invoice_num": item_inv_no,
                   }, merge=True)
                 item["linked_coin_id"] = matched_coin_id
                 item["match_tier"] = match_tier
@@ -7584,6 +7598,12 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
         if not mint_mark_val and ("26ea" in notes_str.lower() or "west point" in notes_str.lower() or "26ea" in fname.lower()):
             mint_mark_val = "W"
 
+        # Plan 4.1 & Argon 4.1.x: Write pure snake_case keys; eliminate illegal key writes
+        ret_val = (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip()
+        inv_val = (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip()
+        pdate_val = (it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or (data.get("invoice_date") if isinstance(data, dict) else "") or (data.get("date") if isinstance(data, dict) else "") or (data.get("Purchase Date") if isinstance(data, dict) else "") or "").strip()
+        item_no_val = (it.get("Retailer Item No.") or it.get("item_number") or it.get("item_no") or "").strip()
+
         doc = {
             "Program/Series":       prog_val,
             "Year":                 it.get("Year", ""),
@@ -7592,24 +7612,23 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             "Condition":            it.get("Condition", "Ungraded"),
             "Metal Content":        metal_val,
             "Cost":                 landed_cost_basis,
+            "Purchase Cost":        landed_cost_basis,
             "Quantity":             item_qty,
             "quantity":             item_qty,
             "Country":              "United States",
+            "country":              "United States",
             "Personal Notes":       (it.get("Personal Notes") or it.get("Original Description from source") or "").strip(),
             "source":               "PDF Invoice",
             "is_demo":              False,
             "is_demo_cleared":      False,
-            "Retailer/Website":     (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
-            "retailer":             (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
-            "retailer_website":     (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
-            "Retailer Invoice #":   (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip(),
-            "invoice_number":       (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip(),
-            "retailer_invoice_num": (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip(),
-            "Purchase Date":        (it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or (data.get("invoice_date") if isinstance(data, dict) else "") or (data.get("date") if isinstance(data, dict) else "") or (data.get("Purchase Date") if isinstance(data, dict) else "") or "").strip(),
-            "purchase_date":        (it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or (data.get("invoice_date") if isinstance(data, dict) else "") or (data.get("date") if isinstance(data, dict) else "") or (data.get("Purchase Date") if isinstance(data, dict) else "") or "").strip(),
-            "Retailer Item No.":    (it.get("Retailer Item No.") or it.get("item_number") or it.get("item_no") or "").strip(),
-            "retailer_item_num":    (it.get("Retailer Item No.") or it.get("item_number") or it.get("item_no") or "").strip(),
-            "status":               "pending_review",
+            "retailer":             ret_val,
+            "retailer_website":     ret_val,
+            "invoice_number":       inv_val,
+            "retailer_invoice_num": inv_val,
+            "purchase_date":        pdate_val,
+            "item_number":          item_no_val,
+            "retailer_item_num":    item_no_val,
+            "status":               "pending",
             "source_file":          fname,
             "import_session_id":    session_id,
             "source_type":          "invoice",
@@ -7629,9 +7648,18 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             from services.us_mint_catalog_service import enrich_us_mint_item
             enrich_us_mint_item(doc)
             doc["Purchase Cost"] = doc.get("Cost")
-            # Plan v3.1 §5.4: Ensure set_cost_label and pure snake_case allocated_fees are stamped on the doc
+            # Plan 4.1 §3.1 item 1: Pure snake_case allocated_fees & shipping_fee
             doc["allocated_fees"] = 0.0 if (is_us_mint_order or doc.get("pack_expanded")) else allocated_fee
-            doc["Allocated Fees"] = doc["allocated_fees"]
+            doc["shipping_fee"] = 0.0 if (is_us_mint_order or doc.get("pack_expanded")) else allocated_fee
+
+            sku_upper = (doc.get("retailer_item_num") or doc.get("item_number") or "").upper()
+            if sku_upper == "26SQRP" or (doc.get("pack_expanded") and "semiquincentennial" in (prog_val + " " + raw_desc).lower()):
+                doc["from_set"] = True
+                doc["set_name"] = "2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll"
+            elif doc.get("pack_expanded"):
+                doc["from_set"] = True
+                doc["set_name"] = prog_val or "US Mint Coin Roll"
+
             if doc.get("pack_expanded") and doc.get("unit_cost"):
                 qty_val = doc.get("Quantity") or doc.get("quantity") or 1
                 cost_val = float(doc.get("Cost") or 0.0)
@@ -8053,11 +8081,13 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         supersede_batch = db.batch()
                         superseded_count = 0
                         # Query using the deployed composite index: receipt_id ASC, status ASC
-                        pending_snaps = col_ref.where("receipt_id", "==", receipt_id).where("status", "==", "pending").stream()
-                        for snap in pending_snaps:
-                            if snap.id not in new_doc_ids:
-                                supersede_batch.set(snap.reference, {"status": "superseded"}, merge=True)
-                                superseded_count += 1
+                        # Argon 4.1.x: supersede any prior docs matching receipt_id with status in (pending, pending_review, staged)
+                        for st in ("pending", "pending_review", "staged"):
+                            st_snaps = col_ref.where("receipt_id", "==", receipt_id).where("status", "==", st).stream()
+                            for snap in st_snaps:
+                                if snap.id not in new_doc_ids:
+                                    supersede_batch.set(snap.reference, {"status": "superseded"}, merge=True)
+                                    superseded_count += 1
                         if superseded_count > 0:
                             supersede_batch.commit()
                             logger.info(f"Superseded {superseded_count} older review_queue docs for receipt {receipt_id}")
@@ -8070,29 +8100,31 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     tax_val      = clean_valuation_value(hdr.get("tax_fee") or hdr.get("tax") or 0.0)
                     grand_total  = clean_valuation_value(hdr.get("total_amount") or hdr.get("grand_total") or 0.0)
 
-                    # Plan v3.1: shipping_val remains parent-level (e.g. 9.95), subtotal remains sum of items, grand_total remains subtotal + shipping + tax
+                    # Plan v3.1 / Plan 4.1: shipping_val remains parent-level (e.g. 9.95), subtotal remains sum of items, grand_total remains subtotal + shipping + tax
                     if subtotal_val <= 0.0:
                         subtotal_val = total_val
                     if grand_total <= 0.0:
                         grand_total = (subtotal_val + shipping_val + tax_val) if (shipping_val + tax_val) > 0 else total_val
 
                     first_c = normalized_coins[0] if normalized_coins else {}
-                    retailer_val = (hdr.get("retailer") or hdr.get("Retailer/Website") or first_c.get("Retailer/Website") or first_c.get("retailer") or "").strip()
-                    invoice_num_val = (hdr.get("invoice_number") or hdr.get("Retailer Invoice #") or first_c.get("Retailer Invoice #") or first_c.get("invoice_number") or "").strip()
-                    invoice_date_val = (hdr.get("invoice_date") or hdr.get("date") or hdr.get("Purchase Date") or first_c.get("Purchase Date") or first_c.get("purchase_date") or "").strip()
+                    retailer_val = (hdr.get("retailer") or hdr.get("retailer_website") or hdr.get("Retailer/Website") or first_c.get("retailer_website") or first_c.get("retailer") or "").strip()
+                    invoice_num_val = (hdr.get("invoice_number") or hdr.get("retailer_invoice_num") or hdr.get("Retailer Invoice #") or first_c.get("retailer_invoice_num") or first_c.get("invoice_number") or "").strip()
+                    invoice_date_val = (hdr.get("invoice_date") or hdr.get("date") or hdr.get("purchase_date") or hdr.get("Purchase Date") or first_c.get("purchase_date") or "").strip()
 
                     for stable_doc_id, coin_doc in new_item_specs:
                         coin_doc["receipt_id"] = receipt_id
                         coin_doc["status"] = "pending"
                         coin_doc["created_at"] = firestore.SERVER_TIMESTAMP
-                        coin_doc["retailer_website"] = coin_doc.get("retailer_website") or coin_doc.get("Retailer/Website") or coin_doc.get("retailer") or retailer_val or ""
-                        coin_doc["Retailer/Website"] = coin_doc["retailer_website"]
+                        coin_doc["retailer_website"] = coin_doc.get("retailer_website") or coin_doc.get("retailer") or retailer_val or ""
                         coin_doc["retailer"] = coin_doc["retailer_website"]
-                        coin_doc["retailer_invoice_num"] = coin_doc.get("retailer_invoice_num") or coin_doc.get("Retailer Invoice #") or coin_doc.get("invoice_number") or invoice_num_val or ""
-                        coin_doc["Retailer Invoice #"] = coin_doc["retailer_invoice_num"]
+                        coin_doc["retailer_invoice_num"] = coin_doc.get("retailer_invoice_num") or coin_doc.get("invoice_number") or invoice_num_val or ""
                         coin_doc["invoice_number"] = coin_doc["retailer_invoice_num"]
-                        coin_doc["Purchase Date"] = coin_doc.get("Purchase Date") or coin_doc.get("purchase_date") or invoice_date_val or ""
-                        coin_doc["purchase_date"] = coin_doc["Purchase Date"]
+                        coin_doc["purchase_date"] = coin_doc.get("purchase_date") or invoice_date_val or ""
+                        # Remove legacy illegal uppercase keys from the document payload if present
+                        coin_doc.pop("Retailer/Website", None)
+                        coin_doc.pop("Retailer Invoice #", None)
+                        coin_doc.pop("Retailer Item No.", None)
+                        coin_doc.pop("Allocated Fees", None)
 
                         doc_ref = col_ref.document(stable_doc_id)
                         batch.set(doc_ref, coin_doc)  # Plan v3.1 §5.3: .set(payload) without merge
@@ -8114,6 +8146,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         "invoice_date":        invoice_date_val,
                         "subtotal":            subtotal_val,
                         "shipping_fee":        shipping_val,
+                        "shipping_amount":     shipping_val,
                         "tax_fee":             tax_val,
                         "total_amount":        grand_total or total_val,
                         "line_items":          line_items_out,

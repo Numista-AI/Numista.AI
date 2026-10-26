@@ -721,13 +721,17 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       'Strike Type':             TextEditingController(text: data['Strike Type']?.toString() ?? ''),
       'Metal Content':           TextEditingController(text: data['Metal Content']?.toString() ?? ''),
       'Purchase Cost':           TextEditingController(text: (data['Purchase Cost'] ?? data['Cost'] ?? '').toString()),
-      'Purchase Date':           TextEditingController(text: data['Purchase Date']?.toString() ?? ''),
-      'Retailer/Website':        TextEditingController(text: (data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website'])?.toString() ?? ''),
-      'Retailer Invoice #':      TextEditingController(text: (data['retailer_invoice_num'] ?? data['invoice_number'] ?? data['Retailer Invoice #'])?.toString() ?? ''),
-      'Retailer Item No.':       TextEditingController(text: (data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.'])?.toString() ?? ''),
-      'Storage Location':        TextEditingController(text: data['Storage Location']?.toString() ?? ''),
-      'Quantity':                TextEditingController(text: (data['Quantity'] ?? data['qty'] ?? '1').toString()),
+      'Purchase Date':           TextEditingController(text: (data['purchase_date'] ?? data['Purchase Date'] ?? '').toString()),
+      'Retailer/Website':        TextEditingController(text: (data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website'] ?? '').toString()),
+      'Retailer Invoice #':      TextEditingController(text: (data['retailer_invoice_num'] ?? data['invoice_number'] ?? data['Retailer Invoice #'] ?? '').toString()),
+      'Retailer Item No.':       TextEditingController(text: (data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.'] ?? '').toString()),
+      'Storage Location':        TextEditingController(text: (data['storage_location'] ?? data['Storage Location'] ?? '').toString()),
+      'Quantity':                TextEditingController(text: (data['Quantity'] ?? data['quantity'] ?? data['qty'] ?? '1').toString()),
     };
+
+    final rawFeeVal = data['allocated_fees'] ?? data['Allocated Fees'] ?? data['shipping_fee'] ?? data['Fee'] ?? data['fee'] ?? 0.0;
+    final feeNum = (rawFeeVal is num) ? rawFeeVal.toDouble() : (double.tryParse(rawFeeVal.toString().replaceAll('\$', '').trim()) ?? 0.0);
+    final setCostLabel = (data['set_cost_label'] ?? '').toString().trim();
 
     bool isSaving = false;
 
@@ -826,6 +830,17 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 '${data['Year'] ?? ''} ${data['Denomination'] ?? 'Review Item'}',
                                 style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white54 : const Color(0xFF64748B), fontSize: 13),
                               ),
+                              if (setCostLabel.isNotEmpty || feeNum >= 0.0)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(
+                                    [
+                                      if (setCostLabel.isNotEmpty) 'Package/Roll: $setCostLabel',
+                                      'Fee: \$${feeNum.toStringAsFixed(2)}',
+                                    ].join('  •  '),
+                                    style: const TextStyle(color: Color(0xFFD4AF37), fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -1270,7 +1285,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   final rawDocs = snapshot.data?.docs ?? [];
                   final docs = rawDocs.where((d) {
                     final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
-                    return (status == 'pending' || status == 'pending_review' || status == 'staged') && status != 'superseded' && status != 'committed';
+                    return status == 'pending';
                   }).toList();
                   if (docs.isEmpty) return const SizedBox.shrink();
 
@@ -1318,7 +1333,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               final rawDocs = snapshot.data?.docs ?? [];
               final docs = rawDocs.where((d) {
                 final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
-                return (status == 'pending' || status == 'pending_review' || status == 'staged') && status != 'superseded' && status != 'committed';
+                return status == 'pending';
               }).toList();
               final highConfCount = docs.where((d) => ReviewHubScreen.isHighConfidenceItem(d.data())).length;
 
@@ -1394,7 +1409,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               final rawDocs = (snapshot.data?.docs.toList() ?? []);
               final docs = rawDocs.where((d) {
                 final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
-                return (status == 'pending' || status == 'pending_review' || status == 'staged') && status != 'superseded' && status != 'committed';
+                return status == 'pending';
               }).toList();
               docs.sort((a, b) {
                 final aData = a.data();
