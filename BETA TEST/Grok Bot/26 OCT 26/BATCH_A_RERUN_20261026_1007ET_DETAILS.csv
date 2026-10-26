@@ -1,0 +1,13 @@
+row,slot,verdict,score,mint_ok,n_req,cited_req,n_mint_facts,cited_url
+1,morgan_dollars_2023_s_2023#S,Supported,0.9748273,True,2,2,39,https://web.archive.org/web/20261004090710/https://www.usmint.gov/coins/coin-programs/morgan-and-peace-silver-dollar-coins/
+2,morgan_dollars_2021_o_privy_2021#O-Privy,Supported,0.79709256,True,2,2,29,https://web.archive.org/web/20210709183332/https://www.usmint.gov/coins/coin-medal-programs/morgan-peace-dollar-anniversary-coins/2021-morgan-dollar
+3,morgan_dollars_2021_cc_privy_2021#CC-Privy,Supported,0.76428276,True,2,2,28,https://web.archive.org/web/20210709183332/https://www.usmint.gov/coins/coin-medal-programs/morgan-peace-dollar-anniversary-coins/2021-morgan-dollar
+4,NEW:morgan_dollars_2024#P,Supported,0.98249555,True,2,2,34,https://web.archive.org/web/20240713042030/https://www.usmint.gov/news/press-releases/united-states-mint-opens-sales-for-the-2024-morgan-and-peace-uncirculated-silver-dollars-on-july-11
+5,NEW:morgan_dollars_2024#S-SILVER-PROOF,Unsupported,0.48614514,False,1,0,35,
+6,NEW:morgan_dollars_2024#S-REVERSE-PROOF,Supported,0.9920432,True,1,1,29,https://web.archive.org/web/20241206144121/https://www.usmint.gov/news/press-releases/united-states-mint-2024-morgan-and-peace-dollar-reverse-proof-two-coin-set-now-available
+7,NEW:morgan_dollars_2025#P,Supported,0.9917139,True,1,1,38,https://web.archive.org/web/20250907103931/https://www.usmint.gov/news/press-releases/2025-morgan-and-peace-uncirculated-silver-dollars-available-on-july-10
+8,NEW:morgan_dollars_2025#S-SILVER-PROOF,Supported,0.81661206,True,2,2,29,https://web.archive.org/web/20261004090710/https://www.usmint.gov/coins/coin-programs/morgan-and-peace-silver-dollar-coins/
+9,NEW:morgan_dollars_2025#S-REVERSE-PROOF,Supported,0.9853204,True,1,1,28,https://web.archive.org/web/20251218150313/https://www.usmint.gov/news/press-releases/morgan-and-peace-dollar-2025-reverse-proof-two-coin-set-available-on-december-11
+10,ADDED:morgan_dollars_2023_s_reverse_proof_2023#S-Reverse-Proof,Supported,0.9784303,True,1,1,23,https://web.archive.org/web/20231110005655/https://www.usmint.gov/news/press-releases/2023-morgan-peace-dollar-reverse-proof-two-coin-set-s-available-november-9-at-noon
+11,ADDED:morgan_dollars_2026 (scope check),Unsupported,0.5408074,False,1,0,29,
+12,ADDED:program#mint_mark_locations,Supported,0.6879883,True,2,2,41,https://web.archive.org/web/20210709183332/https://www.usmint.gov/coins/coin-medal-programs/morgan-peace-dollar-anniversary-coins/2021-morgan-dollar

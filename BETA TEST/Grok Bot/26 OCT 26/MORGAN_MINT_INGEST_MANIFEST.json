@@ -1,0 +1,106 @@
+{
+  "dtg_et": "26 Oct 2026 ~10:07 AM ET",
+  "project": "numista-morgan-pilot",
+  "datastore": "morgan-docs",
+  "docs_before_awq_only": 88,
+  "docs_after": 100,
+  "morgan_mint_pages_added": 12,
+  "import_mode": "INCREMENTAL inline (no GCS)",
+  "pages": [
+    {
+      "id": "page-morgan-2023_morgan_peace_proof_press",
+      "key": "2023_morgan_peace_proof_press",
+      "uri": "https://web.archive.org/web/20230810134920/https://www.usmint.gov/news/press-releases/united-states-mint-opens-sales-for-the-2023-morgan-and-peace-proof-silver-dollars-on-august-9",
+      "title": "United States Mint Opens Sales for the 2023 Morgan and Peace Proof Silver Dollars",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-2021_morgan_dollar_program",
+      "key": "2021_morgan_dollar_program",
+      "uri": "https://web.archive.org/web/20210709183332/https://www.usmint.gov/coins/coin-medal-programs/morgan-peace-dollar-anniversary-coins/2021-morgan-dollar",
+      "title": "2021 Morgan Dollar (program page)",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-2021_morgan_peace_preorder_press",
+      "key": "2021_morgan_peace_preorder_press",
+      "uri": "https://web.archive.org/web/20210525060415/https://www.usmint.gov/news/press-releases/united-states-mint-offering-2021-morgan-and-peace-dollars-in-three-pre-order-windows",
+      "title": "United States Mint Offering 2021 Morgan and Peace Dollars in Three Pre-Order Windows",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-2024_morgan_peace_unc_press",
+      "key": "2024_morgan_peace_unc_press",
+      "uri": "https://web.archive.org/web/20240713042030/https://www.usmint.gov/news/press-releases/united-states-mint-opens-sales-for-the-2024-morgan-and-peace-uncirculated-silver-dollars-on-july-11",
+      "title": "United States Mint Opens Sales for the 2024 Morgan and Peace Uncirculated Silver Dollars",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-2024_morgan_peace_program_landing",
+      "key": "2024_morgan_peace_program_landing",
+      "uri": "https://web.archive.org/web/20261004090710/https://www.usmint.gov/coins/coin-programs/morgan-and-peace-silver-dollar-coins/",
+      "title": "Morgan and Peace Silver Dollar Coins (program landing)",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-2024_morgan_peace_reverse_proof_press",
+      "key": "2024_morgan_peace_reverse_proof_press",
+      "uri": "https://web.archive.org/web/20241206144121/https://www.usmint.gov/news/press-releases/united-states-mint-2024-morgan-and-peace-dollar-reverse-proof-two-coin-set-now-available",
+      "title": "2024 Morgan and Peace Dollar Reverse Proof Two-Coin Set Now Available",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-2025_morgan_peace_unc_press",
+      "key": "2025_morgan_peace_unc_press",
+      "uri": "https://web.archive.org/web/20250907103931/https://www.usmint.gov/news/press-releases/2025-morgan-and-peace-uncirculated-silver-dollars-available-on-july-10",
+      "title": "2025 Morgan and Peace Uncirculated Silver Dollars Available",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-2025_morgan_peace_proof_press",
+      "key": "2025_morgan_peace_proof_press",
+      "uri": "https://web.archive.org/web/20250906083100/https://www.usmint.gov/news/press-releases/2025-morgan-and-peace-dollar-proof-coins-available-on-september-11",
+      "title": "2025 Morgan and Peace Dollar Proof Coins Available",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-2025_morgan_peace_reverse_proof_press",
+      "key": "2025_morgan_peace_reverse_proof_press",
+      "uri": "https://web.archive.org/web/20251218150313/https://www.usmint.gov/news/press-releases/morgan-and-peace-dollar-2025-reverse-proof-two-coin-set-available-on-december-11",
+      "title": "Morgan and Peace Dollar 2025 Reverse Proof Two-Coin Set Available",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-2023_morgan_peace_reverse_proof_press",
+      "key": "2023_morgan_peace_reverse_proof_press",
+      "uri": "https://web.archive.org/web/20231110005655/https://www.usmint.gov/news/press-releases/2023-morgan-peace-dollar-reverse-proof-two-coin-set-s-available-november-9-at-noon",
+      "title": "2023 Morgan & Peace Dollar Reverse Proof Two-Coin Set (S) Available",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-2026_morgan_enhanced_unc_26XE",
+      "key": "2026_morgan_enhanced_unc_26XE",
+      "uri": "https://web.archive.org/web/20261004090713/https://www.usmint.gov/morgan-silver-dollar-2026-enhanced-uncirculated-coin-26XE.html",
+      "title": "Morgan Silver Dollar 2026 Enhanced Uncirculated Coin (26XE)",
+      "source_type": "us_mint"
+    },
+    {
+      "id": "page-morgan-historic_coin_production_facilities",
+      "key": "historic_coin_production_facilities",
+      "uri": "https://web.archive.org/web/20210424145952/https://www.usmint.gov/learn/history/historic-coin-production",
+      "title": "Historic Coin Production Facilities (mint marks)",
+      "source_type": "us_mint"
+    }
+  ],
+  "batch_a_rerun": {
+    "stamp": "20261026_1007ET",
+    "Supported": 10,
+    "Unsupported": 2,
+    "Contradicted": 0,
+    "No_Mint_source": 0,
+    "queries": 24,
+    "checks": 16,
+    "chars": 342652
+  },
+  "notes": "2 pages (2023 reverse proof + 2026 26XE) fetched via box curl after Wayback 429 on laptop; copied to mint_pages_morgan then imported."
+}
