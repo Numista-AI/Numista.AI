@@ -7490,7 +7490,8 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
     elif grand_total <= 0 and (shipping_val + tax_val) > 0:
         total_global_fees = shipping_val + tax_val
 
-    # NET-538 / NET-539: Credit shipping fee to $0 for US Mint rolls/orders
+    # NET-538 / NET-539 / Plan v3.1: Fees & shipping allocation for US Mint orders
+    # Note: Plan v3.1 preserves parent receipt shipping_fee ($9.95), but child items have allocated_fees = 0.0
     retailer_hint = ((data.get("retailer") if isinstance(data, dict) else "") or "").lower()
     is_us_mint_order = (
         "mint" in retailer_hint
@@ -7500,9 +7501,6 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             for it in items
         )
     )
-    if is_us_mint_order and any((it.get("item_number") or it.get("Retailer Item No.") or "").upper() == "26SQRP" or "26sqrp" in ((it.get("Personal Notes") or "") + " " + fname).lower() for it in items):
-        total_global_fees = 0.0
-        shipping_val = 0.0
 
     results = []
     for it in items:
@@ -7510,7 +7508,10 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
         sticker_price = clean_valuation_value(it.get("Cost") or 0.0)
 
         # Proportional Landed Cost Allocation
-        if raw_item_sum > 0.0 and total_global_fees > 0.0:
+        # Under Plan v3.1, US Mint orders keep shipping on receipt but waive fee allocation to child coins
+        if is_us_mint_order and any((it.get("item_number") or it.get("Retailer Item No.") or "").upper() == "26SQRP" or "26sqrp" in ((it.get("Personal Notes") or "") + " " + fname).lower() for it in items):
+            allocated_fee = 0.0
+        elif raw_item_sum > 0.0 and total_global_fees > 0.0:
             allocated_fee = round(total_global_fees * (sticker_price / raw_item_sum), 2)
         elif len(items) == 1 and total_global_fees > 0.0:
             allocated_fee = round(total_global_fees, 2)
@@ -7600,11 +7601,14 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             "is_demo_cleared":      False,
             "Retailer/Website":     (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
             "retailer":             (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
+            "retailer_website":     (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip(),
             "Retailer Invoice #":   (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip(),
             "invoice_number":       (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip(),
+            "retailer_invoice_num": (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip(),
             "Purchase Date":        (it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or (data.get("invoice_date") if isinstance(data, dict) else "") or (data.get("date") if isinstance(data, dict) else "") or (data.get("Purchase Date") if isinstance(data, dict) else "") or "").strip(),
             "purchase_date":        (it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or (data.get("invoice_date") if isinstance(data, dict) else "") or (data.get("date") if isinstance(data, dict) else "") or (data.get("Purchase Date") if isinstance(data, dict) else "") or "").strip(),
             "Retailer Item No.":    (it.get("Retailer Item No.") or it.get("item_number") or it.get("item_no") or "").strip(),
+            "retailer_item_num":    (it.get("Retailer Item No.") or it.get("item_number") or it.get("item_no") or "").strip(),
             "status":               "pending_review",
             "source_file":          fname,
             "import_session_id":    session_id,
@@ -7625,6 +7629,17 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             from services.us_mint_catalog_service import enrich_us_mint_item
             enrich_us_mint_item(doc)
             doc["Purchase Cost"] = doc.get("Cost")
+            # Plan v3.1 §5.4: Ensure set_cost_label and pure snake_case allocated_fees are stamped on the doc
+            doc["allocated_fees"] = 0.0 if (is_us_mint_order or doc.get("pack_expanded")) else allocated_fee
+            doc["Allocated Fees"] = doc["allocated_fees"]
+            if doc.get("pack_expanded") and doc.get("unit_cost"):
+                qty_val = doc.get("Quantity") or doc.get("quantity") or 1
+                cost_val = float(doc.get("Cost") or 0.0)
+                unit_val = float(doc.get("unit_cost") or 0.0)
+                doc["set_cost_label"] = f"${cost_val:.2f} ({qty_val} @ ${unit_val:.2f})"
+            elif not doc.get("set_cost_label"):
+                cost_val = float(doc.get("Cost") or 0.0)
+                doc["set_cost_label"] = f"${cost_val:.2f}"
         except Exception as e:
             logger.warning(f"Error enriching item in normalize_and_validate_receipt: {e}")
 
@@ -8020,27 +8035,34 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         ) for c in normalized_coins
                     ), 2)
 
-                    # NET-538 / NET-539: Stale review queue row purge for the same receipt_id / invoice_number
-                    # Prevents accumulation of duplicate/stale rows from aborted or repeated runs on the Review Hub
-                    try:
-                        stale_docs_to_delete = []
-                        for snap in col_ref.where("receipt_id", "==", receipt_id).stream():
-                            stale_docs_to_delete.append(snap.reference)
-                        
-                        raw_inv = (data.get("invoice_number") if isinstance(data, dict) else "") or ""
-                        if raw_inv and raw_inv not in ("None", "UNKNOWN", ""):
-                            for snap in col_ref.where("Retailer Invoice #", "==", raw_inv).stream():
-                                if snap.reference not in stale_docs_to_delete:
-                                    stale_docs_to_delete.append(snap.reference)
+                    # Plan v3.1 §5.2 / §5.3 / §5.4: Stable doc_id generation & In-memory supersede (ZERO .delete())
+                    # 1. Compute stable doc_id for each line in normalized_coins
+                    new_item_specs = []
+                    new_doc_ids = set()
+                    for line_idx, coin_doc in enumerate(normalized_coins):
+                        item_sku = (coin_doc.get("Retailer Item No.") or coin_doc.get("item_number") or coin_doc.get("item_no") or "").strip()
+                        line_ordinal = line_idx + 1
+                        normalized_line_key = f"{item_sku or 'item'}_{line_ordinal}"
+                        raw_hash_input = f"{receipt_id}|{normalized_line_key}"
+                        stable_doc_id = hashlib.sha256(raw_hash_input.encode("utf-8")).hexdigest()[:40]
+                        new_doc_ids.add(stable_doc_id)
+                        new_item_specs.append((stable_doc_id, coin_doc))
 
-                        if stale_docs_to_delete:
-                            logger.info(f"Purging {len(stale_docs_to_delete)} stale review_queue items for receipt {receipt_id} before re-import")
-                            purge_batch = db.batch()
-                            for sref in stale_docs_to_delete:
-                                purge_batch.delete(sref)
-                            purge_batch.commit()
-                    except Exception as purge_err:
-                        logger.warning(f"Error purging stale review_queue items: {purge_err}")
+                    # 2. In-memory supersede existing pending review_queue docs for this receipt_id (NO .delete())
+                    try:
+                        supersede_batch = db.batch()
+                        superseded_count = 0
+                        # Query using the deployed composite index: receipt_id ASC, status ASC
+                        pending_snaps = col_ref.where("receipt_id", "==", receipt_id).where("status", "==", "pending").stream()
+                        for snap in pending_snaps:
+                            if snap.id not in new_doc_ids:
+                                supersede_batch.set(snap.reference, {"status": "superseded"}, merge=True)
+                                superseded_count += 1
+                        if superseded_count > 0:
+                            supersede_batch.commit()
+                            logger.info(f"Superseded {superseded_count} older review_queue docs for receipt {receipt_id}")
+                    except Exception as sup_err:
+                        logger.warning(f"Error marking review_queue items superseded: {sup_err}")
 
                     hdr = data if isinstance(data, dict) else (data[0] if (isinstance(data, list) and data and isinstance(data[0], dict)) else {})
                     subtotal_val = clean_valuation_value(hdr.get("subtotal") or 0.0)
@@ -8048,12 +8070,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     tax_val      = clean_valuation_value(hdr.get("tax_fee") or hdr.get("tax") or 0.0)
                     grand_total  = clean_valuation_value(hdr.get("total_amount") or hdr.get("grand_total") or 0.0)
 
-                    # If all items have zero allocated fees and pack expansion occurred (NET-538/539)
-                    if normalized_coins and all(float(c.get("Allocated Fees") or 0.0) == 0.0 for c in normalized_coins) and any(c.get("pack_expanded") for c in normalized_coins):
-                        shipping_val = 0.0
-                        grand_total = total_val
-                        subtotal_val = total_val
-
+                    # Plan v3.1: shipping_val remains parent-level (e.g. 9.95), subtotal remains sum of items, grand_total remains subtotal + shipping + tax
                     if subtotal_val <= 0.0:
                         subtotal_val = total_val
                     if grand_total <= 0.0:
@@ -8064,18 +8081,21 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                     invoice_num_val = (hdr.get("invoice_number") or hdr.get("Retailer Invoice #") or first_c.get("Retailer Invoice #") or first_c.get("invoice_number") or "").strip()
                     invoice_date_val = (hdr.get("invoice_date") or hdr.get("date") or hdr.get("Purchase Date") or first_c.get("Purchase Date") or first_c.get("purchase_date") or "").strip()
 
-                    for coin_doc in normalized_coins:
+                    for stable_doc_id, coin_doc in new_item_specs:
                         coin_doc["receipt_id"] = receipt_id
+                        coin_doc["status"] = "pending"
                         coin_doc["created_at"] = firestore.SERVER_TIMESTAMP
-                        coin_doc["Retailer/Website"] = coin_doc.get("Retailer/Website") or coin_doc.get("retailer") or retailer_val or ""
-                        coin_doc["retailer"] = coin_doc["Retailer/Website"]
-                        coin_doc["Retailer Invoice #"] = coin_doc.get("Retailer Invoice #") or coin_doc.get("invoice_number") or invoice_num_val or ""
-                        coin_doc["invoice_number"] = coin_doc["Retailer Invoice #"]
+                        coin_doc["retailer_website"] = coin_doc.get("retailer_website") or coin_doc.get("Retailer/Website") or coin_doc.get("retailer") or retailer_val or ""
+                        coin_doc["Retailer/Website"] = coin_doc["retailer_website"]
+                        coin_doc["retailer"] = coin_doc["retailer_website"]
+                        coin_doc["retailer_invoice_num"] = coin_doc.get("retailer_invoice_num") or coin_doc.get("Retailer Invoice #") or coin_doc.get("invoice_number") or invoice_num_val or ""
+                        coin_doc["Retailer Invoice #"] = coin_doc["retailer_invoice_num"]
+                        coin_doc["invoice_number"] = coin_doc["retailer_invoice_num"]
                         coin_doc["Purchase Date"] = coin_doc.get("Purchase Date") or coin_doc.get("purchase_date") or invoice_date_val or ""
                         coin_doc["purchase_date"] = coin_doc["Purchase Date"]
 
-                        doc_ref = col_ref.document(str(uuid.uuid4()))
-                        batch.set(doc_ref, coin_doc)
+                        doc_ref = col_ref.document(stable_doc_id)
+                        batch.set(doc_ref, coin_doc)  # Plan v3.1 §5.3: .set(payload) without merge
                         new_coin_ids.append(doc_ref.id)
                         doc_qty = max(1, int(coin_doc.get("Quantity") or coin_doc.get("quantity") or 1))
                         added_this_file += doc_qty

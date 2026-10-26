@@ -722,9 +722,9 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       'Metal Content':           TextEditingController(text: data['Metal Content']?.toString() ?? ''),
       'Purchase Cost':           TextEditingController(text: (data['Purchase Cost'] ?? data['Cost'] ?? '').toString()),
       'Purchase Date':           TextEditingController(text: data['Purchase Date']?.toString() ?? ''),
-      'Retailer/Website':        TextEditingController(text: data['Retailer/Website']?.toString() ?? ''),
-      'Retailer Invoice #':      TextEditingController(text: data['Retailer Invoice #']?.toString() ?? ''),
-      'Retailer Item No.':       TextEditingController(text: data['Retailer Item No.']?.toString() ?? ''),
+      'Retailer/Website':        TextEditingController(text: (data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website'])?.toString() ?? ''),
+      'Retailer Invoice #':      TextEditingController(text: (data['retailer_invoice_num'] ?? data['invoice_number'] ?? data['Retailer Invoice #'])?.toString() ?? ''),
+      'Retailer Item No.':       TextEditingController(text: (data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.'])?.toString() ?? ''),
       'Storage Location':        TextEditingController(text: data['Storage Location']?.toString() ?? ''),
       'Quantity':                TextEditingController(text: (data['Quantity'] ?? data['qty'] ?? '1').toString()),
     };
@@ -1269,8 +1269,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 builder: (context, snapshot) {
                   final rawDocs = snapshot.data?.docs ?? [];
                   final docs = rawDocs.where((d) {
-                    final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
-                    return status != 'aborted' && status != 'superseded' && status != 'committed';
+                    final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
+                    return (status == 'pending' || status == 'pending_review' || status == 'staged') && status != 'superseded' && status != 'committed';
                   }).toList();
                   if (docs.isEmpty) return const SizedBox.shrink();
 
@@ -1317,8 +1317,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
             builder: (context, snapshot) {
               final rawDocs = snapshot.data?.docs ?? [];
               final docs = rawDocs.where((d) {
-                final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
-                return status != 'aborted' && status != 'superseded' && status != 'committed';
+                final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
+                return (status == 'pending' || status == 'pending_review' || status == 'staged') && status != 'superseded' && status != 'committed';
               }).toList();
               final highConfCount = docs.where((d) => ReviewHubScreen.isHighConfidenceItem(d.data())).length;
 
@@ -1393,8 +1393,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
               final rawDocs = (snapshot.data?.docs.toList() ?? []);
               final docs = rawDocs.where((d) {
-                final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
-                return status != 'aborted' && status != 'superseded';
+                final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
+                return (status == 'pending' || status == 'pending_review' || status == 'staged') && status != 'superseded' && status != 'committed';
               }).toList();
               docs.sort((a, b) {
                 final aData = a.data();
@@ -1544,7 +1544,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
         ?? 'Coin Set';
     final setSize    = (data['set_size'] as num?)?.toInt() ?? 0;
     final costLabel  = data['set_cost_label'] ?? data['Purchase Cost'] ?? 'N/A';
-    final retailer   = data['Retailer/Website'] ?? 'Unknown';
+    final retailer   = (data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website']) ?? 'Unknown';
     final srcFile    = data['source_file']?.toString() ?? '';
 
     // Expand set_contents for the preview list
@@ -1990,21 +1990,31 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   const Divider(height: 24),
                   () {
                     final rawCost = data['Purchase Cost'] ?? data['Cost'];
-                    final costStr = rawCost != null
-                        ? (rawCost is num ? '\$${rawCost.toStringAsFixed(2)}' : rawCost.toString())
-                        : 'N/A';
+                    final rawSetCostLabel = (data['set_cost_label'] ?? '').toString().trim();
+                    final costStr = rawSetCostLabel.isNotEmpty
+                        ? rawSetCostLabel
+                        : (rawCost != null
+                            ? (rawCost is num ? '\$${rawCost.toStringAsFixed(2)}' : rawCost.toString())
+                            : 'N/A');
+
+                    final rawFee = data['allocated_fees'] ?? data['Allocated Fees'] ?? data['shipping_fee'] ?? data['Fee'] ?? data['fee'];
+                    final feeStr = rawFee != null
+                        ? (rawFee is num ? '\$${rawFee.toStringAsFixed(2)}' : (rawFee.toString().startsWith('\$') ? rawFee.toString() : '\$$rawFee'))
+                        : '\$0.00';
+
                     final isChecklist = data['source_type'] == 'checklist_scan';
                     final sourceLabel = isChecklist ? 'Ingestion Source' : 'Retailer';
-                    final sourceVal = isChecklist ? 'Checklist Scan' : (data['Retailer/Website'] ?? 'N/A').toString();
+                    final sourceVal = isChecklist ? 'Checklist Scan' : ((data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website']) ?? 'N/A').toString();
 
                     return Wrap(
                       spacing: 24,
                       runSpacing: 12,
                       children: [
                         _buildMetaItem(sourceLabel, sourceVal, isChecklist ? Icons.checklist_rtl : Icons.storefront),
-                        _buildMetaItem('Invoice #', (data['Retailer Invoice #'] ?? 'N/A').toString(), Icons.receipt),
+                        _buildMetaItem('Invoice #', ((data['retailer_invoice_num'] ?? data['invoice_number'] ?? data['Retailer Invoice #']) ?? 'N/A').toString(), Icons.receipt),
                         _buildMetaItem('Cost', costStr, Icons.attach_money),
-                        _buildMetaItem('Item #', (data['Retailer Item No.'] ?? 'N/A').toString(), Icons.tag),
+                        _buildMetaItem('Fee', feeStr, Icons.local_shipping_outlined),
+                        _buildMetaItem('Item #', ((data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.']) ?? 'N/A').toString(), Icons.tag),
                         _buildMetaItem('QTY', (data['Quantity'] ?? '1').toString(), Icons.numbers),
                         _buildMetaItem('Date', (data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
                       ],
