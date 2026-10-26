@@ -616,8 +616,12 @@ function resolveApiBase(origin, search, liveUrl) {
 }
 
 function getApiBaseUrl() {
+  var P7GATE_URL = 'https://p7gate---numista-backend-qntvrqvxma-uc.a.run.app';
   var LIVE_URL = 'https://numista-backend-568985927038.us-central1.run.app';
-  return resolveApiBase(window.location.origin, window.location.search, LIVE_URL);
+  var defaultUrl = (window.location && window.location.origin && window.location.origin.indexOf('--p7-gate-') !== -1)
+    ? P7GATE_URL
+    : LIVE_URL;
+  return resolveApiBase(window.location.origin, window.location.search, defaultUrl);
 }
 window.resolveApiBase = resolveApiBase;
 window.getApiBaseUrl = getApiBaseUrl;
