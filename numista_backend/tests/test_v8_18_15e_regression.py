@@ -122,8 +122,11 @@ class MockDocumentReference:
         data = self.db.store.get(self.path)
         return MockSnapshot(self.id, data)
 
-    def set(self, data):
-        self.db.store[self.path] = copy.deepcopy(data)
+    def set(self, data, merge=False):
+        if merge and self.path in self.db.store:
+            self.db.store[self.path].update(copy.deepcopy(data))
+        else:
+            self.db.store[self.path] = copy.deepcopy(data)
 
     def update(self, data):
         if self.path not in self.db.store:

@@ -7126,7 +7126,7 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
 
                 db.collection("users").document(user_email)\
                   .collection("review_queue").document(matched_coin_id)\
-                  .update({
+                  .set({
                       "paper_trail": {
                           "receipt_id":       rec_id,
                           "receipt_filename": rec.get("original_filename", ""),
@@ -7143,7 +7143,7 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
                       "retailer": item_retailer,
                       "Retailer Invoice #": item_inv_no,
                       "invoice_number": item_inv_no,
-                  })
+                  }, merge=True)
                 item["linked_coin_id"] = matched_coin_id
                 item["match_tier"] = match_tier
             else:
