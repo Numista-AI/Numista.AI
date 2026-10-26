@@ -7649,8 +7649,9 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             enrich_us_mint_item(doc)
             doc["Purchase Cost"] = doc.get("Cost")
             # Plan 4.1 §3.1 item 1: Pure snake_case allocated_fees & shipping_fee
-            doc["allocated_fees"] = 0.0 if (is_us_mint_order or doc.get("pack_expanded")) else allocated_fee
-            doc["shipping_fee"] = 0.0 if (is_us_mint_order or doc.get("pack_expanded")) else allocated_fee
+            # NET-565: Only pack/roll expansions waive the fee; regular Mint items (e.g. 23RH) carry Mint S&H.
+            doc["allocated_fees"] = 0.0 if doc.get("pack_expanded") else allocated_fee
+            doc["shipping_fee"] = 0.0 if doc.get("pack_expanded") else allocated_fee
 
             sku_upper = (doc.get("retailer_item_num") or doc.get("item_number") or "").upper()
             if sku_upper == "26SQRP" or (doc.get("pack_expanded") and "semiquincentennial" in (prog_val + " " + raw_desc).lower()):

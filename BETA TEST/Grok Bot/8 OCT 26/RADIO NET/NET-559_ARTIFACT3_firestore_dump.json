@@ -1,0 +1,261 @@
+{
+  "meta": {
+    "dumped_at_et": "2026-10-26 16:51:18 ET",
+    "projectId": "studio-9101802118-8c9a8",
+    "account": "grokbot@numista.ai",
+    "uid": "eIGZgYb49eeCR4Bsa5ABtHr94L63",
+    "invoice": "USM24086141",
+    "item": "26SQRP",
+    "note": "Read-only dump for NET-559 Artifact #3. Pending Hub canary not committed.",
+    "canary_session": "sess_1793047548494_7uoqtd"
+  },
+  "child": {
+    "path": "users/grokbot@numista.ai/review_queue/7a32932ebc4e94a586534e7180cd1c4372c4f17d",
+    "id": "7a32932ebc4e94a586534e7180cd1c4372c4f17d",
+    "fields": {
+      "purchase_date": "2026-09-15",
+      "receipt_id": "rec_Receipt_Semiquincentennial_President_D_Coin_Roll",
+      "invoice_number": "USM24086141",
+      "Strike Type": "Circulating",
+      "item_number": "26SQRP",
+      "country": "United States",
+      "status": "pending",
+      "Denomination": "Dollar",
+      "item_type": "coin",
+      "Personal Notes": "26SQRP Semiquincentennial President D | Mint Facility: Philadelphia (P)",
+      "set_cost_label": "$61.00 (25 @ $2.44)",
+      "upload_method": "pdf_invoice_import",
+      "retailer_item_num": "26SQRP",
+      "is_demo": false,
+      "is_demo_cleared": false,
+      "paper_trail": {
+        "receipt_filename": "Receipt_Semiquincentennial_President_D_Coin_Roll.pdf",
+        "receipt_id": "rec_Receipt_Semiquincentennial_President_D_Coin_Roll",
+        "invoice_number": "USM24086141",
+        "purchase_date": "2026-09-15",
+        "gcs_path": "gs://numista-uploads-studio-9101802118-8c9a8/grokbot@numista.ai/imports/sess_1793047548494_7uoqtd/raw/Receipt_Semiquincentennial_President_D_Coin_Roll.pdf",
+        "match_tier": "exact",
+        "purchase_price": 61.0,
+        "retailer": "United States Mint"
+      },
+      "pack_quantity_multiplier": 25,
+      "Theme/Subject": "Donald J. Trump Semiquincentennial 250th Anniversary Roll (July 4th Privy eligible)",
+      "Cost": 61.0,
+      "Sticker Price": 61.0,
+      "shipping_fee": 0.0,
+      "Metal Content": "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)",
+      "source": "PDF Invoice",
+      "Program/Series": "Semiquincentennial",
+      "import_session_id": "sess_1793047548494_7uoqtd",
+      "source_type": "invoice",
+      "from_set": true,
+      "Mint Mark": "D",
+      "deep_dive_status": "PENDING",
+      "unit_cost": 2.44,
+      "source_file": "Receipt_Semiquincentennial_President_D_Coin_Roll.pdf",
+      "pack_expanded": true,
+      "Quantity": 25,
+      "cost": 61.0,
+      "gcs_path": "gs://numista-uploads-studio-9101802118-8c9a8/grokbot@numista.ai/imports/sess_1793047548494_7uoqtd/raw/Receipt_Semiquincentennial_President_D_Coin_Roll.pdf",
+      "retailer_invoice_num": "USM24086141",
+      "allocated_fees": 0.0,
+      "Year": "2026",
+      "Country": "United States",
+      "quantity": 25,
+      "_catalog_grounded": true,
+      "retailer_website": "United States Mint",
+      "Condition": "Uncirculated",
+      "retailer": "United States Mint",
+      "Purchase Cost": 61.0,
+      "created_at": "2026-10-26T20:46:09.717000+00:00",
+      "set_name": "2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll"
+    },
+    "illegal_slash_keys": [
+      "Theme/Subject",
+      "Program/Series"
+    ],
+    "required_fields": {
+      "from_set": true,
+      "set_name": "2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll",
+      "set_cost_label": "$61.00 (25 @ $2.44)",
+      "allocated_fees": 0.0,
+      "shipping_fee": 0.0,
+      "shipping_amount": "<MISSING>"
+    }
+  },
+  "parent_receipt": {
+    "path": "users/grokbot@numista.ai/receipts/rec_Receipt_Semiquincentennial_President_D_Coin_Roll",
+    "id": "rec_Receipt_Semiquincentennial_President_D_Coin_Roll",
+    "fields": {
+      "tax_fee": 0.0,
+      "receipt_id": "rec_Receipt_Semiquincentennial_President_D_Coin_Roll",
+      "invoice_number": "USM24086141",
+      "import_session_id": "sess_1793047548494_7uoqtd",
+      "unlinked_items": [],
+      "gcs_path": "gs://numista-uploads-studio-9101802118-8c9a8/grokbot@numista.ai/imports/sess_1793047548494_7uoqtd/raw/Receipt_Semiquincentennial_President_D_Coin_Roll.pdf",
+      "invoice_date": "2026-09-15",
+      "session_id": "sess_1793047548494_7uoqtd",
+      "uploaded_at": "2026-10-26T20:46:09.717000+00:00",
+      "line_items": [
+        {
+          "purchase_date": "2026-09-15",
+          "receipt_id": "rec_Receipt_Semiquincentennial_President_D_Coin_Roll",
+          "invoice_number": "USM24086141",
+          "Strike Type": "Circulating",
+          "item_number": "26SQRP",
+          "upload_method": "pdf_invoice_import",
+          "status": "pending",
+          "Denomination": "Dollar",
+          "item_type": "coin",
+          "linked_coin_id": "7a32932ebc4e94a586534e7180cd1c4372c4f17d",
+          "set_cost_label": "$61.00 (25 @ $2.44)",
+          "id": "7a32932ebc4e94a586534e7180cd1c4372c4f17d",
+          "retailer_item_num": "26SQRP",
+          "is_demo": false,
+          "Personal Notes": "26SQRP Semiquincentennial President D | Mint Facility: Philadelphia (P)",
+          "country": "United States",
+          "is_demo_cleared": false,
+          "pack_quantity_multiplier": 25,
+          "Theme/Subject": "Donald J. Trump Semiquincentennial 250th Anniversary Roll (July 4th Privy eligible)",
+          "Cost": 61.0,
+          "shipping_fee": 0.0,
+          "Sticker Price": 61.0,
+          "Metal Content": "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)",
+          "source": "PDF Invoice",
+          "Program/Series": "Semiquincentennial",
+          "import_session_id": "sess_1793047548494_7uoqtd",
+          "source_type": "invoice",
+          "from_set": true,
+          "Mint Mark": "D",
+          "deep_dive_status": "PENDING",
+          "match_tier": "exact",
+          "source_file": "Receipt_Semiquincentennial_President_D_Coin_Roll.pdf",
+          "pack_expanded": true,
+          "Quantity": 25,
+          "cost": 61.0,
+          "gcs_path": "gs://numista-uploads-studio-9101802118-8c9a8/grokbot@numista.ai/imports/sess_1793047548494_7uoqtd/raw/Receipt_Semiquincentennial_President_D_Coin_Roll.pdf",
+          "unit_cost": 2.44,
+          "retailer_invoice_num": "USM24086141",
+          "allocated_fees": 0.0,
+          "Year": "2026",
+          "Country": "United States",
+          "quantity": 25,
+          "_catalog_grounded": true,
+          "retailer_website": "United States Mint",
+          "Condition": "Uncirculated",
+          "retailer": "United States Mint",
+          "created_at": "2026-10-26T20:46:08.774333+00:00",
+          "Purchase Cost": 61.0,
+          "set_name": "2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll"
+        }
+      ],
+      "shipping_amount": 9.95,
+      "linked_coin_ids": [
+        "7a32932ebc4e94a586534e7180cd1c4372c4f17d"
+      ],
+      "subtotal": 61.0,
+      "retailer": "United States Mint",
+      "original_filename": "Receipt_Semiquincentennial_President_D_Coin_Roll.pdf",
+      "total_amount": 70.95,
+      "shipping_fee": 9.95
+    },
+    "illegal_slash_keys": [
+      "line_items[0].Theme/Subject",
+      "line_items[0].Program/Series"
+    ],
+    "required_fields": {
+      "from_set": "<MISSING>",
+      "set_name": "<MISSING>",
+      "set_cost_label": "<MISSING>",
+      "allocated_fees": "<MISSING>",
+      "shipping_fee": 9.95,
+      "shipping_amount": 9.95
+    },
+    "line_item_0_required": {
+      "from_set": true,
+      "set_name": "2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll",
+      "set_cost_label": "$61.00 (25 @ $2.44)",
+      "allocated_fees": 0.0,
+      "shipping_fee": 0.0,
+      "shipping_amount": "<MISSING>"
+    },
+    "line_item_0_illegal_slash_keys": [
+      "Theme/Subject",
+      "Program/Series"
+    ]
+  },
+  "other_usm24086141_review_queue_docs": [
+    {
+      "path": "users/grokbot@numista.ai/review_queue/915044f5-80fc-45b3-bae3-46e70da9b22f",
+      "id": "915044f5-80fc-45b3-bae3-46e70da9b22f",
+      "status": "aborted",
+      "Quantity": 25,
+      "Cost": 61.0,
+      "set_cost_label": "$61.00 (25 @ $2.44)",
+      "from_set": "<MISSING>",
+      "is_set_parent": "<MISSING>",
+      "required_fields": {
+        "from_set": "<MISSING>",
+        "set_name": "<MISSING>",
+        "set_cost_label": "$61.00 (25 @ $2.44)",
+        "allocated_fees": 0.0,
+        "shipping_fee": "<MISSING>",
+        "shipping_amount": "<MISSING>"
+      }
+    },
+    {
+      "path": "users/grokbot@numista.ai/review_queue/9424718d-ce50-4655-b0b0-edc8da877448",
+      "id": "9424718d-ce50-4655-b0b0-edc8da877448",
+      "status": "aborted",
+      "Quantity": 1,
+      "Cost": 70.95,
+      "set_cost_label": "<MISSING>",
+      "from_set": "<MISSING>",
+      "is_set_parent": "<MISSING>",
+      "required_fields": {
+        "from_set": "<MISSING>",
+        "set_name": "<MISSING>",
+        "set_cost_label": "<MISSING>",
+        "allocated_fees": "<MISSING>",
+        "shipping_fee": "<MISSING>",
+        "shipping_amount": "<MISSING>"
+      }
+    },
+    {
+      "path": "users/grokbot@numista.ai/review_queue/d68a2bec-3fd1-4818-9110-27164f0c5931",
+      "id": "d68a2bec-3fd1-4818-9110-27164f0c5931",
+      "status": "aborted",
+      "Quantity": 1,
+      "Cost": 70.95,
+      "set_cost_label": "<MISSING>",
+      "from_set": "<MISSING>",
+      "is_set_parent": "<MISSING>",
+      "required_fields": {
+        "from_set": "<MISSING>",
+        "set_name": "<MISSING>",
+        "set_cost_label": "<MISSING>",
+        "allocated_fees": "<MISSING>",
+        "shipping_fee": "<MISSING>",
+        "shipping_amount": "<MISSING>"
+      }
+    },
+    {
+      "path": "users/grokbot@numista.ai/review_queue/eec4a928-4801-49d8-8d44-cd503b93323c",
+      "id": "eec4a928-4801-49d8-8d44-cd503b93323c",
+      "status": "aborted",
+      "Quantity": 25,
+      "Cost": 70.95,
+      "set_cost_label": "<MISSING>",
+      "from_set": "<MISSING>",
+      "is_set_parent": "<MISSING>",
+      "required_fields": {
+        "from_set": "<MISSING>",
+        "set_name": "<MISSING>",
+        "set_cost_label": "<MISSING>",
+        "allocated_fees": "<MISSING>",
+        "shipping_fee": "<MISSING>",
+        "shipping_amount": "<MISSING>"
+      }
+    }
+  ]
+}

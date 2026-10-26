@@ -704,6 +704,39 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   }
 
   // ─── Per-card edit dialog ─────────────────────────────────────────────────
+  /// NET-565: Build a Firestore-safe update map from the Edit Coin controllers.
+  /// Firestore update(Map) treats '.' in a key as a field-path separator, so keys
+  /// like 'Retailer Item No.' threw invalid-argument (surfaced as the generic
+  /// "unexpected error" toast). Map those to the canonical snake_case fields the
+  /// Hub reads, and write Fee to allocated_fees + shipping_fee.
+  Map<String, dynamic> _buildReviewQueueUpdates(Map<String, TextEditingController> controllers) {
+    const snakeMap = <String, String>{
+      'Purchase Date': 'purchase_date',
+      'Retailer/Website': 'retailer_website',
+      'Retailer Invoice #': 'retailer_invoice_num',
+      'Retailer Item No.': 'retailer_item_num',
+      'Storage Location': 'storage_location',
+    };
+    final updates = <String, dynamic>{};
+    controllers.forEach((key, ctrl) {
+      final text = ctrl.text.trim();
+      if (key == 'Fee') {
+        final fee = double.tryParse(text.replaceAll('\$', '').replaceAll(',', ''));
+        if (fee != null && fee >= 0) {
+          updates['allocated_fees'] = fee;
+          updates['shipping_fee'] = fee;
+        }
+        return;
+      }
+      if (snakeMap.containsKey(key)) {
+        updates[snakeMap[key]!] = text;
+      } else {
+        updates[key] = text;
+      }
+    });
+    return updates;
+  }
+
   void _showCoinEditDialog(String docId, Map<String, dynamic> data) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -731,6 +764,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
     final rawFeeVal = data['allocated_fees'] ?? data['Allocated Fees'] ?? data['shipping_fee'] ?? data['Fee'] ?? data['fee'] ?? 0.0;
     final feeNum = (rawFeeVal is num) ? rawFeeVal.toDouble() : (double.tryParse(rawFeeVal.toString().replaceAll('\$', '').trim()) ?? 0.0);
+    // NET-565: Fee is editable (Mint S&H e.g. $9.95). Saved to allocated_fees + shipping_fee.
+    controllers['Fee'] = TextEditingController(text: feeNum > 0 ? feeNum.toStringAsFixed(2) : '');
     final setCostLabel = (data['set_cost_label'] ?? '').toString().trim();
 
     bool isSaving = false;
@@ -1007,6 +1042,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             const SizedBox(width: 12),
                             Expanded(child: field('Storage Location', 'Storage Location', Icons.inventory_2_outlined)),
                           ]),
+                          field('Fee', 'Fee / Shipping & Handling', Icons.local_shipping_outlined,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true)),
                           field('Retailer/Website', 'Retailer / Website', Icons.storefront_outlined),
                           Row(children: [
                             Expanded(child: field('Retailer Invoice #', 'Invoice #', Icons.receipt_outlined)),
@@ -1042,10 +1079,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               final dialogMessenger = ScaffoldMessenger.of(dialogContext);
                               final nav = Navigator.of(dialogContext);
                               try {
-                                final updates = <String, dynamic>{};
-                                controllers.forEach((key, ctrl) {
-                                  updates[key] = ctrl.text.trim();
-                                });
+                                final updates = _buildReviewQueueUpdates(controllers);
                                 // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
                                 final rawQty = controllers['Quantity']?.text.trim() ?? '';
                                 final parsedQty = int.tryParse(rawQty);
@@ -1104,10 +1138,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               final dialogMessenger = ScaffoldMessenger.of(dialogContext);
                               final nav = Navigator.of(dialogContext);
                               try {
-                                final updates = <String, dynamic>{};
-                                controllers.forEach((key, ctrl) {
-                                  updates[key] = ctrl.text.trim();
-                                });
+                                final updates = _buildReviewQueueUpdates(controllers);
                                 // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
                                 final rawQty2 = controllers['Quantity']?.text.trim() ?? '';
                                 final parsedQty2 = int.tryParse(rawQty2);
@@ -2031,7 +2062,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         _buildMetaItem('Fee', feeStr, Icons.local_shipping_outlined),
                         _buildMetaItem('Item #', ((data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.']) ?? 'N/A').toString(), Icons.tag),
                         _buildMetaItem('QTY', (data['Quantity'] ?? '1').toString(), Icons.numbers),
-                        _buildMetaItem('Date', (data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
+                        _buildMetaItem('Date', (data['purchase_date'] ?? data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
                       ],
                     );
                   }(),

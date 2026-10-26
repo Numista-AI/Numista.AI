@@ -1,0 +1,14 @@
+The Wayback Machine - https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls
+
+United States Mint — 2002 50 State Quarters Program Production (circulating)
+Source: U.S. Mint Circulating Coins Production Excel (archived).
+Facilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.
+
+Design | Denver | Philadelphia | Total
+2002 50 State Quarters Program® Production
+Tennessee | Denver 286,468,000 | Philadelphia 361,600,000 | Total 648,068,000
+Ohio | Denver 414,832,000 | Philadelphia 217,200,000 | Total 632,032,000
+Louisiana | Denver 402,204,000 | Philadelphia 362,000,000 | Total 764,204,000
+Indiana | Denver 327,200,000 | Philadelphia 362,600,000 | Total 689,800,000
+Mississippi | Denver 289,600,000 | Philadelphia 290,000,000 | Total 579,600,000
+Grand Total: 3,313,704,000

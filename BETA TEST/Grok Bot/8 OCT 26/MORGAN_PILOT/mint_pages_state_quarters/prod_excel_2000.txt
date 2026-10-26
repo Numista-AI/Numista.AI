@@ -1,0 +1,14 @@
+The Wayback Machine - https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls
+
+United States Mint — 2000 50 State Quarters Program Production (circulating)
+Source: U.S. Mint Circulating Coins Production Excel (archived).
+Facilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.
+
+Design | Denver | Philadelphia | Total
+2000 50 State Quarters Program® Production
+Massachusetts | Denver 535,184,000 | Philadelphia 628,600,000 | Total 1,163,784,000
+Maryland | Denver 556,532,000 | Philadelphia 678,200,000 | Total 1,234,732,000
+South Carolina | Denver 566,208,000 | Philadelphia 742,576,000 | Total 1,308,784,000
+New Hampshire | Denver 495,976,000 | Philadelphia 673,040,000 | Total 1,169,016,000
+Virginia | Denver 651,616,000 | Philadelphia 943,000,000 | Total 1,594,616,000
+Grand Total: 6,470,932,000
