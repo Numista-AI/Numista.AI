@@ -7490,6 +7490,20 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
     elif grand_total <= 0 and (shipping_val + tax_val) > 0:
         total_global_fees = shipping_val + tax_val
 
+    # NET-538 / NET-539: Credit shipping fee to $0 for US Mint rolls/orders
+    retailer_hint = ((data.get("retailer") if isinstance(data, dict) else "") or "").lower()
+    is_us_mint_order = (
+        "mint" in retailer_hint
+        or any(
+            (it.get("item_number") or it.get("Retailer Item No.") or "").upper() in ("26SQRP", "26XL", "26EA", "26XM", "26XE", "26XH")
+            or "26sqrp" in ((it.get("Personal Notes") or "") + " " + fname).lower()
+            for it in items
+        )
+    )
+    if is_us_mint_order and any((it.get("item_number") or it.get("Retailer Item No.") or "").upper() == "26SQRP" or "26sqrp" in ((it.get("Personal Notes") or "") + " " + fname).lower() for it in items):
+        total_global_fees = 0.0
+        shipping_val = 0.0
+
     results = []
     for it in items:
         item_qty = _get_item_qty(it)
@@ -7615,6 +7629,20 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             logger.warning(f"Error enriching item in normalize_and_validate_receipt: {e}")
 
         results.append(dict(doc))
+
+    # Defense-in-depth: Deduplicate identical US Mint SKU echoes from return coupons (NET-539)
+    if len(results) > 1:
+        seen_skus = set()
+        deduped = []
+        for r in results:
+            sku = (r.get("Retailer Item No.") or "").upper()
+            if sku and sku in ("26SQRP", "26XL", "26EA", "26XM", "26XE", "26XH"):
+                if sku in seen_skus:
+                    logger.info(f"Collapsing duplicate US Mint coupon echo row for SKU {sku}")
+                    continue
+                seen_skus.add(sku)
+            deduped.append(r)
+        results = deduped
 
     return results
 
@@ -7992,11 +8020,40 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         ) for c in normalized_coins
                     ), 2)
 
+                    # NET-538 / NET-539: Stale review queue row purge for the same receipt_id / invoice_number
+                    # Prevents accumulation of duplicate/stale rows from aborted or repeated runs on the Review Hub
+                    try:
+                        stale_docs_to_delete = []
+                        for snap in col_ref.where("receipt_id", "==", receipt_id).stream():
+                            stale_docs_to_delete.append(snap.reference)
+                        
+                        raw_inv = (data.get("invoice_number") if isinstance(data, dict) else "") or ""
+                        if raw_inv and raw_inv not in ("None", "UNKNOWN", ""):
+                            for snap in col_ref.where("Retailer Invoice #", "==", raw_inv).stream():
+                                if snap.reference not in stale_docs_to_delete:
+                                    stale_docs_to_delete.append(snap.reference)
+
+                        if stale_docs_to_delete:
+                            logger.info(f"Purging {len(stale_docs_to_delete)} stale review_queue items for receipt {receipt_id} before re-import")
+                            purge_batch = db.batch()
+                            for sref in stale_docs_to_delete:
+                                purge_batch.delete(sref)
+                            purge_batch.commit()
+                    except Exception as purge_err:
+                        logger.warning(f"Error purging stale review_queue items: {purge_err}")
+
                     hdr = data if isinstance(data, dict) else (data[0] if (isinstance(data, list) and data and isinstance(data[0], dict)) else {})
                     subtotal_val = clean_valuation_value(hdr.get("subtotal") or 0.0)
                     shipping_val = clean_valuation_value(hdr.get("shipping_fee") or hdr.get("shipping") or 0.0)
                     tax_val      = clean_valuation_value(hdr.get("tax_fee") or hdr.get("tax") or 0.0)
                     grand_total  = clean_valuation_value(hdr.get("total_amount") or hdr.get("grand_total") or 0.0)
+
+                    # If all items have zero allocated fees and pack expansion occurred (NET-538/539)
+                    if normalized_coins and all(float(c.get("Allocated Fees") or 0.0) == 0.0 for c in normalized_coins) and any(c.get("pack_expanded") for c in normalized_coins):
+                        shipping_val = 0.0
+                        grand_total = total_val
+                        subtotal_val = total_val
+
                     if subtotal_val <= 0.0:
                         subtotal_val = total_val
                     if grand_total <= 0.0:

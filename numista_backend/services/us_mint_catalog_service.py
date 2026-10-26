@@ -368,13 +368,30 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
                 item["quantity"] = new_qty
                 item["pack_expanded"] = True
                 item["pack_quantity_multiplier"] = pack_qty
+
+                # Override Cost/Allocated Fees with canonical catalog unit price if available (NET-538 / NET-539)
+                cat_issue_price = catalog_match.get("issue_price") or catalog_match.get("unit_price")
+                if cat_issue_price:
+                    try:
+                        clean_cat_price = float(re.sub(r"[^\d.]", "", str(cat_issue_price)))
+                        if clean_cat_price > 0.0:
+                            canonical_lot_cost = round(clean_cat_price * curr_qty, 2)
+                            item["Sticker Price"] = canonical_lot_cost
+                            item["Allocated Fees"] = 0.0
+                            item["Cost"] = canonical_lot_cost
+                            item["Purchase Cost"] = canonical_lot_cost
+                            item["cost"] = canonical_lot_cost
+                    except Exception as e:
+                        logger.warning(f"Failed parsing cat_issue_price '{cat_issue_price}': {e}")
                 
                 # B2/B4: Ensure unit_cost is calculated from lot total Cost
                 cost_val = item.get("Cost") or item.get("Purchase Cost") or item.get("cost") or 0.0
                 try:
                     cost_float = float(cost_val)
                     if cost_float > 0.0:
-                        item["unit_cost"] = round(cost_float / new_qty, 4)
+                        unit_c = round(cost_float / new_qty, 4)
+                        item["unit_cost"] = unit_c
+                        item["set_cost_label"] = f"${cost_float:.2f} ({new_qty} @ ${cost_float / new_qty:.2f})"
                 except (ValueError, TypeError):
                     pass
 
