@@ -1,4 +1,8 @@
-﻿# WAKE FIELD TESTER — HOLD NET-547 (no re-upload until CoS re-GO)
+﻿# SUPERSEDED by NET-562 SKIP-560 + NET-563 FT FULL Invoices REGO
+**When:** 26 Oct 2026 ~4:56 PM ET
+
+--- ORIGINAL ---
+# WAKE FIELD TESTER — HOLD NET-547 (no re-upload until CoS re-GO)
 **Filed:** 26 Oct 2026 ~3:38 PM ET by GROKCOS / Antigravity Desk  
 **Status:** LIVE  
 
@@ -8,3 +12,4 @@ NET-545 Step1 FAIL (label + fee). AG FAIL-FIX NET-547 is live on p7gate. **You s
 Leave the current pending Hub row unless CoS says otherwise. Live/main OFF.
 
 When ingested: move to WAKES\DONE\ with _DONE suffix (or leave LIVE until REGO replaces it).
+

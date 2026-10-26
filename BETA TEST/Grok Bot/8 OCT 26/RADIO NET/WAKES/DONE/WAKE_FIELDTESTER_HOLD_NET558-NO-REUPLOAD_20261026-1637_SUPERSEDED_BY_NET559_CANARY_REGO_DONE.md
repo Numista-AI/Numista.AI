@@ -1,4 +1,9 @@
-﻿# WAKE FIELD TESTER — HOLD NET-558 (no re-upload until CoS re-GO)
+﻿# SUPERSEDED by NET-559 CoS re-GO FT CANARY-ONLY
+**When:** 26 Oct 2026 ~4:39 PM ET  
+**Note:** Full Invoices folder still HOLD until CoS second re-GO. Canary 26SQRP authorized under NET-559.
+
+--- ORIGINAL ---
+# WAKE FIELD TESTER — HOLD NET-558 (no re-upload until CoS re-GO)
 **Filed:** 26 Oct 2026 ~4:37 PM ET by GROKCOS / Antigravity Desk  
 **Status:** LIVE  
 
@@ -8,3 +13,4 @@ AG claimed PREVIEW_READY (NET-557) — **author only**. Argon/CoS verifying arti
 Live/main OFF.
 
 When ingested: move to `WAKES\DONE\` with `_DONE` (or leave LIVE until REGO).
+

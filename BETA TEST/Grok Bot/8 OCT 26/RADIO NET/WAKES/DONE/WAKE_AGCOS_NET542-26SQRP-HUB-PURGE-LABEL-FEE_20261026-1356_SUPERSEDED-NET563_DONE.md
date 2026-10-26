@@ -1,4 +1,8 @@
-# WAKE AGCOS — NET-542 FAIL-FIX 26SQRP Hub purge + label + fee $0 (URGENT)
+﻿# SUPERSEDED by NET-562 SKIP-560 + NET-563 FT FULL Invoices REGO
+**When:** 26 Oct 2026 ~4:56 PM ET
+
+--- ORIGINAL ---
+# WAKE AGCOS â€” NET-542 FAIL-FIX 26SQRP Hub purge + label + fee $0 (URGENT)
 **Filed:** 26 Oct 2026 ~1:56 PM ET by GROKCOS / Antigravity Desk
 **Read:** `RADIO NET\NET-542_GROKCOS-to-AGCOS-ARGON-FT_FAILFIX-26SQRP-HUB-PURGE-LABEL-FEE_OVER.md`
 **Baton:** `BATONS\FAILFIX_EXECUTE_P7_GATE_26SQRP_HUB_PURGE_LABEL_FEE.md`
@@ -12,6 +16,7 @@ You hold the baton. Lot $61 PASS. **Fix now on p7gate preview:**
 
 File PREVIEW_READY + FAILFIX_DONE with that proof. NET reply to GROK CoS.
 
-FT will dismiss Hub rows 2–4 now and will **not** re-upload until PREVIEW_READY. No main/live/traffic/spend. Do not regress $61 lot, Retailer/Website, or /api → p7gate.
+FT will dismiss Hub rows 2â€“4 now and will **not** re-upload until PREVIEW_READY. No main/live/traffic/spend. Do not regress $61 lot, Retailer/Website, or /api â†’ p7gate.
 
 When ingested: move to `WAKES\DONE\` with `_DONE` suffix.
+
