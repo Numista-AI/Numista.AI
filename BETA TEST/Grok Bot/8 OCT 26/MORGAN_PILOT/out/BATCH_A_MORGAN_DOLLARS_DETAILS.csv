@@ -1,0 +1,17 @@
+row,sub,claim_text,score,citationIndices,verdict,n_mint_facts
+1,1,"The 2023 Morgan Proof Silver Dollar is minted at the San Francisco Mint, is struck in .999 silver, and has a proof finish.",0.05555072799324989,,Unsupported,21
+1,2,"Production is limited to 400,000 coins.",0.003931978717446327,,Unsupported,21
+2,1,"The 2021 Morgan Dollar with an O privy mark is produced at the Philadelphia Mint. The O is a privy mark recognizing the historic New Orleans Mint, not a New Orleans mint mark.",,,No Mint source,0
+3,1,"The 2021 Morgan Dollar with a CC privy mark is produced at the Philadelphia Mint. The CC is a privy mark recognizing the historic Carson City Mint, not a Carson City mint mark.",,,No Mint source,0
+4,1,The 2024 Morgan Uncirculated Silver Dollar is minted at the Philadelphia Mint.,0.05623295158147812,,Unsupported,23
+4,2,"Production is limited to 275,000 coins.",0.031360428780317307,,Unsupported,23
+5,1,The 2024 Morgan Silver Dollar Proof Coin is struck at San Francisco (S) in 99.9 percent fine silver.,0.49897056818008423,,Unsupported,12
+6,1,The 2024 Morgan and Peace reverse proof set contains one Morgan Dollar Coin and one Peace Dollar Coin in .999 silver with reverse proof finishes produced at the Mint facility in San Francisco.,0.00603064289316535,,Unsupported,11
+7,1,"The 2025 Morgan Uncirculated Silver Dollar is struck at the Philadelphia Mint and is limited to 150,000 coins.",0.0024645072408020496,,Unsupported,3
+8,1,The 2025 Morgan Proof Silver Dollar is struck at the San Francisco Mint.,0.08320006728172302,,Unsupported,13
+8,2,"Production is limited to 180,000 units for the Morgan Dollar.",0.004378127865493298,,Unsupported,13
+9,1,"The 2025 Morgan and Peace reverse proof product contains one Morgan Dollar Coin and one Peace Dollar Coin in reverse proof finishes, minted at the San Francisco Mint.",0.015451731160283089,,Unsupported,13
+10,1,The 2023 Morgan and Peace reverse proof set includes one Morgan Dollar Coin and one Peace Dollar Coin minted at the United States Mint at San Francisco in .999 silver with reverse proof finishes.,0.005889747757464647,,Unsupported,13
+11,1,"The Morgan Silver Dollar 2026 Enhanced Uncirculated Coin is a West Point product with no mint mark and a 250 privy mark, offered under the 2026 semiquincentennial / America250 program rather than as a duplicate classic morgan_dollars program year slot.",,,No Mint source,0
+12,1,"Historic United States Mint facilities include Philadelphia, Denver, San Francisco, New Orleans (O), Carson City (CC), and West Point.",0.061652109026908875,,Unsupported,10
+12,2,"Classic Morgan dollars from Philadelphia (1878-1921) carry no mint mark; 2021 O and CC marks on anniversary Morgans are privy marks from Philadelphia, not New Orleans or Carson City mint marks.",0.006376153323799372,,Unsupported,10
