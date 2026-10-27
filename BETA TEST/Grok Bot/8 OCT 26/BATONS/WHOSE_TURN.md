@@ -1,11 +1,7 @@
-﻿# WHOSE_TURN — updated 2026-10-27 ~7:02 PM ET (NET-631 FT PASS -> Eric founder retest)
+﻿# WHOSE_TURN — updated 2026-10-27 ~7:30 PM ET (8PM Option B + impress quality)
 
-**DAY baton:** Eric — founder retest on preview p7-gate (NET-631 FAIL-FIX).
-FT OVERALL PASS filed (SHA 06f6abaf / Cloud Run 00498-kek / Hosting p7-gate).
-Hard gates PASS: I-04b Fee $9.95 + I-07 image / $124.50.
-Preview: https://numista-vault--p7-gate-8avtpz22.web.app
-CoS prompting Eric founder retest. Desk mirrored FT_RESULT + OVER + shots to INBOX/BATONS/day.
-**origin/main LOCKED** until Eric types YES after retest (separate from founder retest itself).
-No live/main promote without that typed YES.
+**MINT:** PARKED overnight (founder NO GO). origin/main LOCKED.
 
-**NIGHT:** NET-610 8 PM ET Option B <=$5 (unchanged, separate track).
+**NIGHT:** NET-610 Option B on numista-morgan-pilot — FinOps GO; Eric KEEP $5 only (no raise).
+Quality amend NET-635: EXECUTE_DONE = top-3 BLUF + interesting Mint-vs-third-party conflicts with sources (impress Eric, not just $).
+Desk evening GO **8:00 PM ET**. Stand down ~3 AM. Watch EXECUTE_DONE_NET610_OPTION_B_CHECK_GROUNDING.md.
