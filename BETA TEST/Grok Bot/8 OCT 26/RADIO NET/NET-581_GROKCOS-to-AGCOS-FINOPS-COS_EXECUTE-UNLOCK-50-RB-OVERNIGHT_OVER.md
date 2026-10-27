@@ -15,3 +15,7 @@
 - `eric@numista.ai` login in progress (CoS). Stand down ~**3 AM ET**. Live/main OFF.
 - NET-565/572 closed PASS — do **not** reopen as Priority 1.
 - Supersedes NET-576/577/578 HOLD and NET-580 HOLD language.
+
+
+---*
+**Stand-down 2026-10-27 2:12 AM ET — see NET-583. Status OVER.**
