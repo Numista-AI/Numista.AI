@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../utils/numista_error_helper.dart';
 import '../services/auth_service.dart';
 import '../services/http_auth_client.dart';
 import '../constants.dart';
@@ -372,7 +373,7 @@ class _GradeReviewTabState extends State<_GradeReviewTab>
         if (mounted) { setState(() { _loading = false; _error = 'Failed to load.'; }); }
       }
     } catch (e) {
-      if (mounted) { setState(() { _loading = false; _error = e.toString(); }); }
+      if (mounted) { setState(() { _loading = false; _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load items. Please try again.'); }); }
     }
   }
 
@@ -524,7 +525,7 @@ class _GradeReviewCardState extends State<_GradeReviewCard> {
       if (mounted) {
         setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Submission failed. Please try again.')),
           backgroundColor: const Color(0xFFDC2626),
         ));
       }
@@ -1309,7 +1310,7 @@ class _CommunityReviewTabState extends State<_CommunityReviewTab>
         if (mounted) { setState(() { _loading = false; _error = 'Failed to load.'; }); }
       }
     } catch (e) {
-      if (mounted) { setState(() { _loading = false; _error = e.toString(); }); }
+      if (mounted) { setState(() { _loading = false; _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load items. Please try again.'); }); }
     }
   }
 
@@ -1583,7 +1584,7 @@ class _SubmitTabState extends State<_SubmitTab> {
         }
       }
     } catch (e) {
-      if (mounted) { setState(() { _submitting = false; _feedback = 'Network error: $e'; _isSuccess = false; }); }
+      if (mounted) { setState(() { _submitting = false; _feedback = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not submit. Please check your connection and try again.'); _isSuccess = false; }); }
     }
   }
 

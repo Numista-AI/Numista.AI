@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../services/http_auth_client.dart';
 import '../constants.dart';
 import 'dart:convert';
+import '../utils/numista_error_helper.dart';
 
 class CoaInspectorScreen extends StatefulWidget {
   const CoaInspectorScreen({super.key});
@@ -57,7 +58,7 @@ class _CoaInspectorScreenState extends State<CoaInspectorScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('COA Inspection Error: ${e.toString()}'), backgroundColor: Colors.red),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e)), backgroundColor: Colors.red),
       );
     } finally {
       setState(() => _isAnalyzing = false);

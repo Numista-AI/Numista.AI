@@ -55,18 +55,23 @@ class _BetaFeedbackWidgetState extends State<BetaFeedbackWidget> {
     // Positioned is a ParentDataWidget<StackParentData>; it must be a
     // descendant of a Stack to apply positioning. LayoutBuilder would
     // intercept applyParentData, silently breaking the Stack relationship.
+    final mq = MediaQuery.of(context);
+    final minRight = mq.padding.right + 12.0;
+    final minBottom = mq.padding.bottom + 12.0;
+    final maxRight = (mq.size.width - mq.padding.left - 120.0).clamp(minRight, 800.0);
+    final maxBottom = (mq.size.height - mq.padding.top - 60.0).clamp(minBottom, 1200.0);
+
+    final currentRight = (_right ?? _defaultRight).clamp(minRight, maxRight);
+    final currentBottom = (_bottom ?? _defaultBottom).clamp(minBottom, maxBottom);
+
     return Positioned(
-      right: _right ?? _defaultRight,
-      bottom: _bottom ?? _defaultBottom,
+      right: currentRight,
+      bottom: currentBottom,
       child: GestureDetector(
         onPanUpdate: (details) {
           setState(() {
-            // right decreases when moving right, increases when moving left
-            _right = ((_right ?? _defaultRight) - details.delta.dx)
-                .clamp(0.0, 500.0);
-            // bottom decreases when moving down, increases when moving up
-            _bottom = ((_bottom ?? _defaultBottom) - details.delta.dy)
-                .clamp(0.0, 700.0);
+            _right = (currentRight - details.delta.dx).clamp(minRight, maxRight);
+            _bottom = (currentBottom - details.delta.dy).clamp(minBottom, maxBottom);
           });
         },
         child: Material(

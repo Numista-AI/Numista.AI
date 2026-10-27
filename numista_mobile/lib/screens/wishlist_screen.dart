@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../services/http_auth_client.dart';
+import '../utils/numista_error_helper.dart';
 import '../constants.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -197,7 +198,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to share wish list: $e")),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not share wish list. Please try again.'))),
         );
       }
     }

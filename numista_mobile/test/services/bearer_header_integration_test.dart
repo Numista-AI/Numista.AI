@@ -16,7 +16,7 @@ import 'package:numista_ai/services/grade_flag_service.dart';
 /// httpClientOverride to inject a MockClient that captures every request.
 ///
 /// Assertions:
-///   - Authorization: Bearer <token> header is present on every request.
+///   - `Authorization: Bearer <token>` header is present on every request.
 ///   - Stripe portal body/query does NOT contain user_email (IDOR fix).
 ///
 /// Run with: flutter test test/services/bearer_header_integration_test.dart

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/numista_error_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/epn_service.dart';
 
@@ -54,7 +55,7 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = "Unable to load wish list: $e";
+          _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load wish list. Please try again.');
           _loading = false;
         });
       }

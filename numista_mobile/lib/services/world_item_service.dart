@@ -476,38 +476,48 @@ class WorldItemService {
     }
   }
 
-  /// Real-time stream of all world items for the current user,
+  /// Returns demo world items mapped from in-memory demo coins.
+  static List<WorldItem> get cachedDemoWorldItems {
+    return GuestSeedService.demoCoinCache
+        .where((item) => item['Category'] == 'World' || (item['Country'] != null && item['Country'] != 'USA'))
+        .map((item) => WorldItem(
+              id: 'demo_${item['Year']}_${item['Denomination']}',
+              itemCategory: WorldItemType.foreignCoin,
+              name: '${item['Year']} ${item['Country']} ${item['Denomination']}',
+              country: item['Country']?.toString() ?? 'World',
+              denomination: item['Denomination']?.toString() ?? '',
+              condition: item['Condition']?.toString() ?? 'Ungraded',
+              estimatedValue: double.tryParse((item['AI Estimated Value'] ?? '').toString().replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0,
+              material: item['Metal Content']?.toString() ?? '',
+              era: item['Year']?.toString() ?? '',
+            ))
+        .toList();
+  }
+
+  /// Streams the list of [WorldItem]s for the current user from Firestore,
   /// ordered newest first.
   static Stream<List<WorldItem>> worldItemsStream() {
     // Auth-primary gate: a real non-anonymous Firebase user always reads from
     // Firestore, regardless of the in-memory demo flag. The demo branch is only
     // reached when there is no authenticated user (Browse Demo path, State B).
-    final authUser = FirebaseAuth.instance.currentUser;
+    User? authUser;
+    try {
+      authUser = FirebaseAuth.instance.currentUser;
+    } catch (_) {}
     final isRealUser = authUser != null && !authUser.isAnonymous;
 
     if (!isRealUser && GuestSeedService.isBrowseDemoMode) {
-      final demoWorld = GuestSeedService.demoCoinCache
-          .where((item) => item['Category'] == 'World' || (item['Country'] != null && item['Country'] != 'USA'))
-          .map((item) => WorldItem(
-                id: 'demo_${item['Year']}_${item['Denomination']}',
-                itemCategory: WorldItemType.foreignCoin,
-                name: '${item['Year']} ${item['Country']} ${item['Denomination']}',
-                country: item['Country']?.toString() ?? 'World',
-                denomination: item['Denomination']?.toString() ?? '',
-                condition: item['Condition']?.toString() ?? 'Ungraded',
-                estimatedValue: double.tryParse((item['AI Estimated Value'] ?? '').toString().replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0,
-                material: item['Metal Content']?.toString() ?? '',
-                era: item['Year']?.toString() ?? '',
-              ))
-          .toList();
-      return Stream.value(demoWorld);
+      return Stream.multi((controller) {
+        controller.add(cachedDemoWorldItems);
+      }, isBroadcast: true);
     }
     return _col
         .orderBy('created_at', descending: true)
         .snapshots()
         .map((snap) => snap.docs
             .map((doc) => WorldItem.fromFirestore(doc))
-            .toList());
+            .toList())
+        .asBroadcastStream();
   }
 
   /// Fetches live spot prices from the backend's existing endpoint.

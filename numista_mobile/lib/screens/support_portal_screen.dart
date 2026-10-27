@@ -6,6 +6,7 @@
 // re-redacts server-side on every call.
 
 import 'package:flutter/material.dart';
+import '../utils/numista_error_helper.dart';
 import '../services/ticket_service.dart';
 import '../models/ticket_model.dart';
 
@@ -50,7 +51,7 @@ class _SupportPortalScreenState extends State<SupportPortalScreen> {
       final list = await TicketService.listSupportTickets();
       if (mounted) setState(() { _queue = list; _queueLoading = false; });
     } catch (e) {
-      if (mounted) setState(() { _queueLoading = false; _queueError = e.toString(); });
+      if (mounted) setState(() { _queueLoading = false; _queueError = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load support queue. Please try again.'); });
     }
   }
 
@@ -62,7 +63,7 @@ class _SupportPortalScreenState extends State<SupportPortalScreen> {
       );
       if (mounted) setState(() { _ticketView = view; _viewLoading = false; });
     } catch (e) {
-      if (mounted) setState(() { _viewLoading = false; _viewError = e.toString(); });
+      if (mounted) setState(() { _viewLoading = false; _viewError = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load ticket details. Please try again.'); });
     }
   }
 
@@ -85,7 +86,7 @@ class _SupportPortalScreenState extends State<SupportPortalScreen> {
       if (mounted) {
         setState(() => _replySending = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not send reply. Please try again.')), backgroundColor: Colors.red),
         );
       }
     }
@@ -104,7 +105,7 @@ class _SupportPortalScreenState extends State<SupportPortalScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not update status. Please try again.')), backgroundColor: Colors.red),
       );
     }
   }

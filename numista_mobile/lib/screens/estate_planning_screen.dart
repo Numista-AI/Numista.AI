@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../utils/numista_error_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -578,7 +579,7 @@ class _ProfileTabState extends State<_ProfileTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'An error occurred. Please try again.')), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -838,6 +839,7 @@ class _CollectionTabState extends State<_CollectionTab> {
   Map<String, CoinEstateData> _estateData = {};
   List<EstateBeneficiary> _beneficiaries = [];
   bool _loading = true;
+  // ignore: unused_field (NET-372: bid/advanced mode removed from FMV calc)
   bool _isAdvancedMode = false;
   String _filter = 'All'; // 'All' | 'Unassigned' | 'Needs Appraisal'
   StreamSubscription<Map<String, CoinEstateData>>? _estateSub;
@@ -903,15 +905,9 @@ class _CollectionTabState extends State<_CollectionTab> {
     if (_estateData[c.id]?.fmvOverride != null) {
       return _estateData[c.id]!.fmvOverride!;
     }
-    if (_isAdvancedMode) {
-      final cpg = c.cpgRetail;
-      if (cpg > 0) return cpg;
-      return _parseValue(c.aiEstimatedValue);
-    } else {
-      final bid = c.greysheetBid;
-      if (bid > 0) return bid;
-      return _parseValue(c.aiEstimatedValue) * 0.80;
-    }
+    final cpg = c.cpgRetail;
+    if (cpg > 0) return cpg;
+    return _parseValue(c.aiEstimatedValue);
   }
 
   double _parseValue(String v) {
@@ -1053,6 +1049,7 @@ class _DivisionTabState extends State<_DivisionTab> {
   EstateProfile? _profile;
   bool _loading = true;
   bool _saving = false;
+  // ignore: unused_field (NET-372: bid/advanced mode removed from FMV calc)
   bool _isAdvancedMode = false;
 
   // Simulation results
@@ -1129,15 +1126,9 @@ class _DivisionTabState extends State<_DivisionTab> {
     if (_estateData[c.id]?.fmvOverride != null) {
       return _estateData[c.id]!.fmvOverride!;
     }
-    if (_isAdvancedMode) {
-      final cpg = c.cpgRetail;
-      if (cpg > 0) return cpg;
-      return _parseValue(c.aiEstimatedValue);
-    } else {
-      final bid = c.greysheetBid;
-      if (bid > 0) return bid;
-      return _parseValue(c.aiEstimatedValue) * 0.80;
-    }
+    final cpg = c.cpgRetail;
+    if (cpg > 0) return cpg;
+    return _parseValue(c.aiEstimatedValue);
   }
 
   double _parseValue(String v) {
@@ -1300,7 +1291,7 @@ class _DivisionTabState extends State<_DivisionTab> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error saving division plan: $e')),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not save division plan. Please try again.'))),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -1668,6 +1659,8 @@ class _GenerateTabState extends State<_GenerateTab> {
   }
 
   Future<void> _loadCoinCount() async {
+    if (widget.uid.isEmpty) return;
+    if (FirebaseAuth.instance.currentUser == null) return; // demo/signed-out guard — prevents Firestore 403
     try {
       final snap = await FirebaseFirestore.instance
           .collection('users')
@@ -1787,7 +1780,7 @@ class _GenerateTabState extends State<_GenerateTab> {
       setState(() => _generating = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString().replaceFirst('Exception: ', '')}'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not generate report. Please try again.')),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 8),
         ),
@@ -2198,7 +2191,7 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'An error occurred. Please try again.')), backgroundColor: Colors.red),
         );
       }
     } finally {

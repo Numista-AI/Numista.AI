@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants.dart';
 
 class UpcomingRelease {
   final String itemNumber;
@@ -74,8 +75,14 @@ class UpcomingRelease {
 }
 
 class UpcomingReleasesService {
-  static const String _baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
-  static const String _cacheKey = 'upcoming_releases_cache';
+  static const String _baseUrl = kApiBaseUrl;
+
+  // Per-endpoint guard: only attempt a network fetch once per app session per endpoint.
+  // Subsequent calls for the same endpoint return from cache to avoid server spam.
+  static final Set<String> _attempted = {};
+
+  static String _cacheKeyFor(String endpoint) =>
+      'upcoming_releases_cache_${endpoint.replaceAll('/', '_')}';
 
   static Future<List<UpcomingRelease>> fetchUpcoming() async {
     return _fetchData('/api/mint-releases/upcoming');
@@ -85,7 +92,18 @@ class UpcomingReleasesService {
     return _fetchData('/api/mint-releases/all');
   }
 
+  /// Resets the per-endpoint attempt guard. For testing only.
+  // ignore: invalid_use_of_visible_for_testing_member
+  static void resetForTest() => _attempted.clear();
+
+  /// Returns true if the given endpoint has already been attempted this session. For testing only.
+  // ignore: invalid_use_of_visible_for_testing_member
+  static bool wasAttempted(String endpoint) => _attempted.contains(endpoint);
+
+
   static Future<List<UpcomingRelease>> _fetchData(String endpoint) async {
+    if (_attempted.contains(endpoint)) return _loadCachedReleases(endpoint);
+    _attempted.add(endpoint);
     try {
       final response = await http
           .get(Uri.parse('$_baseUrl$endpoint'))
@@ -100,20 +118,20 @@ class UpcomingReleasesService {
         if (list.isNotEmpty) {
           final prefs = await SharedPreferences.getInstance();
           final rawJson = jsonEncode(list.map((e) => e.toJson()).toList());
-          await prefs.setString(_cacheKey, rawJson);
+          await prefs.setString(_cacheKeyFor(endpoint), rawJson);
           return list;
         }
       }
     } catch (e) {
       debugPrint('[UpcomingReleasesService] Fetch failed: $e. Falling back to local cache.');
     }
-    return _loadCachedReleases();
+    return _loadCachedReleases(endpoint);
   }
 
-  static Future<List<UpcomingRelease>> _loadCachedReleases() async {
+  static Future<List<UpcomingRelease>> _loadCachedReleases(String endpoint) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cachedStr = prefs.getString(_cacheKey);
+      final cachedStr = prefs.getString(_cacheKeyFor(endpoint));
       if (cachedStr != null && cachedStr.isNotEmpty) {
         final rawList = jsonDecode(cachedStr) as List;
         return rawList.map((e) => UpcomingRelease.fromJson(e)).toList();

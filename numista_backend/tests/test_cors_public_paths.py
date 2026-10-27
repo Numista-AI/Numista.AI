@@ -118,3 +118,72 @@ def test_protected_routes_not_in_public_paths():
             f"Protected route '{route}' is incorrectly in _PUBLIC_PATHS — "
             "it must require auth"
         )
+
+
+# ── 4. P7 V8 CORS preview regex & negative origin tests ──────────────────────
+def test_cors_preview_origin_allowed(client_prod_mode):
+    """Preview channels get allow-origin header."""
+    preview_origin = "https://numista-vault--p7-v7-gate-o3flke1i.web.app"
+    resp = client_prod_mode.options(
+        "/api/spot_prices",
+        headers={
+            "Origin": preview_origin,
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert resp.status_code in (200, 204)
+    assert resp.headers.get("access-control-allow-origin") == preview_origin
+
+
+def test_cors_preview_channel_get_spot_prices(client_prod_mode):
+    """GET /api/spot_prices from preview channel returns 200 with matching CORS origin."""
+    preview_origin = "https://numista-vault--p7-v7-gate-o3flke1i.web.app"
+    resp = client_prod_mode.get(
+        "/api/spot_prices",
+        headers={"Origin": preview_origin},
+    )
+    assert resp.status_code == 200
+    assert resp.headers.get("access-control-allow-origin") == preview_origin
+
+
+@pytest.mark.parametrize("evil_origin", [
+    "https://numista-vault--x.web.app.evil.com",
+    "https://evil-numista-vault--x.web.app",
+    "http://numista-vault--x.web.app",
+    "https://other-site--x.web.app",
+])
+def test_cors_evil_origins_rejected(client_prod_mode, evil_origin):
+    """Evil origins mimicking preview pattern must not get allow-origin."""
+    from main import _is_allowed_origin
+    assert not _is_allowed_origin(evil_origin), f"Evil origin was allowed: {evil_origin}"
+
+    resp = client_prod_mode.options(
+        "/api/spot_prices",
+        headers={
+            "Origin": evil_origin,
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    allow_origin = resp.headers.get("access-control-allow-origin")
+    assert allow_origin != evil_origin, f"Disallowed origin {evil_origin} received allow-origin header"
+
+
+# ── 5. Safety: Checklist add_coins default-deny 401 test ─────────────────────
+def test_checklist_add_coins_unauthenticated_returns_401(client_prod_mode):
+    """POST /api/checklist/add_coins without Bearer token must return 401."""
+    resp = client_prod_mode.post(
+        "/api/checklist/add_coins",
+        json={
+            "idempotency_key": "test-key-123",
+            "program_id": "morgan_dollars",
+            "program_name": "Morgan Dollars",
+            "user_email": "anonymous@test.com",
+            "slots": [],
+        },
+    )
+    assert resp.status_code == 401, (
+        f"Expected 401 for unauthenticated checklist add_coins, got {resp.status_code}"
+    )
+
+
+

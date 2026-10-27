@@ -1,0 +1,9 @@
+flutter_launcher_icons:
+  image_path: "assets/logo_owl.png"
+  android: true
+  ios: false
+  web:
+    generate: false
+  windows:
+    generate: false
+  remove_alpha_ios: false

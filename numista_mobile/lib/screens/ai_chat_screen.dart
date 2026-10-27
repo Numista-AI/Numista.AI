@@ -113,7 +113,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Future<void> _loadEverything() async {
     // Load user name and collection context in parallel with session history
     final nameF = MorganPrefs.getDisplayName();
-    final ctxF  = MorganChatContextService.load();
+    final ctxF  = MorganChatContextService.load(forceRefresh: true);
 
     _displayName = await nameF;
     _ctx = await ctxF;
@@ -153,6 +153,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   'content': m['content']?.toString() ?? '',
                 })
             .toList();
+        if (loaded.isNotEmpty &&
+            _ctx != null &&
+            loaded.first['role'] == 'assistant' &&
+            (loaded.first['content']?.contains('coins in your collection') ?? false)) {
+          loaded.first['content'] = _ctx!.openingMessage;
+        }
         if (mounted) {
           setState(() {
             _messages.addAll(loaded.cast<Map<String, dynamic>>());
@@ -1470,7 +1476,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     children: [
                       Text(
                         splitMethod == 'greysheet_value_weighted'
-                            ? 'Based on Greysheet bid values. Edit any amount — total must equal $price.'
+                            ? 'Based on market value. Edit any amount — total must equal $price.'
                             : 'Market values unavailable. Split evenly. Edit if needed — total must equal $price.',
                         style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
@@ -1479,7 +1485,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         final d = splitDetails[i];
                         final denom = d['denomination'] ?? '';
                         final pct = d['share_pct'] ?? 0.0;
-                        final bid = d['greysheet_bid'] ?? 0.0;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Row(
@@ -1490,7 +1495,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(denom, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                    if (bid > 0) Text('Greysheet: \$${bid.toStringAsFixed(2)} (${pct.toStringAsFixed(1)}%)',
+                                    Text('${pct.toStringAsFixed(1)}% share',
                                         style: const TextStyle(fontSize: 10, color: Colors.grey)),
                                   ],
                                 ),
@@ -1664,8 +1669,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
             final denom = d['denomination'] ?? '';
             final pct = d['share_pct'] ?? 0.0;
             final cost = d['cost'] ?? '\$0.00';
-            final bid = d['greysheet_bid'] ?? 0.0;
-            costSummary += '\n  • $denom: $cost (${pct.toStringAsFixed(1)}%, Greysheet \$${bid.toStringAsFixed(2)})';
+            costSummary += '\n  • $denom: $cost (${pct.toStringAsFixed(1)}%)';
           }
         } else if (splitMethod == 'even_split' && splitDetails.isNotEmpty) {
           costSummary = '\n\n⚠️ Cost split evenly (market values unavailable):';

@@ -54,6 +54,10 @@ def classify_document_bytes(
         cleaned = re.sub(r"^```(?:json)?\s*", "", raw_text.strip(), flags=re.IGNORECASE)
         cleaned = re.sub(r"\s*```$", "", cleaned).strip()
         data = json.loads(cleaned)
+        if isinstance(data, list):
+            data = data[0] if data and isinstance(data[0], dict) else {}
+        elif not isinstance(data, dict):
+            data = {}
         
         doc_type = data.get("document_type", "unknown").lower()
         confidence = float(data.get("confidence", 0.5))

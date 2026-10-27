@@ -182,7 +182,7 @@ void main() {
     // program_id, Strike Type, Variety, variety_id must survive expandCollection
     // so SlotResolver.isMatch fast path lights the slot.
 
-    CoinProgram _program(List<ProgramCoin> coins) => CoinProgram(
+    CoinProgram buildProgram(List<ProgramCoin> coins) => CoinProgram(
       id: '2026_semiquincentennial_collectibles',
       url: '',
       name: '2026 America250 - Numismatic Collectibles',
@@ -192,7 +192,7 @@ void main() {
       mintMarkLocations: 'MIXED',
     );
 
-    ProgramCoin _slot(String id, String name, String family, String varietyId) =>
+    ProgramCoin buildSlot(String id, String name, String family, String varietyId) =>
         ProgramCoin(
           id: id,
           name: name,
@@ -201,13 +201,13 @@ void main() {
           varieties: [ChecklistVariety(id: varietyId, label: varietyId)],
         );
 
-    final slotMorganRP = _slot('2026_morgan_reverse_proof',
+    final slotMorganRP = buildSlot('2026_morgan_reverse_proof',
         '2026 Morgan Silver Dollar Reverse Proof', 'morgan', 'P-REVERSE-PROOF');
-    final slotPeaceRP  = _slot('2026_peace_silver_dollar_reverse_proof',
+    final slotPeaceRP  = buildSlot('2026_peace_silver_dollar_reverse_proof',
         '2026 Peace Silver Dollar Reverse Proof', 'peace', 'P-REVERSE-PROOF');
-    final slotMorganEU = _slot('2026_morgan_silver_dollar_enhanced_uncirculated',
+    final slotMorganEU = buildSlot('2026_morgan_silver_dollar_enhanced_uncirculated',
         '2026 Morgan Silver Dollar Enhanced Uncirculated', 'morgan', 'EU');
-    final slotPeaceEU  = _slot('2026_peace_silver_dollar_enhanced_uncirculated',
+    final slotPeaceEU  = buildSlot('2026_peace_silver_dollar_enhanced_uncirculated',
         '2026 Peace Silver Dollar Enhanced Uncirculated', 'peace', 'EU');
 
     // Gate0-shaped grokbot coin docs (verbatim from Firestore dump, 9 Sep 2026)
@@ -259,7 +259,7 @@ void main() {
     test('Morgan RP coin → isMatch Morgan RP slot', () {
       final res = expandCollection([grokbotMorganRP], ['doc_morgan_rp']);
       final item = res.allItems.first;
-      final prog = _program([slotMorganRP]);
+      final prog = buildProgram([slotMorganRP]);
       expect(SlotResolver.isMatch(item, prog, slotMorganRP), isTrue,
           reason: 'Morgan RP coin must match Morgan RP slot after field fix');
     });
@@ -267,7 +267,7 @@ void main() {
     test('Peace RP coin → isMatch Peace RP slot', () {
       final res = expandCollection([grokbotPeaceRP], ['doc_peace_rp']);
       final item = res.allItems.first;
-      final prog = _program([slotPeaceRP]);
+      final prog = buildProgram([slotPeaceRP]);
       expect(SlotResolver.isMatch(item, prog, slotPeaceRP), isTrue,
           reason: 'Peace RP coin must match Peace RP slot');
     });
@@ -275,7 +275,7 @@ void main() {
     test('Morgan EU coin → isMatch Morgan EU slot', () {
       final res = expandCollection([grokbotMorganEU], ['doc_morgan_eu']);
       final item = res.allItems.first;
-      final prog = _program([slotMorganEU]);
+      final prog = buildProgram([slotMorganEU]);
       expect(SlotResolver.isMatch(item, prog, slotMorganEU), isTrue,
           reason: 'Morgan EU coin must match Morgan EU slot');
     });
@@ -283,7 +283,7 @@ void main() {
     test('Peace EU coin → isMatch Peace EU slot', () {
       final res = expandCollection([grokbotPeaceEU], ['doc_peace_eu']);
       final item = res.allItems.first;
-      final prog = _program([slotPeaceEU]);
+      final prog = buildProgram([slotPeaceEU]);
       expect(SlotResolver.isMatch(item, prog, slotPeaceEU), isTrue,
           reason: 'Peace EU coin must match Peace EU slot');
     });
@@ -300,7 +300,7 @@ void main() {
       };
       final res = expandCollection([regularCoin], ['doc_lincoln']);
       final item = res.allItems.first;
-      final prog = _program([slotMorganRP]);
+      final prog = buildProgram([slotMorganRP]);
       expect(SlotResolver.isMatch(item, prog, slotMorganRP), isFalse,
           reason: 'Lincoln cent must not match Morgan RP slot');
     });

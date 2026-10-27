@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../utils/numista_error_helper.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -27,7 +28,8 @@ class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
 
   late final TabController _tabCtrl;
-  static const _signInTab = 0;
+  // ignore: unused_field
+  static const _signInTab = 0; // Tab-index constant (kept for readability)
 
   // ─── Form controllers ─────────────────────────────────────────────────────
   final _emailCtrl       = TextEditingController();
@@ -283,25 +285,36 @@ class _LoginScreenState extends State<LoginScreen>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Image.asset('assets/logo_owl.png', height: 52),
+                              Image.asset(
+                                'assets/logo_owl.png',
+                                height: 52,
+                                gaplessPlayback: true,
+                                errorBuilder: (context, error, stackTrace) => const SizedBox(
+                                  height: 52,
+                                  width: 52,
+                                  child: Icon(Icons.circle_outlined, size: 52, color: Color(0xFF3B82F6)),
+                                ),
+                              ),
                               const SizedBox(width: 14),
-                              const Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'NUMISTA.AI',
-                                    style: TextStyle(
-                                      color: _text,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 1.5,
+                              const Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'NUMISTA.AI',
+                                      style: TextStyle(
+                                        color: _text,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.5,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    'AI-Powered Coin Collection Manager',
-                                    style: TextStyle(color: _sub, fontSize: NumistaTheme.textBodySm),
-                                  ),
-                                ],
+                                    Text(
+                                      'AI-Powered Coin Collection Manager',
+                                      style: TextStyle(color: _sub, fontSize: NumistaTheme.textBodySm),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -314,15 +327,19 @@ class _LoginScreenState extends State<LoginScreen>
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: _border),
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _StatBadge(value: '100+', label: 'Coin\nTypes'),
-                                _StatDivider(),
-                  _StatBadge(value: '5,142', label: 'Reference\nCoins'),
-                                _StatDivider(),
-                                _StatBadge(value: 'AI+', label: 'Community\nVerified'),
-                              ],
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _StatBadge(value: '100+', label: 'Coin\nTypes'),
+                                  _StatDivider(),
+                                  _StatBadge(value: '5,142', label: 'Reference\nCoins'),
+                                  _StatDivider(),
+                                  _StatBadge(value: 'AI+', label: 'Community\nVerified'),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -362,7 +379,16 @@ class _LoginScreenState extends State<LoginScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Logo
-            Image.asset('assets/logo_owl.png', height: 90),
+            Image.asset(
+              'assets/logo_owl.png',
+              height: 90,
+              gaplessPlayback: true,
+              errorBuilder: (context, error, stackTrace) => const SizedBox(
+                height: 90,
+                width: 90,
+                child: Icon(Icons.circle_outlined, size: 90, color: Color(0xFF3B82F6)),
+              ),
+            ),
             const SizedBox(height: 20),
 
             // Headline
@@ -480,28 +506,21 @@ class _LoginScreenState extends State<LoginScreen>
         if (_error != null) ...[ _banner(_error!, isError: true), const SizedBox(height: 16) ],
         if (_successMsg != null) ...[ _banner(_successMsg!, isError: false), const SizedBox(height: 16) ],
 
-        // Tab views — sized to content, no fixed height needed
-        AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          child: SizedBox(
-            height: _tabCtrl.index == _signInTab ? (_usePasswordSignIn ? 280 : 560) : 360,
-            child: TabBarView(
-              controller: _tabCtrl,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [ _buildSignInTab(), _buildCreateTab() ],
-            ),
-          ),
+        // Tab views — natural height via IndexedStack; outer SingleChildScrollView handles scroll
+        IndexedStack(
+          index: _tabCtrl.index,
+          children: [ _buildSignInTab(), _buildCreateTab() ],
         ),
 
         const SizedBox(height: 20),
-        _divider('or'),
+        SizedBox(width: double.infinity, child: _divider('or')),
         const SizedBox(height: 20),
 
         // Google Sign-In
         _googleButton(),
 
         const SizedBox(height: 16),
-        _divider('explore without an account'),
+        SizedBox(width: double.infinity, child: _divider('explore without an account')),
         const SizedBox(height: 16),
 
         // ── Single Primary Demo CTA (Zero-Write, Instant Load) ─────────
@@ -590,11 +609,10 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildSignInTab() {
-    return SingleChildScrollView(
-      child: AutofillGroup(
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return AutofillGroup(
+      child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
           _label('Email Address'),
           const SizedBox(height: 6),
           _textField(controller: _emailCtrl, hint: 'your@email.com', keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.username, AutofillHints.email]),
@@ -707,16 +725,14 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ],
       ),
-      ),
     );
   }
 
   Widget _buildCreateTab() {
-    return SingleChildScrollView(
-      child: AutofillGroup(
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return AutofillGroup(
+      child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
           _label('Your Name (optional)'),
           const SizedBox(height: 6),
           _textField(controller: _nameCtrl, hint: 'Eric  (or leave blank)', keyboardType: TextInputType.name),
@@ -835,7 +851,6 @@ class _LoginScreenState extends State<LoginScreen>
             ),
         ],
       ),
-      ),
     );
   }
 
@@ -953,9 +968,17 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _divider(String label) => Row(children: [
         const Expanded(child: Divider(color: _border)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(label, style: TextStyle(color: _grey.withAlpha(180), fontSize: NumistaTheme.textBodySm)),
+        Flexible(
+          flex: 10,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              label,
+              style: TextStyle(color: _grey.withAlpha(180), fontSize: NumistaTheme.textBodySm),
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+            ),
+          ),
         ),
         const Expanded(child: Divider(color: _border)),
       ]);
@@ -1101,7 +1124,7 @@ class _FreeScanPreviewScreenState extends State<FreeScanPreviewScreen> {
         _error = null;
       });
     } catch (e) {
-      setState(() => _error = 'Failed to pick image: $e');
+      setState(() => _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not pick image. Please try again.'));
     }
   }
 
@@ -1420,39 +1443,43 @@ class PinBoxRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(6, (i) {
-        return Container(
-          width: 48,
-          height: 52,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: filled[i] ? const Color(0xFFF63366) : Colors.grey.shade400,
-              width: 2,
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(6, (i) {
+          return Container(
+            width: 44,
+            height: 50,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: filled[i] ? const Color(0xFFF63366) : Colors.grey.shade400,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.transparent,
             ),
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.transparent,
-          ),
-          alignment: Alignment.center,
-          child: filled[i]
-              ? (showDigits
-                  ? Text(digits[i],
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700))
-                  : Container(
-                      width: 14,
-                      height: 14,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFFF63366),
-                      ),
-                    ))
-              : const SizedBox.shrink(),
-        );
-      }),
+            alignment: Alignment.center,
+            child: filled[i]
+                ? (showDigits
+                    ? Text(digits[i],
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700))
+                    : Container(
+                        width: 14,
+                        height: 14,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFFF63366),
+                        ),
+                      ))
+                : const SizedBox.shrink(),
+          );
+        }),
+      ),
     );
   }
+
 }
 
 typedef _PinBoxRow = PinBoxRow;

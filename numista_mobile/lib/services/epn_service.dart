@@ -3,7 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/coin_model.dart';
+import 'guest_seed_service.dart';
 
 class EpnService {
   static const String _keyCampId = 'epn_campaign_id';
@@ -21,12 +23,16 @@ class EpnService {
   // Call once at app startup (BaseLayout.initState). Non-secret parameters are stored
   // in SharedPreferences for subsequent requests within the session.
   static Future<void> loadFromFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (GuestSeedService.isBrowseDemoMode || user == null || user.isAnonymous) {
+      return;
+    }
     try {
       final doc = await FirebaseFirestore.instance
           .collection('config')
           .doc('ebay')
           .get();
-      if (!doc.exists) return;
+      if (!doc.exists || doc.data() == null) return;
       final data = doc.data()!;
       final prefs = await SharedPreferences.getInstance();
       final appId  = data['app_id']  as String? ?? '';
@@ -38,8 +44,10 @@ class EpnService {
       // Ensure any legacy client-cached cert_id is purged
       await prefs.remove('ebay_cert_id');
       debugPrint('[EPN] Credentials loaded from Firestore');
+    } on FirebaseException catch (fe) {
+      debugPrint('[EPN] Notice: using default EPN config (${fe.code})');
     } catch (e) {
-      debugPrint('[EPN] Failed to load credentials from Firestore: $e');
+      debugPrint('[EPN] Notice: using default EPN config ($e)');
     }
   }
 

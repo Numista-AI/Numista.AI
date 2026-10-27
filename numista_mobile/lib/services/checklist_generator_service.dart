@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../models/program_model.dart';
 import '../utils/slot_resolver.dart';
+import '../utils/text_sanitizer.dart';
 
 /// Programs whose data is live/actively updated — show generation timestamp prominently.
 const _activePrograms = {
@@ -27,7 +28,8 @@ class ChecklistGeneratorService {
   /// Sanitize strings for PDF Helvetica: replace characters outside Latin-1.
   static String _s(String? text) {
     if (text == null || text.isEmpty) return '';
-    return text
+    final sanitized = TextSanitizer.fixMojibake(text);
+    return sanitized
         .replaceAll('\u2014', ' - ')  // em-dash
         .replaceAll('\u2013', '-')    // en-dash
         .replaceAll('\u2018', "'")    // left single quote
