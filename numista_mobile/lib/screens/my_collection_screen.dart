@@ -3519,24 +3519,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     Text('Coin Inspector -- $title',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text)),
                     Spacer(),
-                    // Google Images search — only shown when no photo is active
-                    if (!hasActive && refFuture != null) ...[
-                      Tooltip(
-                        message: 'Opens Google Images: searches for this coin',
-                        child: OutlinedButton.icon(
-                          onPressed: () => _onSearchGoogle(data),
-                          icon: Icon(Icons.image_search, size: 15),
-                          label: Text('Google Images'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _text, side: BorderSide(color: _border),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            textStyle: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                    ],
                     if (canMutate && data['is_set'] != true && data['isSet'] != true && (data['parent_set_id'] == null || data['parent_set_id'].toString().isEmpty)) ...[
                       OutlinedButton.icon(
                         onPressed: () {
@@ -4373,27 +4355,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ],
       ),
     );
-  }
-
-  void _onSearchGoogle(Map<String, dynamic> data) async {
-    final year  = data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-    final mint  = data[_F.mintMark]?.toString() ?? '';
-    final denom = data[_F.denomination]?.toString() ?? '';
-    final query = Uri.encodeComponent('$year${mint.isNotEmpty ? '-$mint' : ''} $denom coin value'.trim());
-    final uri = Uri.parse('https://www.google.com/search?tbm=isch&q=$query');
-    try {
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Could not open browser.'), backgroundColor: _red));
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Couldn\'t open the browser. Please try again.'), backgroundColor: _red));
-      }
-    }
   }
 
   /// Opens eBay SOLD listings in the browser using an EPN affiliate link
@@ -6086,7 +6047,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const bgCard = Color(0xFF161B27);
+    final bgCard = isDark ? const Color(0xFF161B27) : Colors.white;
     const pink   = Color(0xFFF63366);
 
     return AlertDialog(

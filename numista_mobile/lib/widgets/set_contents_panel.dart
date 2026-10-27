@@ -236,42 +236,45 @@ class _SetContentsPanelState extends State<SetContentsPanel> {
 
   // ─── Image strip: [OBV] [REV_1] [REV_2] ... [REV_n] ─────────────────────
   Widget _buildImageStrip(BuildContext context) {
-    return SizedBox(
+    final thumbnails = <Widget>[];
+    final obvUrl = _obverseImage?.obverseUrl;
+    thumbnails.add(SizedBox(
+      width: 100,
       height: 148,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: 1 + _groups.length, // 1 shared obverse + N reverses
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (ctx, i) {
-          if (i == 0) {
-            // Shared obverse
-            final url = _obverseImage?.obverseUrl;
-            return _ImageThumbnail(
-              url:       url,
-              badge:     'OBV',
-              sublabel:  'Obverse\n(shared)',
-              isLoading: _imagesLoading && url == null,
-              onTap:     url != null
-                  ? () => _showLightbox(ctx, url, 'Obverse — Shared Design')
-                  : null,
-            );
-          }
-          // Reverse for group [i-1]
-          final g   = _groups[i - 1];
-          final img = _images[i - 1];
-          // Prefer the subject-specific reverse; fall back to obverse if only that was found.
-          final url = img?.reverseUrl ?? img?.obverseUrl;
-          return _ImageThumbnail(
-            url:       url,
-            badge:     'REV',
-            sublabel:  _shortLabel(g.subject),
-            isLoading: _imagesLoading && img == null,
-            onTap:     url != null
-                ? () => _showLightbox(ctx, url, g.subject)
-                : null,
-          );
-        },
+      child: _ImageThumbnail(
+        url:       obvUrl,
+        badge:     'OBV',
+        sublabel:  'Obverse\n(shared)',
+        isLoading: _imagesLoading && obvUrl == null,
+        onTap:     obvUrl != null
+            ? () => _showLightbox(context, obvUrl, 'Obverse — Shared Design')
+            : null,
       ),
+    ));
+
+    for (int i = 0; i < _groups.length; i++) {
+      final g   = _groups[i];
+      final img = _images[i];
+      final url = img?.reverseUrl ?? img?.obverseUrl;
+      thumbnails.add(SizedBox(
+        width: 100,
+        height: 148,
+        child: _ImageThumbnail(
+          url:       url,
+          badge:     'REV',
+          sublabel:  _shortLabel(g.subject),
+          isLoading: _imagesLoading && img == null,
+          onTap:     url != null
+              ? () => _showLightbox(context, url, g.subject)
+              : null,
+        ),
+      ));
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 10,
+      children: thumbnails,
     );
   }
 
