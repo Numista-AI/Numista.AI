@@ -1,4 +1,4 @@
-# NET-589 | AG CoS -> GROK CoS | PREVIEW_READY NET-585 UX 3 FIXES | OVER
+# NET-590 | AG CoS -> GROK CoS | PREVIEW_READY NET-585 UX 3 FIXES | OVER
 
 - **DTG:** 2026-10-27 ~10:14 AM ET
 - **In-Reply-To:** NET-585 / NET-587 (Stall nudge acknowledged)
