@@ -1291,6 +1291,151 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     );
   }
 
+  // ─── Quick Storage Location Dialog (NET-585) ──────────────────────────────
+  void _showQuickStorageDialog(String docId, Map<String, dynamic> data, String currentLoc) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.email == null) return;
+
+    final controller = TextEditingController(text: currentLoc);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const presets = ['Safe', 'Box 1', 'Box 2', 'Slab Box', 'Binder', 'Desk'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) {
+          return AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.inventory_2_outlined, color: Color(0xFF2563EB), size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Set Storage Location',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${data['Year'] ?? ''} ${data['Denomination'] ?? 'Item'}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFC9A227),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Safe Shelf 2, Box A',
+                      hintStyle: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8)),
+                      prefixIcon: const Icon(Icons.place_outlined, size: 20),
+                      filled: true,
+                      fillColor: isDark ? Colors.white.withAlpha(10) : const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onSubmitted: (val) async {
+                      final newLoc = val.trim();
+                      Navigator.of(ctx).pop();
+                      await _saveQuickStorage(user.email!, docId, newLoc);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Quick suggestions:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: presets.map((p) {
+                      return ActionChip(
+                        label: Text(p, style: const TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          controller.text = p;
+                          controller.selection = TextSelection.fromPosition(TextPosition(offset: p.length));
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () async {
+                  final newLoc = controller.text.trim();
+                  Navigator.of(ctx).pop();
+                  await _saveQuickStorage(user.email!, docId, newLoc);
+                },
+                child: const Text('Save Location'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _saveQuickStorage(String userEmail, String docId, String newLoc) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userEmail)
+          .collection('review_queue')
+          .doc(docId)
+          .update({
+        'storage_location': newLoc,
+        'Storage Location': newLoc,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(newLoc.isEmpty ? 'Storage location cleared' : '📍 Storage location updated: $newLoc'),
+          backgroundColor: const Color(0xFF10B981),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to update storage location.')),
+          backgroundColor: Colors.red[700],
+        ),
+      );
+    }
+  }
+
   // ─── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -1915,14 +2060,49 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       if (storageLoc.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(left: 6),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6).withAlpha(20),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFF3B82F6).withAlpha(120)),
+                          child: InkWell(
+                            onTap: () => _showQuickStorageDialog(id, data, storageLoc),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF3B82F6).withAlpha(20),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF3B82F6).withAlpha(120)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('📍 $storageLoc', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 11, fontWeight: FontWeight.w600)),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.edit_outlined, size: 11, color: Color(0xFF2563EB)),
+                                ],
+                              ),
                             ),
-                            child: Text('📍 $storageLoc', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 11, fontWeight: FontWeight.w600)),
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: InkWell(
+                            onTap: () => _showQuickStorageDialog(id, data, ''),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF64748B).withAlpha(15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF64748B).withAlpha(100)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.add_location_alt_outlined, size: 11, color: Color(0xFF64748B)),
+                                  SizedBox(width: 3),
+                                  Text('Storage', style: TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       _buildMemoryAssistedBadge(data),
@@ -2063,6 +2243,11 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         _buildMetaItem('Item #', ((data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.']) ?? 'N/A').toString(), Icons.tag),
                         _buildMetaItem('QTY', (data['Quantity'] ?? '1').toString(), Icons.numbers),
                         _buildMetaItem('Date', (data['purchase_date'] ?? data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
+                        InkWell(
+                          onTap: () => _showQuickStorageDialog(id, data, storageLoc),
+                          borderRadius: BorderRadius.circular(4),
+                          child: _buildMetaItem('Storage', storageLoc.isNotEmpty ? '$storageLoc ✏️' : '+ Set Location', Icons.inventory_2_outlined),
+                        ),
                       ],
                     );
                   }(),
