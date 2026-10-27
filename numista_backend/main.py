@@ -3509,7 +3509,11 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
         raise HTTPException(status_code=500, detail="Morgan AI is temporarily unavailable. Please try again.")
 
 @app.post("/api/review/commit")
-async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(get_current_user)):
+async def commit_reviews(
+    request: CommitReviewsRequest,
+    background_tasks: BackgroundTasks,
+    _user: dict = Depends(get_current_user)
+):
     """
     Moves items from review_queue to the primary collection with Duplicate Detection.
     A coin is only a true duplicate if Year, Mint, Denom, Invoice#, and Item# ALL match.
@@ -3619,21 +3623,36 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
                     elif 'storage_location' in data and 'Storage Location' not in data:
                         data['Storage Location'] = data['storage_location']
 
-                    # Baseline valuation & enrichment (Plan.v2 / Plan.v3 B2)
+                    # Baseline valuation & enrichment (Plan.v2 / Plan.v3 B2 / Plan.v1 / Argon A-2 / A-3)
                     try:
                         from services.us_mint_catalog_service import enrich_us_mint_item
                         enrich_us_mint_item(data)
-                    except Exception:
-                        pass
-                    if not data.get('ai_est_value') and not data.get('estValue'):
+                    except Exception as enrich_err:
+                        logger.warning(f"Error enriching item {doc_id} on commit: {enrich_err}")
+
+                    # Propagate image URLs to primary_image_url and photo_urls if missing
+                    cat_obv = data.get('image_url_obverse')
+                    cat_rev = data.get('image_url_reverse')
+                    if cat_obv and not data.get('primary_image_url'):
+                        data['primary_image_url'] = cat_obv
+                    if cat_obv and not data.get('photo_urls'):
+                        data['photo_urls'] = [cat_obv] + ([cat_rev] if cat_rev else [])
+
+                    # Stamp all 4 value keys (fill-missing-only)
+                    curr_val = data.get('AI Estimated Value') or data.get('ai_estimated_value') or data.get('estValue') or data.get('ai_est_value')
+                    if not curr_val or str(curr_val).strip() in ("", "$0.00", "0.0", "0", "—", "--", "Valuation Pending", "null"):
                         cat_p = data.get('issue_price') or data.get('Sticker Price') or data.get('Cost') or data.get('Purchase Cost') or 0.0
                         try:
                             clean_cat_p = float(re.sub(r"[^\d.]", "", str(cat_p)))
-                        except Exception:
+                        except Exception as parse_err:
+                            logger.warning(f"Failed parsing price for valuation baseline: {parse_err}")
                             clean_cat_p = 0.0
                         if clean_cat_p > 0.0:
+                            fmt_val = f"${clean_cat_p:.2f}"
                             data['ai_est_value'] = clean_cat_p
-                            data['estValue'] = f"${clean_cat_p:.2f}"
+                            data['ai_estimated_value'] = fmt_val
+                            data['AI Estimated Value'] = fmt_val
+                            data['estValue'] = fmt_val
                             data['valuation_source'] = "US Mint Catalog Baseline"
                             data['enrichment_status'] = "enriched"
 
@@ -3654,6 +3673,9 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
         
         if batch_op_count > 0:
             batch.commit()
+
+        if committed_count > 0:
+            background_tasks.add_task(_async_post_commit_enrichment, caller_email, list(request.review_ids))
         return {
             "status": "success", 
             "message": f"Committed {committed_count} items. Skipped {skipped_count} duplicates. Flagged {flagged_count} possible duplicates.",
@@ -3664,6 +3686,73 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
     except Exception as e:
         logger.exception("Review commit error")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _async_post_commit_enrichment(caller_email: str, committed_ids: list):
+    """
+    Background worker triggered upon review commit (Must-Fix 3 / Argon A-3).
+    - Sets/rolls: verifies baseline intact; skips Greysheet overwrite.
+    - Single coins: ensures catalog / baseline enrichment and triggers Greysheet where applicable.
+    - Logs errors; never bare except: pass (FF-3).
+    """
+    logger.info(f"Starting async post-commit enrichment for {caller_email}, {len(committed_ids)} items")
+    try:
+        user_ref = db.collection('users').document(caller_email)
+        coins_ref = user_ref.collection('coins')
+        for doc_id in committed_ids:
+            try:
+                doc_snap = coins_ref.document(doc_id).get()
+                if not doc_snap.exists:
+                    continue
+                data = doc_snap.to_dict() or {}
+                is_set = data.get("is_set") or data.get("item_type") == "set" or data.get("pack_expanded")
+                updates = {}
+                # Propagate image keys
+                cat_obv = data.get('image_url_obverse')
+                cat_rev = data.get('image_url_reverse')
+                if cat_obv and not data.get('primary_image_url'):
+                    updates['primary_image_url'] = cat_obv
+                if cat_obv and not data.get('photo_urls'):
+                    updates['photo_urls'] = [cat_obv] + ([cat_rev] if cat_rev else [])
+
+                # Baseline valuation check (fill-missing-only)
+                curr_val = data.get('AI Estimated Value') or data.get('ai_estimated_value') or data.get('estValue') or data.get('ai_est_value')
+                if not curr_val or str(curr_val).strip() in ("", "$0.00", "0.0", "0", "—", "--", "Valuation Pending", "null"):
+                    cat_p = data.get('issue_price') or data.get('Sticker Price') or data.get('Cost') or 0.0
+                    try:
+                        clean_cat_p = float(re.sub(r"[^\d.]", "", str(cat_p)))
+                    except Exception as parse_err:
+                        logger.warning(f"Failed parsing price for coin {doc_id} baseline in worker: {parse_err}")
+                        clean_cat_p = 0.0
+                    if clean_cat_p > 0.0:
+                        fmt_val = f"${clean_cat_p:.2f}"
+                        updates['ai_est_value'] = clean_cat_p
+                        updates['ai_estimated_value'] = fmt_val
+                        updates['AI Estimated Value'] = fmt_val
+                        updates['estValue'] = fmt_val
+                        updates['valuation_source'] = "US Mint Catalog Baseline"
+                        updates['enrichment_status'] = "enriched"
+
+                if not is_set:
+                    # Non-set single coins: attempt Greysheet enrichment if missing CPG
+                    cpg_val = data.get('cpgRetail') or data.get('cpg_retail')
+                    if not cpg_val or float(str(cpg_val).replace('$', '').replace(',', '').strip() or 0.0) <= 0.0:
+                        try:
+                            from services.greysheet_service import lookup_greysheet_value
+                            gs_res = lookup_greysheet_value(data)
+                            if gs_res and isinstance(gs_res, dict) and gs_res.get('cpg_retail'):
+                                updates['cpgRetail'] = gs_res.get('cpg_retail')
+                                updates['cpg_retail'] = gs_res.get('cpg_retail')
+                        except Exception as gs_err:
+                            logger.info(f"Greysheet post-commit lookup skipped or unpriced for {doc_id}: {gs_err}")
+
+                if updates:
+                    coins_ref.document(doc_id).set(updates, merge=True)
+                    logger.info(f"Post-commit enrichment updated coin {doc_id} with keys {list(updates.keys())}")
+            except Exception as item_err:
+                logger.error(f"Error enriching coin {doc_id} for user {caller_email}: {item_err}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Error in _async_post_commit_enrichment for {caller_email}: {e}", exc_info=True)
 
 
 @app.post("/api/review/break_up_set")
@@ -3768,6 +3857,39 @@ async def keep_set_as_is(request: Request):
         committed['kept_as_set']    = True
         committed['set_broken_up']  = False
         committed['committed_at']   = firestore.SERVER_TIMESTAMP
+
+        # Enrich with US Mint Catalog (Must-Fix 4 / FF-3)
+        try:
+            from services.us_mint_catalog_service import enrich_us_mint_item
+            enrich_us_mint_item(committed)
+        except Exception as enrich_err:
+            logger.warning(f"Error enriching set {set_doc_id} in keep_set_as_is: {enrich_err}")
+
+        # Propagate image URLs
+        cat_obv = committed.get('image_url_obverse')
+        cat_rev = committed.get('image_url_reverse')
+        if cat_obv and not committed.get('primary_image_url'):
+            committed['primary_image_url'] = cat_obv
+        if cat_obv and not committed.get('photo_urls'):
+            committed['photo_urls'] = [cat_obv] + ([cat_rev] if cat_rev else [])
+
+        # Stamp all 4 value keys (fill-missing-only)
+        curr_val = committed.get('AI Estimated Value') or committed.get('ai_estimated_value') or committed.get('estValue') or committed.get('ai_est_value')
+        if not curr_val or str(curr_val).strip() in ("", "$0.00", "0.0", "0", "—", "--", "Valuation Pending", "null"):
+            cat_p = committed.get('issue_price') or committed.get('Sticker Price') or committed.get('Cost') or committed.get('Purchase Cost') or 0.0
+            try:
+                clean_cat_p = float(re.sub(r"[^\d.]", "", str(cat_p)))
+            except Exception as parse_err:
+                logger.warning(f"Failed parsing price for set valuation baseline: {parse_err}")
+                clean_cat_p = 0.0
+            if clean_cat_p > 0.0:
+                fmt_val = f"${clean_cat_p:.2f}"
+                committed['ai_est_value'] = clean_cat_p
+                committed['ai_estimated_value'] = fmt_val
+                committed['AI Estimated Value'] = fmt_val
+                committed['estValue'] = fmt_val
+                committed['valuation_source'] = "US Mint Catalog Baseline"
+                committed['enrichment_status'] = "enriched"
 
         batch = db.batch()
         # Write to main coins collection using the same doc ID for traceability
@@ -7585,10 +7707,7 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
         sticker_price = clean_valuation_value(it.get("Cost") or 0.0)
 
         # Proportional Landed Cost Allocation
-        # Under Plan v3.1, US Mint orders keep shipping on receipt but waive fee allocation to child coins
-        if is_us_mint_order and any((it.get("item_number") or it.get("Retailer Item No.") or "").upper() == "26SQRP" or "26sqrp" in ((it.get("Personal Notes") or "") + " " + fname).lower() for it in items):
-            allocated_fee = 0.0
-        elif raw_item_sum > 0.0 and total_global_fees > 0.0:
+        if raw_item_sum > 0.0 and total_global_fees > 0.0:
             allocated_fee = round(total_global_fees * (sticker_price / raw_item_sum), 2)
         elif len(items) == 1 and total_global_fees > 0.0:
             allocated_fee = round(total_global_fees, 2)
@@ -7678,6 +7797,8 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             "Metal Content":        metal_val,
             "Cost":                 landed_cost_basis,
             "Purchase Cost":        landed_cost_basis,
+            "allocated_fees":       allocated_fee,
+            "shipping_fee":         allocated_fee,
             "Quantity":             item_qty,
             "quantity":             item_qty,
             "Country":              "United States",
@@ -7713,10 +7834,9 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             from services.us_mint_catalog_service import enrich_us_mint_item
             enrich_us_mint_item(doc)
             doc["Purchase Cost"] = doc.get("Cost")
-            # Plan 4.1 §3.1 item 1: Pure snake_case allocated_fees & shipping_fee
-            # NET-565: Only pack/roll expansions waive the fee; regular Mint items (e.g. 23RH) carry Mint S&H.
-            doc["allocated_fees"] = 0.0 if doc.get("pack_expanded") else allocated_fee
-            doc["shipping_fee"] = 0.0 if doc.get("pack_expanded") else allocated_fee
+            # Plan 4.1 §3.1 item 1 / Plan.v1 / Must-Fix A-1: Pure snake_case allocated_fees & shipping_fee
+            doc["allocated_fees"] = allocated_fee
+            doc["shipping_fee"] = allocated_fee
 
             sku_upper = (doc.get("retailer_item_num") or doc.get("item_number") or "").upper()
             if sku_upper == "26SQRP" or (doc.get("pack_expanded") and "semiquincentennial" in (prog_val + " " + raw_desc).lower()):
