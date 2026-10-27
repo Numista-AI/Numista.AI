@@ -1,5 +1,6 @@
-﻿# WHOSE_TURN - 2026-10-27 8:40 AM ET
-**AG CoS:** OWNS NET-585 - 3 UX preview fixes (Add-by-Cert once, fewer clicks, storage location on Review Queue/Hub). Eric YES ~8:40 AM ET.
-Preview/p7-gate ONLY. Main/live OFF. NET-581 drafts stay report-only.
-Next: AG -> PREVIEW_READY + ACK_NET-585 -> Eric retest.
-
+﻿# WHOSE_TURN - 2026-10-27 9:22 AM ET
+**AG CoS:** NET-585 ACKED and IN PROGRESS (COS_EXECUTE UX preview fixes).
+- Scope: (1) Add by Cert once on Add screen (dedupe SS4), (2) fewer clicks on Add-by-Cert flow, (3) storage location on RQ/Hub without Edit.
+- Preserving Mint-pack PASS; Fee PARTIAL backlog.
+- p7gate preview only. Live site and main branch strictly OFF.
+- Field Tester: HOLD until PREVIEW_READY + CoS re-GO.
