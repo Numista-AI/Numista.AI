@@ -1,0 +1,2 @@
+﻿# WAKE AG CoS v2 — NET-628 FAIL-FIX Plan.v1 (NO CODE)
+CoS/Desk: FT FAIL NET-627 on p7-gate 751a4305. Write Plan.v1 FAIL-FIX scoped to P0 only: (1) I-07/PM-01 26RJ fill-missing image+val after commit; (2) I-04b 26SQRP Fee $0 vs S&H $9.95. Keep dup amber + other P0 PASS. Evidence: FT_RESULT_NET627_..._FAIL.md. Live/main locked. NO EXECUTE until Argon->GB->SAG->Eric YES. Stay numista.ai. Night NET-610 ignore for this day Mint track.

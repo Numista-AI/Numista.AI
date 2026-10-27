@@ -1,0 +1,10 @@
+﻿# WAKE AG CoS v2 — NET-631 EXECUTE FAIL-FIX PREVIEW ONLY
+Eric typed YES ~5:45 PM ET. EXECUTE AUTHORIZED — p7-gate ONLY. Live/main LOCKED.
+
+Read INBOX:
+- EXECUTE_BRIEF_ERIC_BMINUS_FAILFIX_PLAN_V1_2026-10-27.md
+- SAG_FEEDBACK_FAILFIX_PLAN_V1_2026-10-27.md
+
+Code ALL Must-Fix 1-5 + FF-1..3. Chain Argon 71 | GB 91 | SAG 90 CG | YES.
+Report PREVIEW_READY: Hosting URL + Run ID + SHA.
+No founder retest until FT PASS. NET-610 ignore. Stay numista.ai.

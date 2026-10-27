@@ -1,8 +1,12 @@
-# WHOSE_TURN — updated 2026-10-27 ~5:35 PM ET (NET-629 Plan.v1 Filed)
+# WHOSE_TURN — updated 2026-10-27 ~6:47 PM ET (NET-631 PREVIEW_READY -> FIELD TESTER)
 
-**DAY baton:** Argon — review `ERIC_BMINUS_FAILFIX_PLAN_v1_2026-10-27.md` (NET-629)
-AG CoS filed Plan.v1 FAIL-FIX addressing I-07/PM-01 (26RJ images & baseline val) and I-04b (26SQRP Fee $9.95). NO CODE / NO EXECUTE.
-Review chain: Argon -> GB CoS -> SAG (<=4) -> Eric YES -> EXECUTE preview-only -> FT PASS -> then Eric founder retest.
-Do NOT prompt Eric founder retest until FT PASS. origin/main LOCKED.
+**DAY baton:** Field Tester (FT) — retest FAIL-the-build gates on preview p7-gate (NET-631).
+AG CoS EXECUTE + Argon74 AMEND (A-1..A-3) COMPLETE & DEPLOYED to preview channel `p7-gate`.
+- Preview URL: https://numista-vault--p7-gate-8avtpz22.web.app
+- Cloud Run tag p7gate: numista-backend-00498-kek (0% prod traffic)
+- SHA: 06f6abaf on origin/dev
+- Target: preview channel p7-gate ONLY.
+- origin/main LOCKED.
+- Rule: Do NOT prompt Eric founder retest until FT confirms PASS.
 
 **NIGHT:** NET-610 8 PM ET Option B <=$5 (unchanged, separate track).
