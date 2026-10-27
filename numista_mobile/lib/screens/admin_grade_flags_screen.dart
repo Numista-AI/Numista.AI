@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/http_auth_client.dart';
 import '../constants.dart';
 import '../services/grade_flag_service.dart';
+import '../utils/numista_error_helper.dart';
 
 const _apiUrl = kApiBaseUrl;
 
@@ -365,7 +366,7 @@ class _FlagCardState extends State<_FlagCard> {
       if (mounted) {
         setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e)),
           backgroundColor: const Color(0xFFDC2626),
         ));
       }

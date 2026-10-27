@@ -4,6 +4,7 @@ import '../services/http_auth_client.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants.dart';
 import '../widgets/grade_badge_widget.dart';
+import '../utils/numista_error_helper.dart';
 
 class GlossaryAcademyScreen extends StatefulWidget {
   const GlossaryAcademyScreen({super.key});
@@ -83,7 +84,7 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
     } catch (e) {
       if (mounted) {
         setState(() {
-          _dataError = 'Error connecting to backend: $e';
+          _dataError = NumistaErrorHelper.toUserFriendly(e);
           _loadingData = false;
         });
       }
@@ -132,7 +133,7 @@ class _GlossaryAcademyScreenState extends State<GlossaryAcademyScreen> with Sing
     } catch (e) {
       if (mounted) {
         setState(() {
-          _searchError = 'Network error during search: $e';
+          _searchError = NumistaErrorHelper.toUserFriendly(e);
           _searching = false;
         });
       }

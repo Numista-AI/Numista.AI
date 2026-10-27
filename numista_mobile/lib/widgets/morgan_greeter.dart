@@ -4,6 +4,7 @@ import '../services/morgan_prefs.dart';
 import 'morgan_setup_dialog.dart';
 import 'morgan_guide_flow.dart';
 import 'morgan_guides.dart';
+import '../utils/platform_gate.dart';
 
 /// Morgan — Numista.AI's AI concierge greeter.
 ///
@@ -191,21 +192,14 @@ class _MorganGreeterState extends State<MorganGreeter>
       tabName: 'upload',
     ),
     _ActionTile(
-      tileId: 'microscope',
-      emoji: '🔬',
-      icon: Icons.biotech_rounded,
-      color: _teal, // teal
-      title: 'Identify with Microscope',
-      subtitle: 'Place your coin — I\'ll tell you what it is',
-      route: 'Microscope Scanner',
-    ),
-    _ActionTile(
       tileId: 'camera_scanner',
       emoji: '📷',
       icon: Icons.photo_camera_rounded,
       color: const Color(0xFFEC4899), // pink
-      title: 'Webcam / Camera Scanner',
-      subtitle: 'Snap obverse/reverse pictures to add instantly',
+      title: isNativePhone ? 'Take Photo / Camera' : 'Webcam / Camera Scanner',
+      subtitle: isNativePhone
+          ? 'Snap obverse/reverse pictures using your phone camera'
+          : 'Snap obverse/reverse pictures to add instantly',
       route: 'Add New Coins',
       tabName: 'camera',
     ),
@@ -459,6 +453,7 @@ class _MorganGreeterState extends State<MorganGreeter>
     final setupDone = await MorganPrefs.isSetupDone();
     if (!setupDone && mounted) {
       final confirmed = await showMorganSetup(context);
+      await MorganPrefs.markSetupDone();
       if (!confirmed) return; // user dismissed without confirming
     }
 

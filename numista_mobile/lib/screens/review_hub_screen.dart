@@ -6,11 +6,84 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../services/http_auth_client.dart';
+import '../utils/numista_error_helper.dart';
 import '../widgets/grade_badge_widget.dart';
 
 
 class ReviewHubScreen extends StatefulWidget {
   const ReviewHubScreen({super.key});
+
+  /// Format user-facing snackbar message after committing review items
+  static String formatCommitSnackbar({
+    required int committed,
+    int skipped = 0,
+    int flagged = 0,
+  }) {
+    final List<String> parts = [];
+    if (committed > 0) {
+      parts.add('Added $committed coin${committed != 1 ? 's' : ''}.');
+    }
+    if (skipped > 0) {
+      if (skipped == 1) {
+        parts.add('1 was already in your collection from the same invoice, so we didn\'t add it twice.');
+      } else {
+        parts.add('$skipped were already in your collection from the same invoice, so we didn\'t add them twice.');
+      }
+    }
+    if (flagged > 0) {
+      final subject = flagged == 1 ? '1 might be a coin' : '$flagged might be coins';
+      parts.add('$subject you already have; look for the yellow \'Possible duplicate\' tag.');
+    }
+    if (parts.isEmpty) {
+      return 'No coins were added.';
+    }
+    return parts.join(' ');
+  }
+
+  /// Parse backend commit response JSON and return user-facing snackbar message.
+  static String snackbarFromCommitResponse(String responseBody, int fallbackCommitted) {
+    int committed = fallbackCommitted;
+    int skipped = 0;
+    int flagged = 0;
+
+    try {
+      final decoded = jsonDecode(responseBody);
+      if (decoded is Map) {
+        if (decoded.containsKey('committed') && decoded['committed'] != null) {
+          committed = (decoded['committed'] as num).toInt();
+        }
+        if (decoded.containsKey('skipped') && decoded['skipped'] != null) {
+          skipped = (decoded['skipped'] as num).toInt();
+        }
+        if (decoded.containsKey('flagged') && decoded['flagged'] != null) {
+          flagged = (decoded['flagged'] as num).toInt();
+        }
+      }
+    } catch (_) {
+      // Gracefully fall back to fallbackCommitted, 0, 0
+    }
+
+    return formatCommitSnackbar(
+      committed: committed,
+      skipped: skipped,
+      flagged: flagged,
+    );
+  }
+
+  /// Predicate for 100% AI Confidence items eligible for auto-commit.
+  static bool isHighConfidenceItem(Map<String, dynamic> data) {
+    final status = (data['status'] ?? 'staged').toString().toLowerCase();
+    final reviewNeeded = data['review_needed'] == true;
+    if (status == 'quarantined' || status == 'aborted' || status == 'superseded' || status == 'committed' || reviewNeeded) {
+      return false;
+    }
+    double conf = 1.0;
+    try {
+      final raw = data['confidence_score'] ?? data['composite_confidence'];
+      if (raw != null) conf = (raw as num).toDouble();
+    } catch (_) {}
+    return conf >= 0.999;
+  }
 
   @override
   State<ReviewHubScreen> createState() => _ReviewHubScreenState();
@@ -52,8 +125,13 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
       if (response.statusCode == 200) {
         if (!mounted) return;
+        final snackText = ReviewHubScreen.snackbarFromCommitResponse(
+          response.body,
+          _selectedIds.length,
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Successfully committed ${_selectedIds.length} items!')),
+          SnackBar(content: Text(snackText)),
         );
         setState(() => _selectedIds.clear());
       } else {
@@ -75,18 +153,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   // ─── Commit 100% AI Confidence items ──────────────────────────────────────
   Future<void> _commitHighConfidence(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
     final highConfIds = docs
-        .where((d) {
-          final data = d.data();
-          final status = (data['status'] ?? 'staged').toString().toLowerCase();
-          final reviewNeeded = data['review_needed'] == true;
-          if (status == 'quarantined' || status == 'aborted' || reviewNeeded) return false;
-          double conf = 1.0;
-          try {
-            final raw = data['confidence_score'] ?? data['composite_confidence'];
-            if (raw != null) conf = (raw as num).toDouble();
-          } catch (_) {}
-          return conf >= 0.95;
-        })
+        .where((d) => ReviewHubScreen.isHighConfidenceItem(d.data()))
         .map((d) => d.id)
         .toList();
 
@@ -113,9 +180,14 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
       if (response.statusCode == 200) {
         if (!mounted) return;
+        final snackText = ReviewHubScreen.snackbarFromCommitResponse(
+          response.body,
+          highConfIds.length,
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ Successfully committed ${highConfIds.length} items with 100% AI Confidence!'),
+            content: Text(snackText),
             backgroundColor: const Color(0xFF10B981),
           ),
         );
@@ -127,7 +199,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error committing items: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Error committing items. Please try again.')),
           backgroundColor: Colors.red[700],
         ),
       );
@@ -196,7 +268,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error deleting items: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Error deleting items. Please try again.')),
           backgroundColor: Colors.red[700],
         ),
       );
@@ -263,7 +335,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error deleting item: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Error deleting item. Please try again.')),
           backgroundColor: Colors.red[700],
         ),
       );
@@ -405,7 +477,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       messenger.showSnackBar(SnackBar(content: Text('Could not open document (HTTP ${res.statusCode})$msg')));
                     }
                   } catch (e) {
-                    messenger.showSnackBar(SnackBar(content: Text('Error opening file: $e')));
+                    messenger.showSnackBar(SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Error opening file. Please try again.'))));
                   }
                 },
                 icon: const Icon(Icons.open_in_new, size: 14, color: Color(0xFFFFD700)),
@@ -450,7 +522,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             } catch (e) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Failed to delete document: $e')),
+                                  SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to delete document. Please try again.'))),
                                 );
                               }
                             }
@@ -561,7 +633,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[700]),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to commit set. Please try again.')), backgroundColor: Colors.red[700]),
       );
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -624,7 +696,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[700]),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to expand set. Please try again.')), backgroundColor: Colors.red[700]),
       );
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -632,6 +704,39 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   }
 
   // ─── Per-card edit dialog ─────────────────────────────────────────────────
+  /// NET-565: Build a Firestore-safe update map from the Edit Coin controllers.
+  /// Firestore update(Map) treats '.' in a key as a field-path separator, so keys
+  /// like 'Retailer Item No.' threw invalid-argument (surfaced as the generic
+  /// "unexpected error" toast). Map those to the canonical snake_case fields the
+  /// Hub reads, and write Fee to allocated_fees + shipping_fee.
+  Map<String, dynamic> _buildReviewQueueUpdates(Map<String, TextEditingController> controllers) {
+    const snakeMap = <String, String>{
+      'Purchase Date': 'purchase_date',
+      'Retailer/Website': 'retailer_website',
+      'Retailer Invoice #': 'retailer_invoice_num',
+      'Retailer Item No.': 'retailer_item_num',
+      'Storage Location': 'storage_location',
+    };
+    final updates = <String, dynamic>{};
+    controllers.forEach((key, ctrl) {
+      final text = ctrl.text.trim();
+      if (key == 'Fee') {
+        final fee = double.tryParse(text.replaceAll('\$', '').replaceAll(',', ''));
+        if (fee != null && fee >= 0) {
+          updates['allocated_fees'] = fee;
+          updates['shipping_fee'] = fee;
+        }
+        return;
+      }
+      if (snakeMap.containsKey(key)) {
+        updates[snakeMap[key]!] = text;
+      } else {
+        updates[key] = text;
+      }
+    });
+    return updates;
+  }
+
   void _showCoinEditDialog(String docId, Map<String, dynamic> data) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -649,13 +754,19 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       'Strike Type':             TextEditingController(text: data['Strike Type']?.toString() ?? ''),
       'Metal Content':           TextEditingController(text: data['Metal Content']?.toString() ?? ''),
       'Purchase Cost':           TextEditingController(text: (data['Purchase Cost'] ?? data['Cost'] ?? '').toString()),
-      'Purchase Date':           TextEditingController(text: data['Purchase Date']?.toString() ?? ''),
-      'Retailer/Website':        TextEditingController(text: data['Retailer/Website']?.toString() ?? ''),
-      'Retailer Invoice #':      TextEditingController(text: data['Retailer Invoice #']?.toString() ?? ''),
-      'Retailer Item No.':       TextEditingController(text: data['Retailer Item No.']?.toString() ?? ''),
-      'Storage Location':        TextEditingController(text: data['Storage Location']?.toString() ?? ''),
-      'Quantity':                TextEditingController(text: (data['Quantity'] ?? data['qty'] ?? '1').toString()),
+      'Purchase Date':           TextEditingController(text: (data['purchase_date'] ?? data['Purchase Date'] ?? '').toString()),
+      'Retailer/Website':        TextEditingController(text: (data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website'] ?? '').toString()),
+      'Retailer Invoice #':      TextEditingController(text: (data['retailer_invoice_num'] ?? data['invoice_number'] ?? data['Retailer Invoice #'] ?? '').toString()),
+      'Retailer Item No.':       TextEditingController(text: (data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.'] ?? '').toString()),
+      'Storage Location':        TextEditingController(text: (data['storage_location'] ?? data['Storage Location'] ?? '').toString()),
+      'Quantity':                TextEditingController(text: (data['Quantity'] ?? data['quantity'] ?? data['qty'] ?? '1').toString()),
     };
+
+    final rawFeeVal = data['allocated_fees'] ?? data['Allocated Fees'] ?? data['shipping_fee'] ?? data['Fee'] ?? data['fee'] ?? 0.0;
+    final feeNum = (rawFeeVal is num) ? rawFeeVal.toDouble() : (double.tryParse(rawFeeVal.toString().replaceAll('\$', '').trim()) ?? 0.0);
+    // NET-565: Fee is editable (Mint S&H e.g. $9.95). Saved to allocated_fees + shipping_fee.
+    controllers['Fee'] = TextEditingController(text: feeNum > 0 ? feeNum.toStringAsFixed(2) : '');
+    final setCostLabel = (data['set_cost_label'] ?? '').toString().trim();
 
     bool isSaving = false;
 
@@ -754,6 +865,17 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 '${data['Year'] ?? ''} ${data['Denomination'] ?? 'Review Item'}',
                                 style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white54 : const Color(0xFF64748B), fontSize: 13),
                               ),
+                              if (setCostLabel.isNotEmpty || feeNum >= 0.0)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(
+                                    [
+                                      if (setCostLabel.isNotEmpty) 'Package/Roll: $setCostLabel',
+                                      'Fee: \$${feeNum.toStringAsFixed(2)}',
+                                    ].join('  •  '),
+                                    style: const TextStyle(color: Color(0xFFD4AF37), fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -920,6 +1042,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             const SizedBox(width: 12),
                             Expanded(child: field('Storage Location', 'Storage Location', Icons.inventory_2_outlined)),
                           ]),
+                          field('Fee', 'Fee / Shipping & Handling', Icons.local_shipping_outlined,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true)),
                           field('Retailer/Website', 'Retailer / Website', Icons.storefront_outlined),
                           Row(children: [
                             Expanded(child: field('Retailer Invoice #', 'Invoice #', Icons.receipt_outlined)),
@@ -955,10 +1079,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               final dialogMessenger = ScaffoldMessenger.of(dialogContext);
                               final nav = Navigator.of(dialogContext);
                               try {
-                                final updates = <String, dynamic>{};
-                                controllers.forEach((key, ctrl) {
-                                  if (ctrl.text.isNotEmpty) updates[key] = ctrl.text;
-                                });
+                                final updates = _buildReviewQueueUpdates(controllers);
                                 // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
                                 final rawQty = controllers['Quantity']?.text.trim() ?? '';
                                 final parsedQty = int.tryParse(rawQty);
@@ -993,7 +1114,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               } catch (e) {
                                 setDialogState(() => isSaving = false);
                                 dialogMessenger.showSnackBar(
-                                  SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red[700]),
+                                  SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Save failed. Please try again.')), backgroundColor: Colors.red[700]),
                                 );
                               }
                             },
@@ -1017,10 +1138,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               final dialogMessenger = ScaffoldMessenger.of(dialogContext);
                               final nav = Navigator.of(dialogContext);
                               try {
-                                final updates = <String, dynamic>{};
-                                controllers.forEach((key, ctrl) {
-                                  if (ctrl.text.isNotEmpty) updates[key] = ctrl.text;
-                                });
+                                final updates = _buildReviewQueueUpdates(controllers);
                                 // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
                                 final rawQty2 = controllers['Quantity']?.text.trim() ?? '';
                                 final parsedQty2 = int.tryParse(rawQty2);
@@ -1061,8 +1179,12 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 if (!mounted) return;
                                 nav.pop();
                                 if (response.statusCode == 200) {
+                                  final snackText = ReviewHubScreen.snackbarFromCommitResponse(
+                                    response.body,
+                                    1,
+                                  );
                                   messenger.showSnackBar(
-                                    const SnackBar(content: Text('Coin saved and committed to collection!')),
+                                    SnackBar(content: Text(snackText)),
                                   );
                                 } else {
                                   messenger.showSnackBar(
@@ -1072,7 +1194,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               } catch (e) {
                                 setDialogState(() => isSaving = false);
                                 dialogMessenger.showSnackBar(
-                                  SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[700]),
+                                  SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'An error occurred while saving. Please try again.')), backgroundColor: Colors.red[700]),
                                 );
                               }
                             },
@@ -1169,6 +1291,151 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     );
   }
 
+  // ─── Quick Storage Location Dialog (NET-585) ──────────────────────────────
+  void _showQuickStorageDialog(String docId, Map<String, dynamic> data, String currentLoc) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.email == null) return;
+
+    final controller = TextEditingController(text: currentLoc);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const presets = ['Safe', 'Box 1', 'Box 2', 'Slab Box', 'Binder', 'Desk'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) {
+          return AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.inventory_2_outlined, color: Color(0xFF2563EB), size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Set Storage Location',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${data['Year'] ?? ''} ${data['Denomination'] ?? 'Item'}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFC9A227),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Safe Shelf 2, Box A',
+                      hintStyle: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8)),
+                      prefixIcon: const Icon(Icons.place_outlined, size: 20),
+                      filled: true,
+                      fillColor: isDark ? Colors.white.withAlpha(10) : const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onSubmitted: (val) async {
+                      final newLoc = val.trim();
+                      Navigator.of(ctx).pop();
+                      await _saveQuickStorage(user.email!, docId, newLoc);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Quick suggestions:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: presets.map((p) {
+                      return ActionChip(
+                        label: Text(p, style: const TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          controller.text = p;
+                          controller.selection = TextSelection.fromPosition(TextPosition(offset: p.length));
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () async {
+                  final newLoc = controller.text.trim();
+                  Navigator.of(ctx).pop();
+                  await _saveQuickStorage(user.email!, docId, newLoc);
+                },
+                child: const Text('Save Location'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _saveQuickStorage(String userEmail, String docId, String newLoc) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userEmail)
+          .collection('review_queue')
+          .doc(docId)
+          .update({
+        'storage_location': newLoc,
+        'Storage Location': newLoc,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(newLoc.isEmpty ? 'Storage location cleared' : '📍 Storage location updated: $newLoc'),
+          backgroundColor: const Color(0xFF10B981),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to update storage location.')),
+          backgroundColor: Colors.red[700],
+        ),
+      );
+    }
+  }
+
   // ─── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -1193,8 +1460,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 builder: (context, snapshot) {
                   final rawDocs = snapshot.data?.docs ?? [];
                   final docs = rawDocs.where((d) {
-                    final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
-                    return status != 'aborted' && status != 'superseded' && status != 'committed';
+                    final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
+                    return status == 'pending';
                   }).toList();
                   if (docs.isEmpty) return const SizedBox.shrink();
 
@@ -1202,18 +1469,23 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   return Row(
                     children: [
                       const Text('Select All', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      Checkbox(
-                        value: allSelected,
-                        activeColor: const Color(0xFFF63366),
-                        onChanged: (val) {
-                          setState(() {
-                            if (val == true) {
-                              _selectedIds.addAll(docs.map((d) => d.id));
-                            } else {
-                              _selectedIds.clear();
-                            }
-                          });
-                        },
+                      SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: Checkbox(
+                          materialTapTargetSize: MaterialTapTargetSize.padded,
+                          value: allSelected,
+                          activeColor: const Color(0xFFF63366),
+                          onChanged: (val) {
+                            setState(() {
+                              if (val == true) {
+                                _selectedIds.addAll(docs.map((d) => d.id));
+                              } else {
+                                _selectedIds.clear();
+                              }
+                            });
+                          },
+                        ),
                       ),
                     ],
                   );
@@ -1236,18 +1508,10 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
             builder: (context, snapshot) {
               final rawDocs = snapshot.data?.docs ?? [];
               final docs = rawDocs.where((d) {
-                final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
-                return status != 'aborted' && status != 'superseded' && status != 'committed';
+                final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
+                return status == 'pending';
               }).toList();
-              final highConfCount = docs.where((d) {
-                final data = d.data();
-                double conf = 1.0;
-                try {
-                  final raw = data['confidence_score'];
-                  if (raw != null) conf = (raw as num).toDouble();
-                } catch (_) {}
-                return conf >= 0.999;
-              }).length;
+              final highConfCount = docs.where((d) => ReviewHubScreen.isHighConfidenceItem(d.data())).length;
 
               if (highConfCount == 0) return const SizedBox.shrink();
 
@@ -1320,8 +1584,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
               final rawDocs = (snapshot.data?.docs.toList() ?? []);
               final docs = rawDocs.where((d) {
-                final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
-                return status != 'aborted' && status != 'superseded';
+                final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
+                return status == 'pending';
               }).toList();
               docs.sort((a, b) {
                 final aData = a.data();
@@ -1408,7 +1672,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.error_outline, color: Colors.red),
                         title: const Text('Item Rendering Warning', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-                        subtitle: Text(e.toString(), style: const TextStyle(fontSize: 12)),
+                        subtitle: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Unable to render this item.'), style: const TextStyle(fontSize: 12)),
                       ),
                     );
                   }
@@ -1471,7 +1735,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
         ?? 'Coin Set';
     final setSize    = (data['set_size'] as num?)?.toInt() ?? 0;
     final costLabel  = data['set_cost_label'] ?? data['Purchase Cost'] ?? 'N/A';
-    final retailer   = data['Retailer/Website'] ?? 'Unknown';
+    final retailer   = (data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website']) ?? 'Unknown';
     final srcFile    = data['source_file']?.toString() ?? '';
 
     // Expand set_contents for the preview list
@@ -1496,15 +1760,20 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
             // ── Title row ──────────────────────────────────────────────
             Row(
               children: [
-                Checkbox(
-                  value: isSelected,
-                  activeColor: const Color(0xFFF63366),
-                  onChanged: (val) {
-                    setState(() {
-                      if (val == true) { _selectedIds.add(id); }
-                      else { _selectedIds.remove(id); }
-                    });
-                  },
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Checkbox(
+                    materialTapTargetSize: MaterialTapTargetSize.padded,
+                    value: isSelected,
+                    activeColor: const Color(0xFFF63366),
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) { _selectedIds.add(id); }
+                        else { _selectedIds.remove(id); }
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(width: 4),
                 _buildBadge('🗂️ SET', const Color(0xFF2563EB)),
@@ -1743,18 +2012,23 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Checkbox(
-              value: isSelected,
-              activeColor: const Color(0xFFF63366),
-              onChanged: (val) {
-                setState(() {
-                  if (val == true) {
-                    _selectedIds.add(id);
-                  } else {
-                    _selectedIds.remove(id);
-                  }
-                });
-              },
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: Checkbox(
+                materialTapTargetSize: MaterialTapTargetSize.padded,
+                value: isSelected,
+                activeColor: const Color(0xFFF63366),
+                onChanged: (val) {
+                  setState(() {
+                    if (val == true) {
+                      _selectedIds.add(id);
+                    } else {
+                      _selectedIds.remove(id);
+                    }
+                  });
+                },
+              ),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -1786,14 +2060,49 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       if (storageLoc.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(left: 6),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6).withAlpha(20),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFF3B82F6).withAlpha(120)),
+                          child: InkWell(
+                            onTap: () => _showQuickStorageDialog(id, data, storageLoc),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF3B82F6).withAlpha(20),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF3B82F6).withAlpha(120)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('📍 $storageLoc', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 11, fontWeight: FontWeight.w600)),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.edit_outlined, size: 11, color: Color(0xFF2563EB)),
+                                ],
+                              ),
                             ),
-                            child: Text('📍 $storageLoc', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 11, fontWeight: FontWeight.w600)),
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: InkWell(
+                            onTap: () => _showQuickStorageDialog(id, data, ''),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF64748B).withAlpha(15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF64748B).withAlpha(100)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.add_location_alt_outlined, size: 11, color: Color(0xFF64748B)),
+                                  SizedBox(width: 3),
+                                  Text('Storage', style: TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       _buildMemoryAssistedBadge(data),
@@ -1907,23 +2216,38 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   const Divider(height: 24),
                   () {
                     final rawCost = data['Purchase Cost'] ?? data['Cost'];
-                    final costStr = rawCost != null
-                        ? (rawCost is num ? '\$${rawCost.toStringAsFixed(2)}' : rawCost.toString())
-                        : 'N/A';
+                    final rawSetCostLabel = (data['set_cost_label'] ?? '').toString().trim();
+                    final costStr = rawSetCostLabel.isNotEmpty
+                        ? rawSetCostLabel
+                        : (rawCost != null
+                            ? (rawCost is num ? '\$${rawCost.toStringAsFixed(2)}' : rawCost.toString())
+                            : 'N/A');
+
+                    final rawFee = data['allocated_fees'] ?? data['Allocated Fees'] ?? data['shipping_fee'] ?? data['Fee'] ?? data['fee'];
+                    final feeStr = rawFee != null
+                        ? (rawFee is num ? '\$${rawFee.toStringAsFixed(2)}' : (rawFee.toString().startsWith('\$') ? rawFee.toString() : '\$$rawFee'))
+                        : '\$0.00';
+
                     final isChecklist = data['source_type'] == 'checklist_scan';
                     final sourceLabel = isChecklist ? 'Ingestion Source' : 'Retailer';
-                    final sourceVal = isChecklist ? 'Checklist Scan' : (data['Retailer/Website'] ?? 'N/A').toString();
+                    final sourceVal = isChecklist ? 'Checklist Scan' : ((data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website']) ?? 'N/A').toString();
 
                     return Wrap(
                       spacing: 24,
                       runSpacing: 12,
                       children: [
                         _buildMetaItem(sourceLabel, sourceVal, isChecklist ? Icons.checklist_rtl : Icons.storefront),
-                        _buildMetaItem('Invoice #', (data['Retailer Invoice #'] ?? 'N/A').toString(), Icons.receipt),
+                        _buildMetaItem('Invoice #', ((data['retailer_invoice_num'] ?? data['invoice_number'] ?? data['Retailer Invoice #']) ?? 'N/A').toString(), Icons.receipt),
                         _buildMetaItem('Cost', costStr, Icons.attach_money),
-                        _buildMetaItem('Item #', (data['Retailer Item No.'] ?? 'N/A').toString(), Icons.tag),
+                        _buildMetaItem('Fee', feeStr, Icons.local_shipping_outlined),
+                        _buildMetaItem('Item #', ((data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.']) ?? 'N/A').toString(), Icons.tag),
                         _buildMetaItem('QTY', (data['Quantity'] ?? '1').toString(), Icons.numbers),
-                        _buildMetaItem('Date', (data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
+                        _buildMetaItem('Date', (data['purchase_date'] ?? data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
+                        InkWell(
+                          onTap: () => _showQuickStorageDialog(id, data, storageLoc),
+                          borderRadius: BorderRadius.circular(4),
+                          child: _buildMetaItem('Storage', storageLoc.isNotEmpty ? '$storageLoc ✏️' : '+ Set Location', Icons.inventory_2_outlined),
+                        ),
                       ],
                     );
                   }(),

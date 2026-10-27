@@ -51,6 +51,17 @@ class HttpAuthClient {
     return headers;
   }
 
+  static bool _canMakeRequest(Uri url) {
+    if (tokenProviderOverride != null || httpClientOverride != null) return true;
+    if (url.path.contains('spot_prices')) return true;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      return user != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Send an authenticated GET request.
   static Future<http.Response> get(
     Uri url, {
@@ -58,6 +69,10 @@ class HttpAuthClient {
     Map<String, String>? headers,
     Duration timeout = const Duration(seconds: 30),
   }) async {
+    if (!_canMakeRequest(url)) {
+      debugPrint('[HttpAuthClient] Skipping unauthenticated GET to ${url.path}: No signed-in Firebase user.');
+      return http.Response('{"detail": "Authentication token missing or invalid"}', 401);
+    }
     final reqHeaders = await _buildHeaders(headers);
     final ownClient = client == null && httpClientOverride == null;
     final c = httpClientOverride ?? client ?? http.Client();
@@ -76,6 +91,10 @@ class HttpAuthClient {
     Object? body,
     Duration timeout = const Duration(seconds: 30),
   }) async {
+    if (!_canMakeRequest(url)) {
+      debugPrint('[HttpAuthClient] Skipping unauthenticated POST to ${url.path}: No signed-in Firebase user.');
+      return http.Response('{"detail": "Authentication token missing or invalid"}', 401);
+    }
     final reqHeaders = await _buildHeaders(headers);
     final ownClient = client == null && httpClientOverride == null;
     final c = httpClientOverride ?? client ?? http.Client();
@@ -94,6 +113,10 @@ class HttpAuthClient {
     Object? body,
     Duration timeout = const Duration(seconds: 30),
   }) async {
+    if (!_canMakeRequest(url)) {
+      debugPrint('[HttpAuthClient] Skipping unauthenticated PUT to ${url.path}: No signed-in Firebase user.');
+      return http.Response('{"detail": "Authentication token missing or invalid"}', 401);
+    }
     final reqHeaders = await _buildHeaders(headers);
     final ownClient = client == null && httpClientOverride == null;
     final c = httpClientOverride ?? client ?? http.Client();
@@ -112,6 +135,10 @@ class HttpAuthClient {
     Object? body,
     Duration timeout = const Duration(seconds: 30),
   }) async {
+    if (!_canMakeRequest(url)) {
+      debugPrint('[HttpAuthClient] Skipping unauthenticated DELETE to ${url.path}: No signed-in Firebase user.');
+      return http.Response('{"detail": "Authentication token missing or invalid"}', 401);
+    }
     final reqHeaders = await _buildHeaders(headers);
     final ownClient = client == null && httpClientOverride == null;
     final c = httpClientOverride ?? client ?? http.Client();
@@ -130,6 +157,10 @@ class HttpAuthClient {
     Object? body,
     Duration timeout = const Duration(seconds: 30),
   }) async {
+    if (!_canMakeRequest(url)) {
+      debugPrint('[HttpAuthClient] Skipping unauthenticated PATCH to ${url.path}: No signed-in Firebase user.');
+      return http.Response('{"detail": "Authentication token missing or invalid"}', 401);
+    }
     final reqHeaders = await _buildHeaders(headers);
     final ownClient = client == null && httpClientOverride == null;
     final c = httpClientOverride ?? client ?? http.Client();
@@ -149,6 +180,13 @@ class HttpAuthClient {
     Map<String, String>? headers,
     Duration timeout = const Duration(seconds: 60),
   }) async {
+    if (!_canMakeRequest(url)) {
+      debugPrint('[HttpAuthClient] Skipping unauthenticated multipartPost to ${url.path}: No signed-in user.');
+      return http.StreamedResponse(
+        Stream.value(const <int>[]),
+        401,
+      );
+    }
     final token = await getIdToken();
     final request = http.MultipartRequest('POST', url);
     if (token != null && token.isNotEmpty) {

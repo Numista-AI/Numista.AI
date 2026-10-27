@@ -376,6 +376,101 @@ class SlotResolver {
     return '';
   }
 
+  static bool _matches2026CurrencySlot(
+      Map<String, dynamic> item, CoinProgram program, ProgramCoin coinSlot) {
+    final denom      = (item['Denomination']?.toString() ?? item['denomination']?.toString() ?? '').toLowerCase();
+    final progSeries = (item['Program/Series']?.toString() ?? item['program_series']?.toString() ?? '').trim();
+    final themeSub   = (item['Theme/Subject']?.toString() ?? item['theme_subject']?.toString() ?? '').trim().toLowerCase();
+    final title      = (item['Title']?.toString() ?? item['name']?.toString() ?? item['official_title']?.toString() ?? '').trim().toLowerCase();
+    final cNameLower = coinSlot.name.toLowerCase().trim();
+
+    final ts = themeSub;
+    final sl = cNameLower;
+    final d = denom;
+    final ttl = title;
+    final ps = progSeries.toLowerCase();
+
+    final isCentDenom = d.contains('penny') || RegExp(r'(^|\D)1c($|\D)').hasMatch(d) ||
+        (d.contains('cent') && !d.contains('5 cent') && !d.contains('10 cent') && !d.contains('25 cent') && !d.contains('50 cent'));
+    final isNickelDenom = d.contains('nickel') || d.contains('five cent') || d.contains('5 cent') || RegExp(r'(^|\D)5c($|\D)').hasMatch(d);
+    final isDimeDenom = d.contains('dime') || d.contains('ten cent') || d.contains('10 cent') || RegExp(r'(^|\D)10c($|\D)').hasMatch(d);
+    final isQuarterDenom = d.contains('quarter') || d.contains('twenty-five cent') || d.contains('25 cent') || RegExp(r'(^|\D)25c($|\D)').hasMatch(d);
+    final isHalfDenom = d.contains('half') || d.contains('fifty cent') || d.contains('50 cent') || RegExp(r'(^|\D)50c($|\D)').hasMatch(d);
+    final isDollarDenom = (d.contains('dollar') || d.contains(r'$1') || RegExp(r'(^|\D)1 dollar($|\D)').hasMatch(d)) && !d.contains('half');
+
+    // Cent slot
+    if (sl.contains('cent') && !sl.contains('half') && !sl.contains('quarter')) {
+      if (d.isNotEmpty && (isNickelDenom || isDimeDenom || isQuarterDenom || isHalfDenom || isDollarDenom || !isCentDenom)) {
+        return false;
+      }
+      return isCentDenom || ts.contains('lincoln') || ts.contains('cent') ||
+             ps.contains('cent') || ps.contains('penny') || ttl.contains('cent') || ttl.contains('lincoln');
+    }
+
+    // Nickel slot
+    if (sl.contains('nickel')) {
+      if (d.isNotEmpty && (isCentDenom || isDimeDenom || isQuarterDenom || isHalfDenom || isDollarDenom || !isNickelDenom)) {
+        return false;
+      }
+      return isNickelDenom || ts.contains('nickel') || ts.contains('jefferson') ||
+             ps.contains('nickel') || ttl.contains('nickel') || ttl.contains('jefferson');
+    }
+
+    // Dime slot
+    if (sl.contains('dime')) {
+      if (d.isNotEmpty && (isCentDenom || isNickelDenom || isQuarterDenom || isHalfDenom || isDollarDenom || !isDimeDenom)) {
+        return false;
+      }
+      return isDimeDenom || ts.contains('dime') || ts.contains('roosevelt') || ts.contains('emerging') ||
+             ps.contains('dime') || ttl.contains('dime') || ttl.contains('roosevelt') || ttl.contains('emerging');
+    }
+
+    // Half Dollar slot
+    if (sl.contains('half')) {
+      if (d.isNotEmpty && (isCentDenom || isNickelDenom || isDimeDenom || isQuarterDenom || isDollarDenom || !isHalfDenom)) {
+        return false;
+      }
+      return isHalfDenom || ts.contains('half') || ts.contains('enduring') ||
+             ps.contains('half') || ttl.contains('half') || ttl.contains('enduring');
+    }
+
+    // Dollar slot
+    if (sl.contains('dollar') || sl.contains('native american')) {
+      if (d.isNotEmpty && (isCentDenom || isNickelDenom || isDimeDenom || isQuarterDenom || isHalfDenom || !isDollarDenom)) {
+        return false;
+      }
+      return isDollarDenom || ts.contains('polly') || ts.contains('oneida') || ts.contains('native american') ||
+             ts.contains('sacagawea') || ps.contains('native american') || ps.contains('sacagawea') ||
+             ttl.contains('polly') || ttl.contains('oneida') || ttl.contains('native american');
+    }
+
+    // Quarter slots
+    if (sl.contains('quarter')) {
+      if (d.isNotEmpty && (isCentDenom || isNickelDenom || isDimeDenom || isHalfDenom || isDollarDenom || !isQuarterDenom)) {
+        return false;
+      }
+
+      if (sl.contains('mayflower') && (ts.contains('mayflower') || ttl.contains('mayflower'))) {
+        return true;
+      }
+      if (sl.contains('revolutionary') && (ts.contains('revolutionary') || ts.contains('valley forge') ||
+          ttl.contains('revolutionary') || ttl.contains('valley forge'))) {
+        return true;
+      }
+      if (sl.contains('declaration') && (ts.contains('declaration') || ttl.contains('declaration'))) {
+        return true;
+      }
+      if (sl.contains('constitution') && (ts.contains('constitution') || ttl.contains('constitution'))) {
+        return true;
+      }
+      if (sl.contains('gettysburg') && (ts.contains('gettysburg') || ttl.contains('gettysburg'))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /// Evaluates an item from Firestore against a program coin slot.
 
   static bool isMatch(Map<String, dynamic> item, CoinProgram program, ProgramCoin coinSlot) {
@@ -410,6 +505,9 @@ class SlotResolver {
       // Bicentennial…), a year match alone is insufficient — one coin would
       // match every slot in the program.
       // Single-design programs (Kennedy, Morgan, Roosevelt…) are exempt.
+      if (program.id == '2026_semiquincentennial_currency') {
+        return _matches2026CurrencySlot(item, program, coinSlot);
+      }
       if (_isProgramMultiDesign(program)) {
         return _fastPathSubjectMatchesSlot(item, program, coinSlot);
       }
@@ -550,6 +648,10 @@ class SlotResolver {
     // Coins reaching this point: no program_id (import path), passed §2 denom,
     // §3 series, §4 year guards.
     // Subject decision: exact Theme / longest-phrase Title — same contract as fast path.
+    if (program.id == '2026_semiquincentennial_currency') {
+      return _matches2026CurrencySlot(item, program, coinSlot);
+    }
+
     if (_isProgramMultiDesign(program)) {
       return _fastPathSubjectMatchesSlot(item, program, coinSlot);
     }
@@ -565,57 +667,6 @@ class SlotResolver {
         if (themeSub.isNotEmpty && (themeSub.contains(cleanSlotName) || cleanSlotName.contains(themeSub))) return true;
         if (title.isNotEmpty && (title.contains(cleanSlotName) || cleanSlotName.contains(title))) return true;
       }
-    }
-
-    // 5b. 2026 Circulating Currency: require design-level match — no year+series wildcard.
-    // Without this, one Semiquincentennial coin (year=2026, seriesMatched=true) paints all 9 slots.
-    if (program.id == '2026_semiquincentennial_currency') {
-      final ts = themeSub; // already lowercased
-      final sl = cNameLower;
-      // Cent slot
-      if (sl.contains('cent') &&
-          (ts.contains('cent') || ts.contains('lincoln') || ts.contains('1776') ||
-           progSeries.toLowerCase().contains('cent'))) {
-        return true;
-      }
-      // Nickel slot
-      if (sl.contains('nickel') &&
-          (ts.contains('nickel') || ts.contains('jefferson') || ts.contains('1776') ||
-           progSeries.toLowerCase().contains('nickel'))) {
-        return true;
-      }
-      // Dime slot
-      if (sl.contains('dime') &&
-          (ts.contains('dime') || ts.contains('roosevelt') || ts.contains('emerging') ||
-           progSeries.toLowerCase().contains('dime'))) {
-        return true;
-      }
-      // Half Dollar slot: enduring liberty stored as Semiquincentennial + '250th anniversary'
-      if (sl.contains('half') &&
-          (ts.contains('half') || ts.contains('enduring') || ts.contains('250th') ||
-           ts.contains('independence') || progSeries.toLowerCase().contains('half'))) {
-        return true;
-      }
-      // Dollar slot: Native American $1 Coin — Polly Cooper (Oneida Allies at Valley Forge)
-      // Firestore Program/Series: 'Sacagawea & Native American Dollars'
-      // Theme/Subject includes 'oneida', 'polly cooper', 'valley forge', 'sacagawea'
-      if (sl.contains('dollar') || sl.contains('native american')) {
-        if (ts.contains('polly') || ts.contains('oneida') || ts.contains('native american') ||
-            ts.contains('valley forge') || ts.contains('sacagawea') ||
-            progSeries.toLowerCase().contains('native american') ||
-            progSeries.toLowerCase().contains('sacagawea')) {
-          return true;
-        }
-      }
-      // Quarter slots: design keyword must be in BOTH slot name AND theme
-      if (sl.contains('quarter')) {
-        if (sl.contains('mayflower')     && ts.contains('mayflower'))     { return true; }
-        if (sl.contains('revolutionary') && ts.contains('revolutionary')) { return true; }
-        if (sl.contains('declaration')   && ts.contains('declaration'))   { return true; }
-        if (sl.contains('constitution')  && ts.contains('constitution'))  { return true; }
-        if (sl.contains('gettysburg')    && ts.contains('gettysburg'))    { return true; }
-      }
-      return false; // No design match → reject
     }
 
     // Single design series where year + series match is sufficient

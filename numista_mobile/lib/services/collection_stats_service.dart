@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
+import 'guest_seed_service.dart';
 import 'set_expansion_helper.dart';
 
 class CollectionStatsService {
@@ -31,8 +33,10 @@ class CollectionStatsService {
   /// Uses expansion-aware counting via set_expansion_helper.
   /// Writes exclusively to canonical 4-segment path: users/{uid}/metadata/collection_stats.
   static Future<Map<String, dynamic>> rebuildAndUpsertStats() async {
-    if (AuthService.coinsPath.contains('unknown')) {
-      throw StateError('Cannot rebuild collection_stats for unauthenticated user path.');
+    final user = FirebaseAuth.instance.currentUser;
+    final isRealUser = user != null && !user.isAnonymous;
+    if (!isRealUser || GuestSeedService.isBrowseDemoMode || AuthService.coinsPath.contains('unknown')) {
+      return {'coin_count': 0, 'supply_count': 0, 'est_value': 0.0};
     }
 
     final db = FirebaseFirestore.instance;
@@ -48,7 +52,6 @@ class CollectionStatsService {
     double faceValue = 0.0;
     double meltValue = 0.0;
     double acquisitionCost = 0.0;
-    double bidTotal = 0.0;
     double cpgTotal = 0.0;
 
     // Iterate original docs for value aggregation (lot_value per lot)
@@ -76,15 +79,10 @@ class CollectionStatsService {
       acquisitionCost += _parseNumber(d['Cost'] ?? d['purchase_price']);
 
       final cpg = _parseNumber(d['cpgRetail']);
-      final bid = _parseNumber(d['greysheetBid']);
       final aiVal = _parseAiValue((d['AI Estimated Value'] ?? d['ai_value'] ?? '').toString());
-      final baseVal = cpg > 0 ? cpg : (bid > 0 ? bid : aiVal);
+      final baseVal = cpg > 0 ? cpg : aiVal;
 
-      final finalCpg = cpg > 0 ? cpg : baseVal;
-      final finalBid = bid > 0 ? bid : (baseVal * 0.80);
-
-      cpgTotal += finalCpg;
-      bidTotal += finalBid;
+      cpgTotal += baseVal;
     }
 
     final stats = {
@@ -96,9 +94,8 @@ class CollectionStatsService {
       'face_value': double.parse(faceValue.toStringAsFixed(2)),
       'melt_value': double.parse(meltValue.toStringAsFixed(2)),
       'acquisition_cost': double.parse(acquisitionCost.toStringAsFixed(2)),
-      'bid_total': double.parse(bidTotal.toStringAsFixed(2)),
       'cpg_total': double.parse(cpgTotal.toStringAsFixed(2)),
-      'est_value': double.parse(bidTotal.toStringAsFixed(2)), // Estate mode is canonical default
+      'est_value': double.parse(cpgTotal.toStringAsFixed(2)),
       'last_updated': DateTime.now().toUtc().toIso8601String(),
     };
 

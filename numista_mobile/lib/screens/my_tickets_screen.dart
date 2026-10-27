@@ -4,6 +4,7 @@
 // Desktop Web only. All security decisions are made server-side.
 
 import 'package:flutter/material.dart';
+import '../utils/numista_error_helper.dart';
 import '../services/ticket_service.dart';
 import '../models/ticket_model.dart';
 
@@ -43,7 +44,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = e.toString();
+          _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load tickets. Please try again.');
         });
       }
     }
@@ -81,7 +82,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to revoke: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not revoke access. Please try again.')), backgroundColor: Colors.red),
         );
       }
     }
@@ -121,7 +122,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create grant: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not create support access. Please try again.')), backgroundColor: Colors.red),
         );
       }
     }

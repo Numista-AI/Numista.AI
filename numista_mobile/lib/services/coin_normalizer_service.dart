@@ -17,6 +17,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'auth_service.dart';
+import 'guest_seed_service.dart';
 
 class CoinNormalizerService {
   static const int _batchSize = 8;
@@ -28,6 +29,7 @@ class CoinNormalizerService {
   /// Call this once per login session (non-blocking).
   /// Runs fully in background — caller does not need to await.
   static void runForUser() {
+    if (GuestSeedService.isBrowseDemoMode || !AuthService.isSignedIn) return;
     if (_sessionRan) return;
     _sessionRan = true;
     _run().catchError((e) {
@@ -38,6 +40,7 @@ class CoinNormalizerService {
   }
 
   static Future<void> _run() async {
+    if (GuestSeedService.isBrowseDemoMode || !AuthService.isSignedIn) return;
     final col = FirebaseFirestore.instance.collection(AuthService.coinsPath);
 
     // ── Phase 1: Fix combined Year+Mint on ALL coins (no AI, idempotent) ──────

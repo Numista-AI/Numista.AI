@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/numista_error_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
@@ -17,6 +18,7 @@ import '../services/epn_service.dart';
 import '../services/theme_provider.dart';
 import '../services/backup_export_service.dart';
 import '../services/collector_profile_service.dart';
+import '../services/hardware_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -47,6 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _inspectorMode = false;
   bool _advancedValuationMode = false;
   bool _desktopHotkeysEnabled = true;
+  bool _microscopeEnabled = false;
   String _defaultCollectionView = 'All';
 
   @override
@@ -58,8 +61,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadValuationModePref();
     _loadDefaultCollectionView();
     _loadDesktopHotkeysPref();
+    _loadMicroscopePref();
     // Pre-fetch the coin count for the Danger Zone card.
     _fetchCoinCount(AuthService.userEmail);
+  }
+
+  void _loadMicroscopePref() async {
+    final enabled = await HardwareService.isMicroscopeConfigured();
+    if (mounted) {
+      setState(() {
+        _microscopeEnabled = enabled;
+      });
+    }
   }
 
   void _loadDesktopHotkeysPref() async {
@@ -183,8 +196,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Divider(color: borderColor),
           const SizedBox(height: 24),
 
-          // ── Desktop Hotkeys Configuration ─────────────────────────────
           _buildDesktopHotkeysCard(context),
+          const SizedBox(height: 24),
+          Divider(color: borderColor),
+          const SizedBox(height: 24),
+
+          // ── USB Microscope Scanner Configuration ──────────────────────
+          _buildMicroscopeCard(context),
           const SizedBox(height: 24),
           Divider(color: borderColor),
           const SizedBox(height: 24),
@@ -224,7 +242,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Export failed: ${e.toString().split('\n').first}'),
+                        content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Export failed. Please try again.')),
                         backgroundColor: Colors.red.shade700,
                       ),
                     );
@@ -536,6 +554,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildMicroscopeCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    return Container(
+      padding: const EdgeInsets.all(20.0),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.biotech_outlined, color: Color(0xFF2DD4BF), size: 28),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enable USB Microscope Scanner (Local Agent)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Connect a USB microscope to identify coins up close.',
+                  style: TextStyle(fontSize: 16, color: descColor),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _microscopeEnabled,
+            activeThumbColor: const Color(0xFF2DD4BF),
+            onChanged: (val) async {
+              setState(() => _microscopeEnabled = val);
+              await HardwareService.setMicroscopeConfigured(val);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(val
+                        ? 'USB Microscope enabled — agent can connect.'
+                        : 'USB Microscope disabled — localhost polling stopped.'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _clearCollection() async {
     if (mounted) setState(() => _clearRunning = true);
     try {
@@ -563,7 +641,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('❌ Clear failed: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Clear failed. Please try again.')),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 8),
         ));
@@ -1448,7 +1526,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Shows CPG Retail, Greysheet Bid, and Ask values simultaneously. If disabled, simplifies dashboard and division totals to Estate/Liquidation View (Greysheet Bid).',
+                        'Shows CPG Retail, Wholesale, and Ask values simultaneously. If disabled, simplifies dashboard and division totals to Estate / Liquidation View.',
                         style: TextStyle(fontSize: 12, color: descColor),
                       ),
                     ],
@@ -1468,7 +1546,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         SnackBar(
                           content: Text(val
                               ? 'Advanced Numismatist View enabled! Showing Bid, Ask, and CPG.'
-                              : 'Estate/Liquidation View active (Greysheet Bid default).'),
+                              : 'Estate / Liquidation View active.'),
                           duration: const Duration(seconds: 2),
                         ),
                       );
@@ -1671,7 +1749,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Sweep failed: $e'),
+            SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Sweep failed. Please try again.')),
                 backgroundColor: Colors.red));
       }
     } finally {
@@ -1946,7 +2024,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'MS-60', 'MS-61', 'MS-62', 'MS-63', 'MS-64', 'MS-65', 'MS-66', 'MS-67', 'MS-68', 'MS-69', 'MS-70',
       'PR-65', 'PR-67', 'PR-70'
     ];
-    final allServices = ['PCGS', 'NGC', 'ANACS', 'CAC', 'ICG'];
+    final allServices = ['PCGS', 'NGC', 'CACG', 'CAC', 'ANACS', 'ICG'];
     final goalOptions = [
       {'value': 'numismatic_study', 'label': 'Numismatic Study'},
       {'value': 'estate_planning', 'label': 'Estate Planning'},
@@ -2616,7 +2694,7 @@ class _DedupDialogState extends State<_DedupDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Auto-clean failed: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Auto-clean failed. Please try again.')),
           backgroundColor: Colors.red,
         ));
       }

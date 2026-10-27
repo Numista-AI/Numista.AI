@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../constants.dart';
 import 'http_auth_client.dart';
+import '../utils/numista_error_helper.dart';
 
 /// Result returned from the Cloud Run scan_service endpoint.
 class ScanResult {
@@ -133,7 +134,7 @@ class ChecklistScanService {
     } on SocketException {
       return ScanResult.error('No internet connection. Please check your network.');
     } catch (e) {
-      return ScanResult.error('Scan failed: ${e.toString()}');
+      return ScanResult.error(NumistaErrorHelper.toUserFriendly(e));
     }
   }
 

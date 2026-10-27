@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'beta_checklist_widget.dart';
+import '../services/beta_checklist_service.dart';
 
 class BetaWelcomeDialog extends StatelessWidget {
   const BetaWelcomeDialog({super.key});
@@ -135,7 +136,7 @@ class BetaWelcomeDialog extends StatelessWidget {
               _bulletPoint(context, 'Fun & Utility — Is managing your portfolio engaging and useful for your collection?'),
               const SizedBox(height: 24),
 
-              // 18-Step Track Callout
+              // Data-driven checklist callout
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -154,12 +155,12 @@ class BetaWelcomeDialog extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '18-Step Beta Testing Track',
+                            '${BetaChecklistService.allTasks.length}-Step Beta Testing Track',
                             style: TextStyle(color: text, fontSize: 15, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'We created a guided 18-task checklist to walk you through every major feature.',
+                            'We created a guided ${BetaChecklistService.allTasks.length}-task checklist to walk you through every major feature.',
                             style: TextStyle(color: sub, fontSize: 12),
                           ),
                         ],
@@ -180,7 +181,7 @@ class BetaWelcomeDialog extends StatelessWidget {
                       BetaChecklistWidget.showChecklistModal(context);
                     },
                     icon: const Icon(Icons.playlist_add_check, size: 20),
-                    label: const Text('📋 Open 18-Step Beta Checklist'),
+                    label: Text('📋 Open ${BetaChecklistService.allTasks.length}-Step Beta Checklist'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2563EB),
                       foregroundColor: Colors.white,

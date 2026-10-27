@@ -128,10 +128,19 @@ async def api_stripe_customer_portal(
         raise HTTPException(status_code=502, detail="Unable to create Stripe customer portal session")
 
 @router.get("/subscription-status")
-async def api_subscription_status(uid: str):
+async def api_subscription_status(
+    uid: str,
+    _user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Queries current subscription tier, coin usage, daily AI tokens, and grace period status.
     """
+    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    caller_email = (_user.get("email") or "").strip().lower()
+    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
+    if not _user.get("admin") and not is_dev_guest:
+        if uid.strip() != caller_uid and uid.strip().lower() != caller_email:
+            raise HTTPException(status_code=403, detail="Forbidden")
     try:
         profile = get_user_profile(uid)
         tier = get_user_tier(profile)

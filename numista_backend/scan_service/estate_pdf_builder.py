@@ -101,6 +101,20 @@ IRS_THRESHOLD = 3_000.0
 THUMB_W = 0.55 * inch
 THUMB_H = 0.55 * inch
 
+def fix_mojibake(text: Any) -> str:
+    """Sanitize mojibake strings and decode double-encoded UTF-8 sequences (e.g. pound signs)."""
+    if text is None:
+        return ""
+    s = str(text)
+    s = s.replace("Ã‚Â£", "£").replace("Â£", "£").replace("Ã‚", "")
+    try:
+        if "Ã" in s:
+            s = s.encode("latin1").decode("utf-8")
+    except Exception:
+        pass
+    return s
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # STYLE HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -688,7 +702,7 @@ def _executive_summary(ctx: dict, st: dict) -> list:
     for denom, info in summary['fmv_by_denomination'].items():
         pct = (info['total_fmv'] / fmv_total * 100) if fmv_total > 0 else 0
         denom_data.append([
-            denom,
+            fix_mojibake(denom),
             f'{info["count"]:,}',
             f'${info["total_fmv"]:,.0f}',
             f'{pct:.1f}%',
@@ -988,7 +1002,8 @@ def _build_coin_rows(coins: list, st: dict, fetch_photos: bool) -> list:
                         photo_cell = ''
 
         def _v(key1, key2='', fallback=''):
-            return str(coin.get(key1, coin.get(key2, fallback)) or fallback)
+            val = coin.get(key1, coin.get(key2, fallback)) or fallback
+            return fix_mojibake(val)
 
         row = [
             str(idx),
@@ -1007,8 +1022,8 @@ def _build_coin_rows(coins: list, st: dict, fetch_photos: bool) -> list:
             f'${fmv:,.0f}' if fmv is not None else '—',
             f'${melt:,.2f}' if melt is not None else '',
             _v('Storage Location', 'storage_location'),
-            coin.get('_beneficiary', '') or '',
-            coin.get('_estate_notes', '') or '',
+            fix_mojibake(coin.get('_beneficiary', '') or ''),
+            fix_mojibake(coin.get('_estate_notes', '') or ''),
             appr,
         ]
 
@@ -1075,14 +1090,14 @@ def _coin_table_condensed(coins: list, st: dict) -> list:
             str(idx),
             str(coin.get('Year', coin.get('year', '')) or ''),
             str(coin.get('Mint Mark', coin.get('mint_mark', '')) or ''),
-            str(coin.get('Denomination', coin.get('denomination', '')) or ''),
-            str(coin.get('Series', coin.get('series', '')) or ''),
+            fix_mojibake(coin.get('Denomination', coin.get('denomination', '')) or ''),
+            fix_mojibake(coin.get('Series', coin.get('series', '')) or ''),
             str(coin.get('Grade', coin.get('grade', '')) or ''),
             str(coin.get('Cert Number', coin.get('cert_number', '')) or ''),
             f'${cost:,.0f}' if cost is not None else '',
             f'${fmv:,.0f}' if fmv is not None else '—',
             f'${melt:,.2f}' if melt is not None else '',
-            str(coin.get('_beneficiary', '') or ''),
+            fix_mojibake(coin.get('_beneficiary', '') or ''),
             'Y' if coin.get('_needs_appraisal') else '',
         ])
 
@@ -1121,7 +1136,7 @@ def _coin_table_grouped(coins: list, st: dict) -> list:
         groups.setdefault(denom, []).append(coin)
 
     for denom, group_coins in sorted(groups.items()):
-        story.append(Paragraph(denom, st['H3']))
+        story.append(Paragraph(fix_mojibake(denom), st['H3']))
         count = len(group_coins)
         total_fmv = sum((c.get('_fmv') or 0.0) for c in group_coins)
         total_cost = sum((c.get('_cost') or 0.0) for c in group_coins)

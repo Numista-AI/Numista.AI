@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../utils/numista_error_helper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/guest_seed_service.dart';
 import '../services/http_auth_client.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants.dart';
@@ -191,6 +194,11 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
   }
 
   Future<void> _fetchDetails() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || GuestSeedService.isBrowseDemoMode) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     try {
       final code = Uri.encodeComponent(widget.gradeCode);
       final response = await HttpAuthClient.get(Uri.parse('$kApiBaseUrl/api/reference/grade/$code'));
@@ -212,7 +220,7 @@ class _GradeDetailsSheetState extends State<_GradeDetailsSheet> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Failed to connect to server: $e';
+          _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load grade badge. Please try again.');
           _loading = false;
         });
       }

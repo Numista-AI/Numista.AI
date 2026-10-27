@@ -11,6 +11,7 @@ import '../services/reference_library_service.dart';
 import '../services/camera_capture_service.dart';
 import 'desktop_agent_download_screen.dart';
 import '../widgets/morgan_guide_flow.dart';
+import '../utils/platform_gate.dart';
 
 
 // ─── Design Tokens (matches inventory_gallery.dart) ───────────────────────────
@@ -54,6 +55,8 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   int _activeCameraIdx = -1;
   bool _loadingCameras = false;
 
+  bool _microscopeConfigured = false;
+
   @override
   void initState() {
     super.initState();
@@ -74,6 +77,13 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
 
   // ─── Server Ping ────────────────────────────────────────────────────────────
   Future<void> _checkServer() async {
+    final configured = await HardwareService.isMicroscopeConfigured();
+    if (!mounted) return;
+    setState(() => _microscopeConfigured = configured);
+    if (!configured) {
+      setState(() => _serverOnline = false);
+      return;
+    }
     final online = await _hw.isServerRunning();
     if (mounted) {
       setState(() => _serverOnline = online);
@@ -214,7 +224,12 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.fromLTRB(
+        isNativePhone ? 16 : 32,
+        isNativePhone ? 16 : 32,
+        isNativePhone ? 16 : 32,
+        isNativePhone ? 88 : 32,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -282,6 +297,12 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
 
   // ─── Server Status Banner ────────────────────────────────────────────────────
   Widget _buildServerStatus() {
+    if (isNativePhone) {
+      return const SizedBox.shrink();
+    }
+    if (!_microscopeConfigured) {
+      return const SizedBox.shrink();
+    }
     if (_serverOnline) {
       // ── Online state: compact green pill ────────────────────────────────────
       return Container(
@@ -295,15 +316,18 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
           children: [
             const Icon(Icons.circle, size: 12, color: _successGreen),
             const SizedBox(width: 10),
-            const Text(
-              'Hardware Server Online  •  localhost:5000',
-              style: TextStyle(
-                color: _successGreen,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
+            const Flexible(
+              child: Text(
+                'Hardware Server Online  •  localhost:5000',
+                style: TextStyle(
+                  color: _successGreen,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Spacer(),
+            const SizedBox(width: 8),
             TextButton.icon(
               onPressed: _checkServer,
               icon: const Icon(Icons.refresh, size: 16),
@@ -331,15 +355,18 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
             children: [
               const Icon(Icons.circle_outlined, size: 12, color: _errorRed),
               const SizedBox(width: 10),
-              const Text(
-                'Hardware Server Offline',
-                style: TextStyle(
-                  color: _errorRed,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
+              const Flexible(
+                child: Text(
+                  'Hardware Server Offline',
+                  style: TextStyle(
+                    color: _errorRed,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               TextButton.icon(
                 onPressed: _checkServer,
                 icon: const Icon(Icons.refresh, size: 16),

@@ -1,0 +1,51 @@
+steps:
+# Build the backend container image for numista-qc
+- name: 'gcr.io/cloud-builders/docker'
+  id: 'build-qc'
+  args:
+    - 'build'
+    - '-t'
+    - 'us-central1-docker.pkg.dev/numista-qc/numista-qc-docker/numista-backend:$SHORT_SHA'
+    - '-f'
+    - 'Dockerfile'
+    - '.'
+
+# Push to Artifact Registry
+- name: 'gcr.io/cloud-builders/docker'
+  id: 'push-qc'
+  args:
+    - 'push'
+    - 'us-central1-docker.pkg.dev/numista-qc/numista-qc-docker/numista-backend:$SHORT_SHA'
+
+# Deploy to Cloud Run (numista-qc project, My Billing Account / CREDIT500)
+# FIREBASE_PROJECT_ID=numista-qc ensures the service reads/writes ONLY numista-qc Firestore,
+# never the prod project studio-9101802118-8c9a8.
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  id: 'deploy-qc'
+  entrypoint: gcloud
+  args:
+    - 'run'
+    - 'deploy'
+    - 'numista-backend-qc'
+    - '--image'
+    - 'us-central1-docker.pkg.dev/numista-qc/numista-qc-docker/numista-backend:$SHORT_SHA'
+    - '--region'
+    - 'us-central1'
+    - '--project'
+    - 'numista-qc'
+    - '--no-allow-unauthenticated'
+    - '--service-account'
+    - 'qc-runner@numista-qc.iam.gserviceaccount.com'
+    - '--memory'
+    - '1Gi'
+    - '--cpu'
+    - '1'
+    - '--min-instances'
+    - '0'
+    - '--max-instances'
+    - '3'
+    - '--set-env-vars'
+    - 'FIREBASE_PROJECT_ID=numista-qc,ENVIRONMENT=qc'
+
+images:
+  - 'us-central1-docker.pkg.dev/numista-qc/numista-qc-docker/numista-backend:$SHORT_SHA'

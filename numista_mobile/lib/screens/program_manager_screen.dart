@@ -17,11 +17,18 @@ import '../services/guest_seed_service.dart';
 import '../widgets/morgan_guide_flow.dart';
 import '../utils/slot_resolver.dart';
 import '../services/set_expansion_helper.dart';
+import 'add_coins_hub.dart';
+import '../utils/numista_error_helper.dart';
+import '../constants.dart';
+
 
 
 class ProgramManagerScreen extends StatefulWidget {
   final String? initialProgramId;
   const ProgramManagerScreen({super.key, this.initialProgramId});
+
+  @visibleForTesting
+  static EdgeInsets floatingSnackBarMargin(BuildContext context) => _ProgramManagerScreenState._floatingSnackBarMargin(context);
 
   @override
   State<ProgramManagerScreen> createState() => _ProgramManagerScreenState();
@@ -289,18 +296,26 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
   }
 
   Future<void> _loadTotalReferenceCount() async {
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+    if (!isRealUser || GuestSeedService.isBrowseDemoMode) {
+      if (mounted) setState(() => _totalReferenceCount = 2834);
+      return;
+    }
     try {
       final snap = await FirebaseFirestore.instance
           .collection('coins_reference')
           .count()
           .get();
-      if (mounted && snap.count != null) {
+      if (mounted) {
         setState(() {
-          _totalReferenceCount = snap.count!;
+          _totalReferenceCount = snap.count ?? 2834;
         });
       }
-    } catch (e) {
-      debugPrint('Error fetching total reference count: $e');
+    } catch (_) {
+      if (mounted) {
+        setState(() => _totalReferenceCount = 2834);
+      }
     }
   }
 
@@ -373,7 +388,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                     child: const Text('PROGRAM MANAGER', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                   ),
                   const SizedBox(height: 8),
-                  const Text('Track your progress on official US Mint series.', style: TextStyle(color: Color(0xFF64748B), fontSize: 14)),
+                  const Text('Track your progress on official US Mint series.', style: TextStyle(color: Color(0xFF64748B), fontSize: 18)),
                   const SizedBox(height: 24),
                   
                   // Sorting Dropdown
@@ -453,33 +468,54 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                       enrichedPrograms.sort((a, b) => _getStartYear((a['program'] as CoinProgram).years).compareTo(_getStartYear((b['program'] as CoinProgram).years)));
                     }
                     
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Divider(color: Color(0xFFE2E6E9)),
-                        const SizedBox(height: 16),
-                        Text(categoryName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF31333F))),
-                        const SizedBox(height: 16),
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 1.4, // Adjusted for typical desktop card proportions
-                          ),
-                          itemCount: enrichedPrograms.length,
-                          itemBuilder: (context, index) {
-                            final data = enrichedPrograms[index];
-                            final prog = data['program'] as CoinProgram;
-                            
-                            return _buildProgramCard(prog, data['collectedCount'] as int, data['totalCount'] as int, data['pct'] as double);
-                          },
-                        ),
-                        const SizedBox(height: 32),
-                      ],
-                    );
+                        final isNarrow = MediaQuery.of(context).size.width < 650;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Divider(color: Color(0xFFE2E6E9)),
+                            const SizedBox(height: 16),
+                            Text(categoryName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF31333F))),
+                            const SizedBox(height: 16),
+                            if (isNarrow)
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: enrichedPrograms.length,
+                                itemBuilder: (context, index) {
+                                  final data = enrichedPrograms[index];
+                                  final prog = data['program'] as CoinProgram;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: _buildProgramCard(prog, data['collectedCount'] as int, data['totalCount'] as int, data['pct'] as double),
+                                  );
+                                },
+                              )
+                            else
+                              // V8.7 FIX Item2: Wrap instead of GridView so cards size to
+                              // content — no fixed childAspectRatio that clips View Checklist
+                              // button or 'Advances overall record' caption.
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  const double spacing = 16;
+                                  const int crossCount = 3;
+                                  final cardWidth = (constraints.maxWidth - spacing * (crossCount - 1)) / crossCount;
+                                  return Wrap(
+                                    spacing: spacing,
+                                    runSpacing: spacing,
+                                    children: enrichedPrograms.map((data) {
+                                      final prog = data['program'] as CoinProgram;
+                                      return SizedBox(
+                                        width: cardWidth,
+                                        child: _buildProgramCard(prog, data['collectedCount'] as int, data['totalCount'] as int, data['pct'] as double),
+                                      );
+                                    }).toList(),
+                                  );
+                                },
+                              ),
+                            const SizedBox(height: 32),
+                          ],
+                        );
+
                   }),
                 ],
               ),
@@ -563,7 +599,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 Text(
                   'Loading collection data \u2014 first visit may take 3\u20135 seconds',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 18,
                     color: Color(0xFF64748B),
                   ),
                 ),
@@ -575,6 +611,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           // ── Skeleton category sections ──────────────────────────────────
           ...localMap.entries.map((entry) {
             final programs = entry.value;
+            final isNarrow = MediaQuery.of(context).size.width < 650;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -590,24 +627,42 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1.4,
+                if (isNarrow)
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: programs.length,
+                    itemBuilder: (context, index) {
+                      final prog = programs[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildSkeletonCard(prog.name, prog.years),
+                      );
+                    },
+                  )
+                else
+                  // V8.7 FIX Item2: Wrap skeleton to match real card grid
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      const double spacing = 16;
+                      const int crossCount = 3;
+                      final cardWidth = (constraints.maxWidth - spacing * (crossCount - 1)) / crossCount;
+                      return Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: programs.map((prog) {
+                          return SizedBox(
+                            width: cardWidth,
+                            child: _buildSkeletonCard(prog.name, prog.years),
+                          );
+                        }).toList(),
+                      );
+                    },
                   ),
-                  itemCount: programs.length,
-                  itemBuilder: (context, index) {
-                    final prog = programs[index];
-                    return _buildSkeletonCard(prog.name, prog.years);
-                  },
-                ),
                 const SizedBox(height: 32),
               ],
             );
+
           }),
         ],
       ),
@@ -642,8 +697,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               fontSize: 16,
               color: Color(0xFFCBD5E1), // ghost — same position, lighter colour
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            maxLines: 3,
+            overflow: TextOverflow.clip,
           ),
           const SizedBox(height: 4),
           // Ghosted year range
@@ -651,7 +706,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             years,
             style: const TextStyle(fontSize: 12, color: Color(0xFFE2E8F0)),
           ),
-          const Spacer(),
+          const SizedBox(height: 12),
           // Grey shimmer — progress text row
           Container(
             height: 12,
@@ -724,9 +779,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
               Expanded(
                 child: Text(
                   program.name,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF0F172A)),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Color(0xFF0F172A)),
+                  maxLines: 3,
+                  overflow: TextOverflow.clip,
                 ),
               ),
               const SizedBox(width: 8),
@@ -735,15 +790,21 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(program.years, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-          const Spacer(),
+          Text(program.years, style: const TextStyle(fontSize: 18, color: Color(0xFF64748B))),
+          const SizedBox(height: 12),
           
           // Progress text
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${pct.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
-              Text('$collected / $total Collected', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              Text('${pct.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+              Flexible(
+                child: Text(
+                  '$collected / $total Collected',
+                  style: const TextStyle(fontSize: 18, color: Color(0xFF64748B)),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -759,7 +820,10 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           const SizedBox(height: 6),
           Text(
             'Advances overall record by ${programOverallAdvancement.toStringAsFixed(2)}%',
-            style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 18, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            softWrap: true,
+            maxLines: 2,
+            overflow: TextOverflow.clip,
           ),
           const SizedBox(height: 10),
           
@@ -778,8 +842,9 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 foregroundColor: const Color(0xFF0F172A),
                 side: const BorderSide(color: Color(0xFFE2E8F0)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                minimumSize: const Size(double.infinity, 48),
               ),
-              child: const Text('View Checklist'),
+              child: const Text('View Checklist', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             ),
           )
         ],
@@ -825,72 +890,170 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     final pct = totalCount > 0 ? (collectedCount / totalCount) * 100 : 0.0;
     final programOverallAdvancement = _totalReferenceCount > 0 ? (collectedCount / _totalReferenceCount) * 100 : 0.0;
 
+    final isNarrow = MediaQuery.of(context).size.width < 650;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32.0),
+      padding: EdgeInsets.all(isNarrow ? 16.0 : 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Nav Row
-          Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => setState(() {
-                  _selectedProgram = null;
-                  _selectedToAdd.clear();
-                }),
-                icon: const Icon(Icons.arrow_back, size: 16),
-                label: const Text('Back'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF0F172A),
-                  side: const BorderSide(color: Color(0xFFCBD5E1)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          if (isNarrow)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() {
+                        _selectedProgram = null;
+                        _selectedToAdd.clear();
+                      }),
+                      icon: const Icon(Icons.arrow_back, size: 16),
+                      label: const Text('Back'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0F172A),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        minimumSize: const Size(0, 48),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        program.name,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        softWrap: true,
+                        overflow: TextOverflow.visible,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Text(
-                  program.name,
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                ),
-              ),
-              // ── Print Checklist Button ─────────────────────────────────
-              ElevatedButton.icon(
-                onPressed: _generatingProgramId == program.id
-                    ? null
-                    : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
-                icon: _generatingProgramId == program.id
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: _generatingProgramId == program.id
+                            ? null
+                            : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
+                        icon: _generatingProgramId == program.id
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.print, size: 16),
+                        label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF63366),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          minimumSize: const Size(0, 48),
                         ),
-                      )
-                    : const Icon(Icons.print, size: 16),
-                label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF63366),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
+                      ),
+                    ),
+                    SizedBox(
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: _generatingProgramId == program.id
+                            ? null
+                            : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
+                        icon: const Icon(Icons.download_rounded, size: 16),
+                        label: const Text('Download PDF'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF2563EB),
+                          side: const BorderSide(color: Color(0xFF2563EB)),
+                          elevation: 0,
+                          minimumSize: const Size(0, 48),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              // ── Download PDF Button ────────────────────────────────────
-              OutlinedButton.icon(
-                onPressed: _generatingProgramId == program.id
-                    ? null
-                    : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
-                icon: const Icon(Icons.download_rounded, size: 16),
-                label: const Text('Download PDF'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF2563EB),
-                  side: const BorderSide(color: Color(0xFF2563EB)),
-                  elevation: 0,
+              ],
+            )
+          else
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => setState(() {
+                    _selectedProgram = null;
+                    _selectedToAdd.clear();
+                  }),
+                  icon: const Icon(Icons.arrow_back, size: 16),
+                  label: const Text('Back'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F172A),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    minimumSize: const Size(0, 48),
+                  ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Text(
+                    program.name,
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: _generatingProgramId == program.id
+                            ? null
+                            : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: false),
+                        icon: _generatingProgramId == program.id
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.print, size: 16),
+                        label: Text(_generatingProgramId == program.id ? 'Generating…' : 'Print Checklist'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF63366),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          minimumSize: const Size(0, 48),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: _generatingProgramId == program.id
+                            ? null
+                            : () => _showPrintOptionsDialog(context, program, docs, downloadOnly: true),
+                        icon: const Icon(Icons.download_rounded, size: 16),
+                        label: const Text('Download PDF'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF2563EB),
+                          side: const BorderSide(color: Color(0xFF2563EB)),
+                          elevation: 0,
+                          minimumSize: const Size(0, 48),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           const SizedBox(height: 24),
           
           // Program History Card — Coin Reference Search
@@ -935,13 +1098,13 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         Text('AI Coin Reference Search',
                             style: TextStyle(
                                 color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                fontSize: 15,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold)),
                         const SizedBox(height: 3),
                         Text(
                           'Search 1,900+ coins from this program in the Vertex AI reference library',
                           style: TextStyle(
-                              color: isDark ? Colors.white.withAlpha(150) : const Color(0xFF64748B), fontSize: 12, height: 1.4),
+                              color: isDark ? Colors.white.withAlpha(150) : const Color(0xFF64748B), fontSize: 16, height: 1.4),
                         ),
                       ],
                     ),
@@ -956,100 +1119,135 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
           
           // Collection Goal Selector & Manual Complete Toggle Card
           const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(20),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFE2E6E9)),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(8),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.tune_rounded, color: Color(0xFF3B82F6), size: 24),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Set Collection Goal & Completion',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Choose what type of collection you are building to customize completion stats.',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Goal Dropdown
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    border: Border.all(color: const Color(0xFFCBD5E1)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _programGoals[program.id] ?? 'Full Master Set',
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Full Master Set',
-                          child: Text('Full Master Set (All Varieties)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Circulation Only',
-                          child: Text('Circulation / Business Strikes Only (P & D)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Standard Set',
-                          child: Text('Standard Set (P, D, S Clad Proofs)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          _saveProgramPreference(program.id, goal: val);
-                        }
-                      },
+          Builder(builder: (context) {
+            final isNarrow = MediaQuery.of(context).size.width < 700;
+            final dropdownWidget = Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: isNarrow,
+                  value: _programGoals[program.id] ?? 'Full Master Set',
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Full Master Set',
+                      child: Text('Full Master Set (All Varieties)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Manual Complete Switch
-                Row(
-                  children: [
-                    Switch(
-                      value: _programManualComplete[program.id] ?? false,
-                      activeThumbColor: const Color(0xFF10B981),
-                      onChanged: (val) {
-                        _saveProgramPreference(program.id, isManuallyCompleted: val);
-                      },
+                    DropdownMenuItem(
+                      value: 'Circulation Only',
+                      child: Text('Circulation / Business Strikes Only (P & D)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _programManualComplete[program.id] == true ? 'Goal Met ✓' : 'Mark Complete',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: _programManualComplete[program.id] == true ? const Color(0xFF10B981) : const Color(0xFF475569),
-                      ),
+                    DropdownMenuItem(
+                      value: 'Standard Set',
+                      child: Text('Standard Set (P, D, S Clad Proofs)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                     ),
                   ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      _saveProgramPreference(program.id, goal: val);
+                    }
+                  },
+                ),
+              ),
+            );
+
+            final switchWidget = Row(
+              mainAxisSize: isNarrow ? MainAxisSize.max : MainAxisSize.min,
+              children: [
+                Switch(
+                  value: _programManualComplete[program.id] ?? false,
+                  activeThumbColor: const Color(0xFF10B981),
+                  onChanged: (val) {
+                    _saveProgramPreference(program.id, isManuallyCompleted: val);
+                  },
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _programManualComplete[program.id] == true ? 'Goal Met ✓' : 'Mark Complete',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: _programManualComplete[program.id] == true ? const Color(0xFF10B981) : const Color(0xFF475569),
+                  ),
                 ),
               ],
-            ),
-          ),
+            );
+
+            return Container(
+              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: const Color(0xFFE2E6E9)),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(8),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: isNarrow
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.tune_rounded, color: Color(0xFF3B82F6), size: 24),
+                            const SizedBox(width: 14),
+                            const Expanded(
+                              child: Text(
+                                'Set Collection Goal & Completion',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Choose what type of collection you are building to customize completion stats.',
+                          style: TextStyle(fontSize: 18, color: Color(0xFF64748B)),
+                        ),
+                        const SizedBox(height: 14),
+                        dropdownWidget,
+                        const SizedBox(height: 12),
+                        switchWidget,
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        const Icon(Icons.tune_rounded, color: Color(0xFF3B82F6), size: 24),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Set Collection Goal & Completion',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Choose what type of collection you are building to customize completion stats.',
+                                style: TextStyle(fontSize: 18, color: Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        dropdownWidget,
+                        const SizedBox(width: 16),
+                        switchWidget,
+                      ],
+                    ),
+            );
+          }),
+
 
           // Program Progress Dashboard Banner
           const SizedBox(height: 24),
@@ -1104,7 +1302,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                       Text(
                         'Program Progress: $collectedCount of $totalCount Collected',
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0F172A),
                         ),
@@ -1114,7 +1312,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         'You have completed ${pct.toStringAsFixed(0)}% of ${program.name}, '
                         'advancing overall U.S. Currency System of Record completion by ${programOverallAdvancement.toStringAsFixed(2)}%.',
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 18,
                           color: Color(0xFF64748B),
                           height: 1.4,
                         ),
@@ -1138,7 +1336,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                     _selectedFinishFilter = 'ALL';
                   }),
                   icon: const Icon(Icons.clear_all, size: 16),
-                  label: const Text('Reset Filters', style: TextStyle(fontSize: 12)),
+                  label: const Text('Reset Filters', style: TextStyle(fontSize: 16)),
                 ),
             ],
           ),
@@ -1189,7 +1387,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                       Text(
                         'No coins found matching active filters\n(Mint: $_selectedMintFilter, Finish: $_selectedFinishFilter)',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.5),
+                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 18, height: 1.5),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton(
@@ -1204,8 +1402,22 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                 );
               }
 
-              return Container(
-                decoration: BoxDecoration(
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    program.name,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
                   color: Colors.white,
                   border: Border.all(color: const Color(0xFFE2E6E9)),
                   borderRadius: BorderRadius.circular(8),
@@ -1223,18 +1435,18 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         : [ChecklistVariety(id: '', label: coin.name)];
 
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           // Year label — fixed width so variety chips align across rows
                           SizedBox(
-                            width: 44,
+                            width: 52,
                             child: Text(
                               coin.year ?? '',
                               style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
                                 color: Color(0xFF0F172A),
                               ),
                             ),
@@ -1242,15 +1454,15 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                           const SizedBox(width: 8),
                           // Design / state name — shown when meaningful (non-empty and not just the year)
                           if (coin.name.isNotEmpty && coin.name != (coin.year ?? ''))
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 180),
+                            Flexible(
                               child: Text(
                                 coin.name,
-                                overflow: TextOverflow.ellipsis,
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
                                 style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF475569),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1E293B),
                                 ),
                               ),
                             ),
@@ -1259,8 +1471,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                           // Variety chips — wrap to next line if too many
                           Expanded(
                             child: Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
+                              spacing: 8,
+                              runSpacing: 6,
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: varieties.map((variety) {
                                 final coinName =
@@ -1278,8 +1490,6 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                 // Variety-level ownership check — uses coinPool
                                 // (expanded.allItems) so virtual set children
                                 // (e.g. 2002-S proof quarters) resolve correctly.
-                                // Loop A (banner) already uses coinPool; Loop B
-                                // must match the same source.
                                 bool isOwned = false;
                                 for (final data in coinPool) {
                                   if (SlotResolver.isMatch(data, program, coin) &&
@@ -1290,96 +1500,152 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                                 }
 
                                 if (isOwned) {
-                                  // ── Owned ──────────────────────────────
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 7, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFD1FAE5),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
+                                  // ── Owned + Add-Another (NET-087) ──────
+                                  return ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 380),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.check,
-                                            size: 11,
-                                            color: Color(0xFF10B981)),
-                                        const SizedBox(width: 3),
-                                        Text(chipLabel,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF065F46),
-                                              fontWeight: FontWeight.w500,
-                                            )),
+                                        Flexible(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFD1FAE5),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.check,
+                                                    size: 16,
+                                                    color: Color(0xFF10B981)),
+                                                const SizedBox(width: 4),
+                                                Flexible(
+                                                  child: Text(chipLabel,
+                                                      softWrap: true,
+                                                      overflow: TextOverflow.visible,
+                                                      style: const TextStyle(
+                                                        fontSize: 18,
+                                                        color: Color(0xFF065F46),
+                                                        fontWeight: FontWeight.w600,
+                                                      )),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        // NET-087 / P7-V6: 48px labeled add-another button navigating to plain confirm card
+                                        OutlinedButton(
+                                          onPressed: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => AddCoinsHub(
+                                                showAddAnotherConfirm: true,
+                                                initialCoinPreset: {
+                                                  'name': coinName.contains('||')
+                                                      ? coinName.split('||').where((s) => s.isNotEmpty).join(' ')
+                                                      : coinName,
+                                                  'year': coin.year ?? '',
+                                                  'mint': variety.id,
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            minimumSize: const Size(0, 48),
+                                            foregroundColor: const Color(0xFF065F46),
+                                            side: const BorderSide(color: Color(0xFF10B981)),
+                                            backgroundColor: const Color(0xFFD1FAE5),
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          ),
+                                          child: const Text('+ Add another copy',
+                                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                                        ),
                                       ],
                                     ),
                                   );
                                 } else if (isPending) {
                                   // ── Pending / Unreleased ───────────────
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 7, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFEF3C7),
-                                      borderRadius: BorderRadius.circular(4),
+                                  return ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 380),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF3C7),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(chipLabel,
+                                          softWrap: true,
+                                          overflow: TextOverflow.visible,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            color: Color(0xFFD97706),
+                                            fontStyle: FontStyle.italic,
+                                            fontWeight: FontWeight.w600,
+                                          )),
                                     ),
-                                    child: Text(chipLabel,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0xFFD97706),
-                                          fontStyle: FontStyle.italic,
-                                        )),
                                   );
                                 } else {
-                                  // ── Missing — selectable ───────────────
+                                  // ── Missing — selectable with 48px touch target ───────────────
                                   final isSelected =
                                       _selectedToAdd.contains(coinName);
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        if (isSelected) {
-                                          _selectedToAdd.remove(coinName);
-                                        } else {
-                                          _selectedToAdd.add(coinName);
-                                        }
-                                      });
-                                      _tryAdvanceMorganCoinsChecked();
-                                    },
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: Checkbox(
-                                            value: isSelected,
-                                            onChanged: (bool? value) {
-                                              setState(() {
-                                                if (value == true) {
-                                                  _selectedToAdd.add(coinName);
-                                                } else {
-                                                  _selectedToAdd
-                                                      .remove(coinName);
-                                                }
-                                              });
-                                              _tryAdvanceMorganCoinsChecked();
-                                            },
-                                            activeColor:
-                                                const Color(0xFF3B82F6),
-                                            materialTapTargetSize:
-                                                MaterialTapTargetSize
-                                                    .shrinkWrap,
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
+                                  return ConstrainedBox(
+                                    constraints: const BoxConstraints(minHeight: 48, minWidth: 48, maxWidth: 380),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(6),
+                                      onTap: () {
+                                        setState(() {
+                                          if (isSelected) {
+                                            _selectedToAdd.remove(coinName);
+                                          } else {
+                                            _selectedToAdd.add(coinName);
+                                          }
+                                        });
+                                        _tryAdvanceMorganCoinsChecked();
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SizedBox(
+                                              width: 48,
+                                              height: 48,
+                                              child: Checkbox(
+                                                value: isSelected,
+                                                onChanged: (bool? value) {
+                                                  setState(() {
+                                                    if (value == true) {
+                                                      _selectedToAdd.add(coinName);
+                                                    } else {
+                                                      _selectedToAdd.remove(coinName);
+                                                    }
+                                                  });
+                                                  _tryAdvanceMorganCoinsChecked();
+                                                },
+                                                activeColor: const Color(0xFF3B82F6),
+                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                chipLabel,
+                                                softWrap: true,
+                                                overflow: TextOverflow.visible,
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF0F172A),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(width: 3),
-                                        Text(chipLabel,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF475569),
-                                            )),
-                                      ],
+                                      ),
                                     ),
                                   );
                                 }
@@ -1389,9 +1655,12 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
                         ],
                       ),
                     );
+
                   },
                 ),
-              );
+              ),
+            ],
+          );
             },
           ),
 
@@ -1401,24 +1670,39 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _isSavingCoins ? null : _addSelectedCoins,
-                icon: const Icon(Icons.add_task),
-                label: Text('Add ${_selectedToAdd.length} Selected Coins to Wishlist / Collection'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: const Color(0xFF3B82F6),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
+              height: 52,
+              child: _isSavingCoins
+                  ? const SizedBox(
+                      height: 52,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: _confirmAddSelectedCoins,
+                      icon: const Icon(Icons.add_task),
+                      label: Text('Add ${_selectedToAdd.length} Selected Coins to Wishlist / Collection'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: const Color(0xFF3B82F6),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              "ℹ️ Safely adding items directly to your Firestore collection tracker.",
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-              textAlign: TextAlign.center,
+            Builder(
+              builder: (context) {
+                final isRealUser = FirebaseAuth.instance.currentUser != null
+                    && !FirebaseAuth.instance.currentUser!.isAnonymous
+                    && !GuestSeedService.isBrowseDemoMode;
+                return Text(
+                  isRealUser
+                      ? "ℹ️ Safely saves your selected coins directly to your collection."
+                      : "ℹ️ Sign in to save selected coins to your collection.",
+                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 18.0),
+                  textAlign: TextAlign.center,
+                );
+              },
             ),
           ],
         ],
@@ -1533,7 +1817,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to generate PDF checklist: $e'),
+            content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to generate PDF checklist. Please try again.')),
             backgroundColor: Colors.red,
           ),
         );
@@ -1669,9 +1953,132 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     );
   }
 
+  static EdgeInsets _floatingSnackBarMargin(BuildContext context) {
+    final sw = MediaQuery.of(context).size.width;
+    return EdgeInsets.only(top: 80, bottom: 120, right: 16, left: sw > 440 ? sw - 416 : 16);
+  }
+
+  Future<void> _confirmAddSelectedCoins() async {
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+    if (!isRealUser || GuestSeedService.isBrowseDemoMode) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
+            content: const Text('Browse Demo Mode: Create a free account to save coins to your collection.'),
+            backgroundColor: const Color(0xFFF59E0B),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (_selectedToAdd.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Add Selected Coins?',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Save ${_selectedToAdd.length} coin(s) from "${_selectedProgram?.name ?? 'Program'}" to your collection:',
+                style: const TextStyle(color: Color(0xFFE2E8F0), fontSize: 15),
+              ),
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 180),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: _selectedToAdd.map((coinName) {
+                      final parts = coinName.split('||');
+                      final yr = parts.isNotEmpty ? parts[0] : '';
+                      final varId = parts.length > 1 ? parts[1] : '';
+                      final nm = parts.length > 2 ? parts[2] : coinName;
+                      final displayLabel = [
+                        yr,
+                        nm,
+                        if (varId.isNotEmpty && varId != 'P') '($varId)',
+                      ].where((s) => s.isNotEmpty).join(' ');
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '• $displayLabel',
+                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 16)),
+          ),
+          ElevatedButton(
+            autofocus: true,
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3B82F6),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            child: const Text('Save to Collection', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: _floatingSnackBarMargin(context),
+          content: const Text('Saving selected coins to collection...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+      await _addSelectedCoins();
+    }
+  }
+
   Future<void> _addSelectedCoins() async {
     if (_selectedProgram == null || _selectedToAdd.isEmpty) return;
     if (_isSavingCoins) return;
+
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+    if (!isRealUser || GuestSeedService.isBrowseDemoMode) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
+            content: const Text('Browse Demo Mode: Create a free account to save coins to your collection.'),
+            backgroundColor: const Color(0xFFF59E0B),
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isSavingCoins = true);
 
     // One idempotency key per button press. A second call with the same key
@@ -1679,7 +2086,7 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
     final idempotencyKey = const Uuid().v4();
 
     // Build slot payloads from the pipe-delimited key: "YEAR||VARIETY_ID||SERIES_NAME"
-    final List<Map<String, String>> slots = [];
+    final List<Map<String, dynamic>> slots = [];
     for (final coinName in _selectedToAdd) {
       final parts = coinName.split('||');
       final parsedYear    = parts.isNotEmpty ? parts[0] : '';
@@ -1720,12 +2127,17 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         'mint_mark':    parsedMint,
         'denomination': parsedDenom,
         'variety_id':   varietyId,
+        'quantity':     1,
+        'Quantity':     1,
       });
     }
 
 
+    // Capture count before the request (before _selectedToAdd.clear() on success)
+    final selectedCount = _selectedToAdd.length;
+
     try {
-      const baseUrl = 'https://numista-backend-568985927038.us-central1.run.app';
+      const baseUrl = kApiBaseUrl;
       // HttpAuthClient.post injects the Firebase Bearer token — bare http.post returned 401
       final response = await HttpAuthClient.post(
         Uri.parse('$baseUrl/api/checklist/add_coins'),
@@ -1770,6 +2182,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
             content: Text('Successfully added $coinsWritten coin${coinsWritten == 1 ? '' : 's'}!'),
             backgroundColor: Colors.green,
           ),
@@ -1782,16 +2196,24 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding coins (${response.statusCode}): ${response.body}'),
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
+            content: Text(NumistaErrorHelper.toUserFriendly(response.body, statusCode: response.statusCode)),
             backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final coinWord = selectedCount == 1 ? '1 coin' : '$selectedCount coins';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Network error adding coins: $e'),
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
+            content: Text(NumistaErrorHelper.toUserFriendlyWithContext(
+              e,
+              action: 'add your $coinWord',
+            )),
             backgroundColor: Colors.red,
           ),
         );

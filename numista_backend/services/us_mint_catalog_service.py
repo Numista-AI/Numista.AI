@@ -167,6 +167,7 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "title": "2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll",
         "formal_name": "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll (Philadelphia)",
         "year": 2026,
+        "pack_quantity": 25,
         "mint_mark": "",
         "mint_facility": "Philadelphia (P)",
         "denomination": "Dollar",
@@ -350,6 +351,49 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
             facility_note = f"Mint Facility: {facility}"
             if facility_note not in existing_notes:
                 item["Personal Notes"] = f"{existing_notes} | {facility_note}".strip(" |")
+
+        # Pack Quantity Expansion (C1, C2, B1, B2, B4)
+        pack_qty = catalog_match.get("pack_quantity")
+        if pack_qty and isinstance(pack_qty, int) and pack_qty > 1 and not item.get("pack_expanded"):
+            raw_qty = item.get("Quantity") or item.get("quantity") or 1
+            try:
+                curr_qty = int(raw_qty)
+            except (ValueError, TypeError):
+                curr_qty = 1
+                
+            # C2: Guard against expanding if quantity is already a multiple of pack_qty or > 10
+            if curr_qty <= 10 and (curr_qty % pack_qty != 0):
+                new_qty = curr_qty * pack_qty
+                item["Quantity"] = new_qty
+                item["quantity"] = new_qty
+                item["pack_expanded"] = True
+                item["pack_quantity_multiplier"] = pack_qty
+
+                # Override Cost/Allocated Fees with canonical catalog unit price if available (NET-538 / NET-539)
+                cat_issue_price = catalog_match.get("issue_price") or catalog_match.get("unit_price")
+                if cat_issue_price:
+                    try:
+                        clean_cat_price = float(re.sub(r"[^\d.]", "", str(cat_issue_price)))
+                        if clean_cat_price > 0.0:
+                            canonical_lot_cost = round(clean_cat_price * curr_qty, 2)
+                            item["Sticker Price"] = canonical_lot_cost
+                            item["Allocated Fees"] = 0.0
+                            item["Cost"] = canonical_lot_cost
+                            item["Purchase Cost"] = canonical_lot_cost
+                            item["cost"] = canonical_lot_cost
+                    except Exception as e:
+                        logger.warning(f"Failed parsing cat_issue_price '{cat_issue_price}': {e}")
+                
+                # B2/B4: Ensure unit_cost is calculated from lot total Cost
+                cost_val = item.get("Cost") or item.get("Purchase Cost") or item.get("cost") or 0.0
+                try:
+                    cost_float = float(cost_val)
+                    if cost_float > 0.0:
+                        unit_c = round(cost_float / new_qty, 4)
+                        item["unit_cost"] = unit_c
+                        item["set_cost_label"] = f"${cost_float:.2f} ({new_qty} @ ${cost_float / new_qty:.2f})"
+                except (ValueError, TypeError):
+                    pass
 
         item["_catalog_grounded"] = True
 

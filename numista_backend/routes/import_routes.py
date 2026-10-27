@@ -269,6 +269,9 @@ async def commit_batch(req: CommitBatchRequest, user: Dict[str, Any] = Depends(g
             coin_data["imported_at"] = datetime.now(timezone.utc).isoformat()
             coin_data["import_session_id"] = req.import_session_id
 
+            from services.duplicate_check import check_and_flag_duplicate
+            check_and_flag_duplicate(coins_ref, coin_data)
+
             # Write to collection
             batch.set(coins_ref.document(coin_id), coin_data)
             # Delete from staging

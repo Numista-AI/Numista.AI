@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -11,13 +12,24 @@ import 'screens/public_wishlist_view_screen.dart';
 import 'services/theme_provider.dart';
 import 'widgets/morgan_feedback_drawer.dart';
 import 'services/guest_seed_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/auth_gate.dart';
 import 'constants.dart';  // ITEM 10: kApiBaseUrl startup guard
 import 'package:google_fonts/google_fonts.dart';
+import 'utils/numista_error_helper.dart';
 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Uncaught platform error: $error\n$stack');
+    return true; // handled
+  };
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    debugPrint('FlutterError: ${details.exceptionAsString()}\n${details.stack}');
+  };
 
   // Enable Flutter accessibility semantics on web so that Playwright
   // text= / aria-label locators can find flt-semantics nodes.
@@ -205,7 +217,7 @@ Future<void> main() async {
                       fontSize: 22,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              Text(e.toString(),
+              Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'The app could not start. Please reload the page or contact support@numista.ai.'),
                   style: const TextStyle(
                       color: Colors.orangeAccent, fontSize: 14)),
               const SizedBox(height: 24),
@@ -219,6 +231,16 @@ Future<void> main() async {
     ));
     return;
   }
+
+  // Restore persistent Browse Demo state from SharedPreferences across reloads
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final wasDemoActive = prefs.getBool('browse_demo_active') ?? false;
+    if (wasDemoActive || isPendingDemo) {
+      await GuestSeedService.activateBrowseDemo();
+      isPendingDemo = true;
+    }
+  } catch (_) {}
 
   runApp(NumistaAIApp(
     isPendingDemo: isPendingDemo,
@@ -270,6 +292,7 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
           debugShowCheckedModeBanner: false,
           themeMode: ThemeProvider.instance.themeMode,
           theme: ThemeData(
+            visualDensity: VisualDensity.standard,
             brightness: Brightness.light,
             scaffoldBackgroundColor: const Color(0xFFF4F4F2), // Premium parchment/platinum-silver bg
             primaryColor: const Color(0xFF8C7355), // Antique bronze
@@ -308,6 +331,7 @@ class _NumistaAIAppState extends State<NumistaAIApp> {
             ),
           ),
           darkTheme: ThemeData(
+            visualDensity: VisualDensity.standard,
             brightness: Brightness.dark,
             scaffoldBackgroundColor: const Color(0xFF0B1120), // Deep navy-black bg
             primaryColor: const Color(0xFFC9A227), // Metallic gold

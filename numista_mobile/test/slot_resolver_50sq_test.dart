@@ -23,7 +23,7 @@ final _ohSlot = ProgramCoin(
   name: 'Ohio',
   varieties: [ChecklistVariety(id: 'P-UNC', label: 'P Unc')],
 );
-final _50sqProgram = CoinProgram(
+final state50Program = CoinProgram(
   id: '50state',
   name: '50 State Quarters Program',
   url: '',
@@ -51,16 +51,16 @@ void main() {
   // ── Cross-state isolation ─────────────────────────────────────────────────
   group('G3b — 50SQ cross-state isolation (Theme path)', () {
     test('TN coin matches TN slot', () =>
-        expect(SlotResolver.isMatch(_tnCoin, _50sqProgram, _tnSlot), isTrue));
+        expect(SlotResolver.isMatch(_tnCoin, state50Program, _tnSlot), isTrue));
 
     test('TN coin does NOT match OH slot', () =>
-        expect(SlotResolver.isMatch(_tnCoin, _50sqProgram, _ohSlot), isFalse));
+        expect(SlotResolver.isMatch(_tnCoin, state50Program, _ohSlot), isFalse));
 
     test('OH coin does NOT match TN slot', () =>
-        expect(SlotResolver.isMatch(_ohCoin, _50sqProgram, _tnSlot), isFalse));
+        expect(SlotResolver.isMatch(_ohCoin, state50Program, _tnSlot), isFalse));
 
     test('OH coin matches OH slot', () =>
-        expect(SlotResolver.isMatch(_ohCoin, _50sqProgram, _ohSlot), isTrue));
+        expect(SlotResolver.isMatch(_ohCoin, state50Program, _ohSlot), isTrue));
   });
 
   // ── Virginia / West Virginia — theme path ─────────────────────────────────
@@ -126,17 +126,17 @@ void main() {
     };
 
     test('Blank-theme coin does NOT match TN slot', () =>
-        expect(SlotResolver.isMatch(blankCoin, _50sqProgram, _tnSlot), isFalse));
+        expect(SlotResolver.isMatch(blankCoin, state50Program, _tnSlot), isFalse));
 
     test('Blank-theme coin does NOT match OH slot', () =>
-        expect(SlotResolver.isMatch(blankCoin, _50sqProgram, _ohSlot), isFalse));
+        expect(SlotResolver.isMatch(blankCoin, state50Program, _ohSlot), isFalse));
   });
 
   // ── resolveProgramInventory integration ──────────────────────────────────
   group('G3b — resolveProgramInventory: no cross-count', () {
     test('TN and OH each count 1, not 2', () {
       final inventory = SlotResolver.resolveProgramInventory(
-          program: _50sqProgram, coins: [_tnCoin, _ohCoin]);
+          program: state50Program, coins: [_tnCoin, _ohCoin]);
 
       // Key pattern: '${program.id}_${coinSlot.id}_${variety.id}'
       final tnMatch = inventory['50state_tennessee_P-UNC'];

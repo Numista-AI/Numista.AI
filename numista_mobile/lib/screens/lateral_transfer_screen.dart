@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/numista_error_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -164,7 +165,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     } catch (e) {
       setState(() {
         _isFetchingInventory = false;
-        _fetchError = 'Failed to load inventory items: $e';
+        _fetchError = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load inventory items. Please try again.');
       });
     }
   }
@@ -251,7 +252,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error initiating transfer: $e'),
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not initiate transfer. Please try again.')),
           backgroundColor: Colors.red,
         ),
       );
@@ -307,7 +308,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       setState(() => _isClaiming = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Claim failed: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Claim failed. Please try again.')), backgroundColor: Colors.red),
       );
     }
   }
@@ -1058,7 +1059,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Could not download PDF: $e'),
+                    SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not download the PDF. Please try again.')),
                         backgroundColor: Colors.red),
                   );
                 }
@@ -1145,7 +1146,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     } catch (e) {
       setState(() {
         _isLoadingSoldItems = false;
-        _soldItemsError = 'Failed to load sold items: $e';
+        _soldItemsError = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load sold items. Please try again.');
       });
     }
   }
@@ -1234,7 +1235,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       setState(() => _isSelling = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to record sale: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not record sale. Please try again.')), backgroundColor: Colors.red),
       );
     }
   }
@@ -1286,7 +1287,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to undo sale: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not undo sale. Please try again.')), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _isUndoing = false);

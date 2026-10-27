@@ -46,6 +46,7 @@ import 'coin_detail_screen.dart';
 import 'upcoming_releases_screen.dart';
 import '../theme/numista_theme.dart';
 import '../services/ui_variant_service.dart';
+import '../utils/numista_error_helper.dart';
 
 
 class BaseLayout extends StatefulWidget {
@@ -185,7 +186,7 @@ class _BaseLayoutState extends State<BaseLayout> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error opening coin: $e')),
+          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e))),
         );
       }
     }
@@ -214,7 +215,7 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
     // Run US Mint data normalization silently in background for all accounts.
     // Only processes coins that haven't been normalized yet.
-    if (!AuthService.isGuest) {
+    if (!AuthService.isGuest && !widget.isDemoMode && !GuestSeedService.isBrowseDemoMode && AuthService.isSignedIn) {
       CoinNormalizerService.runForUser();
     }
     // Auto-start the guided wizard for first-time Guest users.
@@ -381,6 +382,13 @@ class _BaseLayoutState extends State<BaseLayout> {
           onNavigate: _navigateTo,
           initialTabName: tabName,
         );
+      case 'Take a photo':
+      case 'AI Photo Identification':
+        return AddCoinsHub(
+          onNavigate: _navigateTo,
+          initialTabName: 'camera',
+          showCameraFullScreen: true,
+        );
       case 'World & Specialty':
         return AddWorldItemScreen(
           onNavigate: _navigateTo,
@@ -451,6 +459,8 @@ class _BaseLayoutState extends State<BaseLayout> {
     final double maxWidth;
     switch (route) {
       case 'Add New Coins':
+      case 'Take a photo':
+      case 'AI Photo Identification':
         maxWidth = 1100.0;
         break;
       case 'My Collection':
@@ -558,7 +568,15 @@ class _BaseLayoutState extends State<BaseLayout> {
       'AI Deepdive',
       'Settings & Backup',
     ];
-    final currentIndex = mobileRoutes.indexOf(_activeRoute).clamp(0, 4);
+    int effectiveIndex = mobileRoutes.indexOf(_activeRoute);
+    if (effectiveIndex == -1) {
+      if (_activeRoute == 'Add New Coins') {
+        effectiveIndex = 2; // Map 'Add New Coins' to 'My Collection' tab
+      } else {
+        effectiveIndex = 0;
+      }
+    }
+    final currentIndex = effectiveIndex.clamp(0, 4);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -597,21 +615,25 @@ class _BaseLayoutState extends State<BaseLayout> {
         ),
       ),
       // FAB column: Morgan owl (always) + Add Coins (Collection tab only)
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          _MorganFab(onTap: _showMorganDialog),
-          if (_activeRoute == 'My Collection') ...[
-            const SizedBox(height: 12),
-            FloatingActionButton(
-              heroTag: 'fab_add_coins',
-              onPressed: () => setState(() => _activeRoute = 'Add New Coins'),
-              backgroundColor: const Color(0xFFF63366),
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
+      // V8.7 FIX Item4: add bottom margin so Morgan FAB doesn't overlap Add button on phone
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (_activeRoute != 'Add New Coins') _MorganFab(onTap: _showMorganDialog),
+            if (_activeRoute == 'My Collection') ...[
+              const SizedBox(height: 12),
+              FloatingActionButton(
+                heroTag: 'fab_add_coins',
+                onPressed: () => setState(() => _activeRoute = 'Add New Coins'),
+                backgroundColor: const Color(0xFFF63366),
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
@@ -691,16 +713,21 @@ class _BaseLayoutState extends State<BaseLayout> {
                       else
                         Image.asset('assets/logo_owl.png',
                             height: 36, fit: BoxFit.contain),
-                      IconButton(
-                        icon: Icon(
-                          _isSidebarCollapsed
-                              ? Icons.chevron_right
-                              : Icons.chevron_left,
-                          color: isDark ? Colors.white70 : Colors.black54,
-                          size: 20,
+                      SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: IconButton(
+                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                          icon: Icon(
+                            _isSidebarCollapsed
+                                ? Icons.chevron_right
+                                : Icons.chevron_left,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                            size: 20,
+                          ),
+                          tooltip: _isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
+                          onPressed: _toggleSidebar,
                         ),
-                        tooltip: _isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
-                        onPressed: _toggleSidebar,
                       ),
                     ],
                   ),
@@ -806,8 +833,39 @@ class _BaseLayoutState extends State<BaseLayout> {
                             _buildNavItem('Lateral Transfer', icon: Icons.vpn_key_outlined),
                             _buildNavItem('Claim Transfer', icon: Icons.download_for_offline_outlined),
 
-                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ADD NEW COINS/NOTES/ETC.'),
-                            _buildNavItem('Microscope Scanner', icon: Icons.camera_alt_outlined),
+
+                            if (!_isSidebarCollapsed)
+                              // P7 FIX: Header is now clickable — navigates to AddCoinsHub
+                              Builder(builder: (context) {
+                                final isHeaderDark = Theme.of(context).brightness == Brightness.dark;
+                                return GestureDetector(
+                                  onTap: () => setState(() => _activeRoute = 'Add New Coins'),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 8, top: 22, bottom: 6),
+                                    child: MouseRegion(
+                                      cursor: SystemMouseCursors.click,
+                                      child: Text(
+                                        'ADD NEW COINS/NOTES/ETC.',
+                                        style: TextStyle(
+                                          fontSize: NumistaTheme.textCaption,
+                                          fontWeight: FontWeight.bold,
+                                          color: isHeaderDark
+                                              ? const Color(0xFF38BDF8)
+                                              : const Color(0xFF2563EB),
+                                          letterSpacing: 0.8,
+                                          decoration: TextDecoration.underline,
+                                          decorationColor: isHeaderDark
+                                              ? const Color(0xFF38BDF8).withAlpha(120)
+                                              : const Color(0xFF2563EB).withAlpha(120),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+
+                            _buildNavItem('Take a photo', icon: Icons.camera_alt_outlined),
+                            _buildNavItem('Microscope Scanner', icon: Icons.biotech_outlined),
                             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                               stream: email.isNotEmpty
                                   ? FirebaseFirestore.instance
@@ -897,6 +955,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                           foregroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          minimumSize: const Size(double.infinity, 48),
+                          visualDensity: VisualDensity.standard,
                           elevation: 0,
                         ),
                         icon: Icon(Icons.feedback_outlined, size: 14, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA)),
@@ -971,6 +1031,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                           side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          minimumSize: const Size(double.infinity, 48),
+                          visualDensity: VisualDensity.standard,
                         ),
                         icon: const Icon(Icons.logout, size: 14),
                         label: Text(
@@ -1054,6 +1116,8 @@ class _BaseLayoutState extends State<BaseLayout> {
             onTap: _showMorganDialog,
             borderRadius: BorderRadius.circular(8),
             child: Container(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              alignment: Alignment.center,
               padding: const EdgeInsets.all(10),
               child: Image.asset('assets/logo_owl.png', height: 20),
             ),
@@ -1062,6 +1126,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       );
     }
     return ListTile(
+      minVerticalPadding: 14,
       leading: Image.asset('assets/logo_owl.png', height: 20),
       title: const Text('Help & Ask Morgan',
           style: TextStyle(fontSize: NumistaTheme.textBody)),
@@ -1090,6 +1155,8 @@ class _BaseLayoutState extends State<BaseLayout> {
             'My Collection',
             'Currency Collection',
             'Review Hub',
+            'Take a photo',
+            'AI Photo Identification',
             'Microscope Scanner',
             'Coin Programs',
             'Coin Search',
@@ -1131,6 +1198,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                       });
                     } else if (title == 'Add new coins/notes/etc.') {
                       setState(() => _activeRoute = 'Add New Coins');
+                    } else if (title == 'Take a photo') {
+                      setState(() => _activeRoute = 'Take a photo');
                     } else if (title == 'Admin Grade Flags') {
                       setState(() => _activeRoute = 'Admin: Grade Flags');
                     } else if (title == '🔍 Numista Lookup' || title == 'Numista Lookup') {
@@ -1153,6 +1222,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                 : null,
             borderRadius: BorderRadius.circular(8),
             child: Container(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              alignment: Alignment.center,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: isActive
@@ -1185,6 +1256,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                   });
                 } else if (title == 'Add new coins/notes/etc.') {
                   setState(() => _activeRoute = 'Add New Coins');
+                } else if (title == 'Take a photo') {
+                  setState(() => _activeRoute = 'Take a photo');
                 } else if (title == 'Admin Grade Flags') {
                   setState(() => _activeRoute = 'Admin: Grade Flags');
                 } else if (title == '🔍 Numista Lookup' || title == 'Numista Lookup') {
@@ -1207,6 +1280,8 @@ class _BaseLayoutState extends State<BaseLayout> {
             : null,
         borderRadius: BorderRadius.circular(6),
         child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          alignment: Alignment.centerLeft,
           padding: EdgeInsets.symmetric(vertical: 8, horizontal: isSubItem ? 16 : 8),
           decoration: BoxDecoration(
             color: isActive
@@ -1254,7 +1329,7 @@ class _BaseLayoutState extends State<BaseLayout> {
               ),
             ),
             if (badgeCount > 0) ...[
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -1307,6 +1382,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       ),
     );
     if (confirm == true) {
+      AuthGate.resetWelcome();
       if (isDemo) {
         GuestSeedService.deactivateBrowseDemo();
         UiVariantService.reset();
@@ -1656,19 +1732,19 @@ class _MorganSidebarButtonState extends State<_MorganSidebarButton> {
                 ),
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Ask Morgan',
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: NumistaTheme.textCaption,
+                            color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A),
+                            fontSize: NumistaTheme.textBodySm,
                             fontWeight: FontWeight.w600)),
                     Text('Your AI guide',
                         style: TextStyle(
-                            color: Color(0xFF2DD4BF),
-                            fontSize: NumistaTheme.textCaption)),
+                            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2DD4BF) : const Color(0xFF0F172A).withAlpha(180),
+                            fontSize: NumistaTheme.textBodySm)),
                   ],
                 ),
               ),

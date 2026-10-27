@@ -112,7 +112,7 @@ def test_list_receipts_pruning_and_date(monkeypatch):
 
     mock_db.collection("users").document.return_value = user_ref
     monkeypatch.setattr(main, "db", mock_db)
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     resp = client.get("/api/receipts/tester@numista.ai", headers={"Authorization": "Bearer test-token"})
     assert resp.status_code == 200
@@ -128,7 +128,7 @@ def test_list_receipts_pruning_and_date(monkeypatch):
 
 def test_delete_receipt_retains_blob_when_coins_linked(monkeypatch):
     """Verify MF-1: A receipt with linked coins retains its storage blob on delete."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
@@ -175,7 +175,7 @@ def test_delete_receipt_retains_blob_when_coins_linked(monkeypatch):
 
 def test_delete_receipt_deletes_blob_when_zero_coins_linked(monkeypatch):
     """Verify MF-1: A receipt with zero linked coins deletes both Firestore doc and GCS blob."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
@@ -223,7 +223,7 @@ def test_delete_receipt_deletes_blob_when_zero_coins_linked(monkeypatch):
 
 def test_delete_receipt_rejects_foreign_blob_path(monkeypatch):
     """Verify MF-1: Attempting to delete a receipt pointing to another user's blob returns 403."""
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email: email)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: email)
 
     mock_db = MagicMock()
     user_ref = MagicMock()
@@ -284,12 +284,18 @@ def test_identify_coin_photo_single_image(monkeypatch):
     mock_client = MagicMock()
     mock_client.models = mock_models
     monkeypatch.setattr(main, "genai_client", mock_client)
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, email=None, **kw: "tester@numista.ai")
 
     dummy_image = io.BytesIO(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xdb\x00C\x00")
     files = {"image_a": ("obverse.jpg", dummy_image, "image/jpeg")}
     data = {"user_email": "tester@numista.ai", "save_to_collection": "false"}
 
-    resp = client.post("/api/identify_coin_photo", data=data, files=files)
+    resp = client.post(
+        "/api/identify_coin_photo",
+        data=data,
+        files=files,
+        headers={"Authorization": "Bearer test-token"},
+    )
     assert resp.status_code == 200
     res_data = resp.json()
     assert res_data["coin"]["Year"] == "1964"

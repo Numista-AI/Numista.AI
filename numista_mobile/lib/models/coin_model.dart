@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/text_sanitizer.dart';
 
 class CoinModel {
   final String id;
@@ -175,10 +176,10 @@ class CoinModel {
       id: id,
       year: year,
       mintMark: mintMark,
-      denomination: data['Denomination']?.toString() ?? data['denomination']?.toString() ?? '',
-      programSeries: data['Program/Series']?.toString() ?? data['programSeries']?.toString() ?? data['ProgramSeries']?.toString() ?? '',
-      themeSubject: data['Theme/Subject']?.toString() ?? data['themeSubject']?.toString() ?? '',
-      variety: data['Variety']?.toString() ?? data['variety']?.toString() ?? '',
+      denomination: TextSanitizer.fixMojibake(data['Denomination']?.toString() ?? data['denomination']?.toString() ?? ''),
+      programSeries: TextSanitizer.fixMojibake(data['Program/Series']?.toString() ?? data['programSeries']?.toString() ?? data['ProgramSeries']?.toString() ?? ''),
+      themeSubject: TextSanitizer.fixMojibake(data['Theme/Subject']?.toString() ?? data['themeSubject']?.toString() ?? ''),
+      variety: TextSanitizer.fixMojibake(data['Variety']?.toString() ?? data['variety']?.toString() ?? ''),
       condition: data['Condition']?.toString() ?? data['condition']?.toString() ?? 'Ungraded',
       strikeType: data['Strike Type']?.toString() ?? data['strikeType']?.toString() ?? '',
       holderType: data['Holder Type']?.toString() ?? data['holderType']?.toString() ?? '',
@@ -192,9 +193,16 @@ class CoinModel {
       retailerItemNo: data['Retailer Item No.']?.toString() ?? data['retailerItemNo']?.toString() ?? '',
       retailerInvoiceNo: data['Retailer Invoice #']?.toString() ?? data['retailerInvoiceNo']?.toString() ?? '',
       storageLocation: data['Storage Location']?.toString() ?? data['storageLocation']?.toString() ?? '',
-      personalNotes: data['Personal Notes I']?.toString() ?? data['personalNotes']?.toString() ?? '',
+      personalNotes: TextSanitizer.fixMojibake(
+        data['Notes']?.toString() ??
+        data['notes']?.toString() ??
+        data['Personal Notes']?.toString() ??
+        data['Personal Notes I']?.toString() ??
+        data['personalNotes']?.toString() ??
+        '',
+      ),
       personalRef: data['Personal Reference #']?.toString() ?? data['personalRef']?.toString() ?? '',
-      originalDescription: data['Original Description from source']?.toString() ?? data['originalDescription']?.toString() ?? '',
+      originalDescription: TextSanitizer.fixMojibake(data['Original Description from source']?.toString() ?? data['originalDescription']?.toString() ?? ''),
       aiEstimatedValue: data['ai_estimated_value']?.toString() ?? data['AI Estimated Value']?.toString() ?? 'Pending',
       meltValue: data['Melt Value']?.toString() ?? data['meltValue']?.toString() ?? 'N/A',
       // TODO(remove after 2026-09-15 camelCase migration)

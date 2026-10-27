@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../utils/numista_error_helper.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme-aware color tokens (matches estate_planning_screen.dart pattern)
@@ -158,7 +159,7 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Failed to load report: $e';
+        _error = NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not load the estate report. Please try again.');
         _loading = false;
       });
     }
