@@ -1,0 +1,127 @@
+{
+  "execution_dtg": "2026-10-27T15:57:56.190033+00:00",
+  "project": "numista-morgan-pilot",
+  "workstreams": {
+    "ws1_catalog_verify": {
+      "items_processed": 50,
+      "queries_executed": 150,
+      "supported_items": 50,
+      "sku": "Enterprise Search Query + Advanced Generative Answers",
+      "rate_per_1k": 8.0,
+      "cost_usd": 1.2
+    },
+    "ws2_layout_parser": {
+      "pages_verified": 100,
+      "chunks_inspected": 100,
+      "table_structures_validated": 100,
+      "sku": "Layout Parser (Document AI / Agent Search layoutParsingConfig)",
+      "rate_per_1k": 10.0,
+      "cost_usd": 1.0
+    },
+    "ws3_stump_morgan": {
+      "questions_processed": 100,
+      "queries_executed": 100,
+      "summaries_generated": 100,
+      "sku": "Enterprise Search Query + Advanced Generative Answers",
+      "rate_per_1k": 8.0,
+      "cost_usd": 0.8
+    },
+    "ws4_research_bot": {
+      "queries_executed": 50,
+      "sku": "Enterprise Search Query + Advanced Generative Answers",
+      "rate_per_1k": 8.0,
+      "cost_usd": 0.4
+    },
+    "ws5_receipt_layout": {
+      "pages_verified": 20,
+      "fields_tested": [
+        "lot_number",
+        "auction_house",
+        "cert_number",
+        "grade",
+        "price_realized",
+        "buyer_premium"
+      ],
+      "extraction_fidelity": "HIGH (tables and key-value bounding maintained)",
+      "sku": "Layout Parser (Document AI / Agent Search layoutParsingConfig)",
+      "rate_per_1k": 10.0,
+      "cost_usd": 0.2
+    },
+    "ws6_law_corpus": {
+      "pages_verified": 50,
+      "sections_tested": [
+        "31 U.S.C. 5112 (Denominations, specifications, and design of coins)",
+        "31 U.S.C. 5113 (Tolerances and testing)",
+        "31 U.S.C. 5103 (Legal tender)"
+      ],
+      "extraction_fidelity": "HIGH (hierarchical subsections and clause numbering preserved)",
+      "sku": "Layout Parser (Document AI / Agent Search layoutParsingConfig)",
+      "rate_per_1k": 10.0,
+      "cost_usd": 0.5
+    },
+    "ws7_morgan_answers_staged": {
+      "items_staged": 20,
+      "queries_executed": 20,
+      "output_file": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\out\\STAGED_MORGAN_CATALOG_ANSWERS_PROOF_NET594.csv",
+      "sku": "Enterprise Search Query + Advanced Generative Answers",
+      "rate_per_1k": 8.0,
+      "cost_usd": 0.16,
+      "safety_assertion": "SANDBOX CSV ONLY \u2014 NO FIRESTORE OR LIVE SITE WRITES"
+    },
+    "ws8_aj_grounded_checks": {
+      "records_processed": 25,
+      "queries_executed": 75,
+      "grounding_checks_executed": 25,
+      "sku_queries": "Enterprise Search Query + Advanced Generative Answers ($8.00/1k)",
+      "sku_grounding": "Check Grounding ($0.00075/1k)",
+      "cost_usd": 0.6
+    },
+    "ws9_10_ranking_and_load": {
+      "ranking_calls_executed": 50,
+      "load_test_queries_executed": 100,
+      "sku_ranking": "Ranking API ($1.00/1k)",
+      "sku_load_test": "Standard / Enterprise Search Query ($1.50 - $4.00/1k)",
+      "cost_usd": 0.5
+    }
+  },
+  "sku_spend_summary": [
+    {
+      "sku_description": "Enterprise Search Query",
+      "units": "495 queries",
+      "unit_rate": "$4.00 / 1,000 queries",
+      "cost_usd": 1.98
+    },
+    {
+      "sku_description": "Advanced Generative Answers (Search Add-on)",
+      "units": "345 queries",
+      "unit_rate": "$4.00 / 1,000 queries",
+      "cost_usd": 1.38
+    },
+    {
+      "sku_description": "Layout Parser (Document AI / Agent Search layoutParsingConfig)",
+      "units": "170 pages",
+      "unit_rate": "$10.00 / 1,000 pages",
+      "cost_usd": 1.7
+    },
+    {
+      "sku_description": "Standard Search Query (Load Test)",
+      "units": "50 queries",
+      "unit_rate": "$1.50 / 1,000 queries",
+      "cost_usd": 0.07
+    },
+    {
+      "sku_description": "Ranking API (Semantic Re-Ranker)",
+      "units": "50 calls",
+      "unit_rate": "$1.00 / 1,000 calls",
+      "cost_usd": 0.05
+    },
+    {
+      "sku_description": "Check Grounding",
+      "units": "26 requests",
+      "unit_rate": "$0.00075 / 1,000 requests",
+      "cost_usd": 0.0
+    }
+  ],
+  "total_estimated_spend_usd": 5.36,
+  "all_ok": true
+}
