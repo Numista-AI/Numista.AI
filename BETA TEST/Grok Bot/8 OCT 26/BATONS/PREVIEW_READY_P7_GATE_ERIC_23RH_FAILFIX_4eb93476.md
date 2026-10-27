@@ -13,3 +13,8 @@ flutter analyze: No issues. Backend main.py: python ast.parse OK (no pytest run)
 
 ## Not done / risks
 No unit tests added. Fee-allocation path for the 26SQRP-in-same-order case unchanged (line ~7526 still zeroes). FT stays HOLD until Grok CoS re-GO.
+
+
+---
+**Desk:** Radio id = **NET-572** (AG had used NET-566 — collision with overnight; overnight files left alone). Catalog NOT started. FT HOLD until CoS re-GO. Prefer Eric canary. 2026-10-26 7:19 PM ET.
+
