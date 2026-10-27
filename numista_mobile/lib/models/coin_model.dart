@@ -189,9 +189,9 @@ class CoinModel {
       quantity: data['Quantity']?.toString() ?? data['quantity']?.toString() ?? '1',
       purchaseCost: data['Cost']?.toString() ?? data['Purchase Cost']?.toString() ?? data['purchaseCost']?.toString() ?? '\$0.00',
       purchaseDate: data['Purchase Date']?.toString() ?? data['purchaseDate']?.toString() ?? '',
-      retailer: data['Retailer/Website']?.toString() ?? data['retailer']?.toString() ?? '',
-      retailerItemNo: data['Retailer Item No.']?.toString() ?? data['retailerItemNo']?.toString() ?? '',
-      retailerInvoiceNo: data['Retailer Invoice #']?.toString() ?? data['retailerInvoiceNo']?.toString() ?? '',
+      retailer: data['Retailer/Website']?.toString() ?? data['retailer_website']?.toString() ?? data['retailer']?.toString() ?? '',
+      retailerItemNo: data['Retailer Item No.']?.toString() ?? data['retailer_item_num']?.toString() ?? data['item_number']?.toString() ?? data['retailerItemNo']?.toString() ?? '',
+      retailerInvoiceNo: data['Retailer Invoice #']?.toString() ?? data['retailer_invoice_num']?.toString() ?? data['invoice_number']?.toString() ?? data['retailerInvoiceNo']?.toString() ?? '',
       storageLocation: data['Storage Location']?.toString() ?? data['storageLocation']?.toString() ?? '',
       personalNotes: TextSanitizer.fixMojibake(
         data['Notes']?.toString() ??
