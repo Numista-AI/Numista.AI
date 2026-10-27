@@ -3017,9 +3017,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final finalVal = valCpg;
         
         final fmt = intl.NumberFormat.currency(symbol: '\$');
+        final rawAiVal = m[_F.aiValue] ?? m['ai_estimated_value'] ?? m['estValue'] ?? (m['ai_est_value'] != null ? fmt.format(m['ai_est_value']) : null);
         final valueText = finalVal > 0 
             ? fmt.format(finalVal) 
-            : (m[_F.aiValue]?.toString() ?? '—');
+            : (rawAiVal?.toString() ?? '—');
 
         // For virtual children, selection targets parent doc
         final effectiveId = crw.isVirtualChild ? (crw.parentDocId ?? crw.id) : crw.id;
@@ -3341,7 +3342,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         if (gVal > 0) {
           return _currencyFmt.format(gVal);
         }
-        final av = m[_F.aiValue]?.toString().trim() ?? '';
+        final av = (m[_F.aiValue] ?? m['ai_estimated_value'] ?? m['estValue'] ?? m['ai_est_value'])?.toString().trim() ?? '';
         if (av == 'Pending' || av == 'null' || av.isEmpty) return '';
         final rangeMatch = RegExp(r'^(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)$').firstMatch(av);
         if (rangeMatch != null) {
@@ -3464,8 +3465,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     // Pre-fetch reference image once (no user photo path only).
     // Capture in closure so FutureBuilder doesn't re-run on every rebuild.
-    final hasUserPhoto = data[_F.imageObverse]?.toString().startsWith('http') == true
-        || data[_F.imageReverse]?.toString().startsWith('http') == true;
+    final obvFallback = data[_F.imageObverse] ?? data['primary_image_url'] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).isNotEmpty ? data['photo_urls'][0] : null);
+    final revFallback = data[_F.imageReverse] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).length > 1 ? data['photo_urls'][1] : null);
+    final hasUserPhoto = obvFallback?.toString().startsWith('http') == true
+        || revFallback?.toString().startsWith('http') == true;
     final refFuture = hasUserPhoto
         ? null
         : CoinImageService.fetchReferenceImages(
@@ -3487,8 +3490,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       builder: (_) => StatefulBuilder(
         builder: (ctx, setDlg) {
           final canMutate = data['is_virtual'] != true && coinId.isNotEmpty;
-          final obvUrl   = data[_F.imageObverse]?.toString() ?? '';
-          final revUrl   = data[_F.imageReverse]?.toString() ?? '';
+          final obvUrl   = (data[_F.imageObverse] ?? data['primary_image_url'] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).isNotEmpty ? data['photo_urls'][0] : null))?.toString() ?? '';
+          final revUrl   = (data[_F.imageReverse] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).length > 1 ? data['photo_urls'][1] : null))?.toString() ?? '';
           final hasObv   = obvUrl.isNotEmpty && obvUrl.startsWith('http');
           final hasRev   = revUrl.isNotEmpty && revUrl.startsWith('http');
           final showObv  = _vaultShowObverse || (!hasRev && hasObv);
@@ -3820,7 +3823,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ? data[_F.meltValue].toString()
             : 'N/A');
     return Row(children: [
-      Expanded(child: _metricCard('Est. Value', data[_F.aiValue]?.toString() ?? '--', Color(0xFF1A73E8), Icons.attach_money)),
+      Expanded(child: _metricCard('Est. Value', (data[_F.aiValue] ?? data['ai_estimated_value'] ?? data['estValue'] ?? (data['ai_est_value'] != null ? '\$${(data['ai_est_value'] is num ? (data['ai_est_value'] as num).toStringAsFixed(2) : data['ai_est_value'])}' : null))?.toString() ?? '--', Color(0xFF1A73E8), Icons.attach_money)),
       SizedBox(width: 10),
       Expanded(child: _metricCard('Melt Value', meltStr, Color(0xFF34A853), Icons.blur_circular_outlined)),
       SizedBox(width: 10),
@@ -6316,8 +6319,8 @@ class _CollectionCardImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final obv = _cleanUrl(data[_F.imageObverse]);
-    final rev = _cleanUrl(data[_F.imageReverse]);
+    final obv = _cleanUrl(data[_F.imageObverse] ?? data['primary_image_url'] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).isNotEmpty ? data['photo_urls'][0] : null));
+    final rev = _cleanUrl(data[_F.imageReverse] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).length > 1 ? data['photo_urls'][1] : null));
     final directUrl = rev.isNotEmpty ? rev : obv;  // Prefer reverse (distinct design)
 
     if (directUrl.isNotEmpty) {

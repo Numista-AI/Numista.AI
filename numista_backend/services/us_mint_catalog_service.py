@@ -193,7 +193,7 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "theme_subject": "250th Anniversary Uncirculated Coin Set",
         "strike_type": "Uncirculated",
         "condition": "Uncirculated",
-        "metal_content": "Cupronickel / Clad",
+        "metal_content": "Cupronickel Clad",
         "is_set": True,
         "set_id": "uncirculated-coin-set-2026",
         "item_type": "set",
@@ -436,9 +436,15 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
             item["weight_grams"] = catalog_match["weight_grams"]
 
         # Plan.v3 C2 / IG-2: fill-missing-only copy for set & image & valuation fields
-        for fld in ("is_set", "set_id", "item_type", "image_url_obverse", "image_url_reverse", "issue_price"):
+        for fld in ("is_set", "set_id", "item_type", "image_url_obverse", "image_url_reverse", "issue_price", "metal_content"):
             if fld in catalog_match and not item.get(fld):
                 item[fld] = catalog_match[fld]
+
+        if catalog_match.get("metal_content"):
+            if not item.get("Metal Content"):
+                item["Metal Content"] = catalog_match["metal_content"]
+            if not item.get("metal"):
+                item["metal"] = catalog_match["metal_content"]
 
         # Also fill item_number / retailer_item_num when blank
         sku_code = catalog_match.get("code") or raw_item_no
@@ -485,14 +491,14 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
                             alloc_fees = float(item.get("Allocated Fees") or item.get("allocated_fees") or 0.0)
                             item["Sticker Price"] = canonical_lot_cost
                             item["Allocated Fees"] = alloc_fees
-                            item["Cost"] = round(canonical_lot_cost + alloc_fees, 2)
-                            item["Purchase Cost"] = round(canonical_lot_cost + alloc_fees, 2)
-                            item["cost"] = round(canonical_lot_cost + alloc_fees, 2)
+                            item["Cost"] = canonical_lot_cost
+                            item["Purchase Cost"] = canonical_lot_cost
+                            item["cost"] = canonical_lot_cost
                     except Exception as e:
                         logger.warning(f"Failed parsing cat_issue_price '{cat_issue_price}': {e}")
                 
                 # B2/B4: Ensure unit_cost is calculated from lot total Cost
-                cost_val = item.get("Cost") or item.get("Purchase Cost") or item.get("cost") or 0.0
+                cost_val = item.get("Sticker Price") or item.get("Cost") or item.get("Purchase Cost") or item.get("cost") or 0.0
                 try:
                     cost_float = float(cost_val)
                     if cost_float > 0.0:
@@ -501,6 +507,32 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
                         item["set_cost_label"] = f"${cost_float:.2f} ({new_qty} @ ${cost_float / new_qty:.2f})"
                 except (ValueError, TypeError):
                     pass
+
+        # Plan.v1 / Argon A-2: Propagate image keys so card & inspector resolve without error
+        cat_obv = item.get("image_url_obverse")
+        cat_rev = item.get("image_url_reverse")
+        if cat_obv and not item.get("primary_image_url"):
+            item["primary_image_url"] = cat_obv
+        if cat_obv and not item.get("photo_urls"):
+            item["photo_urls"] = [cat_obv] + ([cat_rev] if cat_rev else [])
+
+        # Plan.v1 / Argon A-3 / FF-3: Baseline valuation (fill-missing-only)
+        cat_issue_p = catalog_match.get("issue_price") or catalog_match.get("unit_price")
+        if cat_issue_p:
+            try:
+                clean_cat_p = float(re.sub(r"[^\d.]", "", str(cat_issue_p)))
+                if clean_cat_p > 0.0:
+                    fmt_val = f"${clean_cat_p:.2f}"
+                    curr_ai_val = item.get("AI Estimated Value") or item.get("ai_estimated_value") or item.get("estValue") or item.get("ai_est_value")
+                    if not curr_ai_val or str(curr_ai_val).strip() in ("", "$0.00", "0.0", "0", "—", "--", "Valuation Pending", "null"):
+                        item["ai_est_value"] = clean_cat_p
+                        item["ai_estimated_value"] = fmt_val
+                        item["AI Estimated Value"] = fmt_val
+                        item["estValue"] = fmt_val
+                        item["valuation_source"] = "US Mint Catalog Baseline"
+                        item["enrichment_status"] = "enriched"
+            except Exception as e:
+                logger.warning(f"Failed parsing cat_issue_price baseline '{cat_issue_p}': {e}")
 
         item["_catalog_grounded"] = True
 
