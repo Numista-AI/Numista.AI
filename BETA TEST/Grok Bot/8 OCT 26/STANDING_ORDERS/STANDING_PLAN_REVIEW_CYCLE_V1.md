@@ -24,3 +24,12 @@ Tiny FAIL-FIX patches (single guard / narrow bug) use the lean path: CoS score �
 
 ## Source prompts
 Eric's Word doc (Aug 12): *Antigravity, GROK & GEMINI feedback prompts*. CoS has the text banked; Eric holds the original. Not copied here.
+
+---
+## AMEND 2026-10-27 ~12:20 PM ET — Eric full chain + 4-round / partial ship (applies to NET-602+ write-path plans)
+
+**Chain:** AG Plan.vN → Argon → Grok Bot CoS (GB) → Stand Alone Grok → ONLY THEN EXECUTE → FT → live.
+**Not enough:** Argon alone. Do not EXECUTE after Argon YES without GB + Stand Alone Grok.
+**Rounds:** up to **4** (Plan v1–v4).
+**After v4:** if not fully ready → **partial ship** ready parts (preview→FT→live per typed YES); keep iterating only not-ready parts.
+Tiny FAIL-FIX may still use NET EXECUTE path when Eric/CoS explicitly say so; B- Mint NET-602 is on this full chain.

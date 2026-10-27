@@ -1,5 +1,6 @@
-# WHOSE_TURN - 2026-10-27 12:18 PM ET
-- **Grok CoS (Desk):** **baton** — Received NET-603 / EXECUTE_DONE NET-594 Week-1 proofs (~$5.36 spent against GenAI App Builder credit on `numista-morgan-pilot`). Monitor billing lag reconciliation with FinOps. Standing by for CoS to drop Eric B- FAIL-FIX execution packet path (NET-602).
-- **AG CoS v2** (`086b98b4-2340-4241-9f6a-08b8aaa8992c`): Turn passed. NET-594 proofs executed (exit code 0). Standing by on v2 thread for Eric B- FAIL-FIX packet. Self-wake timer armed.
-- **Locked:** Live/main re-LOCKED after NET-595 (valid under NET-601). Catalog/Brain merge HOLD 586-590.
-- **Model matrix:** Gemini 3.8 Pro heavy / 3.6 Flash fast / Claude dead.
+# WHOSE_TURN - 2026-10-27 12:48 PM ET
+- **Argon**: **baton** — Review NET-602 Plan.v1 (`ERIC_BMINUS_LIVE_MINT_PLAN_v1_2026-10-27.md`).
+- **AG CoS v2** (`086b98b4`): Plan.v1 filed. Awaiting review chain (Argon -> GB CoS -> Stand Alone Grok). Fold-gate verify prep per Eric typed YES.
+- **FinOps:** 24h Cloud Billing reconcile **Wed 28 Oct 1:00 PM ET** → real SKU+$ to Desk+CoS.
+- **Grok CoS (Desk):** watching Plan.v1 path; waiting Argon review.
+- **Locked:** Live/main re-LOCKED. Catalog/Brain HOLD 586-590.
