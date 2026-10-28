@@ -1,0 +1,207 @@
+{
+  "doc_type": "INGEST_MANIFEST_EXECUTE",
+  "net": "NET-640",
+  "phase": "Phase I afternoon EXECUTE",
+  "filed": "2026-10-28T12:49:41",
+  "zone": "America/New_York",
+  "project": "numista-morgan-pilot",
+  "status": "EXECUTE_DONE",
+  "spend": {
+    "mode": "ESTIMATE",
+    "discovery_usd_estimate": 0.0,
+    "layout_parser_usd": 0.0,
+    "check_grounding_usd": 0.0,
+    "gemini_usd": 0.0,
+    "ceiling_usd": 60.0,
+    "abort_80pct_usd": 48.0,
+    "note": "Inline text import ~22.5 KiB into morgan-docs; under Vertex AI Search 10 GiB free index band. Engine create (morgan-pilot-blended) attach-only. 7 Enterprise Search smoke calls. No Layout Parser, no CG, Adv Answers OFF. ESTIMATE $0 list; FinOps should confirm App Builder promo actuals.",
+    "skus_touched": [
+      "Vertex AI Search / Discovery Engine \u2014 Document index (unstructured inline)",
+      "Vertex AI Search \u2014 Enterprise Search queries (smoke)",
+      "Discovery Engine \u2014 Engine create (blended attach existing stores)"
+    ]
+  },
+  "locks_honored": [
+    "no_CG",
+    "no_fold",
+    "no_Gemini",
+    "no_Document_AI_on_morgan",
+    "no_Cloud_Run",
+    "Adv_Answers_OFF",
+    "reuse_extracts_first",
+    "no_Layout_Parser_this_pass",
+    "smithsonian_attach_only",
+    "no_invented_mintages",
+    "skip_FG-586-04_reburn"
+  ],
+  "wp0": {
+    "adc": "OK",
+    "stores_before": [
+      "morgan-docs",
+      "morgan-factcheck",
+      "smithsonian-nnc",
+      "usmint-site"
+    ],
+    "engines_before": [
+      "morgan-pilot-search",
+      "morgan-factcheck-search",
+      "morgan-factcheck-blended"
+    ],
+    "morgan_docs_before": 114,
+    "morgan_factcheck": 439
+  },
+  "wp1_to_wp4_import": {
+    "target_store": "morgan-docs",
+    "mode": "inline_rawBytes_create",
+    "records_imported": 22,
+    "content_bytes": 22554,
+    "source": "prep JSONL under excerpts_wp1..wp4 (not rebuilt)",
+    "doc_ids": [
+      "wp1-fg-590-16-ar1922-cy1921-sf-half",
+      "wp1-fg-590-17-ar1956-table15-phil-half",
+      "wp1-fg-590-17-ar1967-proof-footnote",
+      "wp1-fg-590-17-ar1956-table17-proof-shipments",
+      "wp1-fg-590-19-ar1965-proof-uncirculated-suspension",
+      "wp1-fg-590-19-local-registry-packaging",
+      "wp1-fg-589-15-pack-verbatim-1794-delivery",
+      "wp1-meta-verified-mintage-rows-pointer",
+      "wp2-fg-588-06-pack-verbatim-watermelon",
+      "wp2-fg-588-10-pack-verbatim-frbn-vs-frn",
+      "wp2-fg-588-10-local-registry-frn-frbn",
+      "wp3-fg-586-01-pack-journals-united-states",
+      "wp3-fg-586-05-device-specs",
+      "wp3-fg-586-02-new-haven-restrike",
+      "wp3-fg-586-03-abel-buell",
+      "wp3-fg-588-09-hibernia-1767-sou",
+      "wp3-fg-590-18-mintmark-order-1917",
+      "wp3-fugio-day1-attribution-seed",
+      "wp4-fg-589-11-coinage-act-1792-1849",
+      "wp4-fg-589-12-usph-fineness-1903-1564",
+      "wp4-fg-589-13-manila-m-mintmark",
+      "wp4-fg-589-14-melecio-figueroa"
+    ],
+    "fail_ids_now_searchable": [
+      "FG-586-01",
+      "FG-586-02",
+      "FG-586-03",
+      "FG-586-05",
+      "FG-588-06",
+      "FG-588-09",
+      "FG-588-10",
+      "FG-589-11",
+      "FG-589-12",
+      "FG-589-13",
+      "FG-589-14",
+      "FG-589-15",
+      "FG-590-16",
+      "FG-590-17",
+      "FG-590-18",
+      "FG-590-19"
+    ]
+  },
+  "wp5": {
+    "smithsonian_nnc": "attach only \u2014 no re-ingest",
+    "preexisting_blended": "morgan-factcheck-blended already had smithsonian-nnc + morgan-factcheck",
+    "single_store_patch": "FAILED_PRECONDITION \u2014 engines with a single data store cannot add/remove stores",
+    "created_engine": {
+      "id": "morgan-pilot-blended",
+      "displayName": "Research Bot Blended (docs + NNC)",
+      "dataStoreIds": [
+        "morgan-docs",
+        "smithsonian-nnc"
+      ],
+      "searchTier": "SEARCH_TIER_ENTERPRISE",
+      "searchAddOns": null,
+      "observabilityEnabled": false,
+      "est_usd": 0
+    }
+  },
+  "wp6_smoke": {
+    "engines_used": [
+      "morgan-pilot-search",
+      "morgan-pilot-blended"
+    ],
+    "any_phase1_hit": true,
+    "log": "/workspace/catalog-research/ingest/logs/SMOKE_QUERY_LOG.json",
+    "summary": [
+      {
+        "name": "SMOKE1_Fugio_NNP",
+        "engine": "morgan-pilot-search",
+        "phase1_hit": true,
+        "top_id": "wp3-fg-586-05-device-specs"
+      },
+      {
+        "name": "SMOKE1_Fugio_NNP",
+        "engine": "morgan-pilot-blended",
+        "phase1_hit": true,
+        "top_id": "wp3-fg-586-05-device-specs"
+      },
+      {
+        "name": "SMOKE2_MintAR_mintage",
+        "engine": "morgan-pilot-search",
+        "phase1_hit": true,
+        "top_id": "wp1-fg-590-16-ar1922-cy1921-sf-half"
+      },
+      {
+        "name": "SMOKE2_MintAR_mintage",
+        "engine": "morgan-pilot-blended",
+        "phase1_hit": true,
+        "top_id": "wp1-fg-590-16-ar1922-cy1921-sf-half"
+      },
+      {
+        "name": "SMOKE3_BEP_FR",
+        "engine": "morgan-pilot-search",
+        "phase1_hit": true,
+        "top_id": "wp2-fg-588-10-pack-verbatim-frbn-vs-frn"
+      },
+      {
+        "name": "SMOKE3_BEP_FR",
+        "engine": "morgan-pilot-blended",
+        "phase1_hit": true,
+        "top_id": "wp2-fg-588-10-pack-verbatim-frbn-vs-frn"
+      },
+      {
+        "name": "SMOKE2b_Franklin_mintage",
+        "engine": "morgan-pilot-search",
+        "phase1_hit": true,
+        "top_id": "wp1-fg-590-17-ar1956-table15-phil-half"
+      }
+    ]
+  },
+  "doc_counts_after": {
+    "morgan-docs_listed": 136,
+    "phase1_excerpt_docs": 22
+  },
+  "engines_after": {
+    "morgan-factcheck-blended": [
+      "morgan-factcheck",
+      "smithsonian-nnc"
+    ],
+    "morgan-factcheck-search": [
+      "morgan-factcheck"
+    ],
+    "morgan-pilot-blended": [
+      "morgan-docs",
+      "smithsonian-nnc"
+    ],
+    "morgan-pilot-search": [
+      "morgan-docs"
+    ]
+  },
+  "not_done_by_design": [
+    "Check Grounding / Phase I-C (needs separate YES \u2264$0.50)",
+    "Layout Parser (reuse-first sufficient; sample not opened)",
+    "URL-manifest full PDF/HTML fetch (cite extracts + local AR enough for smoke)",
+    "catalog/Brain/Firestore fold (HOLD 586-590)",
+    "FG-586-04 re-burn (already SUPPORT)",
+    "FG-590-20 Julian/Keusch optional Tier B skipped"
+  ],
+  "artifacts": {
+    "prep_manifest": "/workspace/catalog-research/ingest/INGEST_MANIFEST_PREP_2026-10-28.json",
+    "execute_manifest": "/workspace/catalog-research/ingest/INGEST_MANIFEST_EXECUTE_NET640_2026-10-28.json",
+    "import_log": "/workspace/catalog-research/ingest/logs/IMPORT_WP1-4_RESULT.json",
+    "smoke_log_json": "/workspace/catalog-research/ingest/logs/SMOKE_QUERY_LOG.json",
+    "smoke_log_md": "/workspace/catalog-research/ingest/logs/SMOKE_QUERY_LOG.md",
+    "blocked_then_resume": "/workspace/catalog-research/ingest/NET640_BLOCKED_THEN_RESUME_AUTH_20261028.md"
+  }
+}

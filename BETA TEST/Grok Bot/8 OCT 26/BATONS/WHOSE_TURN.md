@@ -1,19 +1,20 @@
-# WHOSE_TURN - updated 2026-10-28 ~11:55 AM ET
+# WHOSE_TURN - updated 2026-10-28 ~1:04 PM ET
 
-## NET-643 - GB CoS SCORE (Desk 2026-10-28 11:54 ET)
-- NET-642 Plan.v1: GB CoS 83/100 CONDITIONAL GO (SCORE ONLY).
-- NO EXECUTE / NO FOLD / $0. Do not wake AG for execute.
-- Fold HOLD 586/588/589/590 kept. Live/main locked.
-- Next: SAG independent review -> founder Qs (held for golf) -> Plan.v1.1/v2 if needed.
-- Parallel: NET-640 Phase I afternoon ~12:30-4:00 PM ET <=$60 Discovery-only numista-morgan-pilot (Catalog Research).
-- Parallel: NET-641 Mint FAIL-FIX stalled (needs Eric AG CoS ping).
-- Files: BATONS\GBCOS_REVIEW_NET-642_... ; SAG_PASTE_PACKET_NET-642_... ; NET-643_GBCOS-to-DESK_COS-SCORE-NET-642.md
+## NET-640 Phase I afternoon: EXECUTE_DONE
+- Catalog Research completed WP0-WP6 on `numista-morgan-pilot`.
+- Estimated spend: **$0.00** (inline text under free band; no Layout Parser, no CG, no Gemini).
+- 22 new docs indexed in `morgan-docs` (now 136); `morgan-pilot-blended` created.
+- 16 FAIL rows now searchable via Enterprise Search.
+- Check Grounding (CG) option A ($0.50) and fold HOLD 586-590 remain on HOLD pending separate Eric typed YES.
 
-## BOARD
-- DAY CATALOG: NET-640 Phase I EXECUTE ARMED ~12:30-4:00 PM ET. Ceiling <=$60 Phase I / $60 day envelope. Discovery-only numista-morgan-pilot; no CG/fold/Gemini. No overnight second without Eric YES.
-- PLAN (parallel): NET-642/643 Catalog->Site Plan.v1 scored 83 CONDITIONAL GO. SAG next. PLAN ONLY; $0 spend.
-- Mint FAIL-FIX / NET-641: still day #1 / stalled pending Eric AG CoS ping; origin/main LOCKED.
+## NET-642 Plan.v2 LANDED
+- File: `US_NUMISMATICS_CATALOG_IMPLEMENTATION_PLAN_V2.md` (CoS INBOX ~12:19; mirrored BATONS/RADIO/01_INCOMING).
+- PLAN ONLY - no execute / no fold / $0 unapproved. Main locked. No Mint NET-641 touch.
+- Review cycle: GB CoS + SAG. Flags noted: 90/10 mobile companion vs web-first; confirm Eric Qs.
+
+## OTHER
+- Mint FAIL-FIX / NET-641: stalled pending Eric AG CoS ping; live/main LOCKED.
 - FOLD: HOLD 586/588/589/590.
-- FINOPS: Billing chase NET-610 ~1:00-1:15 PM ET today (separate).
+- FINOPS: NET-610 Billing chase in flight via ADC path.
 
-Turn: Catalog Research fires Phase I at/after 12:30 under <=$60; SAG then Eric review Plan.v1; Mint track separate pending Eric input.
+**Turn:** CoS + SAG review Plan.v2; Phase I afternoon EXECUTE_DONE filed; Mint separate pending Eric input.
