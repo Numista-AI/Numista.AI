@@ -101,7 +101,7 @@ def validate_nac1(nac_code: str) -> bool:
     match = NAC1_REGEX.match(nac_code)
     if not match:
         return False
-    payload,chk = match.group(1), match.group(5)
+    payload,chk = match.group(1), match.group(6)  # group 5 is FAC; CHK is group 6 (found by unit tests, 2026-10-28)
     return compute_nac1_chk(payload) == chk
 ```
 
