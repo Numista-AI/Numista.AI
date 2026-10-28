@@ -1,5 +1,9 @@
-# WHOSE_TURN - updated 2026-10-27 ~9:45 PM ET
+# WHOSE_TURN - updated 2026-10-28 ~3:18 AM ET
 
-**NIGHT:** DESK / FINOPS / COS — AG CoS v2 completed NET-610 Option B execution ($3.86 list-price SKU ceiling, under $5 limit, 540 calls). FinOps NET-637 (BQ export lag noted, hard verify scheduled Wed 28 Oct 1:00 PM ET) ACK'd. Stack 586+588+589+590 remains on HOLD (sandbox only, zero live writes/fold).
+**STAND-DOWN IN EFFECT (NET-638):**
+All AG activity stopped and 25-minute self-wake timer PAUSED until Eric's first morning message to ensure full Gemini/AG quota refresh.
 
-**MINT:** PARKED overnight (founder NO GO on p7-gate). origin/main STRICTLY LOCKED.
+- **MINT TRACK:** PARKED overnight per founder NO-GO on p7-gate. `origin/main` STRICTLY LOCKED. First order of business upon Eric wake is Mint FAIL-FIX plan on p7-gate.
+- **NIGHT TRACK:** NET-610 Option B COMPLETE ($3.86 list-price SKU ceiling math, $0 net OOP promo credit `e87a9b98...`). Zero production writes/fold (`NET-609` HOLD). FinOps hard billing verify scheduled for Wed 28 Oct ~1:00 PM ET.
+
+**Turn:** Awaiting Eric's first message of the morning.
