@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Numista.AI — U.S. Numismatics Master Catalog (1776–2026) Interactive Prototype</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --background: #0d1017;
+      --foreground: #f1f5f9;
+      --card: #161b26;
+      --border: #262f40;
+      --muted-foreground: #94a3b8;
+      --primary: #f59e0b;
+      --primary-foreground: #090d16;
+      --secondary: #1e2638;
+      --secondary-foreground: #e2e8f0;
+    }
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+    .flip-inner {
+      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      transform-style: preserve-3d;
+    }
+    .flipped .flip-inner {
+      transform: rotateY(180deg);
+    }
+    .flip-face {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    .flip-back {
+      transform: rotateY(180deg);
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-6 select-none">
+
+  <!-- TOP BROWSER / SEO CANONICAL ROUTING BAR (Q4) -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 mb-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5 flex-1 min-w-[300px]">
+      <span class="px-2.5 py-1 rounded-md bg-[var(--secondary)] text-[var(--secondary-foreground)] text-xs font-semibold tracking-wide">
+        Q4 SEO ROUTE
+      </span>
+      <div class="flex items-center gap-1.5 bg-[var(--background)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs font-mono flex-1 overflow-x-auto">
+        <span class="text-[var(--muted-foreground)]">https://numista.ai</span>
+        <span id="seo-url-slug" class="text-[var(--foreground)] font-semibold">/catalog/coins/morgan-dollar/1881-s</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 text-xs">
+      <span class="text-[var(--muted-foreground)]">Canonical Key:</span>
+      <code id="canonical-nac-pill" class="px-2.5 py-1 rounded bg-[var(--secondary)] text-[var(--foreground)] font-mono font-semibold border border-[var(--border)]">
+        NAC1.CN.US.1D.MORGAN.1881.S.BASE.E
+      </code>
+      <span class="px-2 py-1 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium">
+        CHK: Valid (Crockford-32)
+      </span>
+    </div>
+  </div>
+
+  <!-- HEADER & SEARCH BAR -->
+  <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 mb-5 shadow-sm">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <h1 class="text-xl font-bold tracking-tight text-[var(--foreground)]">
+            U.S. Numismatics Master Catalog
+          </h1>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            1776 – 2026 Semiquincentennial Edition
+          </span>
+        </div>
+        <p class="text-xs text-[var(--muted-foreground)] mt-1">
+          Desktop Web Reference Architecture · Dual-Tier Mintages · Resilient Dual-Sided Vector Placeholders · Strictly American-Authorized Issues (Q2)
+        </p>
+      </div>
+
+      <!-- Search + Phase 2 AI Microscope Pill -->
+      <div class="flex items-center gap-2.5 w-full md:w-auto">
+        <div class="relative flex-1 md:w-80">
+          <input
+            id="search-input"
+            type="text"
+            placeholder="Search year, series, Fr.#, or NAC1 code..."
+            oninput="applyFilters()"
+            class="w-full bg-[var(--background)] border border-[var(--border)] rounded-xl pl-3.5 pr-8 py-2 text-xs text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:border-[var(--primary)]"
+          />
+          <button onclick="clearSearch()" class="absolute right-2.5 top-2 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+            ✕
+          </button>
+        </div>
+        <div class="px-3 py-2 rounded-xl border border-dashed border-[var(--border)] bg-[var(--background)] text-[var(--muted-foreground)] text-xs flex items-center gap-1.5" title="Scheduled for Phase 2 (Q1 2027)">
+          <span>🔬 Visual AI Match</span>
+          <span class="px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] text-xs font-semibold">Phase 2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- OBJECT KIND TABS (With Gemini Must-Fix #1 Collection Routing Indicator) -->
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-4 mb-4">
+      <div class="flex flex-wrap items-center gap-2" id="kind-tabs">
+        <button onclick="setKindFilter('ALL')" data-kind="ALL" class="kind-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] transition">
+          All Objects (8)
+        </button>
+        <button onclick="setKindFilter('CN')" data-kind="CN" class="kind-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:opacity-90 transition flex items-center gap-1.5">
+          <span>🪙 Coins (CN)</span>
+          <span class="opacity-75 font-mono">→ /coins</span>
+        </button>
+        <button onclick="setKindFilter('BN')" data-kind="BN" class="kind-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:opacity-90 transition flex items-center gap-1.5">
+          <span>💵 Bank Notes (BN)</span>
+          <span class="opacity-75 font-mono">→ /currency</span>
+        </button>
+        <button onclick="setKindFilter('MD')" data-kind="MD" class="kind-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:opacity-90 transition flex items-center gap-1.5">
+          <span>🎖️ Medals (MD · Phase 2)</span>
+          <span class="opacity-75 font-mono">→ /world_items</span>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="flipAllCards()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--background)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition flex items-center gap-1.5">
+          <span>🔄 Flip All Cards (Obverse ↔ Reverse)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ERA TIMELINE & PRE-FEDERAL ISSUING ENTITY FACET (Q1 Consensus) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center mb-4">
+      <div class="lg:col-span-7 flex flex-wrap items-center gap-1.5" id="era-pills">
+        <span class="text-xs font-semibold text-[var(--muted-foreground)] mr-1">Timeline Era:</span>
+        <button onclick="setEraFilter('ALL')" data-era="ALL" class="era-pill px-2.5 py-1 rounded-md text-xs font-medium bg-[var(--primary)] text-[var(--primary-foreground)]">
+          All (1776–2026)
+        </button>
+        <button onclick="setEraFilter('PRE_FEDERAL')" data-era="PRE_FEDERAL" class="era-pill px-2.5 py-1 rounded-md text-xs font-medium bg-[var(--secondary)] text-[var(--secondary-foreground)]">
+          Pre-Federal (1776–1791)
+        </button>
+        <button onclick="setEraFilter('EARLY_FED')" data-era="EARLY_FED" class="era-pill px-2.5 py-1 rounded-md text-xs font-medium bg-[var(--secondary)] text-[var(--secondary-foreground)]">
+          Early Federal (1792–1837)
+        </button>
+        <button onclick="setEraFilter('GILDED')" data-era="GILDED" class="era-pill px-2.5 py-1 rounded-md text-xs font-medium bg-[var(--secondary)] text-[var(--secondary-foreground)]">
+          Classic & Gilded (1838–1933)
+        </button>
+        <button onclick="setEraFilter('MODERN')" data-era="MODERN" class="era-pill px-2.5 py-1 rounded-md text-xs font-medium bg-[var(--secondary)] text-[var(--secondary-foreground)]">
+          Modern & 250th (1934–2026)
+        </button>
+      </div>
+
+      <!-- Year Range Readout & Scrubber -->
+      <div class="lg:col-span-5 flex items-center gap-3 bg-[var(--background)] border border-[var(--border)] rounded-xl px-3.5 py-2">
+        <span class="text-xs font-mono text-[var(--muted-foreground)]">1776</span>
+        <input
+          id="year-slider"
+          type="range"
+          min="1776"
+          max="2026"
+          value="2026"
+          oninput="updateYearCap(this.value)"
+          class="flex-1 accent-amber-400 cursor-pointer"
+        />
+        <span id="year-slider-label" class="text-xs font-mono font-bold text-amber-400">≤ 2026</span>
+      </div>
+    </div>
+
+    <!-- SECONDARY FACET: PRE-FEDERAL ISSUING ENTITY (Revealed/Highlighted per Q1 Consensus) -->
+    <div id="pre-federal-subbar" class="hidden mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-xs font-bold">Q1 UNIFIED TIMELINE + STATE FACET</span>
+        <span class="text-xs text-[var(--foreground)]">Pre-Federal issues are interleaved chronologically with an Issuing Authority filter:</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button onclick="setStateEntity('ALL')" class="px-2.5 py-1 rounded text-xs font-semibold bg-amber-500 text-black">All Pre-Federal</button>
+        <button onclick="setStateEntity('CONTINENTAL')" class="px-2.5 py-1 rounded text-xs font-medium bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)]">Continental Congress</button>
+        <button onclick="setStateEntity('CT')" class="px-2.5 py-1 rounded text-xs font-medium bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)]">Connecticut</button>
+        <button onclick="setStateEntity('MA')" class="px-2.5 py-1 rounded text-xs font-medium bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)]">Massachusetts</button>
+      </div>
+    </div>
+
+    <!-- MINT FACILITY FILTER RAIL (Disambiguated FAC codes per NAC §0.1 & GB CoS #6) -->
+    <div class="flex flex-wrap items-center gap-1.5 pt-1">
+      <span class="text-xs font-semibold text-[var(--muted-foreground)] mr-1">Facility (FAC):</span>
+      <button onclick="setFacFilter('ALL')" data-fac="ALL" class="fac-chip px-2.5 py-1 rounded-md text-xs font-mono font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">ALL</button>
+      <button onclick="setFacFilter('P')" data-fac="P" class="fac-chip px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]">P · Phila</button>
+      <button onclick="setFacFilter('D')" data-fac="D" class="fac-chip px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]">D · Denver</button>
+      <button onclick="setFacFilter('S')" data-fac="S" class="fac-chip px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]">S · San Fran</button>
+      <button onclick="setFacFilter('W')" data-fac="W" class="fac-chip px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]">W · West Point</button>
+      <button onclick="setFacFilter('CC')" data-fac="CC" class="fac-chip px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]">CC · Carson City</button>
+      <button onclick="setFacFilter('DD')" data-fac="DD" class="fac-chip px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--background)] border border-amber-500/40 text-amber-300" title="NAC §0.1 Disambiguated Dahlonega code">DD · Dahlonega</button>
+      <button onclick="setFacFilter('M')" data-fac="M" class="fac-chip px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]" title="U.S.-Philippines Manila Mint">M · Manila (PF)</button>
+      <button onclick="setFacFilter('BEP')" data-fac="BEP" class="fac-chip px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]">BEP · Engraving</button>
+      <button onclick="setFacFilter('XX')" data-fac="XX" class="fac-chip px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]">XX · Contract</button>
+    </div>
+  </div>
+
+  <!-- MAIN WORKSPACE: CATALOG GRID + SLIDE-IN INSPECTOR -->
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+    <!-- Left/Main: Responsive Catalog Cards Grid -->
+    <div id="catalog-grid" class="xl:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Populated dynamically via JS -->
+    </div>
+
+    <!-- Right: Live Item Architecture & Citation Inspector -->
+    <div class="xl:col-span-4 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 sticky top-6 shadow-sm">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-3 mb-4">
+        <div>
+          <span class="text-xs font-semibold uppercase tracking-wider text-amber-400">Live Architecture Inspector</span>
+          <h2 id="insp-title" class="text-base font-bold text-[var(--foreground)] mt-0.5">Select or Click a Card</h2>
+        </div>
+        <span id="insp-kind-badge" class="px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-[var(--secondary)] text-[var(--secondary-foreground)]">
+          CN
+        </span>
+      </div>
+
+      <!-- NAC1 Grammar Breakdown -->
+      <div class="mb-4">
+        <div class="text-xs font-semibold text-[var(--muted-foreground)] mb-1.5 flex items-center justify-between">
+          <span>Deterministic NAC1 Grammar</span>
+          <span class="text-emerald-400 font-mono">Server-Validated</span>
+        </div>
+        <div id="insp-nac-segments" class="grid grid-cols-4 gap-1.5 text-xs font-mono">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Mint Mark vs Facility Separation (GB CoS #6) -->
+      <div class="mb-4 p-3 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+        <div class="text-xs font-semibold text-[var(--foreground)] mb-1">Facility vs. Mint Mark Separation (NAC §0.1)</div>
+        <div id="insp-facility-detail" class="text-xs text-[var(--muted-foreground)] space-y-1"></div>
+      </div>
+
+      <!-- Dual-Tier Mintages & Mandatory Citations (Grok #3 & GB CoS #2) -->
+      <div class="mb-4 p-3 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+        <div class="text-xs font-semibold text-[var(--foreground)] mb-2 flex items-center justify-between">
+          <span>Authoritative Dual-Tier Mintage</span>
+          <span class="text-xs text-emerald-400 font-mono">Tier-A Locked</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mb-2.5">
+          <div class="p-2 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+            <div class="text-xs text-[var(--muted-foreground)]">Tier A (Official Mint/BEP)</div>
+            <div id="insp-mintage-a" class="text-sm font-bold font-mono text-[var(--foreground)] mt-0.5">—</div>
+          </div>
+          <div class="p-2 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+            <div class="text-xs text-[var(--muted-foreground)]">Tier B (Trade Consensus)</div>
+            <div id="insp-mintage-b" class="text-sm font-bold font-mono text-amber-400 mt-0.5">—</div>
+          </div>
+        </div>
+        <div class="text-xs text-[var(--muted-foreground)] border-t border-[var(--border)] pt-2">
+          <span class="font-semibold text-[var(--foreground)]">Primary Citation: </span>
+          <span id="insp-citation">—</span>
+        </div>
+      </div>
+
+      <!-- Physical Specifications & Crosswalk -->
+      <div class="mb-4 p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs space-y-1.5" id="insp-specs">
+      </div>
+
+      <!-- Collection Write-Path Simulation (Gemini Must-Fix #1 & #3) -->
+      <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+        <div class="text-xs font-bold text-emerald-400 mb-1">Collection Write Contract (REQ_031)</div>
+        <div id="insp-write-contract" class="text-xs font-mono text-[var(--foreground)] space-y-1"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION FOR + ADD TO COLLECTION -->
+  <div id="collection-toast" class="fixed bottom-5 right-5 hidden bg-[var(--card)] border-2 border-emerald-500/60 text-[var(--foreground)] rounded-xl p-4 shadow-xl max-w-md z-50">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Idempotent Whole-Document Write Executed</div>
+        <div id="toast-body" class="text-xs text-[var(--foreground)] mt-1 font-mono space-y-1"></div>
+      </div>
+      <button onclick="document.getElementById('collection-toast').classList.add('hidden')" class="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]">✕</button>
+    </div>
+  </div>
+
+  <script>
+    const CATALOG_ITEMS = [
+      {
+        nac_code: "NAC1.CN.PF.1C.FUGIO.1787.XX.BASE.X",
+        seo_slug: "/catalog/coins/fugio-cent/1787-club-rays",
+        kind: "CN",
+        era: "PRE_FEDERAL",
+        state_entity: "CONTINENTAL",
+        year: 1787,
+        year_display: "1787 · Pre-Federal",
+        title: "1787 Fugio Cent — Club Rays",
+        subtitle: "Continental Congress · Sundial / 13 Linked States",
+        fac: "XX",
+        mint_mark_on_coin: false,
+        mint_mark: null,
+        facility_note: "New Haven private contract (Abel Buell dies)",
+        default_face: "OBVERSE",
+        default_face_reason: "Obverse Sundial & 'FUGIO' uniquely identifies the type",
+        has_obverse_image: false,
+        has_reverse_image: false,
+        mintage_a: "Est. 398,577 (Treasury Weight Delivery)",
+        mintage_b: "~400,000 (Newman 4-E Consensus)",
+        citation: "Continental Treasury Board Reports (1787); Eric P. Newman, 'The Early Paper Money & Fugio Cents'",
+        specs: "Copper · 10.2g · 28.5mm · Plain Edge · Coin Turn (180°)",
+        crosswalk: "Red Book: #R-12 · Newman: 4-E · PCGS: #883",
+        target_collection: "users/{uid}/coins",
+        visual_type: "PLACEHOLDER_COIN"
+      },
+      {
+        nac_code: "NAC1.CN.PF.1C.CT.1787.XX.DRAPED.A",
+        seo_slug: "/catalog/coins/connecticut-copper/1787-draped-bust",
+        kind: "CN",
+        era: "PRE_FEDERAL",
+        state_entity: "CT",
+        year: 1787,
+        year_display: "1787 · State of CT",
+        title: "1787 Connecticut Copper (Draped Bust)",
+        subtitle: "AUCTORI CONNEC · Inde Et Lib Seated Liberty",
+        fac: "XX",
+        mint_mark_on_coin: false,
+        mint_mark: null,
+        facility_note: "Company for Coining Coppers (New Haven, CT)",
+        default_face: "OBVERSE",
+        default_face_reason: "Obverse 'AUCTORI CONNEC' legend identifies state authority",
+        has_obverse_image: true,
+        has_reverse_image: true,
+        mintage_a: "Unrecorded (State Franchise)",
+        mintage_b: "Est. 1,100,000 across Miller dies",
+        citation: "Connecticut State Archives (Oct 1785 Authorization); Henry C. Miller Reference",
+        specs: "Copper · 9.5g · 28.0mm · Plain Edge · Medal/Var Turn",
+        crosswalk: "Red Book: CT-1787 · Miller: 33.17-r.1 · PCGS: #370",
+        target_collection: "users/{uid}/coins",
+        visual_type: "COPPER_COIN"
+      },
+      {
+        nac_code: "NAC1.CN.US.G5.LIBCAP.1838.DD.BASE.9",
+        seo_slug: "/catalog/coins/liberty-head-half-eagle/1838-d-dahlonega",
+        kind: "CN",
+        era: "GILDED",
+        state_entity: "NONE",
+        year: 1838,
+        year_display: "1838-D (Dahlonega)",
+        title: "1838-D Classic Head $5 Half Eagle",
+        subtitle: "First Year Dahlonega Mint · Obverse Mint Mark 'D'",
+        fac: "DD",
+        mint_mark_on_coin: true,
+        mint_mark: "D",
+        facility_note: "FAC='DD' disambiguates Dahlonega from Denver ('D') while mint_mark='D'",
+        default_face: "OBVERSE",
+        default_face_reason: "1838-D features unique obverse 'D' mint mark above date",
+        has_obverse_image: true,
+        has_reverse_image: true,
+        mintage_a: "20,583",
+        mintage_b: "20,583 (Est. ~225 surviving)",
+        citation: "U.S. Mint Annual Report (1839), Dahlonega Branch Mint Warrant Returns",
+        specs: "89.92% Gold · 8.36g · 22.5mm · Reeded Edge · Coin Turn",
+        crosswalk: "Red Book: #G5-1838D · McCloskey: 1-A · PCGS: #8177",
+        target_collection: "users/{uid}/coins",
+        visual_type: "GOLD_COIN"
+      },
+      {
+        nac_code: "NAC1.CN.US.1D.MORGAN.1881.S.BASE.E",
+        seo_slug: "/catalog/coins/morgan-dollar/1881-s",
+        kind: "CN",
+        era: "GILDED",
+        state_entity: "NONE",
+        year: 1881,
+        year_display: "1881-S",
+        title: "1881-S Morgan Silver Dollar",
+        subtitle: "George T. Morgan Liberty / Heraldic Eagle",
+        fac: "S",
+        mint_mark_on_coin: true,
+        mint_mark: "S",
+        facility_note: "San Francisco Mint ('S' below wreath on reverse)",
+        default_face: "OBVERSE",
+        default_face_reason: "Obverse profile & 1881 date provide primary type identity",
+        has_obverse_image: true,
+        has_reverse_image: true,
+        mintage_a: "12,760,000",
+        mintage_b: "12,760,000 (Pittman/Treasury melt adjusted)",
+        citation: "Annual Report of the Director of the Mint (FY 1882), Table of Coinage p. 44",
+        specs: "90% Silver, 10% Copper · 26.73g · 38.1mm · Reeded Edge",
+        crosswalk: "Red Book: #1D-1881S · PCGS: #7130 · NNC: 1985.0441.12",
+        target_collection: "users/{uid}/coins",
+        visual_type: "SILVER_COIN"
+      },
+      {
+        nac_code: "NAC1.BN.US.SC5.SILV.1899.BEP.BASE.7",
+        seo_slug: "/catalog/banknotes/silver-certificate-5/series-1899-chief",
+        kind: "BN",
+        era: "GILDED",
+        state_entity: "NONE",
+        year: 1899,
+        year_display: "Series 1899 · BEP",
+        title: "$5 Silver Certificate — 'Indian Chief'",
+        subtitle: "Running Antelope (Ta-to-ka-in-yanka) · Large Size Note",
+        fac: "BEP",
+        mint_mark_on_coin: false,
+        mint_mark: null,
+        facility_note: "Bureau of Engraving and Printing, Washington D.C.",
+        default_face: "OBVERSE",
+        default_face_reason: "Face engraving of Running Antelope & blue seal identifies series",
+        has_obverse_image: true,
+        has_reverse_image: true,
+        mintage_a: "565,516,000 (Total Series 1899 $5 Deliveries)",
+        mintage_b: "Fr. 271–281 (By Signature Combination)",
+        citation: "BEP Annual Production Ledger (1899–1923); Friedberg 'Paper Money of the United States'",
+        specs: "Linen/Cotton Rag · 187mm × 79mm (Large Size) · Blue Treasury Seal",
+        crosswalk: "Friedberg: Fr. 278 · Lyons-Roberts · NNC: NU64219",
+        target_collection: "users/{uid}/currency",
+        visual_type: "BANKNOTE"
+      },
+      {
+        nac_code: "NAC1.CN.PF.1P.USPI.1908.S.BASE.C",
+        seo_slug: "/catalog/coins/philippines-peso/1908-s-reduced-size",
+        kind: "CN",
+        era: "GILDED",
+        state_entity: "NONE",
+        year: 1908,
+        year_display: "1908-S · U.S. Philippines",
+        title: "1908-S U.S.-Philippines One Peso",
+        subtitle: "Insular Government · Standing Filipina / Eagle & Shield",
+        fac: "S",
+        mint_mark_on_coin: true,
+        mint_mark: "S",
+        facility_note: "Struck at San Francisco Mint for U.S. Territorial Philippines (INCLUDE rule)",
+        default_face: "OBVERSE",
+        default_face_reason: "Standing Filipina & 'ONE PESO' denomination on obverse",
+        has_obverse_image: true,
+        has_reverse_image: true,
+        mintage_a: "20,626,000",
+        mintage_b: "20,626,000 (High melt attrition)",
+        citation: "U.S. Mint Annual Report (1908) — Coinage Executed for Philippine Islands",
+        specs: "80% Silver, 20% Copper · 20.0g · 35.0mm · Reeded Edge",
+        crosswalk: "Red Book: USPI-1P-1908S · Allen: #17.02 · PCGS: #90498",
+        target_collection: "users/{uid}/coins",
+        visual_type: "SILVER_COIN"
+      },
+      {
+        nac_code: "NAC1.CN.US.25C.AWQ.2022.P.MAYA.Z",
+        seo_slug: "/catalog/coins/american-women-quarters/2022-p-maya-angelou",
+        kind: "CN",
+        era: "MODERN",
+        state_entity: "NONE",
+        year: 2022,
+        year_display: "2022-P · AWQ Series",
+        title: "2022-P Maya Angelou Quarter",
+        subtitle: "American Women Quarters · Default Unique Identity Side",
+        fac: "P",
+        mint_mark_on_coin: true,
+        mint_mark: "P",
+        facility_note: "Philadelphia Mint (Marked 'P' on obverse behind Washington)",
+        default_face: "REVERSE",
+        default_face_reason: "Eric Standing Rule (2026-10-15): Shared-obverse series default to unique commemorative Reverse",
+        has_obverse_image: true,
+        has_reverse_image: true,
+        mintage_a: "258,200,000",
+        mintage_b: "258,200,000",
+        citation: "U.S. Mint Final 2022 Circulating Coin Production Report",
+        specs: "Cupronickel Clad · 5.67g · 24.26mm · Reeded Edge",
+        crosswalk: "Red Book: #AWQ-2022-MAYA · PCGS: #894112",
+        target_collection: "users/{uid}/coins",
+        visual_type: "AWQ_COIN"
+      },
+      {
+        nac_code: "NAC1.MD.US.PRES.PRES.1923.P.COOL.W",
+        seo_slug: "/catalog/medals/presidential-series/1923-calvin-coolidge",
+        kind: "MD",
+        era: "GILDED",
+        state_entity: "NONE",
+        year: 1923,
+        year_display: "1923 · Official Mint Medal",
+        title: "Calvin Coolidge Presidential Medal",
+        subtitle: "U.S. Mint Official Bronze Series (Phase 2 Integration)",
+        fac: "P",
+        mint_mark_on_coin: false,
+        mint_mark: null,
+        facility_note: "Philadelphia Mint Medallic Department (No mint mark struck)",
+        default_face: "OBVERSE",
+        default_face_reason: "Obverse portrait by John R. Sinnock identifies President",
+        has_obverse_image: false,
+        has_reverse_image: false,
+        mintage_a: "Official Open Edition (Mint List #130)",
+        mintage_b: "Julian PR-32 Reference",
+        citation: "U.S. Mint Medals Catalog; R.W. Julian 'Medals of the United States Mint'",
+        specs: "Bronze · 76.2mm (3 Inch) · Plain Edge · Medal Turn (0°)",
+        crosswalk: "Mint List: #130 · Julian: PR-32 · NNC: 1979.1263",
+        target_collection: "users/{uid}/world_items",
+        visual_type: "PLACEHOLDER_MEDAL"
+      }
+    ];
+
+    let activeKind = "ALL";
+    let activeEra = "ALL";
+    let activeFac = "ALL";
+    let activeStateEntity = "ALL";
+    let maxYear = 2026;
+    let flippedState = {};
+    let selectedNac = CATALOG_ITEMS[3].nac_code;
+
+    function renderVisualArtwork(item, side) {
+      const isPlaceholder = !item.has_obverse_image;
+      if (isPlaceholder) {
+        return `
+          <div class="w-40 h-40 rounded-full border-2 border-dashed border-amber-500/40 bg-[var(--card)] flex flex-col items-center justify-center p-3 text-center relative">
+            <div class="w-32 h-32 rounded-full border border-[var(--border)] flex flex-col items-center justify-center">
+              <span class="text-xs font-mono font-bold text-amber-400 tracking-wider">${side} PENDING</span>
+              <span class="text-xs text-[var(--muted-foreground)] mt-1">${item.year} · ${item.kind}</span>
+              <span class="text-xs font-mono text-[var(--muted-foreground)] mt-0.5">${side === 'OBVERSE' ? 'Sundial Vector' : '13 Linked Rings'}</span>
+              <span class="mt-1.5 px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] text-xs">CC0 Archive Queue</span>
+            </div>
+          </div>
+        `;
+      }
+
+      if (item.visual_type === "BANKNOTE") {
+        if (side === "OBVERSE") {
+          return `
+            <div class="w-64 h-28 rounded-lg border-2 border-emerald-500/40 bg-gradient-to-br from-slate-800 via-slate-900 to-emerald-950 p-2.5 flex flex-col justify-between shadow-inner relative overflow-hidden">
+              <div class="flex items-center justify-between text-xs font-mono text-emerald-300">
+                <span>SERIES OF 1899</span>
+                <span class="px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">SILVER CERTIFICATE</span>
+                <span class="font-bold">$5</span>
+              </div>
+              <div class="flex items-center justify-between my-auto px-2">
+                <div class="w-8 h-8 rounded-full bg-sky-500/30 border border-sky-400 flex items-center justify-center text-xs font-bold text-sky-200">SEAL</div>
+                <div class="text-center">
+                  <div class="text-xs font-bold text-white tracking-wide">TA-TO-KA-IN-YANKA</div>
+                  <div class="text-xs text-emerald-300/80">Running Antelope Portrait</div>
+                </div>
+                <div class="text-xs font-mono text-sky-300">E84920142</div>
+              </div>
+              <div class="flex items-center justify-between text-xs font-mono text-slate-300">
+                <span>FIVE DOLLARS</span>
+                <span>BEP · WASHINGTON D.C.</span>
+              </div>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="w-64 h-28 rounded-lg border-2 border-emerald-500/60 bg-gradient-to-br from-emerald-900 via-emerald-950 to-slate-900 p-2.5 flex flex-col justify-between shadow-inner">
+              <div class="flex justify-between text-xs font-mono text-emerald-200">
+                <span>UNITED STATES OF AMERICA</span>
+                <span>FIVE</span>
+              </div>
+              <div class="my-auto text-center border border-emerald-400/30 rounded py-1.5 px-2 bg-emerald-950/50">
+                <div class="text-xs font-bold text-emerald-300">ORNATE GREEN LATHEWORK BACK</div>
+                <div class="text-xs text-emerald-200/80">Receivable for Customs, Taxes & Public Dues</div>
+              </div>
+              <div class="flex justify-between text-xs font-mono text-emerald-300">
+                <span>BEP REVERSE PLATE</span>
+                <span>$5 · V</span>
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      const palette = item.visual_type === "GOLD_COIN"
+        ? "from-amber-300 via-yellow-500 to-amber-700 border-amber-300 text-amber-950"
+        : item.visual_type === "COPPER_COIN"
+        ? "from-orange-400 via-amber-700 to-stone-800 border-orange-400/80 text-orange-100"
+        : "from-slate-200 via-slate-400 to-slate-600 border-slate-200 text-slate-950";
+
+      const centerLabel = side === "OBVERSE"
+        ? (item.visual_type === "AWQ_COIN" ? "GEORGE WASHINGTON\nLAURA FRASER OBV" : `${item.title.split(' ')[1] || ''} OBVERSE\nPORTRAIT`)
+        : (item.visual_type === "AWQ_COIN" ? "MAYA ANGELOU\nRISING BIRD REV" : `HERALDIC EAGLE\nREVERSE ${item.mint_mark ? '(' + item.mint_mark + ')' : ''}`);
+
+      return `
+        <div class="w-36 h-36 rounded-full bg-gradient-to-br ${palette} border-4 shadow-md flex flex-col items-center justify-center p-3 text-center relative">
+          <div class="w-28 h-28 rounded-full border border-current/30 flex flex-col items-center justify-center px-2">
+            <span class="text-xs font-mono font-bold tracking-widest uppercase opacity-80">${side}</span>
+            <span class="text-xs font-extrabold leading-tight mt-1">${centerLabel.replace('\n', '<br/>')}</span>
+            <span class="text-xs font-mono font-bold mt-1.5 opacity-90">${item.year}${item.mint_mark ? '-' + item.mint_mark : ''}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById("catalog-grid");
+      const query = (document.getElementById("search-input").value || "").toLowerCase().trim();
+
+      const filtered = CATALOG_ITEMS.filter(item => {
+        if (activeKind !== "ALL" && item.kind !== activeKind) return false;
+        if (activeEra !== "ALL" && item.era !== activeEra) return false;
+        if (activeFac !== "ALL" && item.fac !== activeFac) return false;
+        if (activeEra === "PRE_FEDERAL" && activeStateEntity !== "ALL" && item.state_entity !== activeStateEntity) return false;
+        if (item.year > maxYear) return false;
+        if (query) {
+          const hay = `${item.title} ${item.subtitle} ${item.nac_code} ${item.year_display} ${item.crosswalk}`.toLowerCase();
+          if (!hay.includes(query)) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-2 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-8 text-center">
+            <div class="text-sm font-semibold text-[var(--foreground)]">No catalog records match the current filter combination.</div>
+            <button onclick="resetFilters()" class="mt-3 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">Reset All Filters</button>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(item => {
+        const isFlipped = !!flippedState[item.nac_code];
+        const frontSide = item.default_face;
+        const backSide = frontSide === "OBVERSE" ? "REVERSE" : "OBVERSE";
+        const activeSideShown = isFlipped ? backSide : frontSide;
+        const isSelected = item.nac_code === selectedNac;
+
+        return `
+          <div
+            onclick="selectItem('${item.nac_code}')"
+            class="bg-[var(--card)] border ${isSelected ? 'border-amber-400 ring-1 ring-amber-400/50' : 'border-[var(--border)]'} rounded-2xl p-4 shadow-sm hover:border-[var(--primary)] transition cursor-pointer flex flex-col justify-between"
+          >
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-[var(--secondary)] text-[var(--secondary-foreground)]">
+                  ${item.year_display}
+                </span>
+                ${item.era === 'PRE_FEDERAL' ? `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">Pre-Federal</span>` : ''}
+                ${item.default_face === 'REVERSE' ? `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30" title="GB CoS #1: Default side shows unique commemorative reverse">Identity: Reverse</span>` : ''}
+              </div>
+              <button
+                onclick="event.stopPropagation(); toggleCardFlip('${item.nac_code}')"
+                class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--background)] border border-[var(--border)] hover:bg-[var(--secondary)] text-[var(--foreground)] transition"
+              >
+                🔄 Flip (${activeSideShown})
+              </button>
+            </div>
+
+            <div class="perspective-1000 my-2 flex items-center justify-center min-h-[168px] bg-[var(--background)] rounded-xl border border-[var(--border)] p-3 ${isFlipped ? 'flipped' : ''}">
+              <div class="flip-inner w-full flex items-center justify-center relative min-h-[144px]">
+                <div class="flip-face flex items-center justify-center w-full">
+                  ${renderVisualArtwork(item, frontSide)}
+                </div>
+                <div class="flip-face flip-back absolute inset-0 flex items-center justify-center w-full">
+                  ${renderVisualArtwork(item, backSide)}
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <div class="flex items-start justify-between gap-2">
+                <h3 class="text-sm font-bold text-[var(--foreground)]">${item.title}</h3>
+                <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-[var(--background)] border border-[var(--border)] text-[var(--muted-foreground)]">FAC:${item.fac}</span>
+              </div>
+              <p class="text-xs text-[var(--muted-foreground)] mt-0.5">${item.subtitle}</p>
+              <div class="mt-2 px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] font-mono text-xs text-[var(--foreground)] truncate">
+                ${item.nac_code}
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 mt-2.5 text-xs">
+                <div class="p-2 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+                  <span class="text-[var(--muted-foreground)] block">Tier A (Mint/Gov):</span>
+                  <span class="font-mono font-semibold text-[var(--foreground)]">${item.mintage_a}</span>
+                </div>
+                <div class="p-2 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+                  <span class="text-[var(--muted-foreground)] block">Tier B (Consensus):</span>
+                  <span class="font-mono font-semibold text-amber-400">${item.mintage_b}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border)]">
+              <button
+                onclick="event.stopPropagation(); triggerCollectionAdd('${item.nac_code}')"
+                class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition"
+              >
+                + Add (${item.target_collection.replace('users/{uid}', '')})
+              </button>
+              <button
+                onclick="event.stopPropagation(); selectItem('${item.nac_code}')"
+                class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:opacity-90 transition"
+              >
+                Inspect
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function selectItem(nacCode) {
+      selectedNac = nacCode;
+      const item = CATALOG_ITEMS.find(x => x.nac_code === nacCode) || CATALOG_ITEMS[0];
+
+      document.getElementById("seo-url-slug").textContent = item.seo_slug;
+      document.getElementById("canonical-nac-pill").textContent = item.nac_code;
+
+      document.getElementById("insp-title").textContent = item.title;
+      document.getElementById("insp-kind-badge").textContent = `${item.kind} → ${item.target_collection.split('/').pop()}`;
+
+      const parts = item.nac_code.split(".");
+      const labels = ["VER", "KIND", "CC", "CLASS", "SERIES", "DATE", "FAC", "VAR", "CHK"];
+      document.getElementById("insp-nac-segments").innerHTML = parts.map((val, idx) => `
+        <div class="p-1.5 rounded bg-[var(--background)] border border-[var(--border)] text-center">
+          <div class="text-xs text-[var(--muted-foreground)]">${labels[idx] || 'SEG'}</div>
+          <div class="text-xs font-bold text-[var(--foreground)]">${val}</div>
+        </div>
+      `).join("");
+
+      document.getElementById("insp-facility-detail").innerHTML = `
+        <div><strong class="text-[var(--foreground)]">FAC Code:</strong> <code>${item.fac}</code></div>
+        <div><strong class="text-[var(--foreground)]">mint_mark_on_coin:</strong> <code>${item.mint_mark_on_coin}</code> ${item.mint_mark ? `(Struck: "${item.mint_mark}")` : '(No mark struck)'}</div>
+        <div><strong class="text-[var(--foreground)]">Default Face:</strong> <code>${item.default_face}</code> — ${item.default_face_reason}</div>
+        <div><strong class="text-[var(--foreground)]">Note:</strong> ${item.facility_note}</div>
+      `;
+
+      document.getElementById("insp-mintage-a").textContent = item.mintage_a;
+      document.getElementById("insp-mintage-b").textContent = item.mintage_b;
+      document.getElementById("insp-citation").textContent = item.citation;
+
+      document.getElementById("insp-specs").innerHTML = `
+        <div><strong class="text-[var(--foreground)]">Physical Specs:</strong> ${item.specs}</div>
+        <div><strong class="text-[var(--foreground)]">Concordance:</strong> ${item.crosswalk}</div>
+      `;
+
+      document.getElementById("insp-write-contract").innerHTML = `
+        <div>Target SoR: <span class="text-emerald-300 font-bold">${item.target_collection}</span></div>
+        <div>Doc ID: <span class="text-amber-300">{uid}_${item.nac_code}</span></div>
+        <div>Write Mode: <span>create() whole-doc (merge=false)</span></div>
+      `;
+
+      renderGrid();
+    }
+
+    function toggleCardFlip(nacCode) {
+      flippedState[nacCode] = !flippedState[nacCode];
+      renderGrid();
+    }
+
+    function flipAllCards() {
+      const anyUnflipped = CATALOG_ITEMS.some(i => !flippedState[i.nac_code]);
+      CATALOG_ITEMS.forEach(i => {
+        flippedState[i.nac_code] = anyUnflipped;
+      });
+      renderGrid();
+    }
+
+    function triggerCollectionAdd(nacCode) {
+      const item = CATALOG_ITEMS.find(x => x.nac_code === nacCode);
+      if (!item) return;
+      selectItem(nacCode);
+      const toast = document.getElementById("collection-toast");
+      document.getElementById("toast-body").innerHTML = `
+        <div>Item: <strong>${item.title}</strong></div>
+        <div>Routed by kind (<code>${item.kind}</code>) → <strong>${item.target_collection}</strong></div>
+        <div>Idempotent Key: <code>uid_${item.nac_code}</code></div>
+        <div>Downstream Safe: Estate PDF & BigQuery schema isolated.</div>
+      `;
+      toast.classList.remove("hidden");
+    }
+
+    function setKindFilter(kind) {
+      activeKind = kind;
+      document.querySelectorAll(".kind-tab").forEach(btn => {
+        const isMatch = btn.getAttribute("data-kind") === kind;
+        btn.className = `kind-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+          isMatch ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:opacity-90'
+        }`;
+      });
+      renderGrid();
+    }
+
+    function setEraFilter(era) {
+      activeEra = era;
+      activeStateEntity = "ALL";
+      const subbar = document.getElementById("pre-federal-subbar");
+      if (era === "PRE_FEDERAL") {
+        subbar.classList.remove("hidden");
+      } else {
+        subbar.classList.add("hidden");
+      }
+      document.querySelectorAll(".era-pill").forEach(btn => {
+        const isMatch = btn.getAttribute("data-era") === era;
+        btn.className = `era-pill px-2.5 py-1 rounded-md text-xs font-medium ${
+          isMatch ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'bg-[var(--secondary)] text-[var(--secondary-foreground)]'
+        }`;
+      });
+      renderGrid();
+    }
+
+    function setStateEntity(entity) {
+      activeStateEntity = entity;
+      renderGrid();
+    }
+
+    function setFacFilter(fac) {
+      activeFac = fac;
+      document.querySelectorAll(".fac-chip").forEach(btn => {
+        const isMatch = btn.getAttribute("data-fac") === fac;
+        btn.className = `fac-chip px-2.5 py-1 rounded-md text-xs font-mono ${
+          isMatch ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold' : 'bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)]'
+        }`;
+      });
+      renderGrid();
+    }
+
+    function updateYearCap(val) {
+      maxYear = parseInt(val, 10);
+      document.getElementById("year-slider-label").textContent = `≤ ${maxYear}`;
+      renderGrid();
+    }
+
+    function applyFilters() {
+      renderGrid();
+    }
+
+    function clearSearch() {
+      document.getElementById("search-input").value = "";
+      renderGrid();
+    }
+
+    function resetFilters() {
+      activeKind = "ALL";
+      activeEra = "ALL";
+      activeFac = "ALL";
+      activeStateEntity = "ALL";
+      maxYear = 2026;
+      document.getElementById("year-slider").value = 2026;
+      document.getElementById("year-slider-label").textContent = "≤ 2026";
+      document.getElementById("search-input").value = "";
+      document.getElementById("pre-federal-subbar").classList.add("hidden");
+      setKindFilter("ALL");
+      setEraFilter("ALL");
+      setFacFilter("ALL");
+    }
+
+    selectItem(selectedNac);
+  </script>
+</body>
+</html>
