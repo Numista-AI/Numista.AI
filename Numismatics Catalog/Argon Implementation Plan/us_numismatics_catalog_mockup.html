@@ -276,7 +276,7 @@
   <script>
     const CATALOG_ITEMS = [
       {
-        nac_code: "NAC1.CN.PF.1C.FUGIO.1787.XX.BASE.X",
+        nac_code: "NAC1.CN.PF.1C.FUGIO.1787.XX.BASE.H",
         seo_slug: "/catalog/coins/fugio-cent/1787-club-rays",
         kind: "CN",
         era: "PRE_FEDERAL",
@@ -302,7 +302,7 @@
         visual_type: "PLACEHOLDER_COIN"
       },
       {
-        nac_code: "NAC1.CN.PF.1C.CT.1787.XX.DRAPED.A",
+        nac_code: "NAC1.CN.PF.1C.CT.1787.XX.DRAPED.9",
         seo_slug: "/catalog/coins/connecticut-copper/1787-draped-bust",
         kind: "CN",
         era: "PRE_FEDERAL",
@@ -328,7 +328,7 @@
         visual_type: "COPPER_COIN"
       },
       {
-        nac_code: "NAC1.CN.US.G5.LIBCAP.1838.DD.BASE.9",
+        nac_code: "NAC1.CN.US.G5.LIBCAP.1838.DD.BASE.3",
         seo_slug: "/catalog/coins/liberty-head-half-eagle/1838-d-dahlonega",
         kind: "CN",
         era: "GILDED",
@@ -380,7 +380,7 @@
         visual_type: "SILVER_COIN"
       },
       {
-        nac_code: "NAC1.BN.US.SC5.SILV.1899.BEP.BASE.7",
+        nac_code: "NAC1.BN.US.SC5.SILV.1899.BEP.BASE.A",
         seo_slug: "/catalog/banknotes/silver-certificate-5/series-1899-chief",
         kind: "BN",
         era: "GILDED",
@@ -406,7 +406,7 @@
         visual_type: "BANKNOTE"
       },
       {
-        nac_code: "NAC1.CN.PF.1P.USPI.1908.S.BASE.C",
+        nac_code: "NAC1.CN.PF.1P.USPI.1908.S.BASE.Z",
         seo_slug: "/catalog/coins/philippines-peso/1908-s-reduced-size",
         kind: "CN",
         era: "GILDED",
@@ -716,8 +716,8 @@
 
       document.getElementById("insp-write-contract").innerHTML = `
         <div>Target SoR: <span class="text-emerald-300 font-bold">${item.target_collection}</span></div>
-        <div>Doc ID: <span class="text-amber-300">{uid}_${item.nac_code}</span></div>
-        <div>Write Mode: <span>create() whole-doc (merge=false)</span></div>
+        <div>Doc ID: <span class="text-amber-300">${item.nac_code}_SLOT1</span></div>
+        <div>Write Mode: <span>tx.create() whole-doc (validate_nac1 + catalog.exists)</span></div>
       `;
 
       renderGrid();
@@ -744,8 +744,8 @@
       document.getElementById("toast-body").innerHTML = `
         <div>Item: <strong>${item.title}</strong></div>
         <div>Routed by kind (<code>${item.kind}</code>) → <strong>${item.target_collection}</strong></div>
-        <div>Idempotent Key: <code>uid_${item.nac_code}</code></div>
-        <div>Downstream Safe: Estate PDF & BigQuery schema isolated.</div>
+        <div>Idempotent Key: <code>${item.nac_code}_SLOT1</code></div>
+        <div>Verified: <code>validate_nac1()</code> &amp; <code>us_numismatics_catalog</code> existence in tx</div>
       `;
       toast.classList.remove("hidden");
     }
