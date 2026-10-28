@@ -214,18 +214,18 @@ class _CoinSetViewerState extends State<CoinSetViewer> {
         ),
 
         // ── Coin strip ──────────────────────────────────────────────────────
-        SizedBox(
-          height: 148,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: data.coins.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (ctx, i) => _CoinTile(
-              coin: data.coins[i],
+        Wrap(
+          spacing: 10,
+          runSpacing: 12,
+          children: data.coins.map((coin) => SizedBox(
+            width: 100,
+            height: 148,
+            child: _CoinTile(
+              coin: coin,
               onLongPress: (url, label) =>
                   _showLightbox(context, url, label, data.attribution),
             ),
-          ),
+          )).toList(),
         ),
 
         // ── Attribution footer ───────────────────────────────────────────────

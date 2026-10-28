@@ -130,7 +130,10 @@ class CoinDetailScreen extends StatefulWidget {
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 860, maxHeight: 760),
+            constraints: BoxConstraints(
+              maxWidth: (MediaQuery.of(context).size.width * 0.9).clamp(860.0, 1200.0),
+              maxHeight: (MediaQuery.of(context).size.height * 0.9).clamp(760.0, 950.0),
+            ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: widget,
@@ -915,20 +918,20 @@ class _HeroHeader extends StatelessWidget {
                     _GradeBadge(grade: coin.condition),
                   const SizedBox(height: 6),
                   Text(title,
-                    style: const TextStyle(
-                      color: Colors.white, fontSize: 18,
+                    style: TextStyle(
+                      color: _kText(context), fontSize: 18,
                       fontWeight: FontWeight.bold, height: 1.3),
                   ),
                   const SizedBox(height: 4),
                   Text(subtitle,
-                    style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    style: TextStyle(color: _kSubtext(context), fontSize: 12)),
                 ],
               ),
             ),
             // Close button
             IconButton(
               onPressed: onClose,
-              icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+              icon: Icon(Icons.close, color: _kSubtext(context), size: 20),
               tooltip: 'Close',
             ),
           ]),
@@ -2773,10 +2776,10 @@ class _AiInsightsTab extends StatelessWidget {
                   data: insight,
                   styleSheet: MarkdownStyleSheet(
                     p: TextStyle(fontSize: 14, color: _kText(context), height: 1.7),
-                    h1: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, height: 2.0),
-                    h2: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, height: 2.0),
+                    h1: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _kText(context), height: 2.0),
+                    h2: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _kText(context), height: 2.0),
                     h3: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: _kText(context), height: 1.8),
-                    strong: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                    strong: TextStyle(fontWeight: FontWeight.bold, color: _kText(context)),
                     listBullet: TextStyle(fontSize: 14, color: _kText(context), height: 1.7),
                     blockquoteDecoration: BoxDecoration(
                       color: _kAccent(context).withAlpha(20),
@@ -2999,16 +3002,42 @@ class _LegislationTabState extends State<_LegislationTab> {
     },
     '116-330': {
       'title': 'Circulating Collectible Coin Redesign Act of 2020',
-      'name': 'Circulating Collectible Coin Redesign Act of 2020 (American Women Quarters)',
+      'name': 'Circulating Collectible Coin Redesign Act of 2020 (Semiquincentennial & AWQ)',
       'public_law': '116-330',
       'bill_number': 'H.R. 1923',
-      'statute_citation': '134 Stat. 5101 (31 U.S.C. § 5112(z))',
+      'statute_citation': '134 Stat. 5101 (31 U.S.C. § 5112)',
       'enacted': 'January 13, 2021',
       'congress': '116th Congress (2019–2020)',
       'chamber': 'House / Senate',
       'actions_count': 9,
       'congress_url': 'https://www.congress.gov/bill/116th-congress/house-bill/1923',
-      'description': 'Authorized up to five quarter dollar designs per year from 2022 through 2025 celebrating prominent American women and their contributions to the nation.',
+      'description': 'Authorized redesign of circulating coins including 2022-2025 American Women Quarters, 2026 Semiquincentennial (250th Anniversary) coins, and youth sports commemoratives.',
+    },
+    '115-197': {
+      'title': 'American Innovation \$1 Coin Act',
+      'name': 'American Innovation \$1 Coin Act',
+      'public_law': '115-197',
+      'bill_number': 'H.R. 770',
+      'statute_citation': '132 Stat. 1515 (31 U.S.C. § 5112(w))',
+      'enacted': 'July 20, 2018',
+      'congress': '115th Congress (2017–2018)',
+      'chamber': 'House / Senate',
+      'actions_count': 7,
+      'congress_url': 'https://www.congress.gov/bill/115th-congress/house-bill/770',
+      'description': 'Authorized a four-coin-per-year \$1 series from 2019 through 2032 celebrating American innovation and innovators from each State and territory.',
+    },
+    '101-585': {
+      'title': 'Silver Coin Proof Sets Act',
+      'name': 'Silver Coin Proof Sets Act',
+      'public_law': '101-585',
+      'bill_number': 'H.R. 5050',
+      'statute_citation': '104 Stat. 2874 (31 U.S.C. § 5132(a))',
+      'enacted': 'November 15, 1990',
+      'congress': '101st Congress (1989–1990)',
+      'chamber': 'House / Senate',
+      'actions_count': 6,
+      'congress_url': 'https://www.congress.gov/bill/101st-congress/house-bill/5050',
+      'description': 'Authorized the Director of the Mint to prepare and mint proof sets containing 90 percent silver dimes, quarters, and half dollars.',
     },
   };
 
@@ -3029,8 +3058,17 @@ class _LegislationTabState extends State<_LegislationTab> {
     if (series.contains('territor') || series.contains('district of columbia') || series.contains('dc &') || series.contains('dc and')) {
       return '110-161';
     }
-    if (series.contains('women quarter') || series.contains('american women')) {
+    if (series.contains('women quarter') || series.contains('american women') ||
+        series.contains('semiquincentennial') || series.contains('250th') ||
+        theme.contains('semiquincentennial') || theme.contains('250th')) {
       return '116-330';
+    }
+    if (series.contains('innovation') || theme.contains('innovation')) {
+      return '115-197';
+    }
+    if (series.contains('silver proof set') || theme.contains('silver proof set') ||
+        (series.contains('proof set') && series.contains('silver'))) {
+      return '101-585';
     }
     if (series.contains('presidential dollar') || series.contains('president dollar')) {
       return '109-145';
@@ -4214,7 +4252,7 @@ class _OwnerPhotoHero extends StatelessWidget {
                       child: Text(
                         coin.storageLocation,
                         style: TextStyle(
-                          color: Colors.white.withAlpha(200),
+                          color: _kText(context).withAlpha(200),
                           fontSize: 12,
                         ),
                         maxLines: 2,
@@ -4237,7 +4275,7 @@ class _OwnerPhotoHero extends StatelessWidget {
         Text(
           hasPhotos ? 'Your Photo' : '',
           style: TextStyle(
-            color: Colors.white.withAlpha(120),
+            color: _kSubtext(context),
             fontSize: 10,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,

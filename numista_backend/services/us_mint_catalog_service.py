@@ -172,7 +172,7 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "mint_facility": "Philadelphia (P)",
         "denomination": "Dollar",
         "program_series": "Presidential $1 Coins",
-        "theme_subject": "Donald J. Trump Semiquincentennial 250th Anniversary Roll (July 4th Privy eligible)",
+        "theme_subject": "Donald J. Trump Semiquincentennial 250th Anniversary Presidential $1 Coin (Philadelphia)",
         "strike_type": "Circulating",
         "condition": "Uncirculated",
         "metal_content": "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)",
@@ -181,7 +181,94 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "catalog_url": "https://catalog.usmint.gov/",
     },
 
+    # ── 2026 Sets & Rolls (Plan.v3 C2 / IG-2) ─────────────────────────────────
+    "26RJ": {
+        "title": "2026 US Mint Uncirculated Coin Set (250th Anniversary)",
+        "formal_name": "250th Anniversary 2026 Uncirculated Coin Set",
+        "year": 2026,
+        "mint_mark": "P & D",
+        "mint_facility": "Philadelphia & Denver (P & D)",
+        "denomination": "Set",
+        "program_series": "Uncirculated Sets",
+        "theme_subject": "250th Anniversary Uncirculated Coin Set",
+        "strike_type": "Uncirculated",
+        "condition": "Uncirculated",
+        "metal_content": "Cupronickel Clad",
+        "is_set": True,
+        "set_id": "uncirculated-coin-set-2026",
+        "item_type": "set",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/user_contributed/coin_sets/uncirculated-coin-set-2026/26rj_a.jpg",
+        "image_url_reverse": "https://storage.googleapis.com/numista-reference-library/reference_library/user_contributed/coin_sets/uncirculated-coin-set-2026/26rj_e.jpg",
+        "issue_price": 124.50,
+        "retailer": "United States Mint",
+    },
+    "26AGA": {
+        "title": "2026 American Innovation $1 Coin 25-Coin Roll (Philadelphia)",
+        "formal_name": "2026 American Innovation $1 Coin 25-Coin Roll - Philadelphia",
+        "year": 2026,
+        "pack_quantity": 25,
+        "mint_mark": "",
+        "mint_facility": "Philadelphia (P)",
+        "denomination": "Dollar",
+        "program_series": "American Innovation $1",
+        "theme_subject": "American Innovation $1 Coin",
+        "strike_type": "Circulating",
+        "condition": "Uncirculated",
+        "metal_content": "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)",
+        "issue_price": "$45.00",
+        "retailer": "United States Mint",
+    },
+    "26AGB": {
+        "title": "2026 American Innovation $1 Coin 25-Coin Roll (Denver)",
+        "formal_name": "2026 American Innovation $1 Coin 25-Coin Roll - Denver",
+        "year": 2026,
+        "pack_quantity": 25,
+        "mint_mark": "",
+        "mint_facility": "Denver (D)",
+        "denomination": "Dollar",
+        "program_series": "American Innovation $1",
+        "theme_subject": "American Innovation $1 Coin",
+        "strike_type": "Circulating",
+        "condition": "Uncirculated",
+        "metal_content": "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)",
+        "issue_price": "$45.00",
+        "retailer": "United States Mint",
+    },
+    "26GC": {
+        "title": "2026 American Innovation $1 Coin Reverse Proof",
+        "formal_name": "2026 American Innovation $1 Coin Reverse Proof Coin",
+        "year": 2026,
+        "mint_mark": "S",
+        "mint_facility": "San Francisco (S)",
+        "denomination": "Dollar",
+        "program_series": "American Innovation $1",
+        "theme_subject": "American Innovation $1 Coin",
+        "strike_type": "Reverse Proof",
+        "condition": "Reverse Proof",
+        "metal_content": "Manganese-Brass",
+        "issue_price": "$60.00",
+        "retailer": "United States Mint",
+    },
+
     # ── 2024 / 2023 Historical Reference Codes ───────────────────────────────
+    "23RH": {
+        "title": "2023 United States Mint Silver Proof Set",
+        "formal_name": "2023 United States Mint Silver Proof Set",
+        "year": 2023,
+        "mint_mark": "S",
+        "mint_facility": "San Francisco (S)",
+        "denomination": "Set",
+        "program_series": "Silver Proof Sets",
+        "theme_subject": "Silver Proof Set 2023",
+        "strike_type": "Proof",
+        "condition": "Proof",
+        "metal_content": "99.9% Silver",
+        "is_set": True,
+        "set_id": "silver-proof-set-2023",
+        "item_type": "set",
+        "issue_price": 130.00,
+        "retailer": "United States Mint",
+    },
     "24XL": {
         "title": "2024 Peace Silver Dollar (Reverse Proof)",
         "formal_name": "Peace Silver Dollar 2024 Reverse Proof Coin",
@@ -313,16 +400,20 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
         
         # Only override or refine fields if they are generic or empty
         current_series = str(item.get("Program/Series") or "")
-        if not current_series or "Invoice Import" in current_series or current_series == "USA":
+        if not current_series or "Invoice Import" in current_series or current_series == "USA" or current_series in ("Uncirculated Coin Set", "Uncirculated Coin Sets"):
             item["Program/Series"] = catalog_match["program_series"]
 
         current_denom = str(item.get("Denomination") or "")
         if not current_denom or current_denom in ("Coin", "Dollar", "One Ounce"):
             item["Denomination"] = catalog_match["denomination"]
 
-        item["Strike Type"] = catalog_match.get("strike_type", item.get("Strike Type", "Uncirculated"))
-        item["Condition"] = catalog_match.get("condition", item.get("Condition", "Uncirculated"))
-        item["Metal Content"] = catalog_match.get("metal_content", "99.9% Silver")
+        # Plan.v3 C2 / IG-2: Wrap Strike Type / Condition / Metal Content in fill-missing-only guards
+        if not item.get("Strike Type") or item.get("Strike Type") in ("Unspecified", "Business", ""):
+            item["Strike Type"] = catalog_match.get("strike_type", item.get("Strike Type", "Uncirculated"))
+        if not item.get("Condition") or item.get("Condition") in ("Unspecified", ""):
+            item["Condition"] = catalog_match.get("condition", item.get("Condition", "Uncirculated"))
+        if not item.get("Metal Content") or item.get("Metal Content") in ("Unspecified", ""):
+            item["Metal Content"] = catalog_match.get("metal_content", "99.9% Silver")
         
         # Mint facility / mark
         if not item.get("Mint Mark") and "mint_mark" in catalog_match:
@@ -343,6 +434,27 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
         # Weight in grams (for accurate ASW calculation)
         if catalog_match.get("weight_grams") and not item.get("weight_grams"):
             item["weight_grams"] = catalog_match["weight_grams"]
+
+        # Plan.v3 C2 / IG-2: fill-missing-only copy for set & image & valuation fields
+        for fld in ("is_set", "set_id", "item_type", "image_url_obverse", "image_url_reverse", "issue_price", "metal_content"):
+            if fld in catalog_match and not item.get(fld):
+                item[fld] = catalog_match[fld]
+
+        if catalog_match.get("metal_content"):
+            if not item.get("Metal Content"):
+                item["Metal Content"] = catalog_match["metal_content"]
+            if not item.get("metal"):
+                item["metal"] = catalog_match["metal_content"]
+
+        # Also fill item_number / retailer_item_num when blank
+        sku_code = catalog_match.get("code") or raw_item_no
+        if sku_code:
+            if not item.get("Retailer Item No."):
+                item["Retailer Item No."] = sku_code
+            if not item.get("retailer_item_num"):
+                item["retailer_item_num"] = sku_code
+            if not item.get("item_number"):
+                item["item_number"] = sku_code
 
         # If mint facility is recorded, note in Personal Notes if not already present
         facility = catalog_match.get("mint_facility", "")
@@ -376,8 +488,9 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
                         clean_cat_price = float(re.sub(r"[^\d.]", "", str(cat_issue_price)))
                         if clean_cat_price > 0.0:
                             canonical_lot_cost = round(clean_cat_price * curr_qty, 2)
+                            alloc_fees = float(item.get("Allocated Fees") or item.get("allocated_fees") or 0.0)
                             item["Sticker Price"] = canonical_lot_cost
-                            item["Allocated Fees"] = 0.0
+                            item["Allocated Fees"] = alloc_fees
                             item["Cost"] = canonical_lot_cost
                             item["Purchase Cost"] = canonical_lot_cost
                             item["cost"] = canonical_lot_cost
@@ -385,7 +498,7 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
                         logger.warning(f"Failed parsing cat_issue_price '{cat_issue_price}': {e}")
                 
                 # B2/B4: Ensure unit_cost is calculated from lot total Cost
-                cost_val = item.get("Cost") or item.get("Purchase Cost") or item.get("cost") or 0.0
+                cost_val = item.get("Sticker Price") or item.get("Cost") or item.get("Purchase Cost") or item.get("cost") or 0.0
                 try:
                     cost_float = float(cost_val)
                     if cost_float > 0.0:
@@ -394,6 +507,32 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
                         item["set_cost_label"] = f"${cost_float:.2f} ({new_qty} @ ${cost_float / new_qty:.2f})"
                 except (ValueError, TypeError):
                     pass
+
+        # Plan.v1 / Argon A-2: Propagate image keys so card & inspector resolve without error
+        cat_obv = item.get("image_url_obverse")
+        cat_rev = item.get("image_url_reverse")
+        if cat_obv and not item.get("primary_image_url"):
+            item["primary_image_url"] = cat_obv
+        if cat_obv and not item.get("photo_urls"):
+            item["photo_urls"] = [cat_obv] + ([cat_rev] if cat_rev else [])
+
+        # Plan.v1 / Argon A-3 / FF-3: Baseline valuation (fill-missing-only)
+        cat_issue_p = catalog_match.get("issue_price") or catalog_match.get("unit_price")
+        if cat_issue_p:
+            try:
+                clean_cat_p = float(re.sub(r"[^\d.]", "", str(cat_issue_p)))
+                if clean_cat_p > 0.0:
+                    fmt_val = f"${clean_cat_p:.2f}"
+                    curr_ai_val = item.get("AI Estimated Value") or item.get("ai_estimated_value") or item.get("estValue") or item.get("ai_est_value")
+                    if not curr_ai_val or str(curr_ai_val).strip() in ("", "$0.00", "0.0", "0", "—", "--", "Valuation Pending", "null"):
+                        item["ai_est_value"] = clean_cat_p
+                        item["ai_estimated_value"] = fmt_val
+                        item["AI Estimated Value"] = fmt_val
+                        item["estValue"] = fmt_val
+                        item["valuation_source"] = "US Mint Catalog Baseline"
+                        item["enrichment_status"] = "enriched"
+            except Exception as e:
+                logger.warning(f"Failed parsing cat_issue_price baseline '{cat_issue_p}': {e}")
 
         item["_catalog_grounded"] = True
 

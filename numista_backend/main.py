@@ -3509,7 +3509,11 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
         raise HTTPException(status_code=500, detail="Morgan AI is temporarily unavailable. Please try again.")
 
 @app.post("/api/review/commit")
-async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(get_current_user)):
+async def commit_reviews(
+    request: CommitReviewsRequest,
+    background_tasks: BackgroundTasks,
+    _user: dict = Depends(get_current_user)
+):
     """
     Moves items from review_queue to the primary collection with Duplicate Detection.
     A coin is only a true duplicate if Year, Mint, Denom, Invoice#, and Item# ALL match.
@@ -3557,8 +3561,8 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
                 # -- Hybrid Duplicate Detection --------------------------------------
                 # Primary: invoice-based (if invoice# matches + item# matches -> definite dupe)
                 # Fallback: attribute-based (Year + Mint + normalized Denomination -> flag possible_duplicate, NEVER drop)
-                inv_no  = (data.get('Retailer Invoice #') or '').strip()
-                item_no = (data.get('Retailer Item No.')  or '').strip()
+                inv_no  = (data.get('retailer_invoice_num') or data.get('invoice_number') or data.get('Retailer Invoice #') or '').strip()
+                item_no = (data.get('retailer_item_num') or data.get('item_number') or data.get('Retailer Item No.') or '').strip()
                 is_definite_dupe = False
                 is_possible_dupe = False
 
@@ -3571,9 +3575,15 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
                             .where('Retailer Invoice #', '==', inv_no) \
                             .where('Retailer Item No.',  '==', item_no) \
                             .limit(1).get()
-                        # If a coin with this invoice + item already exists in the collection (not in current batch queue)
                         if len(q) > 0 and q[0].id not in request.review_ids:
                             is_definite_dupe = True
+                        if not is_definite_dupe:
+                            q2 = coins_ref \
+                                .where('retailer_invoice_num', '==', inv_no) \
+                                .where('retailer_item_num',  '==', item_no) \
+                                .limit(1).get()
+                            if len(q2) > 0 and q2[0].id not in request.review_ids:
+                                is_definite_dupe = True
                     except Exception:
                         pass  # Index may be missing -- fall through to attribute check
 
@@ -3613,6 +3623,39 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
                     elif 'storage_location' in data and 'Storage Location' not in data:
                         data['Storage Location'] = data['storage_location']
 
+                    # Baseline valuation & enrichment (Plan.v2 / Plan.v3 B2 / Plan.v1 / Argon A-2 / A-3)
+                    try:
+                        from services.us_mint_catalog_service import enrich_us_mint_item
+                        enrich_us_mint_item(data)
+                    except Exception as enrich_err:
+                        logger.warning(f"Error enriching item {doc_id} on commit: {enrich_err}")
+
+                    # Propagate image URLs to primary_image_url and photo_urls if missing
+                    cat_obv = data.get('image_url_obverse')
+                    cat_rev = data.get('image_url_reverse')
+                    if cat_obv and not data.get('primary_image_url'):
+                        data['primary_image_url'] = cat_obv
+                    if cat_obv and not data.get('photo_urls'):
+                        data['photo_urls'] = [cat_obv] + ([cat_rev] if cat_rev else [])
+
+                    # Stamp all 4 value keys (fill-missing-only)
+                    curr_val = data.get('AI Estimated Value') or data.get('ai_estimated_value') or data.get('estValue') or data.get('ai_est_value')
+                    if not curr_val or str(curr_val).strip() in ("", "$0.00", "0.0", "0", "—", "--", "Valuation Pending", "null"):
+                        cat_p = data.get('issue_price') or data.get('Sticker Price') or data.get('Cost') or data.get('Purchase Cost') or 0.0
+                        try:
+                            clean_cat_p = float(re.sub(r"[^\d.]", "", str(cat_p)))
+                        except Exception as parse_err:
+                            logger.warning(f"Failed parsing price for valuation baseline: {parse_err}")
+                            clean_cat_p = 0.0
+                        if clean_cat_p > 0.0:
+                            fmt_val = f"${clean_cat_p:.2f}"
+                            data['ai_est_value'] = clean_cat_p
+                            data['ai_estimated_value'] = fmt_val
+                            data['AI Estimated Value'] = fmt_val
+                            data['estValue'] = fmt_val
+                            data['valuation_source'] = "US Mint Catalog Baseline"
+                            data['enrichment_status'] = "enriched"
+
                     new_coin_ref = coins_ref.document(doc_id)
                     batch.set(new_coin_ref, data)
                     # Plan 4.1 §3.1 item 4: Eliminate commit .delete() — soft-set status committed
@@ -3630,6 +3673,9 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
         
         if batch_op_count > 0:
             batch.commit()
+
+        if committed_count > 0:
+            background_tasks.add_task(_async_post_commit_enrichment, caller_email, list(request.review_ids))
         return {
             "status": "success", 
             "message": f"Committed {committed_count} items. Skipped {skipped_count} duplicates. Flagged {flagged_count} possible duplicates.",
@@ -3640,6 +3686,73 @@ async def commit_reviews(request: CommitReviewsRequest, _user: dict = Depends(ge
     except Exception as e:
         logger.exception("Review commit error")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _async_post_commit_enrichment(caller_email: str, committed_ids: list):
+    """
+    Background worker triggered upon review commit (Must-Fix 3 / Argon A-3).
+    - Sets/rolls: verifies baseline intact; skips Greysheet overwrite.
+    - Single coins: ensures catalog / baseline enrichment and triggers Greysheet where applicable.
+    - Logs errors; never bare except: pass (FF-3).
+    """
+    logger.info(f"Starting async post-commit enrichment for {caller_email}, {len(committed_ids)} items")
+    try:
+        user_ref = db.collection('users').document(caller_email)
+        coins_ref = user_ref.collection('coins')
+        for doc_id in committed_ids:
+            try:
+                doc_snap = coins_ref.document(doc_id).get()
+                if not doc_snap.exists:
+                    continue
+                data = doc_snap.to_dict() or {}
+                is_set = data.get("is_set") or data.get("item_type") == "set" or data.get("pack_expanded")
+                updates = {}
+                # Propagate image keys
+                cat_obv = data.get('image_url_obverse')
+                cat_rev = data.get('image_url_reverse')
+                if cat_obv and not data.get('primary_image_url'):
+                    updates['primary_image_url'] = cat_obv
+                if cat_obv and not data.get('photo_urls'):
+                    updates['photo_urls'] = [cat_obv] + ([cat_rev] if cat_rev else [])
+
+                # Baseline valuation check (fill-missing-only)
+                curr_val = data.get('AI Estimated Value') or data.get('ai_estimated_value') or data.get('estValue') or data.get('ai_est_value')
+                if not curr_val or str(curr_val).strip() in ("", "$0.00", "0.0", "0", "—", "--", "Valuation Pending", "null"):
+                    cat_p = data.get('issue_price') or data.get('Sticker Price') or data.get('Cost') or 0.0
+                    try:
+                        clean_cat_p = float(re.sub(r"[^\d.]", "", str(cat_p)))
+                    except Exception as parse_err:
+                        logger.warning(f"Failed parsing price for coin {doc_id} baseline in worker: {parse_err}")
+                        clean_cat_p = 0.0
+                    if clean_cat_p > 0.0:
+                        fmt_val = f"${clean_cat_p:.2f}"
+                        updates['ai_est_value'] = clean_cat_p
+                        updates['ai_estimated_value'] = fmt_val
+                        updates['AI Estimated Value'] = fmt_val
+                        updates['estValue'] = fmt_val
+                        updates['valuation_source'] = "US Mint Catalog Baseline"
+                        updates['enrichment_status'] = "enriched"
+
+                if not is_set:
+                    # Non-set single coins: attempt Greysheet enrichment if missing CPG
+                    cpg_val = data.get('cpgRetail') or data.get('cpg_retail')
+                    if not cpg_val or float(str(cpg_val).replace('$', '').replace(',', '').strip() or 0.0) <= 0.0:
+                        try:
+                            from services.greysheet_service import lookup_greysheet_value
+                            gs_res = lookup_greysheet_value(data)
+                            if gs_res and isinstance(gs_res, dict) and gs_res.get('cpg_retail'):
+                                updates['cpgRetail'] = gs_res.get('cpg_retail')
+                                updates['cpg_retail'] = gs_res.get('cpg_retail')
+                        except Exception as gs_err:
+                            logger.info(f"Greysheet post-commit lookup skipped or unpriced for {doc_id}: {gs_err}")
+
+                if updates:
+                    coins_ref.document(doc_id).set(updates, merge=True)
+                    logger.info(f"Post-commit enrichment updated coin {doc_id} with keys {list(updates.keys())}")
+            except Exception as item_err:
+                logger.error(f"Error enriching coin {doc_id} for user {caller_email}: {item_err}", exc_info=True)
+    except Exception as e:
+        logger.error(f"Error in _async_post_commit_enrichment for {caller_email}: {e}", exc_info=True)
 
 
 @app.post("/api/review/break_up_set")
@@ -3744,6 +3857,39 @@ async def keep_set_as_is(request: Request):
         committed['kept_as_set']    = True
         committed['set_broken_up']  = False
         committed['committed_at']   = firestore.SERVER_TIMESTAMP
+
+        # Enrich with US Mint Catalog (Must-Fix 4 / FF-3)
+        try:
+            from services.us_mint_catalog_service import enrich_us_mint_item
+            enrich_us_mint_item(committed)
+        except Exception as enrich_err:
+            logger.warning(f"Error enriching set {set_doc_id} in keep_set_as_is: {enrich_err}")
+
+        # Propagate image URLs
+        cat_obv = committed.get('image_url_obverse')
+        cat_rev = committed.get('image_url_reverse')
+        if cat_obv and not committed.get('primary_image_url'):
+            committed['primary_image_url'] = cat_obv
+        if cat_obv and not committed.get('photo_urls'):
+            committed['photo_urls'] = [cat_obv] + ([cat_rev] if cat_rev else [])
+
+        # Stamp all 4 value keys (fill-missing-only)
+        curr_val = committed.get('AI Estimated Value') or committed.get('ai_estimated_value') or committed.get('estValue') or committed.get('ai_est_value')
+        if not curr_val or str(curr_val).strip() in ("", "$0.00", "0.0", "0", "—", "--", "Valuation Pending", "null"):
+            cat_p = committed.get('issue_price') or committed.get('Sticker Price') or committed.get('Cost') or committed.get('Purchase Cost') or 0.0
+            try:
+                clean_cat_p = float(re.sub(r"[^\d.]", "", str(cat_p)))
+            except Exception as parse_err:
+                logger.warning(f"Failed parsing price for set valuation baseline: {parse_err}")
+                clean_cat_p = 0.0
+            if clean_cat_p > 0.0:
+                fmt_val = f"${clean_cat_p:.2f}"
+                committed['ai_est_value'] = clean_cat_p
+                committed['ai_estimated_value'] = fmt_val
+                committed['AI Estimated Value'] = fmt_val
+                committed['estValue'] = fmt_val
+                committed['valuation_source'] = "US Mint Catalog Baseline"
+                committed['enrichment_status'] = "enriched"
 
         batch = db.batch()
         # Write to main coins collection using the same doc ID for traceability
@@ -6945,6 +7091,16 @@ def _score_duplicate(new_coin: dict, existing_coin: dict) -> float:
     if new_cost and ex_cost and new_cost == ex_cost:
         score += 0.05
 
+    # Plan.v3 C1 / IG-1: SKU and Invoice scoring
+    new_sku = _val(new_coin, "retailer_item_num", "item_number", "Retailer Item No.", "product_code")
+    ex_sku  = _val(existing_coin, "retailer_item_num", "item_number", "Retailer Item No.", "product_code")
+    if new_sku and ex_sku and new_sku == ex_sku:
+        score = max(score, 0.60)
+        new_inv = _val(new_coin, "retailer_invoice_num", "invoice_number", "Retailer Invoice #")
+        ex_inv  = _val(existing_coin, "retailer_invoice_num", "invoice_number", "Retailer Invoice #")
+        if new_inv and ex_inv and new_inv == ex_inv:
+            score = max(score, 0.90)
+
     return min(score, 1.0)
 
 
@@ -6958,21 +7114,26 @@ def _run_duplicate_sweep(user_email: str, session_id: str, new_coin_ids: list[st
         return {"strong": 0, "possible": 0}
 
     # Load existing coins (coins + collection + review_queue minus this session)
-    # Plan 4.1 §3.1 item 3: Skip non-actionable older review rows and exclude current write batch IDs
+    # Plan 4.1 §3.1 item 3 & Plan.v3 IG-1: Unfiltered stream without != so coins
+    # missing import_session_id are included. Exclude current session in Python.
     existing = []
     excluded_ids = set(new_coin_ids or [])
     non_actionable_statuses = {"superseded", "aborted", "committed", "dismissed"}
 
     for coll_name in ("coins", "collection", "review_queue"):
         docs = db.collection("users").document(user_email).collection(coll_name)\
-                 .where("import_session_id", "!=", session_id)\
                  .limit(2000).stream()
         for d in docs:
             if d.id in excluded_ids:
                 continue
-            d_dict = d.to_dict()
+            d_dict = d.to_dict() or {}
+            # Exclude coins from this session
+            if d_dict.get("import_session_id") == session_id:
+                continue
+            st = str(d_dict.get("status") or "").strip().lower()
+            if st == "deleted":
+                continue
             if coll_name == "review_queue":
-                st = str(d_dict.get("status") or "").strip().lower()
                 if st in non_actionable_statuses:
                     continue
             existing.append((d.id, coll_name, d_dict))
@@ -6990,7 +7151,7 @@ def _run_duplicate_sweep(user_email: str, session_id: str, new_coin_ids: list[st
                      .collection("review_queue").document(coin_id).get()
         if not coin_doc.exists:
             continue
-        new_coin = coin_doc.to_dict()
+        new_coin = coin_doc.to_dict() or {}
 
         best_score = 0.0
         best_match = None
@@ -7002,30 +7163,54 @@ def _run_duplicate_sweep(user_email: str, session_id: str, new_coin_ids: list[st
 
         if best_score >= 0.90:
             strong_count += 1
+            ex_data = best_match[2] if best_match else {}
+            ex_inv = str(ex_data.get("Retailer Invoice #") or ex_data.get("retailer_invoice_num") or ex_data.get("invoice_number") or "").strip()
+            sku_str = str(new_coin.get("retailer_item_num") or new_coin.get("item_number") or new_coin.get("Retailer Item No.") or "").strip()
+            reason = f"Identical SKU {sku_str} on invoice #{ex_inv} already in collection" if (sku_str and ex_inv) else "Identical item already in collection"
             flags.append({
                 "new_coin_id": coin_id,
                 "match_id": best_match[0] if best_match else None,
                 "match_collection": best_match[1] if best_match else None,
                 "score": best_score,
                 "level": "strong",
+                "reason": reason,
             })
-            # Tag the new coin record
+            # Tag the new coin record with dual-write (IG-1)
             db.collection("users").document(user_email)\
               .collection("review_queue").document(coin_id)\
-              .update({"duplicate_flag": "strong", "duplicate_score": best_score})
+              .update({
+                  "duplicate_flag": "strong",
+                  "duplicate_score": best_score,
+                  "possible_duplicate": True,
+                  "duplicate_reason": reason,
+              })
 
         elif best_score >= 0.60:
             possible_count += 1
+            ex_data = best_match[2] if best_match else {}
+            ex_inv = str(ex_data.get("Retailer Invoice #") or ex_data.get("retailer_invoice_num") or ex_data.get("invoice_number") or "").strip()
+            sku_str = str(new_coin.get("retailer_item_num") or new_coin.get("item_number") or new_coin.get("Retailer Item No.") or "").strip()
+            if sku_str:
+                reason = f"Identical SKU {sku_str} already in collection" + (f" (Order #{ex_inv})" if ex_inv else "") + " — Copy 2"
+            else:
+                reason = f"Possible duplicate match ({int(best_score*100)}%)"
             flags.append({
                 "new_coin_id": coin_id,
                 "match_id": best_match[0] if best_match else None,
                 "match_collection": best_match[1] if best_match else None,
                 "score": best_score,
                 "level": "possible",
+                "reason": reason,
             })
+            # Tag the new coin record with dual-write (IG-1)
             db.collection("users").document(user_email)\
               .collection("review_queue").document(coin_id)\
-              .update({"duplicate_flag": "possible", "duplicate_score": best_score})
+              .update({
+                  "duplicate_flag": "possible",
+                  "duplicate_score": best_score,
+                  "possible_duplicate": True,
+                  "duplicate_reason": reason,
+              })
 
     session_ref.update({"duplicate_flags": flags})
     return {"strong": strong_count, "possible": possible_count}
@@ -7522,10 +7707,7 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
         sticker_price = clean_valuation_value(it.get("Cost") or 0.0)
 
         # Proportional Landed Cost Allocation
-        # Under Plan v3.1, US Mint orders keep shipping on receipt but waive fee allocation to child coins
-        if is_us_mint_order and any((it.get("item_number") or it.get("Retailer Item No.") or "").upper() == "26SQRP" or "26sqrp" in ((it.get("Personal Notes") or "") + " " + fname).lower() for it in items):
-            allocated_fee = 0.0
-        elif raw_item_sum > 0.0 and total_global_fees > 0.0:
+        if raw_item_sum > 0.0 and total_global_fees > 0.0:
             allocated_fee = round(total_global_fees * (sticker_price / raw_item_sum), 2)
         elif len(items) == 1 and total_global_fees > 0.0:
             allocated_fee = round(total_global_fees, 2)
@@ -7606,13 +7788,17 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
 
         doc = {
             "Program/Series":       prog_val,
+            "Theme/Subject":        it.get("Theme/Subject") or it.get("theme") or "",
             "Year":                 it.get("Year", ""),
             "Mint Mark":            mint_mark_val,
             "Denomination":         denom_val,
             "Condition":            it.get("Condition", "Ungraded"),
+            "Strike Type":          it.get("Strike Type") or it.get("strike_type") or "",
             "Metal Content":        metal_val,
             "Cost":                 landed_cost_basis,
             "Purchase Cost":        landed_cost_basis,
+            "allocated_fees":       allocated_fee,
+            "shipping_fee":         allocated_fee,
             "Quantity":             item_qty,
             "quantity":             item_qty,
             "Country":              "United States",
@@ -7648,10 +7834,9 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
             from services.us_mint_catalog_service import enrich_us_mint_item
             enrich_us_mint_item(doc)
             doc["Purchase Cost"] = doc.get("Cost")
-            # Plan 4.1 §3.1 item 1: Pure snake_case allocated_fees & shipping_fee
-            # NET-565: Only pack/roll expansions waive the fee; regular Mint items (e.g. 23RH) carry Mint S&H.
-            doc["allocated_fees"] = 0.0 if doc.get("pack_expanded") else allocated_fee
-            doc["shipping_fee"] = 0.0 if doc.get("pack_expanded") else allocated_fee
+            # Plan 4.1 §3.1 item 1 / Plan.v1 / Must-Fix A-1: Pure snake_case allocated_fees & shipping_fee
+            doc["allocated_fees"] = allocated_fee
+            doc["shipping_fee"] = allocated_fee
 
             sku_upper = (doc.get("retailer_item_num") or doc.get("item_number") or "").upper()
             if sku_upper == "26SQRP" or (doc.get("pack_expanded") and "semiquincentennial" in (prog_val + " " + raw_desc).lower()):
@@ -8120,6 +8305,13 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         coin_doc["retailer"] = coin_doc["retailer_website"]
                         coin_doc["retailer_invoice_num"] = coin_doc.get("retailer_invoice_num") or coin_doc.get("invoice_number") or invoice_num_val or ""
                         coin_doc["invoice_number"] = coin_doc["retailer_invoice_num"]
+                        coin_doc["retailer_item_num"] = coin_doc.get("retailer_item_num") or coin_doc.get("item_number") or coin_doc.get("Retailer Item No.") or ""
+                        coin_doc["item_number"] = coin_doc["retailer_item_num"]
+                        if coin_doc.get("Allocated Fees") is not None and "allocated_fees" not in coin_doc:
+                            try:
+                                coin_doc["allocated_fees"] = float(coin_doc.get("Allocated Fees") or 0.0)
+                            except Exception:
+                                coin_doc["allocated_fees"] = 0.0
                         coin_doc["purchase_date"] = coin_doc.get("purchase_date") or invoice_date_val or ""
                         # Remove legacy illegal uppercase keys from the document payload if present
                         coin_doc.pop("Retailer/Website", None)

@@ -814,6 +814,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         },
       ),
       _QuickAddCard(
+        icon: Icons.receipt_long_outlined,
+        label: 'Upload an invoice',
+        onTap: () {
+          setState(() => _showMoreWays = true);
+          _tabController.animateTo(0);
+        },
+      ),
+      _QuickAddCard(
         icon: Icons.upload_file_outlined,
         label: 'Upload a list',
         onTap: () {

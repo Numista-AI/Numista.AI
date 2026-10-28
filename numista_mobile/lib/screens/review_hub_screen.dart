@@ -1118,7 +1118,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 );
                               }
                             },
-                            child: const Text('Save'),
+                            child: const Text('Save (Keep in Review)'),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1537,6 +1537,20 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                icon: const Icon(Icons.check_circle_outline, size: 16),
+                label: Text('Add Selected (${_selectedIds.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                onPressed: _isProcessing ? null : _commitSelected,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFEF4444),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -1709,14 +1723,15 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     const Spacer(),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF63366),
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                       ),
                       onPressed: _isProcessing ? null : _commitSelected,
                       icon: _isProcessing
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.check_circle_outline),
-                      label: Text(_isProcessing ? 'Processing...' : 'Commit Selected'),
+                      label: Text(_isProcessing ? 'Processing...' : 'Add Selected (${_selectedIds.length})'),
                     ),
                   ],
                 ),
@@ -1802,6 +1817,32 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
               ),
             ),
+
+            if (data['possible_duplicate'] == true) ...[
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.only(left: 48),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withAlpha(30),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.amber.withAlpha(140)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.amber),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Possible Duplicate: ${data['duplicate_reason'] ?? 'Matches existing collection item'}',
+                        style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
 
             // ── Contents preview ───────────────────────────────────────
             if (contents.isNotEmpty) ...[
@@ -2168,6 +2209,30 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   }(),
 
                   // "From Set" amber chip
+                  if (data['possible_duplicate'] == true) ...[
+                    const SizedBox(height: 6),
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withAlpha(30),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.amber.withAlpha(140)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, size: 13, color: Colors.amber),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Possible Duplicate: ${data['duplicate_reason'] ?? 'Matches existing coin'}',
+                              style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ]),
+                  ],
                   if (isFromSet) ...[
                     const SizedBox(height: 6),
                     Row(children: [

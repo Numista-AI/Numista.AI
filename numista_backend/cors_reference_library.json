@@ -1,8 +1,10 @@
 [
   {
     "origin": [
+      "*",
       "https://numista.ai",
       "https://numista-vault.web.app",
+      "https://numista-vault--p7-gate-8avtpz22.web.app",
       "http://localhost:*",
       "http://127.0.0.1:*"
     ],
