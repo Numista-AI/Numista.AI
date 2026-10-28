@@ -1,0 +1,6 @@
+﻿OWNED_BY=Catalog Research
+ASSIGNED=2026-10-28T07:29:00-04:00
+PATH=C:\Users\ericd\Documents\MyVertexProject\Numismatics Catalog
+STATUS=local staging until GCP catalog home decided
+FOLD=HOLD
+SPEND=HOLD until Eric typed YES ceiling
