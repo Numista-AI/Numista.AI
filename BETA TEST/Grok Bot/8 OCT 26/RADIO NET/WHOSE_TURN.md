@@ -1,20 +1,12 @@
-# WHOSE_TURN - updated 2026-10-28 ~1:04 PM ET
+# WHOSE_TURN - updated 2026-10-29 ~9:30 AM ET
 
-## NET-640 Phase I afternoon: EXECUTE_DONE
-- Catalog Research completed WP0-WP6 on `numista-morgan-pilot`.
-- Estimated spend: **$0.00** (inline text under free band; no Layout Parser, no CG, no Gemini).
-- 22 new docs indexed in `morgan-docs` (now 136); `morgan-pilot-blended` created.
-- 16 FAIL rows now searchable via Enterprise Search.
-- Check Grounding (CG) option A ($0.50) and fold HOLD 586-590 remain on HOLD pending separate Eric typed YES.
-
-## NET-642 Plan.v2 LANDED
-- File: `US_NUMISMATICS_CATALOG_IMPLEMENTATION_PLAN_V2.md` (CoS INBOX ~12:19; mirrored BATONS/RADIO/01_INCOMING).
-- PLAN ONLY - no execute / no fold / $0 unapproved. Main locked. No Mint NET-641 touch.
-- Review cycle: GB CoS + SAG. Flags noted: 90/10 mobile companion vs web-first; confirm Eric Qs.
+## NET-644 - Plan.v2.1 DELIVERED
+- **Status:** Argon (AG CoS) authored and delivered `US_NUMISMATICS_CATALOG_IMPLEMENTATION_PLAN_V2.1.md` + `SAG_PASTE_PACKET_NET-644_US_NUMISMATICS_CATALOG_PLAN_V2.1.md`.
+- **Folded:** Mobile 90/10 companion rewrite, Founder Q1–Q4 sealed, `CO`/`PF`/`FS` polity split, common private medals Phase 2 confirmed, guest rate-limits + NO image download, personal collection photo toggle.
+- **Constraints:** PLAN ONLY / no execute / no fold / $0 unapproved spend.
+- **Turn:** GB CoS + Stand Alone Grok review Plan.v2.1. No execute until Mint clear or Eric typed parallel-YES.
 
 ## OTHER
-- Mint FAIL-FIX / NET-641: stalled pending Eric AG CoS ping; live/main LOCKED.
+- Mint FAIL-FIX / NET-641: Day #1 priority on `p7-gate`. `origin/main` LOCKED.
+- NET-640 Phase I: Concluded by Catalog Research (`EXECUTE_DONE` filed 28 Oct; 22 docs indexed in `morgan-docs`, total 136; $0.00 spend).
 - FOLD: HOLD 586/588/589/590.
-- FINOPS: NET-610 Billing chase in flight via ADC path.
-
-**Turn:** CoS + SAG review Plan.v2; Phase I afternoon EXECUTE_DONE filed; Mint separate pending Eric input.
