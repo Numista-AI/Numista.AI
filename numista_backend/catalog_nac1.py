@@ -6,18 +6,20 @@ NAC1 (Numista.AI Catalog v1) identifier grammar, Crockford-32 checksum and valid
 Pure module: NO Firebase / network imports, so it is safe to import from the API
 boundary, ETL pipelines and unit tests alike.
 
-Spec: Numismatics Catalog/Argon Implementation Plan/US_NUMISMATICS_CATALOG_IMPLEMENTATION_PLAN_V2.md  (section 2.1-2.2)
+Spec: Numismatics Catalog/Argon Implementation Plan/US_NUMISMATICS_CATALOG_IMPLEMENTATION_PLAN_V2.1.md (section 2.1-2.2)
 """
 
 import re
+from typing import Dict
 
 CROCKFORD_32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
-# Named groups: the Plan.v2 snippet used group(5) for CHK, which is actually FAC (group 6 is CHK).
+# Plan.v2.1: CC expanded to US|CO|PF|CS|FS (CO = Colonial/Pre-Federal, PF = US-Philippines, FS = Foreign Specie)
 NAC1_REGEX = re.compile(
-    r"^(?P<payload>NAC1\.(?P<kind>CN|BN|MD|TK|ST)\.(?P<cc>US|PF|CS)\.[A-Z0-9]{2,8}\.[A-Z0-9]{2,12}\."
-    r"(?:[0-9]{4}[A-Z]?|ND|XXXX)\.(?:P|D|S|W|CC|O|C|DD|M|PH|BEP|NARA|XX)\."
-    r"[A-Z0-9]{2,12})\.(?P<chk>[0-9A-HJ-NP-TV-Z])$"
+    r"^(?P<payload>NAC1\.(?P<kind>CN|BN|MD|TK|ST)\.(?P<cc>US|CO|PF|CS|FS)\."
+    r"(?P<denom>[A-Z0-9]{2,8})\.(?P<series>[A-Z0-9]{2,12})\."
+    r"(?P<year>[0-9]{4}[A-Z]?|ND|XXXX)\.(?P<fac>P|D|S|W|CC|O|C|DD|M|PH|BEP|NARA|XX)\."
+    r"(?P<var>[A-Z0-9]{2,12}))\.(?P<chk>[0-9A-HJ-NP-TV-Z])$"
 )
 
 # Catalog `kind` -> user sub-collection (Plan section 3.1). BN/MD/TK/ST must NEVER land in "coins".
@@ -60,3 +62,30 @@ def nac1_kind(nac_code: str) -> str:
     if not m:
         raise ValueError("INVALID_NAC1_FORMAT")
     return m.group("kind")
+
+
+def nac1_cc(nac_code: str) -> str:
+    """Return the CC segment (US/CO/PF/CS/FS) of a syntactically valid NAC1 code."""
+    m = NAC1_REGEX.match(nac_code or "")
+    if not m:
+        raise ValueError("INVALID_NAC1_FORMAT")
+    return m.group("cc")
+
+
+def parse_nac1(nac_code: str) -> Dict[str, str]:
+    """Parse a validated NAC1 code into its constituent segments."""
+    if not validate_nac1(nac_code):
+        raise ValueError("INVALID_NAC1_CHECKSUM")
+    m = NAC1_REGEX.match(nac_code)
+    assert m is not None
+    return {
+        "payload": m.group("payload"),
+        "kind": m.group("kind"),
+        "cc": m.group("cc"),
+        "denomination_class": m.group("denom"),
+        "series": m.group("series"),
+        "year": m.group("year"),
+        "facility_code": m.group("fac"),
+        "variety": m.group("var"),
+        "chk": m.group("chk"),
+    }

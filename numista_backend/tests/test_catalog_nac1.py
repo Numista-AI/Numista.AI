@@ -1,4 +1,4 @@
-"""NAC1 grammar / checksum gate (Plan.v2 section 2.2 canonical vectors)."""
+"""NAC1 grammar / checksum gate (Plan.v2.1 section 2.2 canonical vectors)."""
 import os
 import sys
 
@@ -10,12 +10,15 @@ from catalog_nac1 import (  # noqa: E402
     KIND_TO_COLLECTION,
     build_nac1,
     compute_nac1_chk,
+    nac1_cc,
     nac1_kind,
+    parse_nac1,
     validate_nac1,
 )
 
+# All 13 canonical verified NAC1 vectors from Plan.v2.1 §2.2 + extra fixture anchors
 VECTORS = [
-    ("NAC1.CN.PF.1C.FUGIO.1787.XX.BASE", "H"),
+    ("NAC1.CN.CO.1C.FUGIO.1787.XX.BASE", "K"),
     ("NAC1.CN.US.G5.LIBCAP.1838.DD.BASE", "3"),
     ("NAC1.CN.US.1D.MORGAN.1881.S.BASE", "E"),
     ("NAC1.CN.US.1D.MORGAN.1921.P.BASE", "4"),
@@ -25,10 +28,12 @@ VECTORS = [
     ("NAC1.BN.US.FRN1.FED.2017A.BEP.BASE", "6"),
     ("NAC1.BN.US.TN1000.TREAS.1890.BEP.WM", "C"),
     ("NAC1.MD.US.PRES.PRES.1923.P.COOL", "W"),
-    # extra anchors used by the dev fixture / mockup
-    ("NAC1.CN.PF.1C.CT.1787.XX.DRAPED", "9"),
+    ("NAC1.CN.PF.1P.PHL1P.1903.S.BASE", "3"),
+    ("NAC1.CN.FS.1D.SPAN8R.1798.M.BASE", "1"),
+    ("NAC1.MD.US.PRV.CWT.1863.XX.BASE", "H"),
+    # Extra fixture anchors
+    ("NAC1.CN.CO.1C.CT.1787.XX.DRAPED", "V"),
     ("NAC1.BN.US.SC5.SILV.1899.BEP.BASE", "A"),
-    ("NAC1.CN.PF.1P.USPI.1908.S.BASE", "Z"),
 ]
 
 
@@ -46,7 +51,7 @@ def test_wrong_check_digit_rejected():
 @pytest.mark.parametrize("bad", [
     None, 123, "", "NAC1", "nac1.cn.us.1d.morgan.1881.s.base.e",
     "NAC1.XX.US.1D.MORGAN.1881.S.BASE.E",        # bad kind
-    "NAC1.CN.GB.1D.MORGAN.1881.S.BASE.E",        # foreign polity excluded (Q2)
+    "NAC1.CN.GB.1D.MORGAN.1881.S.BASE.E",        # non-Circulating foreign ISO code rejected
     "NAC1.CN.US.1D.MORGAN.1881.Z.BASE.E",        # bad facility
     "NAC1.CN.US.1D.MORGAN.1881.S.BASE.U",        # 'U' not in Crockford alphabet
     "NAC1.CN.US.1D.MORGAN.1881.S.BASE.E.EXTRA",
@@ -63,7 +68,17 @@ def test_kind_routing_never_sends_non_coins_to_coins():
     assert [k for k, v in KIND_TO_COLLECTION.items() if v == "coins"] == ["CN"]
 
 
-def test_nac1_kind():
+def test_nac1_kind_and_cc_and_parse():
     assert nac1_kind("NAC1.BN.US.SC5.SILV.1899.BEP.BASE.A") == "BN"
+    assert nac1_cc("NAC1.CN.CO.1C.FUGIO.1787.XX.BASE.K") == "CO"
+    assert nac1_cc("NAC1.CN.PF.1P.PHL1P.1903.S.BASE.3") == "PF"
+    assert nac1_cc("NAC1.CN.FS.1D.SPAN8R.1798.M.BASE.1") == "FS"
+    parsed = parse_nac1("NAC1.CN.US.G5.LIBCAP.1838.DD.BASE.3")
+    assert parsed["facility_code"] == "DD"
+    assert parsed["chk"] == "3"
     with pytest.raises(ValueError):
         nac1_kind("garbage")
+    with pytest.raises(ValueError):
+        nac1_cc("garbage")
+    with pytest.raises(ValueError):
+        parse_nac1("NAC1.CN.US.1D.MORGAN.1881.S.BASE.F")

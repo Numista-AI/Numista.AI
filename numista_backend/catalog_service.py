@@ -1,12 +1,13 @@
 """
 catalog_service.py
 ------------------
-Catalog read helpers and the transactional collection-add contract (Plan.v2 3.1-3.2).
+Catalog read helpers, guest anti-scraping guards, personal photo toggle, and the
+transactional collection-add contract (Plan.v2.1 3.1-3.3).
 
-`add_catalog_item_in_txn` is deliberately written against a minimal transaction/db
-interface (`tx.get`, `tx.create`, `db.collection(...)`), so the exact same logic is
-unit-tested with an in-memory fake and executed in production under
-`google.cloud.firestore.transactional`.
+`add_catalog_item_in_txn` and `toggle_personal_photo_in_txn` are deliberately written
+against a minimal transaction/db interface (`tx.get`, `tx.create`, `tx.update`,
+`db.collection(...)`), so the exact same logic is unit-tested with an in-memory fake
+and executed in production under `google.cloud.firestore.transactional`.
 """
 
 import json
@@ -22,6 +23,10 @@ CATALOG_COLLECTION = "us_numismatics_catalog"
 USER_COLLECTIONS = ("coins", "currency", "world_items")
 _FIXTURE_PATH = os.path.join(os.path.dirname(__file__), "data", "catalog_dev_fixture.json")
 
+# In-memory guest search sliding-window rate limiter (Founder Q4: rate-limited guest search)
+_guest_search_buckets: Dict[str, List[float]] = {}
+GUEST_SEARCH_LIMIT_PER_MIN = 30
+
 
 class CatalogError(Exception):
     """Business-rule failure carrying an HTTP status + machine-readable code."""
@@ -31,6 +36,40 @@ class CatalogError(Exception):
         self.status_code = status_code
         self.code = code
         self.extra = extra or {}
+
+
+def reset_guest_rate_limits() -> None:
+    """Clear guest rate-limit buckets (used by unit tests)."""
+    _guest_search_buckets.clear()
+
+
+def check_guest_search_rate_limit(
+    client_id: str,
+    limit: int = GUEST_SEARCH_LIMIT_PER_MIN,
+    window_sec: float = 60.0,
+    now_ts: Optional[float] = None,
+) -> None:
+    """Enforce guest search rate limit (Founder Q4: Guest search rate-limited)."""
+    now = now_ts if now_ts is not None else time.time()
+    key = (client_id or "anonymous").strip() or "anonymous"
+    bucket = [t for t in _guest_search_buckets.get(key, []) if now - t < window_sec]
+    if len(bucket) >= limit:
+        _guest_search_buckets[key] = bucket
+        raise CatalogError(429, "GUEST_SEARCH_RATE_LIMIT_EXCEEDED", {"limit_per_min": limit})
+    bucket.append(now)
+    _guest_search_buckets[key] = bucket
+
+
+def verify_image_download_allowed(user: Optional[dict], nac_code: str) -> Dict[str, Any]:
+    """
+    Founder Q4 policy: Unauthenticated guests can browse and view the catalog,
+    but NO image download is permitted without a registered account.
+    """
+    if not validate_nac1(nac_code):
+        raise CatalogError(400, "INVALID_NAC1_CHECKSUM")
+    if not user or not user.get("uid"):
+        raise CatalogError(403, "IMAGE_DOWNLOAD_REQUIRES_ACCOUNT")
+    return {"allowed": True, "nac_code": nac_code, "uid": user["uid"]}
 
 
 # ── Reads ─────────────────────────────────────────────────────────────────────
@@ -57,13 +96,22 @@ def load_catalog(db=None, force: bool = False) -> List[dict]:
     return items
 
 
-def filter_catalog(items: List[dict], kind: Optional[str] = None, era: Optional[str] = None,
-                   facility: Optional[str] = None, state: Optional[str] = None,
-                   max_year: Optional[int] = None, q: Optional[str] = None) -> List[dict]:
+def filter_catalog(
+    items: List[dict],
+    kind: Optional[str] = None,
+    era: Optional[str] = None,
+    facility: Optional[str] = None,
+    state: Optional[str] = None,
+    max_year: Optional[int] = None,
+    q: Optional[str] = None,
+    cc: Optional[str] = None,
+) -> List[dict]:
     out = []
     ql = (q or "").lower().strip()
     for it in items:
         if kind and it.get("kind") != kind:
+            continue
+        if cc and it.get("cc") != cc:
             continue
         if era and it.get("country_era") != era:
             continue
@@ -74,7 +122,10 @@ def filter_catalog(items: List[dict], kind: Optional[str] = None, era: Optional[
         if max_year and it.get("year", 0) > max_year:
             continue
         if ql:
-            hay = " ".join(str(it.get(k, "")) for k in ("title", "subtitle", "nac_code", "year_display", "series"))
+            hay = " ".join(
+                str(it.get(k, ""))
+                for k in ("title", "subtitle", "nac_code", "year_display", "series", "denomination_class")
+            )
             if ql not in hay.lower():
                 continue
         out.append(it)
@@ -89,7 +140,7 @@ def find_by_slug(items: List[dict], slug: str) -> Optional[dict]:
     return None
 
 
-# ── Transactional collection add ─────────────────────────────────────────────
+# ── Transactional collection add & personal photo toggle ─────────────────────
 
 def add_catalog_item_in_txn(
     tx,
@@ -135,6 +186,7 @@ def add_catalog_item_in_txn(
     doc = {
         "nac_code": nac_code,
         "kind": item["kind"],
+        "cc": item.get("cc", "US"),
         "slot": slot,
         "source": "us_catalog",
         "quantity": 1,
@@ -143,11 +195,62 @@ def add_catalog_item_in_txn(
         "mint_mark": item.get("mint_mark"),
         "denomination_class": item.get("denomination_class"),
         "series": item.get("series"),
+        "use_personal_photo": False,
+        "custom_obverse_image_url": None,
+        "custom_reverse_image_url": None,
         "catalog_snapshot": build_catalog_snapshot(item),
         "added_at": now.isoformat(),
     }
     tx.create(ref, doc)
     audit_ref = db.collection("users").document(uid).collection("collection_audit_log").document()
-    tx.create(audit_ref, {"action": "ADD", "nac_code": nac_code, "collection": target_col,
-                          "doc_id": ref.id, "at": now.isoformat()})
+    tx.create(
+        audit_ref,
+        {
+            "action": "ADD",
+            "nac_code": nac_code,
+            "collection": target_col,
+            "doc_id": ref.id,
+            "at": now.isoformat(),
+        },
+    )
     return {"created": True, "doc_id": ref.id, "collection": target_col, "doc": doc}
+
+
+def toggle_personal_photo_in_txn(
+    tx,
+    db,
+    uid: str,
+    collection: str,
+    doc_id: str,
+    use_personal_photo: bool,
+) -> Dict[str, Any]:
+    """
+    Founder Q3: Toggle between the user's personal specimen photo and the stock
+    catalog image without mutating the public catalog or overwriting custom photo URLs.
+    """
+    if collection not in USER_COLLECTIONS:
+        raise CatalogError(400, "INVALID_COLLECTION")
+    ref = db.collection("users").document(uid).collection(collection).document(doc_id)
+    snap = tx.get(ref)
+    if not snap.exists:
+        raise CatalogError(404, "COLLECTION_ITEM_NOT_FOUND")
+    doc = snap.to_dict()
+    if hasattr(tx, "update"):
+        tx.update(ref, {"use_personal_photo": use_personal_photo})
+    doc["use_personal_photo"] = use_personal_photo
+
+    snapshot = doc.get("catalog_snapshot") or {}
+    stock_obv = snapshot.get("obverse_image_url_at_acquire")
+    stock_rev = snapshot.get("reverse_image_url_at_acquire")
+    custom_obv = doc.get("custom_obverse_image_url")
+    custom_rev = doc.get("custom_reverse_image_url")
+
+    active_obv = custom_obv if (use_personal_photo and custom_obv) else stock_obv
+    active_rev = custom_rev if (use_personal_photo and custom_rev) else stock_rev
+    return {
+        "collection": collection,
+        "doc_id": doc_id,
+        "use_personal_photo": use_personal_photo,
+        "active_obverse_image_url": active_obv,
+        "active_reverse_image_url": active_rev,
+    }
