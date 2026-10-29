@@ -16,8 +16,9 @@ void main() {
       ('NAC1.BN.US.TN1000.TREAS.1890.BEP.WM', 'C'),
       ('NAC1.MD.US.PRES.PRES.1923.P.COOL', 'W'),
       ('NAC1.CN.PF.1P.PHL1P.1903.S.BASE', '3'),
-      ('NAC1.CN.FS.1D.SPAN8R.1798.M.BASE', '1'),
+      ('NAC1.CN.FS.1D.SPAN8R.1798.MO.BASE', 'P'),
       ('NAC1.MD.US.PRV.CWT.1863.XX.BASE', 'H'),
+      ('NAC1.TK.US.PRV.CWT.1863.XX.BASE', 'T'),
       ('NAC1.CN.CO.1C.CT.1787.XX.DRAPED', 'V'),
       ('NAC1.BN.US.SC5.SILV.1899.BEP.BASE', 'A'),
     ];
@@ -42,6 +43,18 @@ void main() {
       );
       expect(
         NacCodeParser.validateNac1('NAC1.CN.US.1D.MORGAN.1881.S.BASE.U'),
+        isFalse,
+      );
+      expect(
+        NacCodeParser.validateNac1('NAC1.CN.US.1D.MORGAN.1881.S.BASE.L'),
+        isFalse,
+      );
+      expect(
+        NacCodeParser.validateNac1('NAC1.CN.US.1D.MORGAN.1881.S.BASE.I'),
+        isFalse,
+      );
+      expect(
+        NacCodeParser.validateNac1('NAC1.CN.US.1D.MORGAN.1881.S.BASE.O'),
         isFalse,
       );
       expect(NacCodeParser.validateNac1(''), isFalse);

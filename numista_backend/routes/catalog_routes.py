@@ -23,6 +23,7 @@ from google.cloud import firestore
 from catalog_models import CollectionAddRequest, PhotoToggleRequest
 from catalog_nac1 import validate_nac1
 from catalog_service import (
+    FREE_TRIAL_ITEM_LIMIT,
     CatalogError,
     add_catalog_item_in_txn,
     check_guest_search_rate_limit,
@@ -117,8 +118,17 @@ def _count_fn(uid: str):
 
 
 @firestore.transactional
-def _run_add(tx, uid, nac_code, tier_limit, new_specimen):
-    return add_catalog_item_in_txn(tx, db, uid, nac_code, tier_limit, _count_fn(uid), new_specimen)
+def _run_add(tx, uid, nac_code, tier_limit, new_specimen, idempotency_key=None):
+    return add_catalog_item_in_txn(
+        tx,
+        db,
+        uid,
+        nac_code,
+        tier_limit,
+        _count_fn(uid),
+        new_specimen,
+        idempotency_key=idempotency_key,
+    )
 
 
 @firestore.transactional
@@ -127,7 +137,7 @@ def _run_photo_toggle(tx, uid, collection, doc_id, use_personal_photo):
 
 
 @write_router.post("/catalog-add")
-def catalog_add(body: CollectionAddRequest, user: dict = Depends(get_current_user)):
+def catalog_add(request: Request, body: CollectionAddRequest, user: dict = Depends(get_current_user)):
     uid = user.get("uid")
     if not uid:
         raise HTTPException(status_code=401, detail="Authentication token missing or invalid")
@@ -136,11 +146,17 @@ def catalog_add(body: CollectionAddRequest, user: dict = Depends(get_current_use
     from tier_gatekeeper import TIER_COIN_LIMITS, get_user_profile, get_user_tier
     profile = get_user_profile(uid)
     tier = get_user_tier(profile)
-    limit = float("inf") if (tier == "power_user" or profile.get("power_user") is True) \
-        else TIER_COIN_LIMITS.get(tier, TIER_COIN_LIMITS["free"])
+    if tier == "power_user" or profile.get("power_user") is True:
+        limit = float("inf")
+    elif tier == "free":
+        limit = FREE_TRIAL_ITEM_LIMIT
+    else:
+        limit = TIER_COIN_LIMITS.get(tier, FREE_TRIAL_ITEM_LIMIT)
+
+    idem_key = request.headers.get("Idempotency-Key") or body.idempotency_key
 
     try:
-        result = _run_add(db.transaction(), uid, body.nac_code, limit, body.new_specimen)
+        result = _run_add(db.transaction(), uid, body.nac_code, limit, body.new_specimen, idem_key)
     except CatalogError as e:
         raise HTTPException(status_code=e.status_code, detail={"error": e.code, **e.extra})
     return JSONResponse(status_code=201 if result["created"] else 200, content={

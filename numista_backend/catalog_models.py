@@ -135,6 +135,72 @@ class CatalogItem(BaseModel):
             raise ValueError("mint_mark required when mint_mark_on_coin is true")
         if not self.mint_mark_on_coin and self.mint_mark is not None:
             raise ValueError("mint_mark must be null when mint_mark_on_coin is false")
+
+        # Plan.v2.2 §2.3.1 (SAG #1 / GB MUST-EDIT 4): CC <-> country_era <-> year & facility agreement
+        if self.cc == "CO":
+            if self.country_era != "PRE_FEDERAL" or not (1776 <= self.year <= 1792):
+                raise ValueError("CC=CO requires country_era=PRE_FEDERAL and year in 1776..1792")
+            if self.facility_code in {"M", "PH", "MO", "L", "PTS"}:
+                raise ValueError(f"Invalid facility_code {self.facility_code} for CC=CO")
+        elif self.cc == "PF":
+            if self.country_era != "US_PHILIPPINES" or not (1903 <= self.year <= 1946):
+                raise ValueError("CC=PF requires country_era=US_PHILIPPINES and year in 1903..1946")
+            if self.facility_code not in {"P", "D", "S", "M", "PH"}:
+                raise ValueError(f"Invalid facility_code {self.facility_code} for CC=PF")
+        elif self.cc == "CS":
+            if self.country_era != "CONFEDERATE" or not (1861 <= self.year <= 1865):
+                raise ValueError("CC=CS requires country_era=CONFEDERATE and year in 1861..1865")
+        elif self.cc == "FS":
+            if self.country_era != "FOREIGN_CIRCULATING" or not (1776 <= self.year <= 1857):
+                raise ValueError("CC=FS requires country_era=FOREIGN_CIRCULATING and year in 1776..1857")
+            if self.facility_code not in {"MO", "L", "PTS", "XX"}:
+                raise ValueError(
+                    f"Invalid facility_code {self.facility_code} for CC=FS (use MO for Mexico City, never M=Manila)"
+                )
+        elif self.cc == "US":
+            if self.country_era not in {"EARLY_FEDERAL", "FEDERAL"} or not (1792 <= self.year <= 2026):
+                raise ValueError("CC=US requires country_era in {EARLY_FEDERAL, FEDERAL} and year in 1792..2026")
+            if self.facility_code in {"M", "PH", "MO", "L", "PTS"}:
+                raise ValueError(f"Invalid facility_code {self.facility_code} for CC=US")
+
+        # Plan.v2.2 §2.3.2 (SAG #4 / S3 / GB MUST-EDIT 3): Tier-A mintage authority validator
+        if self.mintage_official_mint is not None:
+            tier_a_cites = [c for c in self.primary_citations if c.tier == "TIER_A_GOV"]
+            if not tier_a_cites:
+                raise ValueError(
+                    f"{self.nac_code}: mintage_official_mint requires at least one TIER_A_GOV citation"
+                )
+            forbidden_tokens = (
+                "pcgs", "coinfacts", "ngc", "ngccoin", "red book", "redbook",
+                "yeoman", "whitman", "greysheet", "numista.com", "heritage", "ha.com", "cointrackers",
+            )
+            allowed_authorities = (
+                "mint", "treasury", "bureau of engraving", "bep", "fraser",
+                "national archives", "nara", "statutes at large", "act of", "congress",
+            )
+            for c in tier_a_cites:
+                combined = f"{c.source_name} {c.citation_text} {c.document_url or ''}".lower()
+                if any(bad in combined for bad in forbidden_tokens):
+                    raise ValueError(
+                        f"{self.nac_code}: Commercial source '{c.source_name}' forbidden as TIER_A_GOV citation"
+                    )
+                if not any(auth in combined for auth in allowed_authorities):
+                    raise ValueError(
+                        f"{self.nac_code}: TIER_A_GOV citation '{c.source_name}' must cite official Mint/Treasury/BEP/NARA authority"
+                    )
+
+        # Plan.v2.2 §2.3.3 (SAG #9 / S5 / GB MUST-EDIT 7): Zero user PII in public catalog docs
+        if self.image_source_credit:
+            credit_lower = self.image_source_credit.lower()
+            if (
+                "@" in credit_lower
+                or "verified contributor:" in credit_lower
+                or "uid:" in credit_lower
+                or "user_" in credit_lower
+            ):
+                raise ValueError(
+                    f"{self.nac_code}: Public image_source_credit must not contain user PII or handles"
+                )
         return self
 
     @property
@@ -143,10 +209,11 @@ class CatalogItem(BaseModel):
 
 
 class CollectionAddRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid")  # Rejects client-supplied kind, slot, or tier
 
     nac_code: str
     new_specimen: bool = False  # True => allocate next free _SLOT{N}; False => idempotent _SLOT1
+    idempotency_key: Optional[str] = None
 
 
 class PhotoToggleRequest(BaseModel):

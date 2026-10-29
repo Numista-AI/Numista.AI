@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from catalog_models import CatalogItem, Specifications  # noqa: E402
+from catalog_models import CatalogItem, Specifications, build_catalog_snapshot  # noqa: E402
 from catalog_service import (  # noqa: E402
     CatalogError,
     add_catalog_item_in_txn,
@@ -26,7 +26,7 @@ MORGAN = "NAC1.CN.US.1D.MORGAN.1881.S.BASE.E"
 NOTE = "NAC1.BN.US.SC5.SILV.1899.BEP.BASE.A"
 MEDAL = "NAC1.MD.US.PRES.PRES.1923.P.COOL.W"
 FUGIO = "NAC1.CN.CO.1C.FUGIO.1787.XX.BASE.K"
-SPAN8R = "NAC1.CN.FS.1D.SPAN8R.1798.M.BASE.1"
+SPAN8R = "NAC1.CN.FS.1D.SPAN8R.1798.MO.BASE.P"
 PHL1P = "NAC1.CN.PF.1P.PHL1P.1903.S.BASE.3"
 CWT_PRV = "NAC1.MD.US.PRV.CWT.1863.XX.BASE.H"
 
@@ -262,6 +262,73 @@ def test_mint_mark_consistency():
         CatalogItem(**{**row, "mint_mark_on_coin": False})  # mark present but flag false
     with pytest.raises(ValueError):
         CatalogItem(**{**row, "mint_mark": None})
+
+
+def test_cc_era_year_agreement():
+    fugio = dict(ITEMS[FUGIO])
+    with pytest.raises(ValueError):
+        CatalogItem(**{**fugio, "year": 1800})  # CO cannot exceed 1792
+    with pytest.raises(ValueError):
+        CatalogItem(**{**fugio, "country_era": "FEDERAL"})
+
+    phl = dict(ITEMS[PHL1P])
+    with pytest.raises(ValueError):
+        CatalogItem(**{**phl, "year": 1950})  # PF cannot exceed 1946
+
+    span = dict(ITEMS[SPAN8R])
+    with pytest.raises(ValueError):
+        CatalogItem(**{**span, "year": 1860})  # FS cannot exceed 1857
+    with pytest.raises(ValueError):
+        CatalogItem(**{**span, "facility_code": "M"})  # must match NAC1 <FAC>=MO
+
+
+def test_tier_a_mintage_validator_rejects_commercial_sources():
+    row = dict(ITEMS[MORGAN])
+    # Missing TIER_A_GOV when mintage_official_mint is non-null
+    with pytest.raises(ValueError):
+        CatalogItem(
+            **{
+                **row,
+                "primary_citations": [
+                    {
+                        "tier": "TIER_B_ACADEMIC",
+                        "source_name": "ANS MANTIS",
+                        "citation_text": "Secondary reference",
+                        "document_url": None,
+                        "verified_date": "2026-10-29",
+                    }
+                ],
+            }
+        )
+    # Disguised commercial source labeled TIER_A_GOV
+    for bad_source in ("PCGS CoinFacts", "NGC Census", "Red Book Guide Book"):
+        with pytest.raises(ValueError):
+            CatalogItem(
+                **{
+                    **row,
+                    "primary_citations": [
+                        {
+                            "tier": "TIER_A_GOV",
+                            "source_name": bad_source,
+                            "citation_text": "Commercial mintage",
+                            "document_url": None,
+                            "verified_date": "2026-10-29",
+                        }
+                    ],
+                }
+            )
+
+
+def test_public_catalog_and_snapshot_reject_user_pii():
+    row = dict(ITEMS[MORGAN])
+    with pytest.raises(ValueError):
+        CatalogItem(**{**row, "image_source_credit": "Photo by collector@example.com"})
+    with pytest.raises(ValueError):
+        CatalogItem(**{**row, "image_source_credit": "Uploaded by uid: u12345"})
+
+    snap = build_catalog_snapshot(row)
+    for forbidden in ("uid", "email", "user_id", "custom_obverse_image_url", "custom_reverse_image_url"):
+        assert forbidden not in snap
 
 
 def test_filter_by_state_facet_cc_and_facility():

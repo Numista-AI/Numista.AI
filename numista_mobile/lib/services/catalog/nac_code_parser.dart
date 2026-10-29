@@ -36,7 +36,7 @@ class NacCodeParser {
   static const String crockford32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
   static final RegExp nac1Regex = RegExp(
-    r'^(NAC1\.(CN|BN|MD|TK|ST)\.(US|CO|PF|CS|FS)\.([A-Z0-9]{2,8})\.([A-Z0-9]{2,12})\.([0-9]{4}[A-Z]?|ND|XXXX)\.(P|D|S|W|CC|O|C|DD|M|PH|BEP|NARA|XX)\.([A-Z0-9]{2,12}))\.([0-9A-HJ-NP-TV-Z])$',
+    r'^(NAC1\.(CN|BN|MD|TK|ST)\.(US|CO|PF|CS|FS)\.([A-Z0-9]{2,8})\.([A-Z0-9]{2,12})\.([0-9]{4}[A-Z]?|ND|XXXX)\.(P|D|S|W|CC|O|C|DD|M|MO|L|PTS|PH|BEP|NARA|XX)\.([A-Z0-9]{2,12}))\.([0-9A-HJ-KM-NP-TV-Z])$',
   );
 
   static const Map<String, String> _kindToCollectionMap = {

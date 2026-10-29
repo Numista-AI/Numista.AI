@@ -116,7 +116,7 @@
     ]
   },
   {
-    "nac_code": "NAC1.CN.FS.1D.SPAN8R.1798.M.BASE.1",
+    "nac_code": "NAC1.CN.FS.1D.SPAN8R.1798.MO.BASE.P",
     "nac_aliases": [],
     "catalog_version": 1,
     "last_verified_at": "2026-10-29T00:00:00Z",
@@ -146,10 +146,10 @@
     "series": "SPAN8R",
     "year": 1798,
     "year_display": "1798-Mo · Foreign Specie (U.S. Legal Tender)",
-    "facility_code": "M",
+    "facility_code": "MO",
     "mint_mark_on_coin": true,
     "mint_mark": "Mo",
-    "facility_note": "Mexico City Mint (Circulating U.S. Legal Tender until 1857)",
+    "facility_note": "Mexico City Mint (Circulating U.S. Legal Tender until 1857; FAC='MO' disambiguates from Manila 'M')",
     "specifications": {
       "designer_obverse": null,
       "designer_reverse": null,
