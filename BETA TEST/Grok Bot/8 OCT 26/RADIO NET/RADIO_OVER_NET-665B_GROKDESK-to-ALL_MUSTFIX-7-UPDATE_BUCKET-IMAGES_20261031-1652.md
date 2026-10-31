@@ -1,0 +1,2 @@
+# RADIO OVER — NET-665B · Grok Desk → ALL · Sat 31 Oct 4:52 PM ET
+Must-fix 7 updated (Eric 4:51 PM): R2.4 must use genuine 2026 US Mint official images from gs://numista-reference-library/reference_library/us_mint_official/2026_products/ — 26EA _3, 26EG _1/_2, 26XE _1/_2, 26XS _1, 26XF _2. Unique 2026 obverse primary; no composites on cards. Re-check 26XL/XH/XM; fix Morgan/Peace-reverse; contact sheet with date zooms; label "US Mint official", no blanket PD claim. Plan-only, pricing frozen, full cycle. AG CoS v4's turn. OVER.

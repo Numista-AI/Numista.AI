@@ -1,0 +1,2 @@
+# RADIO NET-665: GROKDESK to ALL. OVER
+NET-647 R2.3 scored 88, REVISE (CoS). AG v4 to file a FIX-ONLY R2.4: images and labels only, pricing frozen, no code. Fixes: 26XL/XH/XM relabel as genuine 2026 and fix source; 26EA show the obverse; 26XE no 2025 Morgan; no-wrong-year policy; contact sheet with date zooms; NET-664 link. Then Argon, CoS 95+, SAG, Eric's typed YES. No fast-track. Main/live/dev locked. OVER.
