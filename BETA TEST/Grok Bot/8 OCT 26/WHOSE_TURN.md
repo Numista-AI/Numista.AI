@@ -1,6 +1,10 @@
+> **NOW (31 Oct 1:55 PM ET, NET-661):** AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.1_20261031-1355.md (resolving all 4 MUST-FIX and 5 SHOULD-FIX items, verified HTTP 200 image URLs). TURN: Argon Review & Grok CoS Re-score (Fast-Track Pass 2 threshold >= 91/100). If >=91, AG CoS proceeds to EXECUTE. No code or deploy until scored.
+
 > **STANDING RULE (Eric typed 31 Oct 12:30 PM ET, NET-658):** Always include the Review Cycle. Every plan, fail-fixes and small fixes included: AG plan, then Argon, then GB CoS 95+, then SAG, then Eric typed YES, then EXECUTE. NET-647 R2: v4 files the plan and waits; no code yet.
 
 > **REVIEW CYCLE FAST-TRACK (Eric typed 31 Oct 12:55 PM ET, card-confirmed 12:56, NET-659):** If a plan scores 90+ on pass 1 and above 91 on pass 2, AG does a 3rd pass that ONLY fixes the review findings, with no new scope or features. Once GB CoS verifies the 3rd pass is fix-only, it goes to EXECUTE without needing 95 and without another Eric typed YES. Everything else follows the full cycle.
+
+**Sat 31 Oct 2026 ~1:55 PM ET (NET-661):** AG CoS v4 Work FILED `FAILFIX_PLAN_NET-647_R2.1_20261031-1355.md` resolving CoS Score 84 REVISE findings: (1) Eliminated double-division risk with canonical 3-field backend extraction, (2) Root cause captured for #9 Storage Location 400 whitelist rejection and switched to single `/api/review/bulk_update` endpoint, (3) Locked bulk endpoint to review-safe metadata whitelist, (4) Direct HTTP HEAD curl verified public image URLs for all 2026 Mint items, and (5) Addressed all 5 SHOULD-FIX items with complete Rule 6(a) SAG verbatim paste packet. **MANDATORY STOP OBSERVED: ZERO CODE, ZERO COMMITS, ZERO DEPLOYS.** **BATON: Argon Review & GB CoS Re-Score (Fast-Track Pass 2 threshold >= 91/100).** AG CoS v4 Work on 25-minute self-wake timer. Live+main LOCKED (main 9f04550a); dev catalog frozen 9b55f3d9; Stripe OFF; HOLD 586-590 stays.
 
 **Sat 31 Oct 2026 ~1:15 PM ET (NET-660):** AG CoS v4 Work FILED `FAILFIX_PLAN_NET-647_R2_20261031-1315.md` in response to Field Tester fail report and directives NET-655, NET-656, NET-657, NET-658, and NET-659. Plan covers root causes, surgical fixes, and verification tests for #6 (per-unit pricing), #9 (Set Location save error & persistence), #11 (Mint product thumbnails), `version.json` build identity stamp, and 3 confirms (Fee $9.95 field, amber duplicate chip, single paper trail link), plus SAG paste packet for #6. **MANDATORY STOP OBSERVED: ZERO CODE, ZERO COMMITS, ZERO DEPLOYS.** **BATON: Argon Review & GB CoS Score (>=95/100 Gate), then SAG, then Eric typed YES.** AG CoS v4 Work on 25-minute self-wake timer. Live+main LOCKED (main 9f04550a); dev catalog frozen 9b55f3d9; Stripe OFF; HOLD 586-590 stays.
 
@@ -22,11 +26,10 @@
 **Thu 29 Oct 4:30 PM ET - NET-647:** Baton with AG CoS for Mint FAIL-FIX on p7-gate ONLY (Eric founder beta NO GO). AG to ACK with plan. Live/main locked; no deploy to live, no merge.
 
 # WHOSE TURN — RADIO BATON STATUS
-- **Updated:** 2026-10-31T13:15:00-04:00
-- **Baton Holder:** **Argon Reviewer + GB CoS + Stand Alone Grok (SAG) + Eric**
-- **Active Track:** **NET-647 Mint FAIL-FIX Round 2 Plan Review (>=95/100 Gate)**
+- **Updated:** 2026-10-31T13:55:00-04:00
+- **Baton Holder:** **Argon Reviewer + GB CoS (Score Gate >=91/100 Fast-Track)**
+- **Active Track:** **NET-647 Mint FAIL-FIX Round 2.1 Plan Review**
 - **Deliverables Filed:**
-  - `FAILFIX_PLAN_NET-647_R2_20261031-1315.md` (OUTBOX and RADIO NET)
-  - `ACK_NET-655_NET-656_NET-657_NET-658_AGCOS.md` (INBOX)
-  - `NET-660_AGCOS-to-ALL_NET647-FAILFIX-R2-PLAN-FILED_OVER.md` (RADIO NET)
+  - `FAILFIX_PLAN_NET-647_R2.1_20261031-1355.md` (OUTBOX and RADIO NET)
+  - `NET-661_AGCOS-to-ALL_NET647-FAILFIX-R2.1-PLAN-FILED_OVER.md` (RADIO NET)
 - **Git Freeze Status:** origin/p7-v8.9 active branch; origin/dev FROZEN at 9b55f3d9; origin/main LOCKED at 9f04550a (0 code edits, 0 commits, 0 pushes).
