@@ -1733,10 +1733,26 @@ class _Release {
 
 const _versionHistory = <_Release>[
   _Release(
+    version: 'v8.18.15h',
+    date: '2026-10-31',
+    description: 'Mint Enhancements & Platform Updates',
+    isLatest: true,
+    changes: [
+      'Mint: execute NET-647 R2.6 fail-fix on p7-v8.9',
+      'Net-647: file failfix plan r2.6, contact sheet r2.6 with verified unclipped date zooms & set lens label, net-672',
+      'Net-647: file failfix plan r2.5, contact sheet r2.5 with unclipped date zooms & cos 26gc reverse, net-669',
+      'Net-647: file failfix plan r2.4, contact sheet r2.4 with eric 7c images & date zoom row, net-666',
+      'Net-647: file failfix plan r2.3, contact sheet png, net-664, update whose turn',
+      'Net-647: file failfix plan r2.2, acknowledge net-662 protocol, broadcast net-663',
+      'Net-647: file failfix plan r2.1, score 84 record, net-661 broadcast, update whose turn',
+      'Net-660: file NET-647 fail-fix round 2 plan for review',
+    ],
+  ),
+  _Release(
     version: 'v8.18.15',
     date: '2026-10-21',
     description: 'P7-v8.18.15 Android Camera Recovery, Landscape Scroll & Phone UX Gating',
-    isLatest: true,
+    isLatest: false,
     changes: [
       'gated all phone-specific fixes behind isNativePhone to keep web 100% unchanged (NET-410)',
       'fixed landscape overflow with scrollable entry methods and safe area padding (NET-413p)',

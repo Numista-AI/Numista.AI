@@ -1,3 +1,7 @@
+**WHOSE_TURN (NET-678, 31 Oct 7:45 PM ET):** AG CoS v4 FILED `EXECUTE_DONE_AG-COS-V4_NET-678_NET-647-R2.6_20261031.md`. NET-647 R2.6 execution complete on `p7-v8.9` (commit `33076f6af727c49a020da0d2d4e96a9560d002d6`). All 11 fixes verified: flutter analyze (0 issues), flutter test (652/652 passed across 41 test suites), pytest (13/13 passed). Release web built and deployed to preview channel `p7-gate` (https://numista-vault--p7-gate-8avtpz22.web.app). Live probe verified HTTP 200 on `version.json`. 7 official Mint assets uploaded (--no-clobber) to `gs://numista-reference-library/reference_library/us_mint_official/2026_products/` with MD5/SHA256 recorded. Intake `MANIFEST.csv` staged in `image-intake/ag-cos-v4/coins/` (status=PROPOSAL). Dry-run backfill CSV generated (0 Firestore writes). Locks intact: main 9f04550a, dev 9b55f3d9, Stripe OFF. TURN: FIELD TESTER (live re-test on `p7-gate`). NET-646 v3.3 starts only after Field Tester PASS.
+
+**WHOSE_TURN (NET-677, 31 Oct 7:38 PM ET):** ARGON FILED `GEMINI38_REVIEW_IMAGE_CONSOLIDATION_v1.md` (Score: 94/100 CONDITIONAL GO) on `PLAN_IMAGE_CONSOLIDATION_v1.md` (`WAKE_ARGON_NET-676`). Phase 1 quarantine (210 GCS objects, 0.46 GB) verified 100% safe against Firestore (54k docs) and code (25.7k refs); identified 3 lock items for `v1.1` / Phase 2 remap: (1) strip 287 user-upload rows (`numista-uploads-...`) and disambiguate 10 reference `master_path` leaf collisions in `gcs_keep_copy_map.csv` before §5 remap, (2) add `firebasestorage\.app|^users/` to `$user` regex in `gcs_dedupe.ps1:4` and exclude `BETA TEST` (375 screenshot rows) from `laptop_delete_candidates.csv`, and (3) unify `{variant}` naming grammar + 6-value `view_type` enum (`obverse | reverse | edge | privy_detail | ogp | detail`) and `CoinModel.ownerPhotos` backward compatibility. Full packet staged in `For SAG`. TURN: GROK COS / GB COS / SAG (`NET-676`); AG v4 continues executing `NET-673` on `p7-gate`. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
 **WHOSE_TURN (NET-675, 31 Oct 7:00 PM ET):** NET-675 lifts the NET-674 hold for the 7 R2.6 L349 uploads only (no-clobber, no deletes, no renames; md5s in EXECUTE_DONE). AG v4 is executing NET-673 on p7-gate. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
 
 **WHOSE_TURN (NET-674, 31 Oct 6:55 PM ET):** AG v4 is executing NET-673 on p7-gate only. The interim image rules are in force (INTERIM_IMAGE_STORAGE_RULES_20261031-1848.md: GCS and Firestore read-only for images, stage in /workspace/image-intake/<bot>/). The R2.6 L349 bucket upload is HELD pending CoS. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
@@ -39,13 +43,15 @@
 > **REVIEW CYCLE FAST-TRACK (Eric typed 31 Oct 12:55 PM ET, card-confirmed 12:56, NET-659):** If a plan scores 90+ on pass 1 and above 91 on pass 2, AG does a 3rd pass that ONLY fixes the review findings, with no new scope or features. Once GB CoS verifies the 3rd pass is fix-only, it goes to EXECUTE without needing 95 and without another Eric typed YES. Everything else follows the full cycle. (Fast-track N/A to Round 2 since Pass 1 was 84).
 
 # WHOSE TURN — RADIO BATON STATUS
-- **Updated:** 2026-10-31T18:34:00-04:00
-- **Baton Holder:** **STAND ALONE GROK (SAG) REVIEW -> ERIC TYPED YES -> AG COS V4 EXECUTE**
-- **Active Track:** **NET-647 Mint FAIL-FIX Round 2.6 Passed Argon (98/100 GO) & Grok CoS (96/100 PASS) — Staged in `For SAG` for SAG Review**
+- **Updated:** 2026-10-31T19:42:00-04:00
+- **Baton Holder:** **FIELD TESTER (Live Re-Test of NET-647 on Preview Channel `p7-gate`)**
+- **Active Track:** **NET-647 Mint FAIL-FIX Round 2.6 Executed & Deployed to `p7-gate` — Live Re-Test Verification**
 - **Deliverables Filed:**
+  - `EXECUTE_DONE_AG-COS-V4_NET-678_NET-647-R2.6_20261031.md` (RADIO NET, INBOX, OUTBOX, BATONS)
   - `GEMINI38_REVIEW_NET-647_R2.6_2026-10-31.md` (RADIO NET, INBOX, OUTBOX, BATONS, For SAG)
   - `COS_SCORE_NET-647_R2.6_96_PASS_20261031-1830.md` (INBOX, RADIO NET, For SAG)
   - `RADIO_OVER_NET-673_ARGON-to-ALL_R2.6-REVIEW_20261031.md` (RADIO NET, INBOX, OUTBOX, BATONS)
   - `FAILFIX_PLAN_NET-647_R2.6_20261031-1830.md` (RADIO NET, OUTBOX, For SAG)
   - `NET-647_MINT_THUMBNAILS_CONTACT_SHEET_R2.6.png` (RADIO NET, OUTBOX, For SAG)
-- **Git Freeze Status:** origin/p7-v8.9 active branch; origin/dev FROZEN at 9b55f3d9; origin/main LOCKED at 9f04550a (0 code edits, 0 commits, 0 pushes).
+- **Deployment URL:** `https://numista-vault--p7-gate-8avtpz22.web.app` (version `8.18.15`, build `81818`, commit `33076f6a`)
+- **Git Freeze Status:** origin/p7-v8.9 active branch; origin/dev FROZEN at 9b55f3d9; origin/main LOCKED at 9f04550a (0 code edits, 0 commits, 0 pushes to main or dev). Stripe OFF.
