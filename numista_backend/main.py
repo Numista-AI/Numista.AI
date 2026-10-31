@@ -3774,17 +3774,36 @@ async def bulk_update_reviews(request: BulkUpdateRequest, _user: dict = Depends(
         if request.user_email.strip().lower() != caller_email:
             raise HTTPException(status_code=403, detail="Forbidden: email mismatch")
 
-    allowed_keys = {"storage_location", "condition", "notes", "status"}
-    for k in (request.updates or {}).keys():
-        if k not in allowed_keys:
+    KEY_ALIASES = {
+        "Storage Location": "storage_location",
+        "storage_location": "storage_location",
+        "condition": "condition",
+        "Condition": "condition",
+        "notes": "notes",
+        "Notes": "notes",
+        "status": "status",
+        "Status": "status",
+    }
+    allowed_canonical_keys = {"storage_location", "condition", "notes", "status"}
+
+    canonical_updates = {}
+    for k, v in (request.updates or {}).items():
+        canonical_k = KEY_ALIASES.get(k, k)
+        if canonical_k not in allowed_canonical_keys:
             raise HTTPException(status_code=400, detail=f"Invalid update field: {k}")
+        canonical_updates[canonical_k] = v
+
+    # Dual-persist storage_location and Storage Location for compatibility
+    final_updates = dict(canonical_updates)
+    if "storage_location" in canonical_updates:
+        final_updates["Storage Location"] = canonical_updates["storage_location"]
 
     try:
         queue_ref = db.collection('users').document(caller_email).collection('review_queue')
         batch = db.batch()
         batch_op_count = 0
         for doc_id in request.review_ids:
-            batch.update(queue_ref.document(doc_id), request.updates)
+            batch.update(queue_ref.document(doc_id), final_updates)
             batch_op_count += 1
             if batch_op_count >= 490:
                 batch.commit()

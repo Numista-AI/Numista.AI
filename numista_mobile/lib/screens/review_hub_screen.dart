@@ -9,6 +9,8 @@ import '../services/http_auth_client.dart';
 import '../utils/numista_error_helper.dart';
 import '../widgets/grade_badge_widget.dart';
 
+/// Top-level convenience alias for ReviewHubScreen.formatCurrency
+String formatCurrency(num amount) => ReviewHubScreen.formatCurrency(amount);
 
 class ReviewHubScreen extends StatefulWidget {
   const ReviewHubScreen({super.key});
@@ -68,6 +70,23 @@ class ReviewHubScreen extends StatefulWidget {
       skipped: skipped,
       flagged: flagged,
     );
+  }
+
+  /// Formats currency with string-based commercial half-up rounding (ROUND_HALF_UP).
+  /// Eliminates binary IEEE-754 underflow errors and handles negative amounts.
+  static String formatCurrency(num amount) {
+    final isNeg = amount.isNegative;
+    final absVal = amount.abs();
+    final s = absVal.toStringAsFixed(4);
+    final parts = s.split('.');
+    final whole = int.parse(parts[0]);
+    final frac = parts.length > 1 ? parts[1] : '0000';
+    int cents = whole * 100 + int.parse(frac.substring(0, 2));
+    if (frac.length > 2 && int.parse(frac.substring(2, 3)) >= 5) {
+      cents += 1;
+    }
+    final formatted = (cents / 100.0).toStringAsFixed(2);
+    return isNeg ? '-$formatted' : formatted;
   }
 
   /// Predicate for 100% AI Confidence items eligible for auto-commit.
@@ -1051,12 +1070,33 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                     controllers['Mint Mark']?.text = ym.group(2)!.toUpperCase();
                                   }
                                 }
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(user.email!)
-                                    .collection('review_queue')
-                                    .doc(docId)
-                                    .update(updates);
+                                final bulkUpdates = <String, dynamic>{};
+                                final loc = (updates['Storage Location'] ?? updates['storage_location'])?.toString().trim();
+                                if (loc != null && loc.isNotEmpty) {
+                                  bulkUpdates['storage_location'] = loc;
+                                }
+                                final cond = updates['Condition']?.toString().trim();
+                                if (cond != null && cond.isNotEmpty) {
+                                  bulkUpdates['condition'] = cond;
+                                }
+                                final notes = updates['Notes']?.toString().trim();
+                                if (notes != null && notes.isNotEmpty) {
+                                  bulkUpdates['notes'] = notes;
+                                }
+                                if (bulkUpdates.isNotEmpty) {
+                                  final res = await HttpAuthClient.post(
+                                    Uri.parse("$_apiUrl/api/review/bulk_update"),
+                                    headers: {"Content-Type": "application/json"},
+                                    body: jsonEncode({
+                                      "user_email": user.email,
+                                      "review_ids": [docId],
+                                      "updates": bulkUpdates,
+                                    }),
+                                  );
+                                  if (res.statusCode != 200) {
+                                    throw Exception('Failed to save update: ${res.body}');
+                                  }
+                                }
                                 if (!mounted) return;
                                 nav.pop();
                                 messenger.showSnackBar(
@@ -1113,13 +1153,34 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                     controllers['Mint Mark']?.text = ym2.group(2)!.toUpperCase();
                                   }
                                 }
-                                // Save edits first
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(user.email!)
-                                    .collection('review_queue')
-                                    .doc(docId)
-                                    .update(updates);
+                                // Save edits first via canonical bulk_update
+                                final bulkUpdates2 = <String, dynamic>{};
+                                final loc2 = (updates['Storage Location'] ?? updates['storage_location'])?.toString().trim();
+                                if (loc2 != null && loc2.isNotEmpty) {
+                                  bulkUpdates2['storage_location'] = loc2;
+                                }
+                                final cond2 = updates['Condition']?.toString().trim();
+                                if (cond2 != null && cond2.isNotEmpty) {
+                                  bulkUpdates2['condition'] = cond2;
+                                }
+                                final notes2 = updates['Notes']?.toString().trim();
+                                if (notes2 != null && notes2.isNotEmpty) {
+                                  bulkUpdates2['notes'] = notes2;
+                                }
+                                if (bulkUpdates2.isNotEmpty) {
+                                  final res = await HttpAuthClient.post(
+                                    Uri.parse("$_apiUrl/api/review/bulk_update"),
+                                    headers: {"Content-Type": "application/json"},
+                                    body: jsonEncode({
+                                      "user_email": user.email,
+                                      "review_ids": [docId],
+                                      "updates": bulkUpdates2,
+                                    }),
+                                  );
+                                  if (res.statusCode != 200) {
+                                    throw Exception('Failed to save update: ${res.body}');
+                                  }
+                                }
 
                                 // Then commit to main collection
                                 final response = await HttpAuthClient.post(
@@ -1211,9 +1272,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 ),
                 onPressed: () {
                   final updates = <String, dynamic>{};
-                  if (locationController.text.isNotEmpty) updates['Storage Location'] = locationController.text;
-                  if (costController.text.isNotEmpty) updates['Cost'] = costController.text;
-                  if (dateController.text.isNotEmpty) updates['Purchase Date'] = dateController.text;
+                  if (locationController.text.isNotEmpty) updates['storage_location'] = locationController.text;
                   if (updates.isNotEmpty) _bulkUpdateItems(updates);
                 },
                 child: const Text('Apply Changes', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -1979,14 +2038,39 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   const Divider(height: 24),
                   () {
                     final rawCost = data['Purchase Cost'] ?? data['Cost'];
-                    final baseCostStr = rawCost != null
-                        ? (rawCost is num ? '\$${rawCost.toStringAsFixed(2)}' : rawCost.toString())
-                        : 'N/A';
-                    final qtyVal = data['Quantity'];
+                    final qtyVal = data['Quantity'] ?? data['qty'];
                     final cleanQty = qtyVal != null ? int.tryParse(qtyVal.toString()) ?? 1 : 1;
-                    final costStr = (cleanQty > 1 && baseCostStr != 'N/A')
-                        ? '$baseCostStr each'
-                        : baseCostStr;
+
+                    String costStr;
+                    if (cleanQty > 1) {
+                      if (data['unit_cost_cents'] != null) {
+                        costStr = '\$${((data['unit_cost_cents'] as num) / 100.0).toStringAsFixed(2)} each';
+                      } else if (data['unit_cost'] != null && data['unit_cost'] is num) {
+                        costStr = '\$${formatCurrency(data['unit_cost'] as num)} each';
+                      } else if (data['line_total'] != null && data['line_total'] is num) {
+                        costStr = '\$${formatCurrency((data['line_total'] as num) / cleanQty)} each';
+                      } else if (rawCost != null && rawCost is num) {
+                        costStr = '\$${formatCurrency(rawCost)} each';
+                      } else if (rawCost != null && num.tryParse(rawCost.toString()) != null) {
+                        costStr = '\$${formatCurrency(num.parse(rawCost.toString()))} each';
+                      } else {
+                        costStr = rawCost != null ? '$rawCost each' : 'N/A';
+                      }
+                    } else {
+                      if (data['unit_cost_cents'] != null) {
+                        costStr = '\$${((data['unit_cost_cents'] as num) / 100.0).toStringAsFixed(2)}';
+                      } else if (data['unit_cost'] != null && data['unit_cost'] is num) {
+                        costStr = '\$${formatCurrency(data['unit_cost'] as num)}';
+                      } else if (data['line_total'] != null && data['line_total'] is num) {
+                        costStr = '\$${formatCurrency(data['line_total'] as num)}';
+                      } else if (rawCost != null && rawCost is num) {
+                        costStr = '\$${formatCurrency(rawCost)}';
+                      } else if (rawCost != null && num.tryParse(rawCost.toString()) != null) {
+                        costStr = '\$${formatCurrency(num.parse(rawCost.toString()))}';
+                      } else {
+                        costStr = rawCost?.toString() ?? 'N/A';
+                      }
+                    }
 
                     final isChecklist = data['source_type'] == 'checklist_scan';
                     final sourceLabel = isChecklist ? 'Ingestion Source' : 'Retailer';
