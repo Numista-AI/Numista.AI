@@ -1,3 +1,9 @@
+**WHOSE_TURN (NET-675, 31 Oct 7:00 PM ET):** NET-675 lifts the NET-674 hold for the 7 R2.6 L349 uploads only (no-clobber, no deletes, no renames; md5s in EXECUTE_DONE). AG v4 is executing NET-673 on p7-gate. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
+**WHOSE_TURN (NET-674, 31 Oct 6:55 PM ET):** AG v4 is executing NET-673 on p7-gate only. The interim image rules are in force (INTERIM_IMAGE_STORAGE_RULES_20261031-1848.md: GCS and Firestore read-only for images, stage in /workspace/image-intake/<bot>/). The R2.6 L349 bucket upload is HELD pending CoS. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
+## WHOSE TURN (NET-673, Sat 31 Oct 6:34 PM ET): ARGON FILED `GEMINI38_REVIEW_NET-647_R2.6_2026-10-31.md` (Score: 98/100 GO) & GB CoS FILED `COS_SCORE_NET-647_R2.6_96_PASS_20261031-1830.md` (Score: 96/100 PASS). All 7 must-fixes from `COS_SCORE_NET-647_R2.5_90_REVISE` & `NET-671A` verified 100% PASS (7/7 Date Zoom Bays unclipped with full `"1776 ~ 2026"` visible, Card #9 26RJ relabeled to Set Lens, Section 2 header shortened with zero overlap, 3-review map table & per-bay readout included, pricing frozen at 3249 cents ROUND_HALF_UP, zero code executed). Full R2.6 packet staged in `For SAG` folder. TURN: STAND ALONE GROK (SAG) REVIEW -> ERIC TYPED YES -> EXECUTE on p7-v8.9. Main/live 9f04550a, dev 9b55f3d9 LOCKED; Stripe OFF.
+
 ## WHOSE TURN (NET-672, Sat 31 Oct 6:30 PM ET): AG CoS v4 Work FILED FAILFIX PLAN R2.6 & CONTACT SHEET R2.6 PNG with Argon-verified unclipped Date Zoom Row (Bays 1, 2, 5 re-cropped to verified wider coordinates; Card #9 26RJ relabeled to Set Lens; Section 2 header shortened; false "100% unclipped" claims removed; exact per-bay text readout attached; pricing frozen; no code). TURN: ARGON / GROK COS (R2.6 Review & Score to >=95) -> SAG Review -> Eric Typed YES -> Execution on p7-v8.9. Main/live 9f04550a, dev 9b55f3d9 LOCKED; Stripe OFF.
 
 ## WHOSE TURN (NET-671, Sat 31 Oct 6:25 PM ET): R2.5 scored CoS 90, Argon 93, SAG 94, all REVISE (COS_SCORE_NET-647_R2.5_90_REVISE_20261031-1819.md). AG CoS v4's turn: FIX-ONLY R2.6 (images and labels only; pricing frozen; no code/commits/deploys/uploads). Then Argon review, CoS 95+, SAG, Eric's typed YES, EXECUTE. Fast-track N/A. Main/live 9f04550a, dev 9b55f3d9 LOCKED; Stripe OFF.
@@ -33,11 +39,13 @@
 > **REVIEW CYCLE FAST-TRACK (Eric typed 31 Oct 12:55 PM ET, card-confirmed 12:56, NET-659):** If a plan scores 90+ on pass 1 and above 91 on pass 2, AG does a 3rd pass that ONLY fixes the review findings, with no new scope or features. Once GB CoS verifies the 3rd pass is fix-only, it goes to EXECUTE without needing 95 and without another Eric typed YES. Everything else follows the full cycle. (Fast-track N/A to Round 2 since Pass 1 was 84).
 
 # WHOSE TURN — RADIO BATON STATUS
-- **Updated:** 2026-10-31T18:30:00-04:00
-- **Baton Holder:** **ARGON / GROK COS (R2.6 Review & Scoring to >=95 Gate)**
-- **Active Track:** **NET-647 Mint FAIL-FIX Round 2.6 Filed (Awaiting Argon Review & Grok CoS >=95 Gate)**
+- **Updated:** 2026-10-31T18:34:00-04:00
+- **Baton Holder:** **STAND ALONE GROK (SAG) REVIEW -> ERIC TYPED YES -> AG COS V4 EXECUTE**
+- **Active Track:** **NET-647 Mint FAIL-FIX Round 2.6 Passed Argon (98/100 GO) & Grok CoS (96/100 PASS) — Staged in `For SAG` for SAG Review**
 - **Deliverables Filed:**
-  - `FAILFIX_PLAN_NET-647_R2.6_20261031-1830.md` (RADIO NET, OUTBOX)
-  - `NET-647_MINT_THUMBNAILS_CONTACT_SHEET_R2.6.png` (RADIO NET, OUTBOX, Artifacts)
-  - `NET-672_AGCOS-to-ALL_NET647-FAILFIX-R2.6-PLAN-FILED_OVER.md` (RADIO NET, OUTBOX)
+  - `GEMINI38_REVIEW_NET-647_R2.6_2026-10-31.md` (RADIO NET, INBOX, OUTBOX, BATONS, For SAG)
+  - `COS_SCORE_NET-647_R2.6_96_PASS_20261031-1830.md` (INBOX, RADIO NET, For SAG)
+  - `RADIO_OVER_NET-673_ARGON-to-ALL_R2.6-REVIEW_20261031.md` (RADIO NET, INBOX, OUTBOX, BATONS)
+  - `FAILFIX_PLAN_NET-647_R2.6_20261031-1830.md` (RADIO NET, OUTBOX, For SAG)
+  - `NET-647_MINT_THUMBNAILS_CONTACT_SHEET_R2.6.png` (RADIO NET, OUTBOX, For SAG)
 - **Git Freeze Status:** origin/p7-v8.9 active branch; origin/dev FROZEN at 9b55f3d9; origin/main LOCKED at 9f04550a (0 code edits, 0 commits, 0 pushes).
