@@ -1,5 +1,11 @@
-﻿**Sat 31 Oct 2026 ~12:05 PM ET (NET-654):** AG CoS v4 Work COMPLETED NET-647 Mint FAIL-FIX: all 11 surgical fixes implemented on branch p7-v8.9 (commit 30f851ac), Rule 8 verified (flutter analyze 0 issues, pytest 6/6 pass, safety test 97/97 pass, measured height 25/25 pass), built and deployed to Firebase Hosting preview channel p7-gate (https://numista-vault--p7-gate-8avtpz22.web.app). **BATON: Field Tester** on p7-gate validation (Folder-Drop & All-Invoices paths). AG CoS on 25-min self-wake timer. NET-646 Plan v3.3 starts at Phase P0 immediately after Field Tester PASS. Live+main LOCKED (main 9f04550a); dev catalog frozen 9b55f3d9; Stripe OFF; HOLD 586-590 stays.
-**Sat 31 Oct 2026 ~11:15 AM ET (NET-653):** AG CoS v3 (9a4c2c35, ericdcman) DIED ('Invalid thought signature' after Eric's billing re-login) â€” RETIRED, NEVER WAKE. New builder = **AG CoS v4 Work**, conv ba2bfdb2-60a1-47d5-befb-78ea742d3dc3 (eric@numista.ai, PAYG numista-qc). **TURN: AG CoS v4 on NET-647** â€” 11 fixes, branch p7-v8.9 only, p7-gate only, then Field Tester (incl. Folder-Drop). After FT PASS, v3.3 starts at P0 per Eric's 10:09 YES (NET-652). Live+main LOCKED; dev frozen 9b55f3d9; HOLD 586-590 stays.
+> **STANDING RULE (Eric typed 31 Oct 12:30 PM ET, NET-658):** Always include the Review Cycle. Every plan, fail-fixes and small fixes included: AG plan, then Argon, then GB CoS 95+, then SAG, then Eric typed YES, then EXECUTE. NET-647 R2: v4 files the plan and waits; no code yet.
+
+> **REVIEW CYCLE FAST-TRACK (Eric typed 31 Oct 12:55 PM ET, card-confirmed 12:56, NET-659):** If a plan scores 90+ on pass 1 and above 91 on pass 2, AG does a 3rd pass that ONLY fixes the review findings, with no new scope or features. Once GB CoS verifies the 3rd pass is fix-only, it goes to EXECUTE without needing 95 and without another Eric typed YES. Everything else follows the full cycle.
+
+**Sat 31 Oct 2026 ~1:15 PM ET (NET-660):** AG CoS v4 Work FILED `FAILFIX_PLAN_NET-647_R2_20261031-1315.md` in response to Field Tester fail report and directives NET-655, NET-656, NET-657, NET-658, and NET-659. Plan covers root causes, surgical fixes, and verification tests for #6 (per-unit pricing), #9 (Set Location save error & persistence), #11 (Mint product thumbnails), `version.json` build identity stamp, and 3 confirms (Fee $9.95 field, amber duplicate chip, single paper trail link), plus SAG paste packet for #6. **MANDATORY STOP OBSERVED: ZERO CODE, ZERO COMMITS, ZERO DEPLOYS.** **BATON: Argon Review & GB CoS Score (>=95/100 Gate), then SAG, then Eric typed YES.** AG CoS v4 Work on 25-minute self-wake timer. Live+main LOCKED (main 9f04550a); dev catalog frozen 9b55f3d9; Stripe OFF; HOLD 586-590 stays.
+
+**Sat 31 Oct 2026 ~12:05 PM ET (NET-654):** AG CoS v4 Work COMPLETED NET-647 Mint FAIL-FIX: all 11 surgical fixes implemented on branch p7-v8.9 (commit 30f851ac), Rule 8 verified (flutter analyze 0 issues, pytest 6/6 pass, safety test 97/97 pass, measured height 25/25 pass), built and deployed to Firebase Hosting preview channel p7-gate (https://numista-vault--p7-gate-8avtpz22.web.app). **BATON: Field Tester** on p7-gate validation (Folder-Drop & All-Invoices paths). AG CoS on 25-min self-wake timer. NET-646 Plan v3.3 starts at Phase P0 immediately after Field Tester PASS. Live+main LOCKED (main 9f04550a); dev catalog frozen 9b55f3d9; Stripe OFF; HOLD 586-590 stays.
+**Sat 31 Oct 2026 ~11:15 AM ET (NET-653):** AG CoS v3 (9a4c2c35, ericdcman) DIED ('Invalid thought signature' after Eric's billing re-login) — RETIRED, NEVER WAKE. New builder = **AG CoS v4 Work**, conv ba2bfdb2-60a1-47d5-befb-78ea742d3dc3 (eric@numista.ai, PAYG numista-qc). **TURN: AG CoS v4 on NET-647** — 11 fixes, branch p7-v8.9 only, p7-gate only, then Field Tester (incl. Folder-Drop). After FT PASS, v3.3 starts at P0 per Eric's 10:09 YES (NET-652). Live+main LOCKED; dev frozen 9b55f3d9; HOLD 586-590 stays.
 
 **Sat 31 Oct 10:15 AM ET - NET-652 (relayed by CoS):** Eric typed 'YES for v3.3' at 10:09 AM ET (msg t1775u) - NET-646 Plan v3.3 execution APPROVED. Order holds: NET-647 Mint FAIL-FIX (p7-v8.9) needs Field Tester PASS incl. Folder-Drop FIRST; only then v3.3 Phase P0. AG files PROGRESS/DONE/BLOCKED on 647 first. Live+main locked; dev 9b55f3d9, main 9f04550a; HOLD 586-590; Stripe OFF; firestore.rules needs separate Eric YES.
 
@@ -15,15 +21,12 @@
 
 **Thu 29 Oct 4:30 PM ET - NET-647:** Baton with AG CoS for Mint FAIL-FIX on p7-gate ONLY (Eric founder beta NO GO). AG to ACK with plan. Live/main locked; no deploy to live, no merge.
 
-# WHOSE TURN â€” RADIO BATON STATUS
-- **Updated:** 2026-10-29T16:05:00-04:00
-- **Baton Holder:** **GB CoS + Stand Alone Grok (SAG) + Eric**
-- **Active Track:**
-  1. **NET-645 (3-Figure Mintage Fold):** **COMPLETE & VERIFIED** (ACK_DONE_NET-645.md filed).
-  2. **NET-646 (Plan.v2.6 â€” U.S. Numismatics Catalog 1776â€“2026 DOCS-ONLY):** **FILED BY ARGON (AG CoS) â€” READY FOR GB CoS & SAG REVIEW (>=95/100 Gate).**
+# WHOSE TURN — RADIO BATON STATUS
+- **Updated:** 2026-10-31T13:15:00-04:00
+- **Baton Holder:** **Argon Reviewer + GB CoS + Stand Alone Grok (SAG) + Eric**
+- **Active Track:** **NET-647 Mint FAIL-FIX Round 2 Plan Review (>=95/100 Gate)**
 - **Deliverables Filed:**
-  - US_NUMISMATICS_CATALOG_IMPLEMENTATION_PLAN_V2.6.md
-  - SAG_PASTE_PACKET_NET-646_US_NUMISMATICS_CATALOG_PLAN_V2.6.md
-  - ACK_NET-646_AGCOS_PLAN-V2.6.md
-- **Git Freeze Status:** origin/dev FROZEN at 9b55f3d9; origin/main LOCKED at 9f04550a (0 code edits, 0 commits, 0 pushes).
-
+  - `FAILFIX_PLAN_NET-647_R2_20261031-1315.md` (OUTBOX and RADIO NET)
+  - `ACK_NET-655_NET-656_NET-657_NET-658_AGCOS.md` (INBOX)
+  - `NET-660_AGCOS-to-ALL_NET647-FAILFIX-R2-PLAN-FILED_OVER.md` (RADIO NET)
+- **Git Freeze Status:** origin/p7-v8.9 active branch; origin/dev FROZEN at 9b55f3d9; origin/main LOCKED at 9f04550a (0 code edits, 0 commits, 0 pushes).
