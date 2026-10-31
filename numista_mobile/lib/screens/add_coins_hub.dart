@@ -818,11 +818,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       ),
       _QuickAddCard(
         icon: Icons.upload_file_outlined,
-        label: 'Upload a list',
-        onTap: () {
-          setState(() => _showMoreWays = true);
-          _tabController.animateTo(0);
-        },
+        label: 'Upload an invoice',
+        onTap: _launchBulkImporter,
       ),
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -868,14 +865,22 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ...entryCards,
-        if (_showMoreWays) ...[
-          _buildTabBar(),
-          Expanded(
-            child: TabBarView(
+    return SafeArea(
+      child: Stack(
+        children: [
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: entryCards,
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _buildTabBar(),
+              ),
+            ],
+            body: TabBarView(
               controller: _tabController,
               children: [
                 // ITEM 9: Tab order matches priority: upload → camera → manual → cert → sku → roll → world → set
@@ -945,10 +950,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               ],
             ),
           ),
-        ] else
-          const Spacer(),
-        if (_isProcessing) _buildProcessingOverlay(),
-      ],
+          if (_isProcessing) _buildProcessingOverlay(),
+        ],
+      ),
     );
   }
 
@@ -1007,6 +1011,23 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
 
+  Future<void> _launchBulkImporter() async {
+    final guideState = MorganGuideService.current.value;
+    if (guideState?.guide.id == 'guide_invoice' && guideState?.step == 0) {
+      MorganGuideService.next();
+    }
+    final email = AuthService.userEmail;
+    final path  = buildAddCoinsHtmlPath(email);
+    final uri   = kIsWeb
+        ? Uri.base.resolve(path)
+        : Uri.parse('https://$kAppPublicDomain$path');
+    if (kIsWeb) {
+      await launchUrl(uri, webOnlyWindowName: '_self');
+    } else {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+    }
+  }
+
   Widget _buildUploadFilesTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
@@ -1049,22 +1070,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final guideState = MorganGuideService.current.value;
-                    if (guideState?.guide.id == 'guide_invoice' && guideState?.step == 0) {
-                      MorganGuideService.next();
-                    }
-                    final email = AuthService.userEmail;
-                    final path  = buildAddCoinsHtmlPath(email);
-                    final uri   = kIsWeb
-                        ? Uri.base.resolve(path)
-                        : Uri.parse('https://$kAppPublicDomain$path');
-                    if (kIsWeb) {
-                      await launchUrl(uri, webOnlyWindowName: '_self');
-                    } else {
-                      await launchUrl(uri, mode: LaunchMode.platformDefault);
-                    }
-                  },
+                  onPressed: _launchBulkImporter,
                   icon: const Icon(Icons.open_in_new, size: 18),
                   label: const Text('Open Bulk Import →',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),

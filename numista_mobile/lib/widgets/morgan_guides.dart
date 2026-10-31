@@ -27,9 +27,8 @@ class MorganGuides {
             "Tap the yellow 'Open Bulk Import' button to get started.",
         hint: "The button is in the center of this screen.",
         nextLabel: "Open Bulk Import →",
-        position: GuidePosition.bottomRight,
-        showArrow: true,
-        arrowDirection: ArrowDirection.down,
+        position: GuidePosition.topRight,
+        showArrow: false,
       ),
       // Step 2: pick file & start import in full-screen scanner
       MorganStep(

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:numista_ai/models/coin_model.dart';
-import 'package:numista_ai/services/backup_export_service.dart';
 
 void main() {
   group('GreySheet Bid Display Hotfix Tests (NET-372 / NET-376)', () {

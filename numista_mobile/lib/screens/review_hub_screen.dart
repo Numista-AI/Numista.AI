@@ -1840,6 +1840,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               ),
             ),
             const SizedBox(width: 8),
+            _buildCoinThumbnail(data),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1864,19 +1866,6 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               border: Border.all(color: Colors.orange.withAlpha(160)),
                             ),
                             child: const Text('Set Condition', style: TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                      if (storageLoc.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6).withAlpha(20),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFF3B82F6).withAlpha(120)),
-                            ),
-                            child: Text('📍 $storageLoc', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 11, fontWeight: FontWeight.w600)),
                           ),
                         ),
                       _buildMemoryAssistedBadge(data),
@@ -1990,9 +1979,15 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   const Divider(height: 24),
                   () {
                     final rawCost = data['Purchase Cost'] ?? data['Cost'];
-                    final costStr = rawCost != null
+                    final baseCostStr = rawCost != null
                         ? (rawCost is num ? '\$${rawCost.toStringAsFixed(2)}' : rawCost.toString())
                         : 'N/A';
+                    final qtyVal = data['Quantity'];
+                    final cleanQty = qtyVal != null ? int.tryParse(qtyVal.toString()) ?? 1 : 1;
+                    final costStr = (cleanQty > 1 && baseCostStr != 'N/A')
+                        ? '$baseCostStr each'
+                        : baseCostStr;
+
                     final isChecklist = data['source_type'] == 'checklist_scan';
                     final sourceLabel = isChecklist ? 'Ingestion Source' : 'Retailer';
                     final sourceVal = isChecklist ? 'Checklist Scan' : (data['Retailer/Website'] ?? 'N/A').toString();
@@ -2005,8 +2000,14 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         _buildMetaItem('Invoice #', (data['Retailer Invoice #'] ?? 'N/A').toString(), Icons.receipt),
                         _buildMetaItem('Cost', costStr, Icons.attach_money),
                         _buildMetaItem('Item #', (data['Retailer Item No.'] ?? 'N/A').toString(), Icons.tag),
-                        _buildMetaItem('QTY', (data['Quantity'] ?? '1').toString(), Icons.numbers),
+                        _buildMetaItem('QTY', cleanQty.toString(), Icons.numbers),
                         _buildMetaItem('Date', (data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
+                        _buildMetaItem(
+                          'Location',
+                          storageLoc.isNotEmpty ? storageLoc : '+ Set Location',
+                          Icons.inventory_2_outlined,
+                          onTap: () => _showCoinEditDialog(id, data),
+                        ),
                       ],
                     );
                   }(),
@@ -2062,8 +2063,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     );
   }
 
-  Widget _buildMetaItem(String label, String value, IconData icon) {
-    return SizedBox(
+  Widget _buildMetaItem(String label, String value, IconData icon, {VoidCallback? onTap}) {
+    final content = SizedBox(
       width: 140,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2075,12 +2076,62 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
-                Text(value, style: const TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis)),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: onTap != null && value.startsWith('+') ? const Color(0xFF3B82F6) : const Color(0xFF475569),
+                    fontWeight: FontWeight.w500,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
+    );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: content,
+      );
+    }
+    return content;
+  }
+
+  Widget _buildCoinThumbnail(Map<String, dynamic> data) {
+    final rawUrl = (data['image_url_obverse'] ??
+            data['image_url'] ??
+            data['obverse_url'] ??
+            data['reference_image_url'] ??
+            data['image'] ??
+            '')
+        .toString()
+        .trim();
+
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: rawUrl.isNotEmpty
+          ? Image.network(
+              rawUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const Center(
+                child: Icon(Icons.monetization_on_outlined, size: 28, color: Color(0xFFC9A227)),
+              ),
+            )
+          : const Center(
+              child: Icon(Icons.monetization_on_outlined, size: 28, color: Color(0xFFC9A227)),
+            ),
     );
   }
 
