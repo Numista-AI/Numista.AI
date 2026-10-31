@@ -1,4 +1,8 @@
-> **NOW (31 Oct 1:55 PM ET, NET-661):** AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.1_20261031-1355.md (resolving all 4 MUST-FIX and 5 SHOULD-FIX items, verified HTTP 200 image URLs). TURN: Argon Review & Grok CoS Re-score (Fast-Track Pass 2 threshold >= 91/100). If >=91, AG CoS proceeds to EXECUTE. No code or deploy until scored.
+> **PROTOCOL CORRECTION (31 Oct 2:30 PM ET, NET-662):** ">=91 means EXECUTE" is WRONG. R2 pass 1 scored 84, so there is no fast-track. Full cycle: Argon, then CoS 95+, then SAG, then Eric typed YES. Fast-track >91 only unlocks a fix-only 3rd pass that CoS verifies. NOW: R2.1 scored CoS 89 REVISE. TURN: AG v4 revises to R2.2 (plan only). Argon reviews R2.1.
+
+> **NOW (31 Oct 2:45 PM ET, NET-663):** AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.2_20261031-1445.md (protocol correction acknowledged: full review cycle in effect; verbatim FT regression pass list, integer cents end-to-end, deleted legacy hack with CSV dry-run backfill, machine proof for #9, version drift fixed, 11-thumbnail contact sheet with PD licenses, catalog facts only). TURN: Argon Review & Grok CoS Re-score (Gate >= 95), then SAG, then Eric typed YES. Zero code or deploy until full cycle passes.
+
+> **PROTOCOL CORRECTION (31 Oct 2:30 PM ET, NET-662):** ">=91 means EXECUTE" is WRONG. R2 pass 1 scored 84, so there is no fast-track. Full cycle: Argon, then CoS 95+, then SAG, then Eric typed YES. Fast-track >91 only unlocks a fix-only 3rd pass that CoS verifies. NOW: R2.1 scored CoS 89 REVISE. TURN: AG v4 revises to R2.2 (plan only). Argon reviews R2.1.
 
 > **STANDING RULE (Eric typed 31 Oct 12:30 PM ET, NET-658):** Always include the Review Cycle. Every plan, fail-fixes and small fixes included: AG plan, then Argon, then GB CoS 95+, then SAG, then Eric typed YES, then EXECUTE. NET-647 R2: v4 files the plan and waits; no code yet.
 
@@ -26,10 +30,10 @@
 **Thu 29 Oct 4:30 PM ET - NET-647:** Baton with AG CoS for Mint FAIL-FIX on p7-gate ONLY (Eric founder beta NO GO). AG to ACK with plan. Live/main locked; no deploy to live, no merge.
 
 # WHOSE TURN — RADIO BATON STATUS
-- **Updated:** 2026-10-31T13:55:00-04:00
-- **Baton Holder:** **Argon Reviewer + GB CoS (Score Gate >=91/100 Fast-Track)**
-- **Active Track:** **NET-647 Mint FAIL-FIX Round 2.1 Plan Review**
+- **Updated:** 2026-10-31T14:45:00-04:00
+- **Baton Holder:** **Argon Reviewer + GB CoS (Score Gate >=95) + SAG + Eric (typed YES)**
+- **Active Track:** **NET-647 Mint FAIL-FIX Round 2.2 Plan Review**
 - **Deliverables Filed:**
-  - `FAILFIX_PLAN_NET-647_R2.1_20261031-1355.md` (OUTBOX and RADIO NET)
-  - `NET-661_AGCOS-to-ALL_NET647-FAILFIX-R2.1-PLAN-FILED_OVER.md` (RADIO NET)
+  - `FAILFIX_PLAN_NET-647_R2.2_20261031-1445.md` (OUTBOX and RADIO NET)
+  - `NET-663_AGCOS-to-ALL_NET647-FAILFIX-R2.2-PLAN-FILED_OVER.md` (RADIO NET)
 - **Git Freeze Status:** origin/p7-v8.9 active branch; origin/dev FROZEN at 9b55f3d9; origin/main LOCKED at 9f04550a (0 code edits, 0 commits, 0 pushes).
