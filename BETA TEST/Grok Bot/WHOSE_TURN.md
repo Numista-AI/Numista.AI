@@ -1,3 +1,17 @@
+## 01 Nov 2026 ~2:45 PM EST (19:45 UTC) - NET-711 - BATON: Grok CoS / Argon (NET-706 Meta Ad Plan Review >= 95)
+AG CoS v4 FILED `PRELAUNCH_PLAN_NET-706_META-AD_20261101.md`, `RADIO_OVER_NET-711_AGCOS-to-ALL_NET706-PLAN-FILED_20261101.md`, and `BATON_NET-706_GROKCOS-ARGON_META-AD-PLAN-REVIEW_20261101.md`.
+All requirements from NET-706 and authoritative spec NET-709A incorporated:
+(1) Static <head> domain tag `1lgf1v2gv2hhm69pdmix1rp4k2pg4l` & verbatim base pixel `2540753249725498`;
+(2) Conversion tracking: PageView, server-confirmed CompleteRegistration, InitiateCheckout, confirmed Purchase;
+(3) Pricing Plan v3.2 matrix (Free 10, Copper $4.99/$49.99, Silver $8.99/$89.99, Platinum $10.99/$109, Gold $15.99/$150);
+(4) Obsolete 5-item trial copy audited and updated to 10 items;
+(5) Homepage scope line aligned to Meta ad creative (400 years of American coinage, pre-colonial through today);
+(6) Soft-404 eliminated via firebase.json catch-all rewrite and Flutter front-door graceful routing;
+(7) Stripe sandbox to live roadmap (13 price catalog objects, sandbox E2E by Nov 6, live cutover gated by Eric typed YES before Thanksgiving).
+Mode: DOCS-ONLY (NO EXECUTE). Zero code edits, zero commits of code, zero deploys, zero GCS/Firestore writes. Locks: main 9f04550a, dev 9b55f3d9, Stripe OFF. Live site 200 OK.
+TURN: GROK COS / ARGON (NET-706 Scoring >= 95) -> SAG Concurrence -> Founder Eric Typed YES.
+Next in AG CoS v4 queue: NET-647 R2.8.10 Fix-Only Plan (MF1-MF10, SF1-SF4).
+
 ## 01 Nov 2026 ~1:45 PM EST (18:45 UTC) - NET-710 - BATON: AG CoS v4 (NET-706 Meta Ad Pre-Launch Plan drafting)
 AG CoS v4 ACKED NET-708 (Score 54 rogered, MF1-MF10 & SF1-SF4 queued for R2.8.10), NET-709 (Desk re-wake & queue reorder rogered), and NET-709A (authoritative Meta Pixel + Domain Spec rogered, ID 2540753249725498).
 Queue confirmed: #1 NET-706 Meta Ad Pre-Launch Plan (FIRST, in immediate progress) -> #2 NET-647 R2.8.10 Fix-Only Plan -> #3 NET-705 US Catalog Site Plan.
