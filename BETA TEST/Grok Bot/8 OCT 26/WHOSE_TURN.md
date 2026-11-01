@@ -1,3 +1,35 @@
+## 01 Nov 2026 ~10:40 AM EST (15:40 UTC) - NET-707 - BATON: Grok CoS / Argon (R2.8.9 Review & Scoring >= 95)
+AG CoS v4 FILED `FAILFIX_PLAN_NET-647_R2.8.9_20261101.md`, `RADIO_OVER_NET-707_AGCOS-to-ALL_R2.8.9-PLAN-FILED_20261101.md`, and `BATON_NET-707_GROKCOS-ARGON_R2.8.9-REVIEW_20261101.md`.
+Acknowledged `WAKE_AG-COS-V4_NET-705_CATALOG-SITE-PLAN_20261101.md` and `WAKE_AG-COS-V4_NET-706_META-AD-PRELAUNCH-PLAN_20261101.md` (`ACK_WAKE_..._NET-705` & `ACK_WAKE_..._NET-706` filed).
+Queue confirmed: #1 R2.8.9 (NET-647) review/scoring -> #2 NET-706 Meta Ad plan -> #3 NET-705 Catalog plan.
+All Grok CoS Score 72 (`NET-702`) Must-Fix (MF1-MF5) and Should-Fix (SF1-SF3) findings and Argon Score 86 (`NET-701A`) Defects 1-4 resolved and verified:
+(1) MF1 / Defect 1: Added `if (year != '2026') return null;` immediately following SKU/23RH blocks in `Canonical2026MintAssets.resolve`, preventing quarter hijack. All 12 historical quarters reach `Atb50SqLincolnResolver` cleanly;
+(2) MF2 / Defect 2: Dual-read `data['year'] ?? data['Year']` and composite title fallback (`Theme/Subject` + `Program/Series`) verified 28/28 on live Firestore docs and 28/28 on bare CSV rows;
+(3) MF3: Replaced all 21 404 code URLs with exact public bucket object names and byte counts. All 45 unique reference URLs verified HTTP 200 OK via live HEAD requests;
+(4) MF4: Live HTTP 200 fallbacks for all staged paths (`fallbackObverseUrl`, `fallbackReverseUrl`). 23RH primary URLs point to live composites;
+(5) MF5 / Defect 3: Strict `&&` title logic in `Atb50SqLincolnResolver`;
+(6) SF1: Row 18 Lincoln Cent obverse mapped to live `2002_Penny_Proof_Obv.png` (1,018,519 B, 200 OK);
+(7) SF2: Trump $1 mapped to live bucket assets `26sqrp_b.webp` (179,722 B, 200 OK) and `MASTER_SEMIQDJT_image_2.jpg` (245,212 B, 200 OK);
+(8) SF3: Restored verbatim repository code citations in Section 7 per `GEMINI.md` Rule 6(a).
+Pre-flight verification (`scratch/test_argon_turnkey.py`) confirmed: 28/28 FS PASS, 28/28 CSV PASS, 4/4 Negative Guards PASS, 45/45 Live HTTP 200 URLs, 0 unexpected failures.
+Mode: DOCS-ONLY (`NO EXECUTE`). Zero code edits, zero git commits of code, zero Firebase deploys, zero GCS/Firestore writes. Locks: main 9f04550a, dev 9b55f3d9, Stripe OFF. Live site 200 OK.
+TURN: GROK COS / ARGON (R2.8.9 Scoring >= 95) -> SAG Review Concurrence -> Founder Eric Morning Typed YES -> Execution on `p7-v8.9` ONLY.
+
+## 01 Nov 2026 ~10:00 AM EST (15:00 UTC) - NET-705 - BATON: Grok CoS / Argon (R2.8.9 Review & Scoring >= 95)
+AG CoS v4 FILED `FAILFIX_PLAN_NET-647_R2.8.9_20261101.md`, `RADIO_OVER_NET-705_AGCOS-to-ALL_R2.8.9-PLAN-FILED_20261101.md`, and `BATON_NET-705_GROKCOS-ARGON_R2.8.9-REVIEW_20261101.md`.
+All Grok CoS Score 72 (`NET-702`) Must-Fix (MF1-MF5) and Should-Fix (SF1-SF3) findings and Argon Score 86 (`NET-701A`) Defects 1-4 resolved and verified:
+(1) MF1 / Defect 1: Added `if (year != '2026') return null;` immediately following SKU/23RH blocks in `Canonical2026MintAssets.resolve`, preventing quarter hijack. All 12 historical quarters reach `Atb50SqLincolnResolver` cleanly;
+(2) MF2 / Defect 2: Dual-read `data['year'] ?? data['Year']` and composite title fallback (`Theme/Subject` + `Program/Series`) verified 28/28 on live Firestore docs and 28/28 on bare CSV rows;
+(3) MF3: Replaced all 21 404 code URLs with exact public bucket object names and byte counts. All 45 unique reference URLs verified HTTP 200 OK via live HEAD requests;
+(4) MF4: Live HTTP 200 fallbacks for all staged paths (`fallbackObverseUrl`, `fallbackReverseUrl`). 23RH primary URLs point to live composites;
+(5) MF5 / Defect 3: Strict `&&` title logic in `Atb50SqLincolnResolver`;
+(6) SF1: Row 18 Lincoln Cent obverse mapped to live `2002_Penny_Proof_Obv.png` (1,018,519 B, 200 OK);
+(7) SF2: Trump $1 mapped to live bucket assets `26sqrp_b.webp` (179,722 B, 200 OK) and `MASTER_SEMIQDJT_image_2.jpg` (245,212 B, 200 OK);
+(8) SF3: Restored verbatim repository code citations in Section 7 per `GEMINI.md` Rule 6(a).
+Pre-flight verification (`scratch/test_argon_turnkey.py`) confirmed: 28/28 FS PASS, 28/28 CSV PASS, 4/4 Negative Guards PASS, 45/45 Live HTTP 200 URLs, 0 unexpected failures.
+Mode: DOCS-ONLY (`NO EXECUTE`). Zero code edits, zero git commits of code, zero Firebase deploys, zero GCS/Firestore writes. Locks: main 9f04550a, dev 9b55f3d9, Stripe OFF. Live site 200 OK.
+TURN: GROK COS / ARGON (R2.8.9 Scoring >= 95) -> SAG Review Concurrence -> Founder Eric Morning Typed YES -> Execution on `p7-v8.9` ONLY.
+
 ## 01 Nov 2026 ~03:28 AM EST (08:28 UTC) - NET-704 - BATON: AG CoS v4 (0300 Stand-Down Order Active; Self-Wake Paused Until Eric Morning Message / 0900 ET)
 Grok Bot CoS issued NET-704_GROKCOS-to-AGCOS_STAND-DOWN-0300_OVER.md ordering immediate stand-down to protect Gemini/Antigravity quota until Eric's morning message. AG CoS v4 acknowledged (ACK_NET-704_AGCOS-to-GROKCOS_STAND-DOWN-CONFIRMED_OVER.md). All work stashed/verified in pre-flight (scratch/test_argon_turnkey.py passing 28/28 live Firestore docs, 28/28 bare CSV rows, 4/4 negative guards, 45 live HTTP 200 OK URLs). 25-minute self-wake timer PAUSED. Handoff watch runs will not flag stalls. Station standing down until Founder Eric's first morning message / 09:00 AM ET quota refresh to file FAILFIX_PLAN_NET-647_R2.8.9_20261101.md. Mode: DOCS-ONLY (NO EXECUTE). Zero code edits, zero git commits of code, zero Firebase deploys. Locks: origin/main at 9f04550a, origin/dev at 9b55f3d9, Stripe OFF. Live site 200 OK. TURN: AG CoS v4 (resuming upon Eric's morning message / 0900 ET).
 
