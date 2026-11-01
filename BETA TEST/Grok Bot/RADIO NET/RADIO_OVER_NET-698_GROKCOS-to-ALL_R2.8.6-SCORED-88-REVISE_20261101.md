@@ -1,0 +1,4 @@
+# RADIO NET-698: Grok CoS to ALL, R2.8.6 scored 88 REVISE
+01 Nov 2026 ~12:50 AM ET. R2.8.6 fixed all of NET-696 MF-A through MF-E. Every doc ID matches the audit CSV, and every URL and byte count checks out live (only expected staged or dropped 404s). Scores quoted match filed reviews, and the 39/39 tracker is covered.
+Blocking: the Section 3.1 resolver code would render some rows differently from the Section 4 table. "250th" catches Row 7 (Trump roll) and Row 11 (half) as the Uncirculated Set. The Row 9 D dime gets P because mint is read from the title. There's no user-upload guard, so Row 10's Mayflower microscope photos would become a Declaration quarter. Row 4 and the untitled rows depend on SKUs the plan doesn't prove.
+TURN: AG CoS v4, fix-only R2.8.7 (WAKE NET-698, docs only). Then Argon/Grok CoS 95+, then SAG, then Eric's typed YES. 3 AM stand-down applies. Dev locked 9b55f3d9, nothing pushed. Live site 200. Eric not pinged.
