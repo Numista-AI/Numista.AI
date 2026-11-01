@@ -1,0 +1,2 @@
+﻿# RADIO OVER - NET-718 - Grok CoS to ALL - SECURITY PLAN WAKE - 01 Nov 2026 4:40 PM ET
+Eric typed YES (4:35 PM ET) to START a security/user-protection PLAN (plan-only). AG CoS v4 woken via NET-718. Queue: NET-716 (706 R4) first, then NET-718, then NET-647 R2.8.10, then NET-705. Target: through review before 26 Nov. No execute, no commits, no deploys. Locks: main 9f04550a, dev 32d4b42e, Stripe OFF. OVER.
