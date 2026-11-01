@@ -1,3 +1,24 @@
+## 01 Nov 2026 ~3:35 PM EST (20:35 UTC) - NET-713 - BATON: Grok CoS / Argon (NET-706 R2 Review >= 95)
+AG CoS v4 FILED `PRELAUNCH_PLAN_NET-706_R2_META-AD_20261101.md`, `RADIO_OVER_NET-713_AGCOS-to-ALL_NET706-R2-PLAN-FILED_20261101.md`, and `BATON_NET-712_GROKCOS-ARGON_NET-706-R2-REVIEW_20261101.md`.
+All findings from Grok CoS Score 55 (`NET-712`) Must-Fix (MF1–MF9) and Should-Fix (SF1–SF7) resolved:
+(1) MF1: Real HTTP 404 for unknown paths preserved (NO wildcard `**` rewrite in `firebase.json`; `404.html` and `NotFoundScreen` intact; query params preserved on valid routes);
+(2) MF2: Meta Pixel base code and domain verification tag byte-verbatim from NET-709A spec, unchanged comments and whitespace;
+(3) MF3: PageView double-fire eliminated (initial load fires via base code; in-app client routing skips initial route, fires +1 per subsequent route change);
+(4) MF4: CompleteRegistration duplicate-proof (once-per-UID local guard; single shared helper for email and Google `isNewUser == true`; failed signups and returning Google users fire nothing);
+(5) MF5: Data export price = 6 months of user tier ($95.94 for never-paid Legacy / Free);
+(6) MF6: Stripe 13 canonical prices from Plan v3.2 (8 subscriptions, 1 AI top-up, 4 full exports; zero invented SKUs);
+(7) MF7: Fabricated "5 free coins" quote removed; real strings cited from `login_screen.dart`, `public_info_screens.dart`, `base_layout.dart`, and `tier_gatekeeper.py:44`;
+(8) MF8: Single unified hero placeholder `[PLACEHOLDER - Eric picks final wording]`;
+(9) MF9: Annual savings column recalculated with exact dollars and percentages;
+(10) SF1–SF7: Lifetime $500 removed (ON HOLD); Purchase value from server/webhook-confirmed Stripe `amount_total`; locks restated (dev tip `32d4b42e`, catalog `9b55f3d9`, main `9f04550a`, Stripe OFF); Legacy cutoff `2026-11-27T05:00:00Z`; InitiateCheckout fires on server checkout URL receipt before `launchUrl`; SF6 age 35–65+ with copy/creative readable to age 83; station ID `ba2bfdb2` maintained.
+Mode: DOCS-ONLY (`NO EXECUTE`). Zero code edits, zero commits of code, zero deploys, zero GCS/Firestore writes. Locks: main 9f04550a, dev tip 32d4b42e (catalog 9b55f3d9), Stripe OFF. Live site 200 OK.
+TURN: GROK COS / ARGON (NET-706 R2 Scoring >= 95) -> SAG Concurrence -> Founder Eric Typed YES.
+Next in AG CoS v4 queue: NET-647 R2.8.10 Fix-Only Plan.
+
+- NET-712 ADDENDUM (Desk, 3:17 PM ET): SF6 resolved per Eric's own words ("My Aunt is 83, so bump it up to that"): Meta ad setting stays 35-65+ (Meta max); creative and copy must be readable for people up to age 83, with large type and plain words. DEV LOCK FLAG: origin/dev tip is now 32d4b42e, not 9b55f3d9. Queue: NET-706 R2, then NET-647 R2.8.10, then NET-705.
+## 01 Nov 2026 3:15 PM EST - NET-712 - BATON: AG CoS v4 (NET-706 R2 fix-only)
+Grok CoS scored NET-706 55/100 REVISE (soft-404 fix is inverted - would remove live real 404s; pixel code not verbatim; invented Stripe SKUs + export price; fabricated '5 free coins' quote; homepage line not placeholder). NET-706 baton CLOSED. SAG not run. Argon review of NET-706 still open (optional before R2). See COS_SCORE_NET-706_55_REVISE_20261101-1515EST.md and WAKE/BATON NET-712. Queue: 706 R2 > 647 R2.8.10 > 705. Locks unchanged.
+
 ## 01 Nov 2026 ~2:45 PM EST (19:45 UTC) - NET-711 - BATON: Grok CoS / Argon (NET-706 Meta Ad Plan Review >= 95)
 AG CoS v4 FILED `PRELAUNCH_PLAN_NET-706_META-AD_20261101.md`, `RADIO_OVER_NET-711_AGCOS-to-ALL_NET706-PLAN-FILED_20261101.md`, and `BATON_NET-706_GROKCOS-ARGON_META-AD-PLAN-REVIEW_20261101.md`.
 All requirements from NET-706 and authoritative spec NET-709A incorporated:
@@ -212,5 +233,6 @@ R2.8.7 scored 89/100 REVISE (Argon 97 GO not concurred). BATON -> AG CoS v4 for 
 
 
 - 2026-11-01 01:16 EST (06:16Z) | Grok CoS | NET-702 | R2.8.8 scored 72/100 REVISE (Argon 86 REVISE). Baton -> AG CoS v4 for fix-only R2.8.9 (MF1-MF5: 2026 year guard, 'Year' key, 21 invented/404 URLs, staged fallbacks, && logic). Stand down ~2:45 AM ET if not filed. Locks unchanged; site 200.
+
 
 
