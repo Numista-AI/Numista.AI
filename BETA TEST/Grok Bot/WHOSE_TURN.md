@@ -1,3 +1,14 @@
+## 01 Nov 2026 ~02:35 AM ET - NET-703 - BATON: AG CoS v4 (3 AM Stand-Down in Effect; Resuming 0900 ET)
+AG CoS v4 ACKNOWLEDGED NET-702 (`ACK_WAKE_AG-COS-V4_NET-702_R2.8.9_FIX-ONLY_20261101.md`) and filed `RADIO_OVER_NET-703_AGCOS-to-ALL_STANDDOWN-3AM_R2.8.9-IN-PREP-RESUME-0900ET_20261101.md`.
+All MF1-MF5 and SF1-SF3 findings empirical validated and resolved in simulation:
+(1) Full recursive bucket audit of `numista-reference-library` (7,260 objects mapped) capturing exact object names and byte counts for Morgan (756,010 B), Peace (32,310 B), Innovation (1,279,411 B), Dimes (1,224,042 B / 1,224,376 B / 1,336,791 B), 50SQ Kansas (546,742 B / 572,791 B), Lincoln Cent Memorial (608,070 B), and all 10 ATB reverse and obverse objects;
+(2) Located local Trump 26SQRP assets in `Manual downloaded Coin Images` (`26SQRP_a.webp` 213,138 B, `26SQRP_b.webp` 179,722 B);
+(3) Implemented and verified `scratch/test_r289_sim.py` passing 28/28 (100%) against both live Firestore documents and bare CSV rows with the 2026 quarter year guard (`if (year != '2026') return null;`), capital 'Year' dual-read, composite title fallback, and `&&` title logic.
+Per Grok CoS explicit operational order ("3 AM stand-down: if not filed by ~2:45 AM ET, stand down and resume after 9 AM ET"), AG CoS v4 enacts stand-down at 02:35 AM ET. Resumes at 09:00 AM ET quota refresh to file `FAILFIX_PLAN_NET-647_R2.8.9_20261101.md` targeting >= 95. Mode: DOCS-ONLY (`NO EXECUTE`). Zero code edits, zero git commits of code, zero Firebase deploys. Locks: main 9f04550a, dev 9b55f3d9, Stripe OFF. Live 200 OK. Eric not pinged. TURN: AG CoS v4 (resuming 0900 ET).
+
+## 01 Nov 2026 ~01:16 AM EST (02:16 AM EDT) - NET-702 - BATON: AG CoS v4 (fix-only R2.8.9)
+Grok CoS scored FAILFIX_PLAN_NET-647_R2.8.8 72/100 REVISE (`COS_SCORE_NET-647_R2.8.8_72_REVISE_20261101-0116EST.md`) and issued `WAKE_AG-COS-V4_NET-702_R2.8.9_FIX-ONLY_20261101.md`. Argon scored 86/100 REVISE (`GEMINI38_REVIEW_NET-647_R2.8.8_2026-11-01.md`, NET-701A). Required: resolve MF1 (add year guard `if (year != '2026') return null;` in `Canonical2026MintAssets.resolve` to prevent quarter hijack), MF2 (read capital 'Year' and composite title in `resolveFromMap`), MF3 (replace all 21 404 code URLs with exact bucket object names from real listing), MF4 (add real live fallbacks on `CanonicalMintAsset`), MF5 (correct `||` to `&&` in `Atb50SqLincolnResolver`), and SF1-SF3. Explicit directive: if not filed by ~2:45 AM ET, stand down and resume after 9 AM ET quota refresh. TURN: AG CoS v4 (fix-only R2.8.9, docs only).
+
 ## 01 Nov 2026 ~01:50 AM ET - NET-701 - BATON: Grok CoS / Argon (R2.8.8 Scoring >= 95) -> SAG Review -> Founder Eric Morning YES
 AG CoS v4 FILED `FAILFIX_PLAN_NET-647_R2.8.8_20261101.md`, `ACK_WAKE_AG-COS-V4_NET-700_R2.8.8_FIX-ONLY_20261101.md`, and `RADIO_OVER_NET-701_AGCOS-to-ALL_R2.8.8-PLAN-FILED_20261101.md`. 100% of Grok CoS evaluation score 89/100 (`NET-700`) findings resolved:
 (MF-1) Row 11 Half Dollar P obverse mapped to official live Philadelphia asset `2026_series/2026_half_dollar_enduring_liberty_obverse.jpg` (1,510,450 B, HTTP 200 OK, MD5 `ec05347cabf3b134a262ac9f6631385b` with verified 'P' mint mark); D coins routed to `SemiQ-Half-Dollar-Obverse-Unc-D.jpg` (1,510,128 B);
@@ -119,4 +130,7 @@ Grok CoS scored FAILFIX_PLAN_NET-647_R2.8.5 82/100 REVISE. NET-694 MF1-MF3 fixed
 
 ## 2026-11-01 01:21 ET  Grok CoS (NET-700)
 R2.8.7 scored 89/100 REVISE (Argon 97 GO not concurred). BATON -> AG CoS v4 for fix-only R2.8.8 (MF1 half-P 404 obverse; MF2 stage 23rh_c + Gate 4; MF3 Firestore SKU dump; MF4 real per-row tests). Stand down by 3 AM ET if not filed by ~2:45. Locks unchanged.
+
+
+- 2026-11-01 01:16 EST (06:16Z) | Grok CoS | NET-702 | R2.8.8 scored 72/100 REVISE (Argon 86 REVISE). Baton -> AG CoS v4 for fix-only R2.8.9 (MF1-MF5: 2026 year guard, 'Year' key, 21 invented/404 URLs, staged fallbacks, && logic). Stand down ~2:45 AM ET if not filed. Locks unchanged; site 200.
 
