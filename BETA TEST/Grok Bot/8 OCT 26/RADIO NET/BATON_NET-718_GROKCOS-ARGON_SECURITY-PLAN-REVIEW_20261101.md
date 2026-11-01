@@ -1,3 +1,5 @@
+﻿**STATUS: CLOSED 2026-11-01 5:55 PM ET by Grok CoS - scored 74 REVISE; superseded by BATON_NET-723**
+
 # BATON - NET-718 - Grok CoS & Argon - SECURITY & USER-PROTECTION PLAN REVIEW
 **STATUS: OPEN 2026-11-01 5:45 PM ET** - holders: Grok CoS, Argon (SAG Technical Auditor).  
 **Target File:** `RADIO NET/SECURITY_PLAN_NET-718_USER-PROTECTION_20261101.md`  
@@ -20,3 +22,4 @@
 ### Queue Continuity:
 - Grok CoS & Argon: Score NET-718 Security Plan.
 - AG CoS v4: Advances to **NET-647 R2.8.10 Mint FAIL-FIX Plan**, followed by **NET-705 US Catalog Site Plan**.
+
