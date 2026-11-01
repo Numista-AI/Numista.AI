@@ -1,3 +1,23 @@
+## 2026-11-01 5:45 PM ET - Grok CoS / Argon's turn on NET-718; SAG / Eric on NET-706 (NET-722)
+AG CoS v4 FILED `SECURITY_PLAN_NET-718_USER-PROTECTION_20261101.md`, `RADIO_OVER_NET-722_AGCOS-to-ALL_NET718-SECURITY-PLAN-FILED_20261101.md`, and `BATON_NET-718_GROKCOS-ARGON_SECURITY-PLAN-REVIEW_20261101.md`.
+All 10 Spec Requirements addressed with exact origin/dev 32d4b42e citations:
+(1) No postal addresses: Audited estate_models.dart, scan_service/main.py:695, estate_fiduciary_service.dart:71; eliminates 'Primary Storage / Home Safe' default across backend & mobile; sanitizes CSV template in web/add_coins.html:1332;
+(2) Scan auto-redaction: In-memory Document AI Specialized Invoice Parser entity detection (ship_to_address, bill_to_address, receiver_name, customer_id) + solid black polygon fill (#000000) before GCS write; never stores unredacted originals in temp buckets/caches; low-confidence fallback canvas; dedicated dry-run script _scripts/dry_run_receipt_redaction_audit.py with zero writes;
+(3) Universal EXIF/GPS stripping: Client HTML5 canvas re-encode (web) & native stripping (mobile) + server Pillow backstop middleware _sanitize_image_exif stripping tag 0x8825 from all image formats while preserving orientation 0x0112;
+(4) Values private by default: Deletes owner_email from /public_wishlists/{token} in main.py:12745; strips financial values by default; privacy masking mode on Attorney Portal (attorney_portal_screen.dart:520, 704);
+(5) 2FA threshold: Firebase Auth TOTP MFA prompted above collection FMV threshold ($5,000 baseline example) [ERIC DECISION]; mandatory for Aunt Janet account;
+(6) Rules audit & tests: Fixed cross-user read gap in firestore.rules:190 (family_groups/{groupId}); specified 6-point automated emulator test suite (firestore_storage_security.test.ts);
+(7) Secret Manager & key scan: Runtime secrets in Secret Manager; planned gitleaks & trufflehog commit history scans; detailed 5-step operational rotation protocol;
+(8) Meta pixel event safety: Reconciled with NET-706 R5: Pixel sends event names only, zero user PII, zero coin metadata/cert numbers, zero collection FMV valuations;
+(9) Data minimization: Full account deletion endpoint DELETE /api/user/account (Auth + Firestore + GCS + Stripe cleanup); 14-day Cloud Logging retention;
+(10) Site copy proposal: Plain-language security promise for Landing Page, Privacy Policy, and Estate Planning screens [ERIC DECISION].
+Mode: DOCS-ONLY (NO EXECUTE). Zero code edits, zero commits of code, zero deploys. Locks: main 9f04550a, dev tip 32d4b42e (catalog 9b55f3d9), Stripe OFF. Live site 200 OK.
+TURN: GROK COS / ARGON (NET-718 Security Plan Review >= 95) & SAG / Eric (NET-706 R5 Concurrence / Gate 2 YES).
+Next in AG CoS v4 queue: NET-647 R2.8.10 Mint FAIL-FIX Plan, then NET-705 US Catalog Site Plan.
+
+## 2026-11-01 5:20 PM ET - SAG / Eric's turn on NET-706; AG CoS v4 continues NET-718 (NET-721)
+NET-706 R5 scored 97 PASS by Grok CoS (Gate 1 cleared). Next: SAG concurrence, then Eric's typed YES, then build baton. AG CoS v4 queue: NET-718 security plan, NET-647 R2.8.10, NET-705. Locks: main 9f04550a, dev 32d4b42e, Stripe OFF. Live 404/200 checks OK.
+
 ## 2026-11-01 5:10 PM ET - Grok CoS / Argon's turn (NET-719 / NET-720)
 AG CoS v4 FILED `PRELAUNCH_PLAN_NET-706_R5_META-AD_20261101.md`, `RADIO_OVER_NET-720_AGCOS-to-ALL_NET706-R5-PLAN-FILED_20261101.md`, and `BATON_NET-719_GROKCOS-ARGON_NET-706-R5-REVIEW_20261101.md`.
 All findings from Grok CoS Score 92 (`NET-719`) Must-Fix (MF-B, MF-C) and Should-Fix (SF-E) resolved:
