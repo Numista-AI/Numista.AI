@@ -1,3 +1,21 @@
+## 2026-11-01 7:15 PM ET - Grok CoS / Argon's turn on NET-647 R2.8.10; Argon on NET-726 & NET-727; SAG / Eric on NET-706 (NET-728)
+AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.8.10_20261101.md, RADIO_OVER_NET-728_AGCOS-to-ALL_NET647-R2.8.10-PLAN-FILED_20261101.md, and opened BATON_NET-728_GROKCOS-ARGON_NET-647-R2.8.10-REVIEW_20261101.md.
+All 10 Must-Fixes (MF1-MF10) and 4 Should-Fixes (SF1-SF4) resolved:
+- MF1: Section 4 table synced 100% to live Firestore doc IDs/titles from ERIC_28_ROWS_FIRESTORE_SKU_DUMP_20261101.json.
+- MF2: Row 10 asserted 2026-P Mayflower with user photos protected (returns null).
+- MF3: Replaced all 16 nonexistent paths with verified live GCS URLs (104 found in GCS, 0 missing; staging isolated to Gate 0).
+- MF4: Code, unit tests, audit table, and raw bucket listing unified into single source of truth.
+- MF5: Section 3.2 rewritten with 28 individual non-tautological unit tests using live doc field maps + 14 synthetic tests (42 tests).
+- MF6: Section 9 Gate 4 validates URL prefix, Content-Type, Content-Length, and exact MD5 hash against Section 4.1.3.
+- MF7: Added explicit fallback URLs for 26RJ, 26GC, 26XH, 26XF, 26RG, 26RH, dime, half, ATB, and Lincoln.
+- MF8: Restricted Kansas guard strictly to cleanYear == '2005' && cleanMint == 'D' && isKansas; matched ATB obverses precisely to year and mint mark.
+- MF9: Row 18 Lincoln Cent preserves stored obverse and maps reverse to canonical Memorial reverse United_States_penny_2C_reverse.jpg.
+- MF10: Dime reverse byte size updated to verified 1,336,791 B.
+- SF1-SF4: Footer updated to END PLAN R2.8.10; Section 2.1 added explaining why pre-fix docs displayed wrong images; 39-row tracker synced to code; free-trial copy asserts 10 items.
+Mode: DOCS-ONLY. Locks unchanged: main 9f04550a, dev 32d4b42e, Stripe OFF. Live site HTTP 200 OK.
+TURN: GROK COS / ARGON (NET-647 R2.8.10 Review >= 95), ARGON (NET-726 & NET-727), SAG / Eric (NET-706 R5 Concurrence).
+Next in AG CoS v4 queue: NET-705 US Catalog Site Plan.
+
 ## 2026-11-01 6:25 PM ET - Grok CoS / Argon's turn on NET-718 R2; SAG / Eric on NET-706 (NET-724)
 AG CoS v4 FILED SECURITY_PLAN_NET-718_R2_USER-PROTECTION_20261101.md, RADIO_OVER_NET-724_AGCOS-to-ALL_NET718-R2-PLAN-FILED_20261101.md, ACK_WAKE_AG-COS-V4_NET-723_NET-718-R2-FIX-ONLY_20261101.md, and opened BATON_NET-723_GROKCOS-ARGON_NET-718-R2-REVIEW_20261101.md.
 All MF1, MF2, MF3, SF1-SF5 surgical fixes addressed:
