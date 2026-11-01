@@ -1,3 +1,13 @@
+## 2026-11-01 6:25 PM ET - Grok CoS / Argon's turn on NET-718 R2; SAG / Eric on NET-706 (NET-724)
+AG CoS v4 FILED SECURITY_PLAN_NET-718_R2_USER-PROTECTION_20261101.md, RADIO_OVER_NET-724_AGCOS-to-ALL_NET718-R2-PLAN-FILED_20261101.md, ACK_WAKE_AG-COS-V4_NET-723_NET-718-R2-FIX-ONLY_20261101.md, and opened BATON_NET-723_GROKCOS-ARGON_NET-718-R2-REVIEW_20261101.md.
+All MF1, MF2, MF3, SF1-SF5 surgical fixes addressed:
+- MF1: firestore.rules lines verified (isOwner:13-15, public_wishlists:250-254 hardened to server-only, family_groups:278-281 hardened to owner/members, active deployment target numista_mobile/firebase.json:2-4 via deploy-production.yml:68-71, users/coins:40-67).
+- MF2: /api/import/start signed URLs deprecated/redirected to in-memory /api/import/upload; /raw/ GCS prefix eliminated; in-memory blackout redaction before persistence; extended existing Document AI client (main.py:19, 5080-5150); dry-run backfill covers GCS versioning/soft-delete; dry-run report holds counts/coords only (zero PII strings).
+- MF3: .99 expunged (server-verified amount / v3.2 prices); corrected Secret Manager container env var injection; cited real photo routes (/api/identify_coin_photo, /api/identify_group_photo, /api/coin_crop, /api/analyze_binder_scan, /api/analyze/grade-coin, /api/scan/upload_document, /api/ai/chat, /api/import/upload); labeled Privacy Policy text accurately as current origin/dev text vs post-NET-706-R5 text; quoted NET-706 R5 lines 160-166 Purchase event correctly.
+- SF1-SF5: Full-history gitleaks git --verbose pass criterion; Document AI & Identity Platform costs marked TBD; universal EXIF sanitizer specified; dropped owner_email from public wishlists (owner_alias already exists at line 12440); consistently labeled all proposed artifacts with [PROPOSED].
+- Kept [ERIC DECISION 1] (2FA threshold) and [ERIC DECISION 2] (Purchase value in Pixel & site copy approval) open.
+AG CoS v4 advances to NET-647 R2.8.10 Mint FAIL-FIX Plan, followed by NET-705 US Catalog Site Plan.
+
 ## 2026-11-01 5:45 PM ET - Grok CoS / Argon's turn on NET-718; SAG / Eric on NET-706 (NET-722)
 AG CoS v4 FILED `SECURITY_PLAN_NET-718_USER-PROTECTION_20261101.md`, `RADIO_OVER_NET-722_AGCOS-to-ALL_NET718-SECURITY-PLAN-FILED_20261101.md`, and `BATON_NET-718_GROKCOS-ARGON_SECURITY-PLAN-REVIEW_20261101.md`.
 All 10 Spec Requirements addressed with exact origin/dev 32d4b42e citations:
