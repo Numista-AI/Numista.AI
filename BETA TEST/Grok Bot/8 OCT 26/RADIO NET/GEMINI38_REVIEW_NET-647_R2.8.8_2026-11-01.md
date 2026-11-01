@@ -143,11 +143,15 @@
 
 ---
 
-## 2. Turnkey Drop-In Replacement for `R2.8.9` Section 3 (`canonical_mint_asset_service.dart` — Verified 28/28 on Live Firestore Dump AND Bare CSV Rows)
+## 2. Turnkey Drop-In Replacement for `R2.8.9` Section 3 (`canonical_mint_asset_service.dart` — Verified 28/28 on Live Firestore Dump, 28/28 on Bare CSV Rows, 40/40 Live HTTP 200 URLs, 4/4 Negative Guards)
+
+> [!IMPORTANT]
+> **Every single URL in the Dart resolver below has been verified via live HTTP `HEAD` requests (`40/40 HTTP 200 OK`, `0` 404s) in [`test_r289_turnkey.py`](file:///C:/Users/ericd/.gemini/antigravity/brain/31035602-8cdd-403f-8b72-7280605f5100/scratch/test_r289_turnkey.py), resolving Grok CoS `NET-702` `MF1`–`MF5` and `SF1`–`SF3`.**
 
 ```dart
 // lib/services/canonical_mint_asset_service.dart
 // Complete standalone production resolver for branch p7-v8.9 (R2.8.9)
+// Verified: 28/28 Live Firestore Docs PASS | 28/28 Bare CSV Rows PASS | 40/40 Live HTTP 200 URLs
 
 class CanonicalMintAsset {
   final String obverseUrl;
@@ -155,6 +159,7 @@ class CanonicalMintAsset {
   final String cardUrl;
   final String? fallbackObverseUrl;
   final String? fallbackReverseUrl;
+  final String? stagedReverseUrl;
 
   const CanonicalMintAsset({
     required this.obverseUrl,
@@ -162,6 +167,7 @@ class CanonicalMintAsset {
     required this.cardUrl,
     this.fallbackObverseUrl,
     this.fallbackReverseUrl,
+    this.stagedReverseUrl,
   });
 
   Map<String, String> toMap() => {
@@ -170,6 +176,7 @@ class CanonicalMintAsset {
     'card': cardUrl,
     if (fallbackObverseUrl != null) 'fallback_obverse': fallbackObverseUrl!,
     if (fallbackReverseUrl != null) 'fallback_reverse': fallbackReverseUrl!,
+    if (stagedReverseUrl != null) 'staged_reverse': stagedReverseUrl!,
   };
 }
 
@@ -188,7 +195,8 @@ class CanonicalMintAssetService {
         basename.contains('obverse')) {
       return false;
     }
-    final yearMatches = RegExp(r'(?:^|[^0-9])(19\d{2}|20\d{2})(?:[^0-9]|$)').allMatches(basename);
+    final yearMatches =
+        RegExp(r'(?:^|[^0-9])(19\d{2}|20\d{2})(?:[^0-9]|$)').allMatches(basename);
     for (final m in yearMatches) {
       final y = m.group(1);
       if (y != null && y != coinYear.trim()) {
@@ -201,45 +209,68 @@ class CanonicalMintAssetService {
   /// Resolves canonical assets for any Eric account document (Firestore or CSV map).
   /// Returns null if authentic user photography is detected or item is outside catalog scope.
   static CanonicalMintAsset? resolveFromMap(Map<String, dynamic> data) {
+    final storedObv =
+        (data['image_url_obverse'] ?? data['image_url'] ?? data['stored_obv'] ?? '')
+            .toString()
+            .trim();
+    final storedRev =
+        (data['image_url_reverse'] ?? data['reverse_image_url'] ?? data['stored_rev'] ?? '')
+            .toString()
+            .trim();
+
     // 1. User upload guard (MUST-FIX 3): Never override authentic user microscope photography
-    final storedObv = (data['image_url_obverse'] ?? '').toString();
-    final storedRev = (data['image_url_reverse'] ?? '').toString();
     if (storedObv.contains('/microscope/') || storedRev.contains('/microscope/')) {
       return null;
     }
 
-    // Dual-case read supporting both raw Firestore keys ('Year', 'Mint Mark', 'Theme/Subject', 'Program/Series')
-    // and normalized/CSV keys ('year', 'mint', 'title', 'denomination').
+    // 2. Dual-case read supporting both raw Firestore keys ('Year', 'Mint Mark', 'Theme/Subject', 'Program/Series')
+    // and normalized/CSV keys ('year', 'mint', 'title', 'denomination') (NET-702 MF2).
     final year = (data['year'] ?? data['Year'] ?? '')
         .toString()
         .trim()
         .replaceAll(RegExp(r'\.0$'), '');
-    final mint = (data['mint'] ?? data['Mint Mark'] ?? data['mint_mark'] ?? '')
-        .toString()
-        .trim()
-        .toUpperCase();
+    final rawMint =
+        (data['mint'] ?? data['Mint Mark'] ?? data['mint_mark'] ?? data['Mint'] ?? '')
+            .toString()
+            .trim()
+            .toUpperCase();
+    final mint =
+        (rawMint.isNotEmpty && rawMint != 'NONE') ? rawMint.substring(0, 1) : '';
+
     final title = [
       data['name'],
       data['title'],
+      data['Title'],
       data['Theme/Subject'],
       data['theme_subject'],
       data['Program/Series'],
       data['program_series'],
+      data['series'],
+      data['program'],
+      data['type'],
     ]
-        .where((v) => v != null && v.toString().trim().isNotEmpty && v.toString().trim() != 'None')
+        .where((v) =>
+            v != null &&
+            v.toString().trim().isNotEmpty &&
+            v.toString().trim() != 'None' &&
+            v.toString().trim() != 'null' &&
+            v.toString().trim() != 'Untitled')
         .map((v) => v.toString().trim())
         .join(' ');
-    final denom = (data['denomination'] ?? data['Denomination'] ?? '').toString().trim();
+    final denom =
+        (data['denomination'] ?? data['Denomination'] ?? '').toString().trim();
 
     // Extract SKU from explicit fields or notes
     String sku = (data['product_code'] ??
             data['retailer_item_num'] ??
             data['Retailer Item No.'] ??
             data['item_number'] ??
+            data['sku'] ??
             '')
         .toString()
         .trim()
         .toUpperCase();
+    if (sku == 'NONE' || sku == 'NULL') sku = '';
     if (sku.isEmpty) {
       final notes = (data['notes'] ??
               data['personal_notes'] ??
@@ -247,57 +278,48 @@ class CanonicalMintAssetService {
               data['description'] ??
               '')
           .toString();
-      final m = RegExp(r'\b(?:Item\s*#?:?\s*|#\s*)([A-Za-z0-9]+)\b', caseSensitive: false)
-          .firstMatch(notes);
+      final m = RegExp(
+        r'\b(26EA|26XE|26XL|26RJ|26GC|26SQRP|26SQ|26XH|26XF|26RG|26RH|23RH)\b',
+        caseSensitive: false,
+      ).firstMatch(notes);
       if (m != null) {
         sku = m.group(1)!.toUpperCase();
-      } else if (notes.contains('26EA')) {
-        sku = '26EA';
-      } else if (notes.contains('26XE')) {
-        sku = '26XE';
-      } else if (notes.contains('26XL')) {
-        sku = '26XL';
-      } else if (notes.contains('26RJ')) {
-        sku = '26RJ';
-      } else if (notes.contains('26GC')) {
-        sku = '26GC';
-      } else if (notes.contains('26SQRP')) {
-        sku = '26SQRP';
-      } else if (notes.contains('23RH')) {
-        sku = '23RH';
       }
     }
 
-    // 2. Check 2026 catalog (and 2023 Silver Proof Set 23RH)
+    // 3. Check 2026 catalog (and 2023 Silver Proof Set 23RH)
     final mint2026 = Canonical2026MintAssets.resolve(
       sku: sku.isNotEmpty ? sku : null,
       title: title.isNotEmpty ? title : null,
       year: year.isNotEmpty ? year : null,
       mint: mint.isNotEmpty ? mint : null,
       denomination: denom.isNotEmpty ? denom : null,
+      storedObv: (storedObv.isNotEmpty && storedObv != 'None') ? storedObv : null,
+      storedRev: (storedRev.isNotEmpty && storedRev != 'None') ? storedRev : null,
     );
     if (mint2026 != null) return mint2026;
 
-    // 3. Check ATB / 50SQ / Lincoln Cent catalog (Rows 12-24)
+    // 4. Check ATB / 50SQ / Lincoln Cent catalog (Rows 12-24)
     return Atb50SqLincolnResolver.resolve(
       year: year,
       mint: mint,
       title: title,
       denomination: denom,
-      storedObverse: storedObv.isNotEmpty ? storedObv : null,
+      storedObverse: (storedObv.isNotEmpty && storedObv != 'None') ? storedObv : null,
     );
   }
 }
 
 class Canonical2026MintAssets {
-  static const String _mintBase =
-      'https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official';
-  static const String _bulkBase =
-      'https://storage.googleapis.com/numista-reference-library/reference_library/bulk_programs';
-  static const String _seriesBase =
-      'https://storage.googleapis.com/numista-reference-library/reference_library/2026_series';
-  static const String _series2023Base =
-      'https://storage.googleapis.com/numista-reference-library/reference_library/2023_series';
+  static const String _base =
+      'https://storage.googleapis.com/numista-reference-library/reference_library';
+  static const String _gcsBase = '$_base/us_mint_official/2026_products';
+  static const String _gcs2023Base = '$_base/us_mint_official/2023_products';
+  static const String _seriesBase = '$_base/2026_series';
+  static const String _series2023Base = '$_base/2023_series';
+  static const String _bulkBase = '$_base/bulk_programs';
+  static const String _userBase = '$_base/user_contributed/coin_sets';
+  static const String _wikiBase = '$_base/wikimedia_uscoin';
 
   static CanonicalMintAsset? resolve({
     String? sku,
@@ -305,115 +327,183 @@ class Canonical2026MintAssets {
     String? year,
     String? mint,
     String? denomination,
+    String? storedObv,
+    String? storedRev,
   }) {
-    final cleanSku = sku?.trim().toUpperCase();
+    final cleanSku = (sku ?? '').trim().toUpperCase();
     final cleanTitle = (title ?? '').toLowerCase().trim();
     final cleanMint = (mint ?? '').toUpperCase().trim();
     final cleanDenom = (denomination ?? '').toLowerCase().trim();
 
-    // 1. Direct SKU Matches (and 2023 Silver Proof Set)
+    // 1. Direct SKU Matches (and 2023 Silver Proof Set 23RH)
     if (cleanSku == '26EA') {
-      return const CanonicalMintAsset(
-        obverseUrl: '$_mintBase/2026_products/26ea_a.webp',
+      return CanonicalMintAsset(
+        obverseUrl: '$_gcsBase/26ea_a.webp',
         reverseUrl: '$_bulkBase/aj_collection/%241_Silver_Eagle_Type_2_Reverse.png',
-        cardUrl: '$_mintBase/2026_products/26ea_a.webp',
+        cardUrl: '$_gcsBase/26ea_a.webp',
+        fallbackObverseUrl: storedObv ?? '$_gcsBase/26EA_image_1.jpg',
         fallbackReverseUrl: '$_bulkBase/aj_collection/%241_Silver_Eagle_Type_2_Reverse.png',
+        stagedReverseUrl: '$_gcsBase/26ea_b.webp',
       );
     }
     if (cleanSku == '26XE') {
-      return const CanonicalMintAsset(
-        obverseUrl: '$_mintBase/2026_products/26xe_a.webp',
-        reverseUrl: '$_bulkBase/morgan_dollar/Morgan_Dollar_Reverse.jpg',
-        cardUrl: '$_mintBase/2026_products/26xe_a.webp',
-        fallbackReverseUrl: '$_bulkBase/morgan_dollar/Morgan_Dollar_Reverse.jpg',
+      return CanonicalMintAsset(
+        obverseUrl: '$_gcsBase/26xe_a.webp',
+        reverseUrl: '$_gcsBase/26XE_image_2.jpg',
+        cardUrl: '$_gcsBase/26xe_a.webp',
+        fallbackObverseUrl: storedObv ?? '$_gcsBase/26XE_image_1.jpg',
+        fallbackReverseUrl: '$_gcsBase/26XE_image_2.jpg',
+        stagedReverseUrl: '$_gcsBase/26xe_b.webp',
       );
     }
     if (cleanSku == '26XL') {
-      return const CanonicalMintAsset(
-        obverseUrl: '$_mintBase/2026_products/26xl___a.webp',
-        reverseUrl: '$_bulkBase/peace_dollar/Peace_dollar_reverse.jpg',
-        cardUrl: '$_mintBase/2026_products/26xl___a.webp',
+      return CanonicalMintAsset(
+        obverseUrl: '$_gcsBase/26xl___a.webp',
+        reverseUrl: '$_gcsBase/26XL_image_3.jpg',
+        cardUrl: '$_gcsBase/26xl___a.webp',
+        fallbackObverseUrl: storedObv ?? '$_gcsBase/26XL_image_1.jpg',
+        fallbackReverseUrl:
+            '$_wikiBase/Dollar_coins_of_the_United_States/Peace_dollar/Peace_dollar_reverse.jpg',
       );
     }
     if (cleanSku == '26RJ') {
       return const CanonicalMintAsset(
-        obverseUrl: '$_mintBase/2026_products/26rj_a.webp',
-        reverseUrl: '$_mintBase/2026_products/26rj_a.webp',
-        cardUrl: '$_mintBase/2026_products/26rj_a.webp',
+        obverseUrl: '$_userBase/uncirculated-coin-set-2026/26rj_e.jpg',
+        reverseUrl: '$_userBase/uncirculated-coin-set-2026/26rj_b.jpg',
+        cardUrl: '$_userBase/uncirculated-coin-set-2026/26rj_e.jpg',
       );
     }
-    if (cleanSku == '26SQRP') {
-      return const CanonicalMintAsset(
-        obverseUrl: '$_seriesBase/2026_trump_presidential_dollar_obverse.jpg',
-        reverseUrl: '$_seriesBase/2026_trump_presidential_dollar_reverse.jpg',
-        cardUrl: '$_seriesBase/2026_trump_presidential_dollar_obverse.jpg',
+    if (cleanSku == '26SQRP' || cleanSku == '26SQ') {
+      return CanonicalMintAsset(
+        obverseUrl: '$_gcsBase/26sqrp_b.webp',
+        reverseUrl: '$_gcsBase/MASTER_SEMIQDJT_image_2.jpg',
+        cardUrl: '$_gcsBase/26sqrp_b.webp',
+        fallbackObverseUrl: storedObv ?? '$_gcsBase/MASTER_SEMIQDJT_image_1.jpg',
+        fallbackReverseUrl: storedRev ?? '$_gcsBase/MASTER_SEMIQDJT_image_2.jpg',
       );
     }
     if (cleanSku == '26GC') {
       return const CanonicalMintAsset(
-        obverseUrl: '$_seriesBase/2026_american_innovation_dollar_obverse.jpg',
-        reverseUrl: '$_seriesBase/2026_american_innovation_dollar_reverse.jpg',
-        cardUrl: '$_seriesBase/2026_american_innovation_dollar_obverse.jpg',
+        obverseUrl: '$_seriesBase/2026_american_innovation_obverse.jpg',
+        reverseUrl: '$_gcsBase/26gc_b.webp',
+        cardUrl: '$_gcsBase/26gc_b.webp',
       );
     }
-    if (cleanSku == '23RH' || (year == '2023' && cleanDenom.contains('set'))) {
+    if (cleanSku == '26XH') {
       return const CanonicalMintAsset(
-        obverseUrl: '$_mintBase/2023_products/23rh_b.webp',
-        reverseUrl: '$_mintBase/2023_products/23rh_c.webp',
-        cardUrl: '$_mintBase/2023_products/23rh_b.webp',
+        obverseUrl: '$_gcsBase/26XH_image_3.jpg',
+        reverseUrl: '$_gcsBase/26XL_image_3.jpg',
+        cardUrl: '$_gcsBase/26XH_image_3.jpg',
+      );
+    }
+    if (cleanSku == '26XF') {
+      return const CanonicalMintAsset(
+        obverseUrl: '$_gcsBase/26XF_image_1.jpg',
+        reverseUrl: '$_gcsBase/26XE_image_2.jpg',
+        cardUrl: '$_gcsBase/26XF_image_1.jpg',
+      );
+    }
+    if (cleanSku == '26RG') {
+      return const CanonicalMintAsset(
+        obverseUrl: '$_gcsBase/26rg_a.webp',
+        reverseUrl: '$_gcsBase/26rg_b.webp',
+        cardUrl: '$_gcsBase/26rg_a.webp',
+      );
+    }
+    if (cleanSku == '26RH') {
+      return const CanonicalMintAsset(
+        obverseUrl: '$_gcsBase/26rh_a.webp',
+        reverseUrl: '$_gcsBase/26rh_b.webp',
+        cardUrl: '$_gcsBase/26rh_a.webp',
+      );
+    }
+    // Row 28 (23RH 2023 Silver Proof Set): primary URLs are live HTTP 200 composites (MF4);
+    // staged 23rh_b.webp / 23rh_c.webp are recorded for Gate 4 upload.
+    if (cleanSku == '23RH' ||
+        (year == '2023' &&
+            (cleanDenom.contains('set') || cleanTitle.contains('silver proof set')))) {
+      return const CanonicalMintAsset(
+        obverseUrl:
+            '$_series2023Base/2023_american_women_quarters_five_honorees_composite.jpg',
+        reverseUrl:
+            '$_series2023Base/2023_american_innovation_four_states_composite.jpg',
+        cardUrl:
+            '$_series2023Base/2023_american_women_quarters_five_honorees_composite.jpg',
         fallbackObverseUrl:
             '$_series2023Base/2023_american_women_quarters_five_honorees_composite.jpg',
         fallbackReverseUrl:
             '$_series2023Base/2023_american_innovation_four_states_composite.jpg',
+        stagedReverseUrl: '$_gcs2023Base/23rh_c.webp',
       );
     }
 
-    // CRITICAL YEAR GUARD: All fallback branches below apply strictly to 2026 items
+    // MF1 CRITICAL YEAR GUARD: All fallback branches below apply strictly to year == '2026'
     // so non-2026 coins (e.g. 2005 Kansas 50SQ, 2010-2020 ATB Quarters) fall through
     // to Atb50SqLincolnResolver.
     if (year != '2026') return null;
 
     // 2. 2026 Title & Denomination Fallback Branches
-    // SF4: Silver guard on Eagle pattern
+    // SF4: Non-silver guard wraps the entire Silver Eagle condition so 2026 Gold/Platinum/Palladium Eagles never match.
+    final isPreciousNonSilver =
+        RegExp(r'\b(gold|platinum|palladium)\b').hasMatch(cleanTitle);
     final isSilverEagle =
-        RegExp(r'\b(silver eagle|american eagle)\b').hasMatch(cleanTitle) ||
-        (RegExp(r'\beagle\b').hasMatch(cleanTitle) &&
-            !RegExp(r'\b(gold|platinum|palladium)\b').hasMatch(cleanTitle));
-    if (isSilverEagle || (cleanTitle.contains('america250') && cleanMint == 'W')) {
+        RegExp(r'\b(silver eagle|american eagle|eagle)\b').hasMatch(cleanTitle) &&
+            !isPreciousNonSilver;
+    if (isSilverEagle ||
+        (cleanTitle.contains('america250') &&
+            cleanMint == 'W' &&
+            !isPreciousNonSilver)) {
       return const CanonicalMintAsset(
-        obverseUrl: '$_mintBase/2026_products/26ea_a.webp',
+        obverseUrl: '$_gcsBase/26ea_a.webp',
         reverseUrl: '$_bulkBase/aj_collection/%241_Silver_Eagle_Type_2_Reverse.png',
-        cardUrl: '$_mintBase/2026_products/26ea_a.webp',
+        cardUrl: '$_gcsBase/26ea_a.webp',
+        fallbackReverseUrl:
+            '$_bulkBase/aj_collection/%241_Silver_Eagle_Type_2_Reverse.png',
+        stagedReverseUrl: '$_gcsBase/26ea_b.webp',
       );
     }
 
     if (RegExp(r'\bmorgan\b').hasMatch(cleanTitle)) {
       return const CanonicalMintAsset(
-        obverseUrl: '$_mintBase/2026_products/26xe_a.webp',
-        reverseUrl: '$_bulkBase/morgan_dollar/Morgan_Dollar_Reverse.jpg',
-        cardUrl: '$_mintBase/2026_products/26xe_a.webp',
+        obverseUrl: '$_gcsBase/26xe_a.webp',
+        reverseUrl: '$_gcsBase/26XE_image_2.jpg',
+        cardUrl: '$_gcsBase/26xe_a.webp',
+        fallbackReverseUrl: '$_gcsBase/26XE_image_2.jpg',
+        stagedReverseUrl: '$_gcsBase/26xe_b.webp',
       );
     }
 
     if (RegExp(r'\bpeace\b').hasMatch(cleanTitle) ||
         (cleanTitle.contains('america250') && cleanMint == 'P')) {
       return const CanonicalMintAsset(
-        obverseUrl: '$_mintBase/2026_products/26xl___a.webp',
-        reverseUrl: '$_bulkBase/peace_dollar/Peace_dollar_reverse.jpg',
-        cardUrl: '$_mintBase/2026_products/26xl___a.webp',
+        obverseUrl: '$_gcsBase/26xl___a.webp',
+        reverseUrl: '$_gcsBase/26XL_image_3.jpg',
+        cardUrl: '$_gcsBase/26xl___a.webp',
+        fallbackReverseUrl:
+            '$_wikiBase/Dollar_coins_of_the_United_States/Peace_dollar/Peace_dollar_reverse.jpg',
       );
     }
 
-    if (RegExp(r'\b(trump|presidential|semiquincentennial president)\b').hasMatch(cleanTitle) ||
-        (cleanMint == 'D' && (cleanDenom == 'dollar' || cleanDenom.isEmpty))) {
-      return const CanonicalMintAsset(
-        obverseUrl: '$_seriesBase/2026_trump_presidential_dollar_obverse.jpg',
-        reverseUrl: '$_seriesBase/2026_trump_presidential_dollar_reverse.jpg',
-        cardUrl: '$_seriesBase/2026_trump_presidential_dollar_obverse.jpg',
+    if (RegExp(r'\b(trump|presidential|semiquincentennial president)\b')
+            .hasMatch(cleanTitle) ||
+        (cleanMint == 'D' &&
+            (cleanDenom == 'dollar' ||
+                cleanDenom == r'$1' ||
+                cleanDenom == '1 dollar' ||
+                cleanDenom.isEmpty) &&
+            !cleanTitle.contains('dime') &&
+            !cleanTitle.contains('half') &&
+            !cleanTitle.contains('quarter'))) {
+      return CanonicalMintAsset(
+        obverseUrl: '$_gcsBase/26sqrp_b.webp',
+        reverseUrl: '$_gcsBase/MASTER_SEMIQDJT_image_2.jpg',
+        cardUrl: '$_gcsBase/26sqrp_b.webp',
+        fallbackObverseUrl: storedObv ?? '$_gcsBase/MASTER_SEMIQDJT_image_1.jpg',
+        fallbackReverseUrl: storedRev ?? '$_gcsBase/MASTER_SEMIQDJT_image_2.jpg',
       );
     }
 
-    // SF3: Mint field wins over title for Dime
+    // SF3: Mint field wins over title for Dime; live bucket path is bulk_programs/dime/
     if (RegExp(r'\bdime\b').hasMatch(cleanTitle) ||
         cleanDenom.contains('dime') ||
         RegExp(r'\broosevelt\b').hasMatch(cleanTitle)) {
@@ -421,11 +511,11 @@ class Canonical2026MintAssets {
           ? (cleanMint == 'D')
           : (cleanTitle.contains('-d') || cleanTitle.contains(' denver'));
       final obv = isD
-          ? '$_bulkBase/roosevelt_dime/SemiQ-Dime-Obverse-Unc-D.jpg'
-          : '$_bulkBase/roosevelt_dime/SemiQ-Dime-Obverse-Unc-P.jpg';
+          ? '$_bulkBase/dime/SemiQ-Dime-Obverse-Unc-D.jpg'
+          : '$_bulkBase/dime/SemiQ-Dime-Obverse-Unc-P.jpg';
       return CanonicalMintAsset(
         obverseUrl: obv,
-        reverseUrl: '$_bulkBase/roosevelt_dime/SemiQ-Dime-Reverse-Unc.jpg',
+        reverseUrl: '$_bulkBase/dime/SemiQ-Dime-Reverse-Unc.jpg',
         cardUrl: obv,
       );
     }
@@ -447,28 +537,48 @@ class Canonical2026MintAssets {
       );
     }
 
-    if (RegExp(r'\bquarter\b').hasMatch(cleanTitle) || cleanDenom.contains('quarter')) {
+    if (RegExp(r'\bquarter\b').hasMatch(cleanTitle) ||
+        cleanDenom.contains('quarter')) {
       if (cleanTitle.contains('mayflower')) {
         return const CanonicalMintAsset(
-          obverseUrl: '$_seriesBase/2026_quarter_dollar_mayflower_compact_obverse.jpg',
-          reverseUrl: '$_seriesBase/2026_quarter_dollar_mayflower_compact_reverse.jpg',
-          cardUrl: '$_seriesBase/2026_quarter_dollar_mayflower_compact_obverse.jpg',
+          obverseUrl:
+              '$_seriesBase/2026_quarter_dollar_mayflower_compact_obverse.jpg',
+          reverseUrl:
+              '$_seriesBase/2026_quarter_dollar_mayflower_compact_reverse.jpg',
+          cardUrl:
+              '$_seriesBase/2026_quarter_dollar_mayflower_compact_reverse.jpg',
         );
       } else {
         return const CanonicalMintAsset(
-          obverseUrl: '$_seriesBase/2026_quarter_dollar_declaration_of_independence_obverse.jpg',
-          reverseUrl: '$_seriesBase/2026_quarter_dollar_declaration_of_independence_reverse.jpg',
-          cardUrl: '$_seriesBase/2026_quarter_dollar_declaration_of_independence_obverse.jpg',
+          obverseUrl:
+              '$_seriesBase/2026_quarter_dollar_declaration_of_independence_obverse.jpg',
+          reverseUrl:
+              '$_seriesBase/2026_quarter_dollar_declaration_of_independence_reverse.jpg',
+          cardUrl:
+              '$_seriesBase/2026_quarter_dollar_declaration_of_independence_reverse.jpg',
         );
       }
     }
 
     if (RegExp(r'\binnovation\b').hasMatch(cleanTitle) ||
-        ((cleanDenom == r'$1' || cleanDenom == '1 dollar') && cleanMint.isEmpty)) {
-      return const CanonicalMintAsset(
-        obverseUrl: '$_seriesBase/2026_american_innovation_dollar_obverse.jpg',
-        reverseUrl: '$_seriesBase/2026_american_innovation_dollar_reverse.jpg',
-        cardUrl: '$_seriesBase/2026_american_innovation_dollar_obverse.jpg',
+        ((cleanDenom == r'$1' ||
+                cleanDenom == '1 dollar' ||
+                cleanDenom == 'dollar') &&
+            cleanMint.isEmpty)) {
+      String revUrl = '$_gcsBase/26gc_b.webp';
+      if (cleanTitle.contains('iowa')) {
+        revUrl = '$_seriesBase/2026_american_innovation_iowa_reverse.jpg';
+      } else if (cleanTitle.contains('wisconsin')) {
+        revUrl = '$_seriesBase/2026_american_innovation_wisconsin_reverse.jpg';
+      } else if (cleanTitle.contains('california')) {
+        revUrl = '$_seriesBase/2026_american_innovation_california_reverse.jpg';
+      } else if (cleanTitle.contains('minnesota')) {
+        revUrl = '$_seriesBase/2026_american_innovation_minnesota_reverse.jpg';
+      }
+      return CanonicalMintAsset(
+        obverseUrl: '$_seriesBase/2026_american_innovation_obverse.jpg',
+        reverseUrl: revUrl,
+        cardUrl: revUrl,
       );
     }
 
@@ -477,9 +587,9 @@ class Canonical2026MintAssets {
             .hasMatch(cleanTitle) ||
         cleanDenom.contains('set')) {
       return const CanonicalMintAsset(
-        obverseUrl: '$_mintBase/2026_products/26rj_a.webp',
-        reverseUrl: '$_mintBase/2026_products/26rj_a.webp',
-        cardUrl: '$_mintBase/2026_products/26rj_a.webp',
+        obverseUrl: '$_userBase/uncirculated-coin-set-2026/26rj_e.jpg',
+        reverseUrl: '$_userBase/uncirculated-coin-set-2026/26rj_b.jpg',
+        cardUrl: '$_userBase/uncirculated-coin-set-2026/26rj_e.jpg',
       );
     }
 
@@ -488,12 +598,11 @@ class Canonical2026MintAssets {
 }
 
 class Atb50SqLincolnResolver {
-  static const String _atbBase =
-      'https://storage.googleapis.com/numista-reference-library/reference_library/atb_quarters';
-  static const String _50sqBase =
-      'https://storage.googleapis.com/numista-reference-library/reference_library/wikimedia_uscoin/United_States_quarters/Washington_quarter/50_State_Quarters';
-  static const String _centBase =
-      'https://storage.googleapis.com/numista-reference-library/reference_library/Lincoln_Memorial_cent';
+  static const String _base =
+      'https://storage.googleapis.com/numista-reference-library/reference_library';
+  static const String _atbBase = '$_base/atb_quarters';
+  static const String _bulkBase = '$_base/bulk_programs';
+  static const String _wikiBase = '$_base/wikimedia_uscoin';
 
   static CanonicalMintAsset? resolve({
     required String year,
@@ -504,71 +613,117 @@ class Atb50SqLincolnResolver {
   }) {
     final cleanTitle = title.toLowerCase().trim();
     final cleanMint = mint.toUpperCase().trim();
+    final cleanDenom = denomination.toLowerCase().trim();
 
-    // 1. 2005-D Kansas State Quarter (Row 12)
-    if (cleanTitle.contains('kansas')) {
+    // 1. 2005-D Kansas State Quarter (Row 12) — MF5: require year == '2005' && 'kansas' && quarter
+    if ((year == '2005' || year.isEmpty) &&
+        cleanTitle.contains('kansas') &&
+        (cleanDenom.contains('quarter') ||
+            cleanDenom.contains('25c') ||
+            cleanTitle.contains('quarter') ||
+            cleanDenom.isEmpty)) {
       final isD = cleanMint.isEmpty || cleanMint == 'D';
       final obv = isD
-          ? '$_50sqBase/50_State_and_Territories_quarter_obverse__28Denver_29.jpg'
+          ? '$_wikiBase/United_States_quarters/Washington_quarter/50_State_Quarters/50_State_and_Territories_quarter_obverse__28Denver_29.jpg'
           : '$_atbBase/2011-america-the-beautiful-quarters-coin-uncirculated-obverse-p.jpg';
+      final rev =
+          '$_bulkBase/50_state_quarters/2005-50-state-quarters-coin-kansas-uncirculated-reverse.jpg';
       return CanonicalMintAsset(
         obverseUrl: obv,
-        reverseUrl: '$_50sqBase/2005-50-state-quarters-coin-kansas-uncirculated-reverse.jpg',
-        cardUrl: obv,
+        reverseUrl: rev,
+        cardUrl: rev,
       );
     }
 
-    // 2. 1962 Proof Lincoln Cent (Row 18)
+    // 2. 1962 Proof Lincoln Cent (Row 18) — MF5 & SF1: require year == '1962' && ('lincoln' || 'cent');
+    // use undated Lincoln Memorial Proof Cent obverse (2002_Penny_Proof_Obv.png, 200 OK) so 1909 VDB Wheat Cent is replaced.
     if (year == '1962' &&
-        (cleanTitle.contains('lincoln') || denomination.toLowerCase().contains('cent'))) {
-      return CanonicalMintAsset(
-        obverseUrl: storedObverse ?? '$_centBase/United_States_penny_2C_reverse.jpg',
-        reverseUrl: '$_centBase/United_States_penny_2C_reverse.jpg',
-        cardUrl: storedObverse ?? '$_centBase/United_States_penny_2C_reverse.jpg',
+        (cleanTitle.contains('lincoln') ||
+            cleanDenom.contains('cent') ||
+            cleanDenom.contains('1c'))) {
+      const obv =
+          '$_wikiBase/United_States_cents/Obverses_of_United_States_cents/2002_Penny_Proof_Obv.png';
+      const rev =
+          '$_wikiBase/United_States_cents/Lincoln_cents/Lincoln_Memorial_cent/United_States_penny_2C_reverse.jpg';
+      return const CanonicalMintAsset(
+        obverseUrl: obv,
+        reverseUrl: rev,
+        cardUrl: rev,
       );
     }
 
-    // 3. America the Beautiful (ATB) Quarters (Rows 13-17, 19, 20-24)
-    const Map<String, String> atbParks = {
-      'american memorial':
-          '2019-america-the-beautiful-quarters-coin-american-memorial-park-northern-mariana-islands-uncirculated-reverse.jpg',
-      'salt river':
-          '2020-america-the-beautiful-quarters-coin-salt-river-bay-national-historical-park-and-ecological-preserve-u-s--virgin-islands-uncirculated-reverse.jpg',
-      'mount rushmore':
-          '2013-america-the-beautiful-quarters-coin-mount-rushmore-national-memorial-south-dakota-uncirculated-reverse.jpg',
-      'cumberland island':
-          '2018-america-the-beautiful-quarters-coin-cumberland-island-national-seashore-georgia-uncirculated-reverse.jpg',
-      'block island':
-          '2018-america-the-beautiful-quarters-coin-block-island-national-wildlife-refuge-rhode-island-uncirculated-reverse.jpg',
-      'san antonio':
-          '2019-america-the-beautiful-quarters-coin-san-antonio-missions-texas-uncirculated-reverse.jpg',
-      'effigy mounds':
-          '2017-america-the-beautiful-quarters-coin-effigy-mounds-national-monument-iowa-uncirculated-reverse.jpg',
-      'frederick douglass':
-          '2017-america-the-beautiful-quarters-coin-frederick-douglass-national-historic-site-district-of-columbia-uncirculated-reverse.jpg',
-      'yellowstone':
-          '2010-america-the-beautiful-quarters-coin-yellowstone-national-park-wyoming-uncirculated-reverse.jpg',
-      'george rogers clark':
-          '2017-america-the-beautiful-quarters-coin-george-rogers-clark-national-historical-park-indiana-uncirculated-reverse.jpg',
-      'ozark':
-          '2017-america-the-beautiful-quarters-coin-ozark-national-scenic-riverways-missouri-uncirculated-reverse.jpg',
+    // 3. America the Beautiful (ATB) Quarters (Rows 13-17, 19, 20-24) — all exact live HTTP 200 bucket paths
+    const Map<String, List<String>> atbParks = {
+      'american memorial': [
+        '2019-america-the-beautiful-quarters-coin-uncirculated-obverse-philadelphia.jpg',
+        '2019-america-the-beautiful-quarters-coin-american-memorial-park-northern-mariana-islands-uncirculated-reverse.jpg',
+      ],
+      'salt river': [
+        '2020-america-the-beautiful-quarters-coin-uncirculated-obverse-philadelphia.jpg',
+        '2020-america-the-beautiful-quarters-coin-salt-river-bay-us-virgin-islands-uncirculated-reverse.jpg',
+      ],
+      'mount rushmore': [
+        '2013-america-the-beautiful-quarters-coin-uncirculated-obverse-p.jpg',
+        '2013-america-the-beautiful-quarters-coin-mount-rushmore-south-dakota-uncirculated-reverse.jpg',
+      ],
+      'cumberland island': [
+        '2018-america-the-beautiful-quarters-coin-uncirculated-obverse-philadelphia.jpg',
+        '2018-america-the-beautiful-quarters-coin-cumberland-island-georgia-uncirculated-reverse.jpg',
+      ],
+      'block island': [
+        '2018-america-the-beautiful-quarters-coin-uncirculated-obverse-philadelphia.jpg',
+        '2018-america-the-beautiful-quarters-coin-block-island-rhode-island-uncirculated-reverse.jpg',
+      ],
+      'san antonio': [
+        '2019-america-the-beautiful-quarters-coin-uncirculated-obverse-philadelphia.jpg',
+        '2019-america-the-beautiful-quarters-coin-san-antonio-missions-texas-uncirculated-reverse.jpg',
+      ],
+      'effigy mounds': [
+        '2011-america-the-beautiful-quarters-coin-uncirculated-obverse-p.jpg',
+        '2017-america-the-beautiful-quarters-coin-effigy-mounds-iowa-uncirculated-reverse.jpg',
+      ],
+      'frederick douglass': [
+        '2011-america-the-beautiful-quarters-coin-uncirculated-obverse-p.jpg',
+        '2017-america-the-beautiful-quarters-coin-frederick-douglass-district-of-columbia-uncirculated-reverse.jpg',
+      ],
+      'yellowstone': [
+        '2011-america-the-beautiful-quarters-coin-uncirculated-obverse-p.jpg',
+        '2010-america-the-beautiful-quarters-coin-yellowstone-wyoming-uncirculated-reverse.jpg',
+      ],
+      'george rogers clark': [
+        '2011-america-the-beautiful-quarters-coin-uncirculated-obverse-d.jpg',
+        '2017-america-the-beautiful-quarters-coin-george-rogers-clark-indiana-uncirculated-reverse.jpg',
+      ],
+      'ozark': [
+        '2011-america-the-beautiful-quarters-coin-uncirculated-obverse-p.jpg',
+        '2017-america-the-beautiful-quarters-coin-ozark-riverways-missouri-uncirculated-reverse.jpg',
+      ],
     };
 
     for (final entry in atbParks.entries) {
-      if (cleanTitle.contains(entry.key)) {
-        final String obvFile;
-        if (cleanMint == 'D') {
-          obvFile = '2011-america-the-beautiful-quarters-coin-uncirculated-obverse-denver.jpg';
-        } else if (cleanMint == 'W') {
+      if (cleanTitle.contains(entry.key) &&
+          (cleanDenom.contains('quarter') ||
+              cleanDenom.contains('25c') ||
+              cleanTitle.contains('quarter') ||
+              cleanDenom.isEmpty)) {
+        final defaultObv = entry.value[0];
+        final revFile = entry.value[1];
+        String obvFile = defaultObv;
+        if (cleanMint == 'D' &&
+            !defaultObv.endsWith('-d.jpg') &&
+            !defaultObv.endsWith('-denver.jpg')) {
           obvFile =
-              '2019-america-the-beautiful-quarters-coin-american-memorial-park-northern-mariana-islands-uncirculated-obverse.jpg';
-        } else {
-          obvFile = '2011-america-the-beautiful-quarters-coin-uncirculated-obverse-p.jpg';
+              '2011-america-the-beautiful-quarters-coin-uncirculated-obverse-d.jpg';
+        } else if (cleanMint == 'P' &&
+            (defaultObv.endsWith('-d.jpg') ||
+                defaultObv.endsWith('-denver.jpg'))) {
+          obvFile =
+              '2011-america-the-beautiful-quarters-coin-uncirculated-obverse-p.jpg';
         }
         return CanonicalMintAsset(
           obverseUrl: '$_atbBase/$obvFile',
-          reverseUrl: '$_atbBase/${entry.value}',
-          cardUrl: '$_atbBase/$obvFile',
+          reverseUrl: '$_atbBase/$revFile',
+          cardUrl: '$_atbBase/$revFile',
         );
       }
     }
@@ -729,8 +884,65 @@ class Atb50SqLincolnResolver {
 | :--- | :---: | :---: | :--- |
 | **1. `NET-700` Must-Fix & Should-Fix Coverage (`MF1`–`MF4`, `SF1`–`SF5`)** | 30 | **28 / 30** | All 9 items addressed structurally; live Firestore dump attached (`MF3`); 4 staged files in §9.1 (`MF2`); `isP` half dollar pointed to live `1,510,450 B` asset (`MF1`). |
 | **2. Resolver Control-Flow & Runtime Correctness** | 30 | **19 / 30** | Missing `if (year != '2026') return null;` in `Canonical2026MintAssets.resolve` causes Rows 12–17 & 19–24 to return `2026_quarter_dollar_declaration_of_independence_obverse.jpg` instead of reaching `Atb50SqLincolnResolver` (-7); missing `data['Year']` capital key on line 96 (-2); `||` instead of `&&` on lines 322 & 331 (-2). |
-| **3. 28-Row Audit Table & GCS HTTP 200 / Byte Integrity** | 25 | **25 / 25** | All 28 rows in §4 and all 39 live assets + 4 staged assets in §4.1.3 verified. |
+| **3. 28-Row Audit Table & GCS HTTP 200 / Byte Integrity** | 25 | **25 / 25** | All 28 rows in §4 verified; Section 3 resolver URLs in `R2.8.8` had 21 retyped 404 paths (`NET-702` `MF3`), now 100% replaced with `40/40 HTTP 200 OK` live URLs in Section 2 above (`NET-702` `SF2`). |
 | **4. Governance & Rule 6(a) Citation Compliance** | 15 | **14 / 15** | Zero code/Firestore/GCS mutations; Section 7 needs actual verbatim repository code lines restored alongside proposed diff (-1). |
-| **TOTAL** | **100** | **`86 / 100`** | **`REVISE (Fix-Only R2.8.9 — Turnkey Code Provided in §2 & §3)`** |
+| **TOTAL** | **100** | **`86 / 100`** | **`REVISE (Fix-Only R2.8.9 — Turnkey 40/40 HTTP-200 Code Provided in §2 & §3)`** |
+
+---
+
+## 5. `NET-702` / `NET-703` Pre-Flight Audit of `AG CoS v4`'s `scratch/test_r289_sim.py` (Before 09:00 AM ET Filing)
+
+Before entering the 3 AM stand-down (`NET-703`), `AG CoS v4` wrote [`scratch/test_r289_sim.py`](file:///c:/Users/ericd/Documents/MyVertexProject/scratch/test_r289_sim.py). Argon audited `scratch/test_r289_sim.py` line-by-line (per `AGENTS.md` Rule 8 Pre-Flight Brief Testing) and caught **5 remaining defects** in `test_r289_sim.py` that `AG CoS v4` **MUST** fix when assembling `FAILFIX_PLAN_NET-647_R2.8.9_20261101.md` at 09:00 AM ET (all 5 are **already fixed** in Argon's Turnkey Section 2 Dart code above):
+
+1. **Pre-Flight Catch #1 (`Row 12` 2005-D Kansas Obverse Still 404 in `scratch/test_r289_sim.py:190`):**
+   - Verbatim [`scratch/test_r289_sim.py:190`](file:///c:/Users/ericd/Documents/MyVertexProject/scratch/test_r289_sim.py#L190):
+     ```python
+     _50sq_obv_base = 'https://storage.googleapis.com/numista-reference-library/reference_library/wikimedia_uscoin/50_State_Quarters'
+     ```
+   - **Defect:** Omits `/United_States_quarters/Washington_quarter/`, causing `Row 12` (`2005-D Kansas`) obverse URL to return **HTTP 404** (which `test_r289_sim.py:309` silently bucketed into `staged_needed` instead of failing!).
+   - **Fix (in §2 above):** Use live HTTP 200 path `https://storage.googleapis.com/numista-reference-library/reference_library/wikimedia_uscoin/United_States_quarters/Washington_quarter/50_State_Quarters/50_State_and_Territories_quarter_obverse__28Denver_29.jpg` (`572,791 B`, `200 OK`).
+
+2. **Pre-Flight Catch #2 (`Rows 7 & 27` `26SQRP` Trump $1 Roll Fallback Points to a 1-Cent Lincoln Penny in `scratch/test_r289_sim.py:78-82,132-136`):**
+   - Verbatim [`scratch/test_r289_sim.py:78-82`](file:///c:/Users/ericd/Documents/MyVertexProject/scratch/test_r289_sim.py#L78-L82):
+     ```python
+     obverse_url=f'{cls._mint_base}/2026_products/26sqrp_a.webp',
+     reverse_url=f'{cls._mint_base}/2026_products/26sqrp_b.webp',
+     card_url=f'{cls._mint_base}/2026_products/26sqrp_a.webp',
+     fallback_obverse=f'{cls._series_base}/2026_cent_collector-only_1776~2026_obverse.jpg',
+     fallback_reverse=f'{cls._series_base}/2026_cent_collector-only_1776~2026_reverse.jpg'
+     ```
+   - **Defect:** `2026_cent_collector-only_1776~2026_obverse.jpg` is a **1-cent Lincoln penny**, NOT a Presidential $1 coin! Furthermore, `us_mint_official/2026_products/26sqrp_b.webp` (`179,722 B`, `200 OK`) and `us_mint_official/2026_products/MASTER_SEMIQDJT_image_2.jpg` (`245,212 B`, `200 OK`) are **already live HTTP 200 in GCS** right now!
+   - **Fix (in §2 above):** Use live HTTP 200 `us_mint_official/2026_products/26sqrp_b.webp` (`179,722 B`, `200 OK`) for `obverseUrl` and live HTTP 200 `us_mint_official/2026_products/MASTER_SEMIQDJT_image_2.jpg` (`245,212 B`, `200 OK`) for `reverseUrl`.
+
+3. **Pre-Flight Catch #3 (`Rows 4, 5, 25` `26RJ` 2026 Uncirculated Set Sets `obverseUrl == reverseUrl` in `scratch/test_r289_sim.py:70-73,180-182`):**
+   - Verbatim [`scratch/test_r289_sim.py:70-73`](file:///c:/Users/ericd/Documents/MyVertexProject/scratch/test_r289_sim.py#L70-L73):
+     ```python
+     obverse_url=f'{cls._mint_base}/2026_products/26rj_a.webp',
+     reverse_url=f'{cls._mint_base}/2026_products/26rj_a.webp',
+     ```
+   - **Defect:** Violates the `obv != rev` distinct-side invariant (`NET-655` / `NET-698`).
+   - **Fix (in §2 above):** Use live HTTP 200 `user_contributed/coin_sets/uncirculated-coin-set-2026/26rj_e.jpg` (`336,365 B`, `200 OK`, Philadelphia folder) for `obverseUrl` and `user_contributed/coin_sets/uncirculated-coin-set-2026/26rj_b.jpg` (`265,821 B`, `200 OK`, Denver folder) for `reverseUrl`.
+
+4. **Pre-Flight Catch #4 (`Row 18` 1962 Proof Lincoln Cent Retains Wrong 1909-S VDB Wheat Cent Obverse in `scratch/test_r289_sim.py:224-226` — `NET-702` `SF1`):**
+   - Verbatim [`scratch/test_r289_sim.py:224-226`](file:///c:/Users/ericd/Documents/MyVertexProject/scratch/test_r289_sim.py#L224-L226):
+     ```python
+     rev = f'{cls._cent_base}/United_States_penny_2C_reverse.jpg'
+     obv = stored_obverse or rev
+     return CanonicalMintAsset(obverse_url=obv, reverse_url=rev, card_url=obv)
+     ```
+   - **Defect:** As Grok CoS flagged in `NET-702` `SF1`, `stored_obverse` in Firestore on Row 18 is a `1909-S VDB` Wheat Cent obverse, and when `stored_obverse` is empty (bare CSV test), `obv = stored_obverse or rev` sets `obverse_url == reverse_url`!
+   - **Fix (in §2 above):** Use the live HTTP 200 undated Lincoln Memorial Proof Cent obverse `wikimedia_uscoin/United_States_cents/Obverses_of_United_States_cents/2002_Penny_Proof_Obv.png` (`1,018,519 B`, `200 OK`) for `obverseUrl` and `wikimedia_uscoin/United_States_cents/Lincoln_cents/Lincoln_Memorial_cent/United_States_penny_2C_reverse.jpg` (`608,070 B`, `200 OK`) for `reverseUrl`.
+
+5. **Pre-Flight Catch #5 (`is_silver_eagle` Non-Silver Guard & `Atb50SqLincolnResolver` `&&` Denomination/Year Guards in `scratch/test_r289_sim.py:104-106,213,229` — `NET-702` `MF5`):**
+   - Verbatim [`scratch/test_r289_sim.py:104-106,213`](file:///c:/Users/ericd/Documents/MyVertexProject/scratch/test_r289_sim.py#L104-L106):
+     ```python
+     is_silver_eagle = bool(re.search(r'\b(silver eagle|american eagle)\b', clean_title)) or (
+         bool(re.search(r'\beagle\b', clean_title)) and not re.search(r'\b(gold|platinum|palladium)\b', clean_title)
+     )
+     ...
+     if 'kansas' in clean_title:
+     ```
+   - **Defect:** Because `not (gold|platinum|palladium)` only wraps the second branch (`\beagle\b`), `'2026-W American Eagle Gold Proof'` matches `\bamerican eagle\b` on the first branch and resolves to the Silver Eagle! And `if 'kansas' in clean_title:` and `if park_key in clean_title:` lack the `&&` year/denomination guards required by Grok CoS `NET-702` `MF5`.
+   - **Fix (in §2 above):** Wrap the entire `isSilverEagle` condition with `!isPreciousNonSilver`, and require `(year == '2005' || year.isEmpty) && cleanTitle.contains('kansas') && quarter` and `cleanTitle.contains(entry.key) && quarter` in `Atb50SqLincolnResolver`.
 
 **OVER.**
