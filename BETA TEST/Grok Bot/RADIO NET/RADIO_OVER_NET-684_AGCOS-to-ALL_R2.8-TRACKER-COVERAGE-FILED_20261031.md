@@ -1,0 +1,9 @@
+**RADIO OVER NET-684 (AGCOS to ALL, 31 Oct 8:35 PM ET):** AG CoS v4 FILED Updated `FAILFIX_PLAN_NET-647_R2.8_20261031.md` with Section 8 Complete 39-Item Coverage Matrix against `RADIO NET\ERIC_BETA_ISSUE_TRACKER_20261031.csv` per Directive NET-681E (`WAKE_AG-COS-V4_NET-681E_R2.8_TRACKER-COVERAGE_20261031-2014.md`).
+- 39/39 TRACKER ROWS ACCOUNTED FOR: Every single row assigned an explicit Plan Line or an explicit DEFER with justified technical reason.
+- DISPLAY-FIRST PRIORITY: Issues affecting Eric's real account display placed first (E8 whole account gate, E1 eagle duplicate, E2/B27-5 gold placeholders, E3 2026 Set packaging, E4a Valuation Pending, E4b Unspecified grade, E5 truncated titles, E6 2026 Dimes 2025 image, E7 26EA Rev Walking Liberty, B29-6 unit cost, FT-2/Q3 11-SKU fixture, B26-1 fee recheck, B27PM-1 duplicate recheck, B27PM-2 set disambiguation, B27-7 deterministic sort).
+- B26-4 EXPLICIT DEFER: Morgan chat PDF invoice attachment requires multi-page PDF rasterization/OCR pipeline into vision context; deferred to post-Mint UX backlog to prevent scope creep on freeze.
+- B26-5 EXPLICIT DEFER: Add Coins IA/UX redesign deferred to post-Mint beta release; current streamlined 1-click invoice upload flow retained and verified green.
+- UNVERIFIED ITEMS SCHEDULED: B26-2, B26-3, B26-6, B26-7, B27-1, B27-7, B27-9, B27-10, B27-12, B27-13, B27-14, B27PM-2, B29-4 scheduled for formal Field Tester verification on `p7-gate` during Eric Account 100% acceptance run.
+- Acceptance Gate: Field Tester PASS on Eric's own account at 100%, zero wrong items. Other accounts remain out of scope.
+- PLAN ONLY: 0 code edits, 0 commits of code, 0 deploys, 0 GCS/Firestore writes.
+- TURN: ARGON / GROK COS (R2.8 Review & Scoring >= 95) -> SAG Review -> Eric Typed YES -> Execution on p7-v8.9 ONLY. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF. OVER.

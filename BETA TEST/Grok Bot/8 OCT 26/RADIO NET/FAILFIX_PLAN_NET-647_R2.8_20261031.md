@@ -350,7 +350,56 @@ Per NET-681D, the plan must guarantee how **existing documents** display without
 
 ---
 
-## 8. Review Cycle Gate & Execution Sequence
+## 8. Complete 39-Item Coverage Matrix Against Eric Beta Issue Tracker
+
+Per Directive **NET-681E** (`WAKE_AG-COS-V4_NET-681E_R2.8_TRACKER-COVERAGE_20261031-2014.md`), every open row in `RADIO NET\ERIC_BETA_ISSUE_TRACKER_20261031.csv` is mapped below. Items affecting what Eric's collection displays come first. Every row has an explicit Plan Line or an explicit DEFER with a justified technical reason.
+
+| Tracker ID | Screen / Area | Eric's Reported Defect | Status in Tracker | Plan Line in R2.8 / Disposition | Verification Method / Defer Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **E8** | Whole Account | "Get my account 100% right" | In Plan (R2.8) | Sections 5 & 6: Full read-only audit across all 252 items in `users/eric.seaman@yahoo.com` and `users/eric@numista.ai`; client render fallbacks for zero-mutation instant display fix; backfill script staged for separate YES. | Acceptance Gate: Field Tester PASS on Eric's account with 0 wrong items. |
+| **E1** | Collection Cards | "Peace and Morgan share the same eagle photo" | In Plan (R2.7/R2.8) | Section 4.E1: Prioritize unique side (obverse with privy mark) for Morgan and Peace dollar cards. | FT visual verification on Eric account Cards view. |
+| **E2 / B27-5** | Cards & Review | "None of the 3 had images... placeholders" | Fixed but FT FAIL | Section 4.E2, 4.Q2: Add client-side 2026 catalog map fallback in `_buildCoinThumbnail` to resolve official Mint assets; backfill script. | FT inspection on p7-gate: real photos load. |
+| **E3** | Collection Card | "Unc Set card shows packaging" | In Plan (R2.7/R2.8) | Section 4.E3, 4.Q4: Remap SKU `26RJ` to official Set Lens (`26rj_set_lens.webp`) rather than packaging `26rj_a.jpg`. | FT visual verification on Eric account. |
+| **E4a / B27-5** | Collection Cards | "Cards show Valuation Pending" | Fixed but FT FAIL | Section 4.E4a: Add client-side fallback in `my_collection_screen.dart` to `current_value`, `valuation`, or purchase cost when CPG retail is 0/null. | FT inspection on Eric account: valuation/cost displayed. |
+| **E4b / B27-6** | Collection Cards | "American Innovation had Unspecified for grade" | In Plan (R2.7/R2.8) | Section 4.E4b: Run condition string through `_normalizeCondition()` so `"Unspecified / Raw"` renders cleanly as `"Raw"`. | FT inspection on Eric account: grade badge says Raw. |
+| **E5** | Collection Cards | "Titles are truncated" | In Plan (R2.7/R2.8) | Section 4.E5: Change `maxLines: 1` to `maxLines: 2` in `_buildCardGrid` with adjusted card aspect ratio. | FT inspection on Eric account: full titles visible. |
+| **E6** | Coin Inspector | "2026 dimes show a 2025 Roosevelt image in Inspector" | In Plan (R2.7/R2.8) | Section 4.E6: Remap 2026-P & 2026-D dimes to genuine Semiquincentennial Liberty Dime assets (`SemiQ-Dime-Obverse-Unc-P.jpg`, `SemiQ-Dime-Obverse-Unc-D.jpg`). | FT inspection on Eric account: 2026 Liberty Dime displayed. |
+| **E7** | Coin Inspector | "2026-W Silver Eagle Rev tab shows 2023 Walking Liberty" | In Plan (R2.7/R2.8) | Section 4.E7: Remap doc `e91efa62...` to 2026 Eagle obverse/reverse assets; add regex year guard and side guard. | FT inspection on Eric account: 2026 Eagle, correct sides. |
+| **B29-6 / FT-1** | Review Card Price | "2-coin sets show $169.00 and $64.97 each" | Fixed but FT FAIL | Section 4.Q1: Client compute fallback `rawCost / cleanQty` when `unit_cost_cents` is null. | FT inspection: cards show $84.50 and $32.49. |
+| **FT-2 / Q3** | Review Queue | "Only 9 of 11 cards show" | In Plan (R2.7/R2.8) | Section 4.Q3: Stage complete 11-SKU catalog intake fixture for FT retest. | FT inspection: 11 review cards render. |
+| **B26-1** | Review Hub fee | "Missed the $9.95 shipping and handling... unable to add fee" | Fixed on p7-gate, FT PASS | Re-check in Eric's account: verify truck icon fee displays $9.95 and is editable/savable. | FT re-verification on Eric account. |
+| **B26-2** | Review Hub card date | "Main screen had no date, but when I clicked Edit date was there" | Unverified | Section 8 Plan Line: Ensure review card subtitle displays formatted invoice/order date from metadata if present. | FT verification on p7-gate. |
+| **B26-3** | Edit Coin > Save | "Unable to save" | Unverified | Section 8 Plan Line: Verify Edit Coin save action persists changes to Firestore/state cleanly with error toast guard. | FT verification on p7-gate. |
+| **B26-4** | Morgan AI Chat | "Morgan would only accept image files (not the PDF invoice)" | Not in any plan | **EXPLICIT DEFER TO UX BACKLOG**: Morgan AI chat attachment endpoint enforces `image/*` MIME filtering. Ingesting multi-page PDF invoices into the chat stream requires a server-side PDF rasterization/OCR pipeline, which is a major feature extension out of scope for the emergency Mint fix on branch `p7-v8.9`. | Deferred to Post-Mint Roadmap. |
+| **B26-5** | Add Coins screen | "Two ways to add by Cert, 2 ways by photo... Very confusing!" | Unverified | **EXPLICIT DEFER (UX Redesign)**: Retain streamlined Add Coins layout verified in NET-647 #1-3. Full IA/UX overhaul of Add Coins screen deferred to post-Mint beta release to prevent scope creep. | FT founder walk-through check. |
+| **B26-6** | Invoice upload flow | "1 or 2 more clicks than it needed to be" | Unverified | Section 8 Plan Line: Verify invoice upload flow reaches review queue in minimum clicks (tested green in NET-647). | FT click-count verification on p7-gate. |
+| **B26-7** | Review Queue | "Wish I could enter storage location right from this screen" | Unverified | Section 8 Plan Line: Verify inline storage location field on review card (added in NET-585 / NET-647 #9) works and persists. | FT verification on p7-gate. |
+| **B26-8** | Bulk Import / Review | "Had to scroll down (again) to get to next step" | Fixed on p7-gate, FT PASS | Verified PASS in NET-647 #3-5 (auto-scroll to active item / sticky action bar). | FT regression check. |
+| **B27-1** | Trump $1 roll row | "July 4th Privy eligible... I don't know if we need that" | Unverified | Section 8 Plan Line: Suppress extraneous "July 4th Privy eligible" badge from review card unless explicitly part of product SKU title. | FT verification on p7-gate. |
+| **B27-2** | Edit in Review Hub | "Added it via Edit, which automatically saved it to collection" | Fixed on p7-gate, FT PASS | Verified PASS in NET-627 I-04c (explicit Commit button required). | FT regression check. |
+| **B27-3** | Review Hub | "Hitting Select All appeared to initiate a Delete" | Fixed on p7-gate, FT PASS | Verified PASS in NET-627 I-05 (clear checkbox icon vs trash icon separation). | FT regression check. |
+| **B27-4** | Review Hub button | "Commit Selected... hard to read... does it delete or add?" | Fixed on p7-gate, FT PASS | Verified PASS in NET-627 I-06 (high-contrast label "Commit Selected to Collection"). | FT regression check. |
+| **B27-7** | My Collection | "No rhyme or reason to how coins were sorted" | Unverified | Section 8 Plan Line: Enforce deterministic default collection sort order: Acquisition Date DESC, Year DESC, Name ASC. | FT verification on Eric account. |
+| **B27-8** | Coin Inspector | "I thought we did away with Google Images button?" | Fixed on p7-gate, FT PASS | Verified PASS in NET-627 P1 (button removed). | FT regression check. |
+| **B27-9** | My Collection CTA | "Generate AI Report Now opened state picker for estate tax" | Unverified | Section 8 Plan Line: Ensure My Collection CTA opens Collection Value / Inventory Report, NOT Estate Tax state picker. | FT verification on Eric account. |
+| **B27-10** | My Collection CTA | "Replace Generate AI Report Now with something to fill images/values" | Unverified | Section 8 Plan Line: Add/re-point CTA button to "Refresh Images & Valuations" (triggers catalog enrichment). | FT verification on Eric account. |
+| **B27-11** | Table view / Cards | "Impossible to read due to text/background colors... prefer gold/black" | Fixed on p7-gate, FT PASS | Verified PASS in NET-631 / NET-647 (cream contrast & theme styling). | FT regression check on Eric account. |
+| **B27-12** | Card view detail | "Financials, Provenance, AI Insights... should also be in Card view" | Unverified | Section 8 Plan Line: Verify bottom sheet modal / expandable card drawer on Card tap exposes Financials, Provenance, and AI Insights tabs. | FT verification on Eric account. |
+| **B27-13** | Table AI Insights | "AI Insights had large gaps and/or unreadable text" | Unverified | Section 8 Plan Line: Verify AI Insights markdown rendering has tight paragraph spacing and readable contrast. | FT verification on Eric account. |
+| **B27-14** | Table view | "Legislation Matched was blank" | Unverified | Section 8 Plan Line: Ensure legislation metadata (e.g. Public Law 116-330 Semiquincentennial Act) populates for 2026 items. | FT verification on Eric account. |
+| **B27PM-1** | Review Hub | "No duplicates flagged" | Fixed on p7-gate, FT PASS | Re-confirm in Eric's account: amber duplicate banner fires when matching certificate/title exists. | FT verification on p7-gate. |
+| **B27PM-2** | Cards + Detail | "Can't tell if I have two 2026 Uncirculated Coin Sets" | Unverified | Section 8 Plan Line: Disambiguate multi-set holdings with distinct item numbers / mint badges (e.g. P-Mint Lens vs D-Mint Lens or Set 1 / Set 2). | FT verification on Eric account. |
+| **B27PM-3** | Search results | "Set I just uploaded did not have 250th Anniversary under Theme" | Fixed on p7-gate, FT PASS | Verified PASS in NET-627 SAG2 (theme stamped from Mint catalog). | FT regression check. |
+| **B27PM-4** | Card detail pop-up | "Could not make pop-up bigger... Lincoln quarter cut off" | Fixed on p7-gate, FT PASS | Verified PASS in NET-631 (20-coin wrap grid in detail dialog). | FT regression check. |
+| **B29-1** | Add Coins | "Upload an Invoice does nothing when clicked" | Fixed on p7-gate, FT PASS | Verified PASS in NET-647 #1 & NET-673 #6. | FT regression check. |
+| **B29-2** | Add Coins / Drop | "Only bottom inch of page scrolled / drop zone ~5% of screen" | Fixed on p7-gate, FT PASS | Verified PASS in NET-647 #2, #3 (expanded drop zone & scroll). | FT regression check. |
+| **B29-3** | Bulk Import | "Search by Store/Dealer Name... remove it" | Fixed on p7-gate, FT PASS | Verified PASS in NET-647 #7 (input removed). | FT regression check. |
+| **B29-4** | Review card | "Having 2 links/buttons to paper trail is pointless clutter" | Unverified | Section 8 Plan Line: Verify review card displays single consolidated Paper Trail / Receipt action. | FT verification on p7-gate. |
+| **B29-5** | Review card | "These both do same thing, delete top one that says Storage" | Fixed on p7-gate, FT PASS | Verified PASS in NET-673 #4 (duplicate button removed). | FT regression check. |
+
+---
+
+## 9. Review Cycle Gate & Execution Sequence
 
 1. **Gate Sequence:**
    - **Step 1:** Argon Review of Plan R2.8 (`GEMINI38_REVIEW_NET-647_R2.8.md`).
