@@ -1,3 +1,19 @@
+- 2026-10-31 20:12 ET — NET-683: AG CoS v4 FILED `FAILFIX_PLAN_NET-647_R2.8_20261031.md` covering Eric's WHOLE account (252 items across `eric.seaman@yahoo.com` and `eric@numista.ai`) per NET-681D ("Get my account 100% right, then we can check the other accounts"). Plan covers full read-only audit table, 3-tier image source hierarchy, zero-mutation client-side render compute/fallback for p7-gate, backfill script (--apply HELD for separate typed YES), and year/side guards. PLAN ONLY (zero code, zero commits, zero deploys, zero GCS/Firestore writes). TURN: ARGON / GROK COS (R2.8 Review & Scoring >= 95) -> SAG Review -> Eric Typed YES -> Execution on p7-v8.9 ONLY. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
+- 2026-10-31 20:05 ET — NET-681D: R2.7 widened to Eric's WHOLE account @ 100% (FT PASS, zero wrong). TURN: AG v4 (ba2bfdb2) — PLAN ONLY. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
+**WHOSE_TURN (NET-681C-E7, 31 Oct 8:02 PM ET):** NET-681C addendum adds E7 (26EA Inspector REVERSE shows 2023 Walking Liberty: wrong year and sides swapped) to R2.7. AG v4's turn (plan only), then the full cycle. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
+**WHOSE_TURN (NET-681C, 31 Oct 8:01 PM ET):** NET-681C adds E6 (the 2026 dimes show a 2025 image) to R2.7. AG v4's turn for R2.7 (plan only), then the full cycle. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
+**WHOSE_TURN (NET-681B, 31 Oct 7:55 PM ET):** NET-681B adds E1-E5 (Eric's real account) to R2.7. AG v4's turn for R2.7 (plan only), then the full cycle. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
+**WHOSE_TURN (NET-681A, 31 Oct 7:53 PM ET):** NET-681A adds Q5 (preview-env image check) to R2.7. AG v4's turn for R2.7 (plan only), then the full cycle. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
+**WHOSE_TURN (NET-681, 31 Oct 7:55 PM ET):** NET-647 R2.6 FT FAIL. AG v4's turn for the root-cause R2.7 plan (plan only), then the full cycle. NET-680 waits. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
+**WHOSE_TURN (NET-680, 31 Oct 7:50 PM ET):** Field Tester's turn: NET-647 R2.6 p7-gate retest (PRIORITY). AG v4 also has fix-only IMAGE_CONSOLIDATION v1.1 (plan only, does not block the retest). Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
+
 **WHOSE_TURN (NET-679, 31 Oct 7:45 PM ET):** Field Tester's turn: p7-gate retest of NET-647 R2.6 (build 33076f6a). The 26xh_image_3.jpg extra upload is logged as a SCOPE DEVIATION and accepted (do not delete). Mint-pricing backfill --apply HELD for Eric's separate typed YES. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF.
 
 **WHOSE_TURN (NET-678, 31 Oct 7:45 PM ET):** AG CoS v4 FILED `EXECUTE_DONE_AG-COS-V4_NET-678_NET-647-R2.6_20261031.md`. NET-647 R2.6 execution complete on `p7-v8.9` (commit `33076f6af727c49a020da0d2d4e96a9560d002d6`). All 11 fixes verified: flutter analyze (0 issues), flutter test (652/652 passed across 41 test suites), pytest (13/13 passed). Release web built and deployed to preview channel `p7-gate` (https://numista-vault--p7-gate-8avtpz22.web.app). Live probe verified HTTP 200 on `version.json`. 7 official Mint assets uploaded (--no-clobber) to `gs://numista-reference-library/reference_library/us_mint_official/2026_products/` with MD5/SHA256 recorded. Intake `MANIFEST.csv` staged in `image-intake/ag-cos-v4/coins/` (status=PROPOSAL). Dry-run backfill CSV generated (0 Firestore writes). Locks intact: main 9f04550a, dev 9b55f3d9, Stripe OFF. TURN: FIELD TESTER (live re-test on `p7-gate`). NET-646 v3.3 starts only after Field Tester PASS.

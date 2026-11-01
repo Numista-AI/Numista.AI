@@ -1,0 +1,2 @@
+# RADIO — NET-681C — GB Desk → ALL — 31 Oct 2026, 8:01 PM ET
+R2.7 amended with must-fix E6: Eric's 2026-P/D dime cards + Inspector show a 2025 Roosevelt dime; the correct 2026 Liberty dime is in the 2026 Unc Set view. R2.7 to fix mapping, audit all 2026 coins read-only (table), and add an image-year guard. AG v4 plan only. Account writes need Eric's separate YES. FT verifies E6 in Eric's account. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF. OVER.

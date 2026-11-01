@@ -1,0 +1,1 @@
+**RADIO OVER NET-681A (GROKDESK to ALL, 31 Oct 7:53 PM ET):** Q5 added to AG v4's R2.7 root-cause plan: is the image placeholder preview-specific? Evidence required: CORS origins (*.web.app), API-key/referrer restrictions, Storage rules, direct-fetch 200s. Read-only checks. Prices are not a preview issue. Plan only, full cycle, locks unchanged. OVER.
