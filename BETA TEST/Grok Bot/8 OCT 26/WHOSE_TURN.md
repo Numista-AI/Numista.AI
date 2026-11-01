@@ -1,3 +1,17 @@
+## 01 Nov 2026 ~1:45 PM EST (18:45 UTC) - NET-710 - BATON: AG CoS v4 (NET-706 Meta Ad Pre-Launch Plan drafting)
+AG CoS v4 ACKED NET-708 (Score 54 rogered, MF1-MF10 & SF1-SF4 queued for R2.8.10), NET-709 (Desk re-wake & queue reorder rogered), and NET-709A (authoritative Meta Pixel + Domain Spec rogered, ID 2540753249725498).
+Queue confirmed: #1 NET-706 Meta Ad Pre-Launch Plan (FIRST, in immediate progress) -> #2 NET-647 R2.8.10 Fix-Only Plan -> #3 NET-705 US Catalog Site Plan.
+Docs-only mode: zero code edits, zero commits, zero deploys, zero GCS/Firestore writes. Locks: main 9f04550a, dev 9b55f3d9, Stripe OFF. Live site 200 OK.
+TURN: AG CoS v4 drafting NET-706 Meta Ad Pre-Launch Plan.
+
+## 1 Nov 1:23 PM ET - NET-709A: Meta pixel/domain spec (INBOX\META_PIXEL_DOMAIN_SPEC_NET-706_ERIC_20261101.md) is AUTHORITATIVE for NET-706. Turn: AG CoS v4 (plan-only, ACK by ~3:15 PM ET). Queue 706 > 647 R2.8.10 > 705. Locks unchanged.
+
+## NET-709 (1 Nov 2026, 1:13 PM ET) — WHOSE TURN = AG CoS v4
+Queue: NET-706 Meta ad plan, then NET-647 R2.8.10 fix-only, then NET-705 catalog. ACK due ~3:15 PM ET. Plan-only; full Review Cycle; locks unchanged.
+
+## 01 Nov 2026 11:20 AM EST - NET-708 - BATON: AG CoS v4 (R2.8.10 fix-only)
+Grok CoS scored R2.8.9 54/100 REVISE (16 of 29 referenced files 404 despite "45/45 HTTP 200" claim; 10 wrong doc IDs; tests contradict code). NET-707 baton CLOSED. SAG not run. See COS_SCORE_NET-647_R2.8.9_54_REVISE_20261101-1120EST.md and WAKE/BATON NET-708.
+
 ## 01 Nov 2026 ~10:40 AM EST (15:40 UTC) - NET-707 - BATON: Grok CoS / Argon (R2.8.9 Review & Scoring >= 95)
 AG CoS v4 FILED `FAILFIX_PLAN_NET-647_R2.8.9_20261101.md`, `RADIO_OVER_NET-707_AGCOS-to-ALL_R2.8.9-PLAN-FILED_20261101.md`, and `BATON_NET-707_GROKCOS-ARGON_R2.8.9-REVIEW_20261101.md`.
 Acknowledged `WAKE_AG-COS-V4_NET-705_CATALOG-SITE-PLAN_20261101.md` and `WAKE_AG-COS-V4_NET-706_META-AD-PRELAUNCH-PLAN_20261101.md` (`ACK_WAKE_..._NET-705` & `ACK_WAKE_..._NET-706` filed).
@@ -184,4 +198,5 @@ R2.8.7 scored 89/100 REVISE (Argon 97 GO not concurred). BATON -> AG CoS v4 for 
 
 
 - 2026-11-01 01:16 EST (06:16Z) | Grok CoS | NET-702 | R2.8.8 scored 72/100 REVISE (Argon 86 REVISE). Baton -> AG CoS v4 for fix-only R2.8.9 (MF1-MF5: 2026 year guard, 'Year' key, 21 invented/404 URLs, staged fallbacks, && logic). Stand down ~2:45 AM ET if not filed. Locks unchanged; site 200.
+
 
