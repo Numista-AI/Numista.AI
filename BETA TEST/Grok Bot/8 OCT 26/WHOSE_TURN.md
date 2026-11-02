@@ -1,3 +1,20 @@
+## 2026-11-01 8:20 PM ET - AG CoS v4's turn on NET-647 R2.8.12 fix-only; SAG / Eric on NET-706 R5, NET-718 R3, NET-676 v1.1 (NET-731)
+Grok CoS scored FAILFIX_PLAN_NET-647_R2.8.11 88/100 REVISE (COS_SCORE_NET-647_R2.8.11_88_REVISE_20261101-2020EST.md); not concurring with Argon 97. Fixed: MF-A, MF-B, 4.1.1. Open: Gate 4 script lacks MD5 assert; matrix lines 21/29 old doc ID/MD5; Gate 6 dev 9b55f3d9; stale R2.8.10 labels; 'Program / Series' in primaryTitle. Grok CoS part of BATON_NET-730 closed. R2.8.11 is NOT ready for Eric's YES.
+WAKE/BATON NET-731 to AG CoS v4. Stall point ~10:20 PM ET. Locks: main 9f04550a, dev 32d4b42e, Stripe OFF. Live 200/200/404.
+TURN: AG CoS v4 (NET-647 R2.8.12), SAG / Eric (NET-706 R5, NET-718 R3, NET-676 v1.1).
+
+## 2026-11-01 9:15 PM ET - Grok CoS / Argon's turn on NET-647 R2.8.12 Review; GB CoS on SAG Plan Revisions (NET-732)
+AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.8.12_20261101.md (~167 KB, 1,570 lines), RADIO_OVER_NET-732_AGCOS-to-ALL_NET647-R2.8.12-PLAN-FILED_20261101.md, and opened BATON_NET-732_GROKCOS-ARGON_NET-647-R2.8.12-REVIEW_20261101.md. Closed BATON_NET-731.
+All Must-Fixes (MF-1 through MF-3), Should-Fixes (SF-1 through SF-3), and Nit 1 from Grok CoS 88 REVISE score resolved:
+- MF-1: Gate 4 Python script now explicitly parses x-goog-hash MD5, decodes base64, converts to lowercase hex, and asserts match against expected hex MD5 for all 4 staged assets.
+- MF-2: Section 1 Resolution Matrix updated: Row 10 doc ID set to live 0172d0ee64284a12a8aa269ce805ec07 (noting user microscope photos preserved via hasUserUploadedPhotos guard); dime reverse MD5 hex set to verified 8533943d7d88a011adaf372476bfe1f3.
+- MF-3: Line 1570 Gate 6 updated: origin/dev tip remains at 32d4b42e (catalog at 9b55f3d9); origin/main locked at 9f04550a. Preview deployment channel uses p7-v8.9 strictly.
+- SF-1 through SF-3 & Nit 1: Stale version labels updated to R2.8.12; primaryTitle reads 'Program / Series' (with spaces); Section 7.4 cite updated to 2282-2289; line 8 queue text updated; footer set to **END PLAN R2.8.12**.
+- Standalone unit test suite passes 43/43 (100%) (flutter test scratch/canonical_mint_asset_service_test.dart) with full terminal output embedded in Section 3.2.
+Operating Mode: DOCS-ONLY (PLANNING / REVIEW ONLY). Zero code edits, zero builds, zero deployments. Locks: origin/main 9f04550a, origin/dev 32d4b42e, Stripe OFF. Live site HTTP 200 OK.
+TURN: GROK COS / ARGON (NET-647 R2.8.12 Review >= 95), GB COS (revisions to NET-706, NET-718, NET-676 per SAG reviews).
+Station Standing Down: Zero active batons held by AG CoS. Standing down for the night per Rule 9 and user schedule instructions.
+
 ## 2026-11-01 7:55 PM ET - Grok CoS / Argon's turn on NET-647 R2.8.11 Review; SAG / Eric on NET-706 R5, NET-718 R3, NET-676 v1.1 (NET-730)
 AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.8.11_20261101.md (~166 KB, 1,570 lines), RADIO_OVER_NET-730_AGCOS-to-ALL_NET647-R2.8.11-PLAN-FILED_20261101.md, and opened BATON_NET-730_GROKCOS-ARGON_NET-647-R2.8.11-REVIEW_20261101.md. Closed BATON_NET-729.
 All Must-Fixes (MF-A through MF-D), Should-Fixes (SF-A through SF-D, Should-Fix 5, 6, 7), and Nits surgically resolved:
