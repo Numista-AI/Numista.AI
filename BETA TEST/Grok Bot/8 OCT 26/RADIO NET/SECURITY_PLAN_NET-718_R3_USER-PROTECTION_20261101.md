@@ -88,6 +88,8 @@ Exact quotes:
 - **Test:** Fixtures (JPEG with GPS, PNG tEXt, WebP XMP, HEIC, PDF with an address) go through each endpoint, then the stored object is read back. Assert exiftool shows no metadata beyond dimensions, and the PDF fixture string is absent. CI check: grep fails if `generate_signed_url(` targets any path outside `quarantine/`.
 - **Owner:** Backend (AG CoS impl) | **Effort:** 2 d | **Risk:** Medium. Re-encode changes bytes, and existing hash-dedupe must use the post-sanitize hash.
 
+- **P10/P11 client-direct uploads [PROPOSED, folded from Argon NET-726A SHOULD-FIX]:** The client writes straight to the default bucket `studio-9101802118-8c9a8.firebasestorage.app` from `numista_mobile/lib/screens/coin_detail_screen.dart:4402-4410`, `numista_mobile/lib/screens/my_collection_screen.dart:5440-5446` and the `support_screenshots/` path, so a backend-only sanitizer never sees them. Fix: either route these uploads through a backend sanitize endpoint, or have the client write only to a `quarantine/` prefix that a Storage-triggered worker sanitizes and moves to the final path (storage.rules deny public read on `quarantine/`). **Test:** upload a GPS-tagged JPEG via each client path on staging; the final object has no EXIF GPS and the quarantine object is deleted.
+
 ### SEC-2 Document PII redaction + low-confidence user review
 - **Current state [EXISTS]:** Document AI is already wired (main.py:5015-5016 `name=DOCUMENT_AI_PROCESSOR_PATH,` / `raw_document=raw_doc,`). There is no redaction step.
 - **Gap:** Names, addresses, account and card numbers on invoices and appraisals are stored and indexed unredacted.
@@ -199,3 +201,6 @@ SEC-7 → SEC-4 → SEC-5 → SEC-6 → SEC-1 → SEC-2 → SEC-3 (A, then Eric 
 5. Vendor assurances need a source or an UNVERIFIED label.
 6. Don't cross-cite branches that have diverged (p7-v8.9 vs dev).
 7. Docs-only means no commits or pushes, docs included (fbcb35a8).
+
+## R3 docs-only fold (GB CoS, 2026-11-01)
+Argon NET-726A SHOULD-FIX (P10/P11 client-direct uploads) folded into SEC-1. Score of record: author-of-record; independence via Argon and SAG.

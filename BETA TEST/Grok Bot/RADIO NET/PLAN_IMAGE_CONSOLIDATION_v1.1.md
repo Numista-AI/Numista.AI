@@ -23,7 +23,7 @@ Tag legend: [v1] carried from v1 unchanged; [FIX MF-n / SF] closes a CoS-score i
 - **One `side` / `view_type` enum everywhere:** `obverse | reverse | edge | privy_detail | ogp | detail`.
 - Relation to the existing index key (quoted, `numista_mobile/lib/services/coin_image_service.dart:9`):
   `/// Key format in Firestore: {year}[_{mint}][_{subject}]_{program}_{side}`
-  The index key is unchanged (it is a lookup key, not a filename). [PROPOSED] build_image_index.py maps master filenames to that key; mapping table goes in the P2 dry-run.
+  The index key is unchanged (it is a lookup key, not a filename). [PROPOSED] `numista_backend/_scripts/build_image_index.py` maps master filenames to that key; mapping table goes in the P2 dry-run.
 
 ## 2. Duplicate proof (read-only, 31 Oct, recounted 1 Nov)
 - Real buckets in project studio-9101802118-8c9a8 (from `buckets.txt`, read-only listing). Image buckets in scope: `numista-reference-library`, `us_mint_coin_images`. Protected user buckets: `numista-uploads-studio-9101802118-8c9a8`, `studio-9101802118-8c9a8-uploads`, `studio-9101802118-8c9a8.firebasestorage.app`. Not image stores, out of scope: all `gcf-*`, `run-sources-*`, `*_cloudbuild`, `vision-*`, `numista-firestore-exports`, `numista-estate-reports`, `numista-training-docs`, `coin_paper_currency_test`, `ai-studio-bucket-*`, `*-blueprint-config`, `*_import_document`, `cloud-ai-platform-*`, `studio-9101802118-8c9a8-source-bucket`.
@@ -33,7 +33,7 @@ Tag legend: [v1] carried from v1 unchanged; [FIX MF-n / SF] closes a CoS-score i
 - Hash, never name, decides a duplicate.
 
 ## 3. Protection rules [FIX MF-2]
-1. User regex in `gcs_dedupe.ps1:4` changes from `'uploads|user-content|user_contributed'` to `'uploads|user-content|user_contributed|firebasestorage\.app|^users/'`. Reason: owner photos are written under `users/` in the default bucket (quoted, `numista_mobile/lib/screens/coin_detail_screen.dart:4402-4403`):
+1. User regex in `1 NUMISTA.AI/Coin Images/_INDEX/consolidation_20261031/gcs_dedupe.ps1:4` (untracked working file; not in git at 32d4b42e) changes from `'uploads|user-content|user_contributed'` to `'uploads|user-content|user_contributed|firebasestorage\.app|^users/'`. Reason: owner photos are written under `users/` in the default bucket (quoted, `numista_mobile/lib/screens/coin_detail_screen.dart:4402-4403`):
    ```dart
          final refCompressed = FirebaseStorage.instance
              .ref('users/$userEmail/coins/${coin.id}/owner_photo_$photoId.$ext');
@@ -60,7 +60,7 @@ v1 assumed versioning/lifecycle protection; it does not exist. So:
 - **No GCS move or delete in P2.** P2 = copy kept object to `master/`, verify md5 equal, leave the original in place and readable for 30 days.
 - [PROPOSED] External URL check before any later delete: for each of the 210, build the public `https://storage.googleapis.com/<bucket>/<name>` URL and search Research Posts, Buffer/X post exports, site HTML/JSON in the repo and `code_refs.csv`; plus a 30-day access check if usage logs are available. Any hit = keep.
 - [PROPOSED] Delete of the 210 only in a later phase with its own YES, after 30 days with zero hits. Soft delete (7 days) is the last-resort restore.
-- Relative paths: `ref_image_widget.dart:57` builds URLs against us_mint_coin_images (quoted): `      : 'https://storage.googleapis.com/us_mint_coin_images/$path';` so any relative path in Firestore/JSON pointing at us_mint_coin_images protects the object (179 of the 210 live in that bucket). P0 matches relative paths against it.
+- Relative paths: `numista_mobile/lib/widgets/common/ref_image_widget.dart:57` builds URLs against us_mint_coin_images (quoted): `      : 'https://storage.googleapis.com/us_mint_coin_images/$path';` so any relative path in Firestore/JSON pointing at us_mint_coin_images protects the object (179 of the 210 live in that bucket). P0 matches relative paths against it.
 
 ## 5. Remap
 ### 5.1 Clean map [FIX MF-1]
@@ -79,7 +79,7 @@ Fields from `firestore_image_refs_summary.txt` (read-only scan, 31 Oct).
 | users/*/review_queue, staging_area | gcs_path | IN, ref images only | Skip user-upload paths |
 | users/*/receipts, binder_scans, import_sessions, estate_reports | gcs_path | OUT | User uploads; never remapped |
 | users/*/wishlist | image ref | IN | Ref images |
-| coin_image_index | obverse/reverse.public_url, gcs_path | IN, via rebuild of build_image_index.py, not doc edits | Index is generated (`build_image_index.py:45` `FIRESTORE_COLLECTION = "coin_image_index"`) |
+| coin_image_index | obverse/reverse.public_url, gcs_path | IN, via rebuild of `numista_backend/_scripts/build_image_index.py`, not doc edits | Index is generated (`numista_backend/_scripts/build_image_index.py:45` `FIRESTORE_COLLECTION = "coin_image_index"`) |
 | currency_image_index, coin_set_index | image refs | IN | Generated indexes |
 | reference_library | gcs_url, gcs_path, filename | IN | Catalog of library objects |
 | definitive_reference | image_url_obverse/_reverse | IN | Catalog |
@@ -106,7 +106,7 @@ Upload only to `gs://numista-reference-library/reference_library/incoming/{bot}/
 ## 7. Extra views [v1, enum fixed]
 - view_type enum per Sec 1. Tag privy close-ups (26ea_d, 26xe_e, 26xl___d, 26gc_h) as `privy_detail`; box/case/COA (26XM/26XH composites, 26gc_a) as `ogp`.
 - 7a Edge: `edge` required for Presidential $1 (2007+), Sacagawea/Native American $1 (2009+). Index flags coins missing one. Search order: master index -> buckets -> laptop -> museum/public domain -> verified uploads.
-- Code today (quoted, `coin_model.dart:209-210`):
+- Code today (quoted, `numista_mobile/lib/models/coin_model.dart:209-210`):
   ```dart
         imageUrlObverse: (data['image_url_obverse'] ?? data['imageUrlObverse'] ?? data['imageUrl'] ?? '').toString(),
         imageUrlReverse: (data['image_url_reverse'] ?? data['imageUrlReverse'] ?? '').toString(),
@@ -115,8 +115,8 @@ Upload only to `gs://numista-reference-library/reference_library/incoming/{bot}/
 
 ## 7c. User uploads: phone, webcam, microscope [FIX MF-3 compat + Eric scope]
 What exists at 32d4b42e:
-- Phone/webcam capture: `add_coins_hub.dart:5201` `              title: const Text('Take Photo (Webcam / Phone)'),` and `coin_detail_screen.dart:4357` `              onTap: () => Navigator.pop(context, ImageSource.camera),`
-- Microscope: `base_layout.dart:368-369` routes 'Microscope Scanner' to `MicroscopeScanScreen()`; USB microscope bridge described in `desktop_agent_download_screen.dart:295`.
+- Phone/webcam capture: `numista_mobile/lib/screens/add_coins_hub.dart:5201` `              title: const Text('Take Photo (Webcam / Phone)'),` and `numista_mobile/lib/screens/coin_detail_screen.dart:4357` `              onTap: () => Navigator.pop(context, ImageSource.camera),`
+- Microscope: `numista_mobile/lib/screens/base_layout.dart:368-369` routes 'Microscope Scanner' to `MicroscopeScanScreen()`; USB microscope bridge described in `numista_mobile/lib/screens/desktop_agent_download_screen.dart:295`.
 - Storage rule (quoted, `numista_backend/storage.rules:9-12`):
   ```
       match /users/{email}/{allPaths=**} {
@@ -124,13 +124,13 @@ What exists at 32d4b42e:
                            && request.auth.token.email == email;
       }
   ```
-- Finding: "compressed" and "original" get the same bytes (`coin_detail_screen.dart:4404` and `:4409` both `putData(uploadBytes, ...)`), so nothing is compressed and EXIF (incl. GPS) is kept in both copies. Fix belongs to NET-718 (EXIF stripping); this plan depends on it and does not duplicate it.
-- **Two ownerPhotos schemas exist** (Argon cited only one). Doc comment (quoted, `coin_model.dart:40`): `  /// Each entry: {id, url, storage_path, original_storage_path, caption, uploaded_at, uploaded_by}`; written map (quoted, `coin_detail_screen.dart:4412-4417`): `'id'`, `'url'`, `'original_url'`, `'caption'`, `'uploaded_at'`. Parsing is schema-free (`coin_model.dart:239-241` maps each entry to `Map<String, dynamic>`), so any new keys must be optional and readers must accept both shapes. No migration of existing entries.
+- Finding: "compressed" and "original" get the same bytes (`numista_mobile/lib/screens/coin_detail_screen.dart:4404` and `:4409` both `putData(uploadBytes, ...)`), so nothing is compressed and EXIF (incl. GPS) is kept in both copies. Fix belongs to NET-718 (EXIF stripping); this plan depends on it and does not duplicate it.
+- **Two ownerPhotos schemas exist** (Argon cited only one). Doc comment (quoted, `numista_mobile/lib/models/coin_model.dart:40`): `  /// Each entry: {id, url, storage_path, original_storage_path, caption, uploaded_at, uploaded_by}`; written map (quoted, `numista_mobile/lib/screens/coin_detail_screen.dart:4412-4417`): `'id'`, `'url'`, `'original_url'`, `'caption'`, `'uploaded_at'`. Parsing is schema-free (`numista_mobile/lib/models/coin_model.dart:239-241` maps each entry to `Map<String, dynamic>`), so any new keys must be optional and readers must accept both shapes. No migration of existing entries.
 Rules [v1 7c, kept]: per-user area, never merged into master by default; tag device (`phone | webcam | microscope`) and view_type (Sec 1 enum); microscope = `detail` or `privy_detail` only, never the primary card image; resolution + focus checks; EXIF GPS stripped on ingest (per NET-718).
 [PROPOSED] new optional keys on each owner_photos entry: `device`, `view_type`, `qc: {resolution, focus_score}`, `promotion_status: none|nominated|approved|rejected`.
 
 ## 7d. Image ranking and collector toggle [PROPOSED]
-Today's tiers (quoted, `build_image_index.py:52-60`): tier 1 = `"us_mint_coin_images"`, `"US Mint"`; tier 2 = `reference_library/bulk_programs/`; tier 3 = `wikimedia_uscoin/` "Wikimedia Commons / Public Domain".
+Today's tiers (quoted, `numista_backend/_scripts/build_image_index.py:52-60`): tier 1 = `"us_mint_coin_images"`, `"US Mint"`; tier 2 = `reference_library/bulk_programs/`; tier 3 = `wikimedia_uscoin/` "Wikimedia Commons / Public Domain".
 Stock ranking (default card image):
 1. Museum / official (US Mint, BEP, Treasury, NNC/Smithsonian, ANS) - tier 1, museum sources added at tier 1.
 2. Public domain (Wikimedia Commons PD, today tier 3). [PROPOSED] Library items in `bulk_programs/` and `rare_uscoin/` (today tier 2) are re-tiered by their recorded source: official/museum -> rank 1, public domain -> rank 2, unknown licence -> below rank 2 until a licence is recorded.
@@ -162,3 +162,6 @@ GCS and Firestore read only; stage at /workspace/image-intake/<bot>/ or COIN IMA
 - Line numbers drift between branches: Argon's coin_detail 4364-4380 is 4402-4417 at 32d4b42e. Always cite the commit. [new]
 - Read the model doc comment as well as the writer: ownerPhotos has two schemas. [new]
 - Report files are themselves a data leak risk; hash user path segments. [new]
+
+## v1.1 docs-only path fix (GB CoS, 2026-11-01, per Argon NET-726A)
+Bare filenames replaced with full repo paths verified by `git ls-tree -r 32d4b42e`. `gcs_dedupe.ps1` is not tracked in git; its working path is given. No content or scope change.

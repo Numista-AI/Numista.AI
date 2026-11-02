@@ -1,3 +1,22 @@
+## 2026-11-01 7:55 PM ET - Grok CoS / Argon's turn on NET-647 R2.8.11 Review; SAG / Eric on NET-706 R5, NET-718 R3, NET-676 v1.1 (NET-730)
+AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.8.11_20261101.md (~166 KB, 1,570 lines), RADIO_OVER_NET-730_AGCOS-to-ALL_NET647-R2.8.11-PLAN-FILED_20261101.md, and opened BATON_NET-730_GROKCOS-ARGON_NET-647-R2.8.11-REVIEW_20261101.md. Closed BATON_NET-729.
+All Must-Fixes (MF-A through MF-D), Should-Fixes (SF-A through SF-D, Should-Fix 5, 6, 7), and Nits surgically resolved:
+- MF-A: Verbatim origin/dev 32d4b42e repository citations verified (7.1 my_collection_screen:6320-6366, 7.2 my_collection_screen:3016-3023, 7.3 coin_image_service:535-571 with closing brace, 7.4 review_hub_screen:2282-2290 with [PROPOSED EXTENSION], 7.5 main.py:8369-8376).
+- MF-B: Row 10 microscope user photo guard (hasUserUploadedPhotos) returns null in resolveFromMap so Eric's own microscope photos under studio-9101802118-8c9a8-uploads/microscope/eric@numista.ai/... are protected from overwrite.
+- MF-C: Gate 4 updated with executable Python verification script asserting HTTP 200, Content-Type: image/webp, Content-Length byte size, and x-goog-hash MD5 against all 4 staged assets.
+- MF-D: Corrected dime reverse MD5 to 8533943d7d88a011adaf372476bfe1f3; matrix Row 10 updated to 0172d0ee64284a12a8aa269ce805ec07; Section 4.1.1 synced to Row 11 doc 8f2197d5d03a428db24486b4ee375a5e with live MD5s ef82afd24a... / cceb4ab85d...; Row 03 fixture populated with Retailer Item No. 26XL & Variety Reverse Proof; 23RH primary URLs use live HTTP 200 composites with staged assets held behind Gate 4.
+- Should-Fixes & Nits: 'Program / Series' key handled (with spaces); stray prose fence removed at line 61; dev tip documented as 32d4b42e; Row 18 proof fallback note added; footer set to **END PLAN R2.8.11**.
+- Standalone unit test suite passes 43/43 (100%) (flutter test scratch/canonical_mint_asset_service_test.dart) with full terminal output embedded in Section 3.2.
+Operating Mode: DOCS-ONLY (PLANNING / REVIEW ONLY). Zero code edits, zero builds, zero deployments. Locks: origin/main 9f04550a, origin/dev 32d4b42e, Stripe OFF. Live site HTTP 200 OK.
+TURN: GROK COS / ARGON (NET-647 R2.8.11 Review >= 95), SAG / Eric (Gate 2/3 concurrence on NET-706 R5, NET-718 R3, NET-676 v1.1, and NET-647 R2.8.11).
+Next in AG CoS v4 queue: NET-705 US Catalog Site Plan.
+
+## 2026-11-01 7:30 PM ET - AG CoS v4's turn on NET-647 R2.8.11 fix-only; Argon on NET-726 & NET-727; SAG / Eric on NET-706 (NET-729)
+Grok CoS scored FAILFIX_PLAN_NET-647_R2.8.10 at 77/100 REVISE (COS_SCORE_NET-647_R2.8.10_77_REVISE_20261101-1930EST.md). Grok CoS part of BATON_NET-728 closed.
+Open: MF-A Section 7 citations not verbatim on origin/dev 32d4b42e; MF-B Row 10 overwrites user microscope photos; MF-C Gate 4 HEAD-only; MF-D wrong MD5s/doc IDs in matrix and 4.1.1. SF-A to SF-D.
+WAKE/BATON NET-729 to AG CoS v4 for R2.8.11 fix-only. Stall point ~9:30 PM ET. Locks: main 9f04550a, dev 32d4b42e, Stripe OFF.
+TURN: AG CoS v4 (NET-647 R2.8.11), ARGON (NET-726 & NET-727), SAG / Eric (NET-706 R5 concurrence + YES).
+
 ## 2026-11-01 7:15 PM ET - Grok CoS / Argon's turn on NET-647 R2.8.10; Argon on NET-726 & NET-727; SAG / Eric on NET-706 (NET-728)
 AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.8.10_20261101.md, RADIO_OVER_NET-728_AGCOS-to-ALL_NET647-R2.8.10-PLAN-FILED_20261101.md, and opened BATON_NET-728_GROKCOS-ARGON_NET-647-R2.8.10-REVIEW_20261101.md.
 All 10 Must-Fixes (MF1-MF10) and 4 Should-Fixes (SF1-SF4) resolved:
