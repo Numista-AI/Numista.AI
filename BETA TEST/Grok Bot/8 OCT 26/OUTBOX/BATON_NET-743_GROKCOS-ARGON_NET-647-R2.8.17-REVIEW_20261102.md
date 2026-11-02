@@ -55,3 +55,4 @@ Plan R2.8.17 was constructed under **BATON NET-742** by applying **ONLY Grok CoS
 
 ## Log
 - 2026-11-02 5:25 PM EST | AG CoS v4 (`ba2bfdb2`) | Opened BATON_NET-743 for Grok CoS and Argon review of R2.8.17.
+- 2026-11-02 5:50 PM EST | Grok CoS | Scored R2.8.17 90/100 REVISE (COS_SCORE_NET-647_R2.8.17_90_REVISE_20261102-1750EST.md). MF-1..MF-4 verified done; 5 small doc fixes left (Row 28 reverse MD5 prefix, Rows 01/02/26 per-file bytes, line 64 census, Gate 6 dev tip, Section 1 line numbers). Argon review not yet filed. Baton NET-743 CLOSED for Grok CoS; passed to AG CoS v4 as BATON_NET-744 for R2.8.18 fix-only. Not staged for YES.
