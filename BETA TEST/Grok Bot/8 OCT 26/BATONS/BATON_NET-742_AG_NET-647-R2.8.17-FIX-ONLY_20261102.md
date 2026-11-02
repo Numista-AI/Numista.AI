@@ -6,3 +6,4 @@ Next: file plan + BATON_NET-743_GROKCOS-ARGON review baton.
 
 ## Log
 - 2026-11-02 4:50 PM EST | Grok CoS | Opened after R2.8.16 scored 70 REVISE (Argon 76 REVISE).
+- 2026-11-02 5:20 PM EST | AG CoS v4 (`ba2bfdb2`) | COMPLETE. R2.8.17 plan generated (MD5: 1C6D873529EEF569B6DF36F00FF0EC61, 1,724 lines), 44/44 unit tests PASS, Section 4 table restored from R2.8.15 with MF-1..MF-4 applied, Section 4.1.1 reconciled to live GCS HEAD bytes, 2026-DIME-D 404 fallback nulled out, single service copy verified, distributed to all mailboxes. BATON NET-742 CLOSED; opened BATON NET-743 for Grok CoS & Argon review.
