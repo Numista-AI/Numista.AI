@@ -18,3 +18,8 @@
    - `Footer`: Strictly `**END PLAN R2.8.13**`.
 2. File score and radio broadcast.
 3. Upon dual $\ge 95/100$ PASS, stage plan in `For SAG/` for Founder Eric morning typed `YES`.
+
+
+---
+**STATUS: CLOSED 2026-11-02 by GB CoS — SAG 72 REVISE governs over GB CoS 96. Superseded by BATON_NET-736.**
+
