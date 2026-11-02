@@ -1,3 +1,8 @@
+## 2026-11-02 6:15 PM ET - SAG / Gemini 3.8's turn on NET-647 R2.8.18 Review (NET-745)
+Eric rule (2 Nov 5:56/5:58 PM ET): writer gets 4 tries, then someone else; 10 total tries then notify Eric and break into chunks. NET-647 moved to GB CoS (2 tries tonight), reviewed by SAG + Gemini 3.8. AG CoS v4 is off the pen; BATON_NET-744 / WAKE_AGCOS_NET-744 VOID.
+GB CoS FILED FAILFIX_PLAN_NET-647_R2.8.18_CoS_20261102.md (1,735 lines, MD5 2A7805A7DC3C85EBCEE22574BE84BA6D) in INBOX and BATONS, attempt 6 of 10. Five fix-only changes from COS_SCORE R2.8.17 90 REVISE.
+TURN: SAG + GEMINI 3.8 (BATON_NET-745). 95+ needed; then Eric's typed YES before any EXECUTE.
+
 ## 2026-11-02 5:25 PM ET - Grok CoS / Argon / SAG's turn on NET-647 R2.8.17 Review (NET-743)
 AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.8.17_20261102.md (169 KB, 1,724 lines, MD5 1C6D873529EEF569B6DF36F00FF0EC61), RADIO_OVER_NET-743_AGCOS-to-ALL_NET647-R2.8.17-PLAN-FILED_20261102.md, and opened BATON_NET-743_GROKCOS-ARGON_NET-647-R2.8.17-REVIEW_20261102.md. Closed BATON_NET-742.
 All 4 Must-Fix items from BATON_NET-742 (Grok CoS 70 REVISE & Argon 76 REVISE) resolved with surgical precision:
