@@ -1,3 +1,24 @@
+## 2026-11-02 1:45 PM ET - Grok CoS / Argon / SAG's turn on NET-647 R2.8.14 Review (NET-737)
+AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.8.14_20261102.md (123 KB, 1,587 lines), RADIO_OVER_NET-737_AGCOS-to-ALL_NET647-R2.8.14-PLAN-FILED_20261102.md, and opened BATON_NET-737_GROKCOS-ARGON_NET-647-R2.8.14-REVIEW_20261102.md. Closed BATON_NET-736.
+All Must-Fix and Should-Fix items from BATON_NET-736 and SAG 72 REVISE resolved:
+1. MF1 (Row 28 Swap Fixed): §4 table primary = 2023 composite JPGs (five honorees & four states); fallbacks = staged 23rh_b.webp / 23rh_c.webp. Aligned 100% with §3.1 and test Row 28.
+2. MF2 (Path Census Single Source of Truth): Exactly 114 Total Reference Suite Paths (110 Live in GCS HTTP 200 + 4 Staged WebPs under Gate 0). Measured bytes and hex MD5s verified and embedded in §4.1.3.
+3. MF3 (User-Upload Guard & Non-Destructive Protection): hasUserUploadedPhotos matches numista-uploads-studio-, /users/, and scan_source: microscope. Rows 10 and 11 return null from resolver, protecting user microscope scans non-destructively; marked PRESERVED in §4 table.
+4. MF4 (§8 Tracker Synchronized): Tracker rows B26-1, 2, 6, 13, 15–19, 22–26 match §3.1 resolver.
+5. MF5 (extractSku Theme Matching): Personal Notes removed from theme matching (combined = '  '). Notes only scanned for explicit 4-char SKU tokens.
+6. MF6 (Mayflower P & Half Dollar Defaults): Mayflower P fallback obverse set to null (no cross-mint fallback). Half dollar with empty mint mark defaults strictly to 2026-HALF-P and P obverse image.
+7. SF1 (Footer): Set strictly to **END PLAN R2.8.14**.
+8. SF2 (Unit Test Count): Exactly 43 Tests Total (28 Live Docs + 15 Synthetic Tracker Cases). Real terminal output from flutter test ..\scratch\canonical_mint_asset_service_test.dart embedded showing 43/43 PASS exit code 0.
+9. SF3 (Byte-Identical Fallbacks Nullified): Redundant fallbacks proved identical via MD5 and set to null (dime P obverse, dime reverse, half reverse, Mayflower reverse, half dollar obverse).
+10. SF4 (West Point Guard): Explicit check ensures 'WEST POINT' does not match 'S'.
+11. SF5 (Code vs Test Unity): Tests execute self-contained standalone Dart resolver class identical to §3.1.
+12. SF6 (Gate 6 Reference): Corrected to origin/dev 01a03f90.
+13. SF7 (Live Firestore Read-Only Verification): Real read-only terminal verification output for Docs 08, 09, 10, 11, 18, 19 embedded in §4.1.2.
+14. SF8 (Security Rule 2 Compliance): Pre-storage PII redaction pipeline documented and implemented in §7.5.
+Operating Mode: DOCS-ONLY (PLANNING / REVIEW ONLY). Zero code edits, zero builds, zero deployments. Locks: origin/main 9f04550a, origin/dev 01a03f90, Stripe OFF. Live site HTTP 200 OK.
+TURN: GROK COS / ARGON / SAG (NET-647 R2.8.14 Review >= 95 PASS required for Gate 0 Founder Eric typed YES).
+Station Status: Zero active batons held by AG CoS. Handoff complete.
+
 ## 2026-11-02 11:30 AM ET - AG CoS v4\'s turn on NET-647 R2.8.14 fix-only (NET-736)
 Stand Alone Grok (SAG) scored FAILFIX_PLAN_NET-647_R2.8.13 72/100 REVISE (SAG_REVIEW_NET-647-R2.8.13_72_REVISE.md); Grok CoS scored 96/100 PASS (GROKCOS_SCORE_NET-647_R2.8.13_96_PASS_20261102.md). Per radio net protocol, lower score governs.
 GB CoS closed BATON_NET-735 and opened BATON_NET-736 to AG CoS for NET-647 R2.8.14 FIX-ONLY.
