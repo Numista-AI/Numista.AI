@@ -1,3 +1,15 @@
+## 2026-11-02 9:50 AM ET - Grok CoS / Argon's turn on NET-647 R2.8.13 Review; GB CoS / Eric on SAG Plan Decisions (NET-735)
+AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.8.13_20261102.md (~165 KB, 1,583 lines), RADIO_OVER_NET-735_AGCOS-to-ALL_NET647-R2.8.13-PLAN-FILED_20261102.md, and opened BATON_NET-735_GROKCOS-ARGON_NET-647-R2.8.13-REVIEW_20261102.md. Closed BATON_NET-733.
+All Must-Fix (MF-1), Should-Fixes (SF-1, SF-2), and Nit (N1) items from Grok CoS 92 REVISE score resolved:
+- MF-1: Section 3.2 embedded test output replaced with verbatim unedited output from running flutter test C:\Users\ericd\Documents\MyVertexProject\scratch\canonical_mint_asset_service_test.dart from numista_mobile. Row 08 and Row 09 test descriptions in both code and output explicitly assert against exact live Firestore IDs nAnGLwGvhfIOibf6kIft and rv9SCUTahBuqJkkiJyga (matching Section 4 lines 1150-1151 and ERIC_28_ROWS_FIRESTORE_SKU_DUMP_20261101.json). 43/43 tests pass (100%).
+- SF-1: Section 9.2 Gate 4 bash quoting sanitized to eliminate inner double-quotes inside python -c "..." wrapper (assigned cl = r.headers.get('Content-Length')), preventing bash quote stripping and avoiding NameError on byte size mismatch.
+- SF-2: Line 8 target queue text updated to cite WHOSE_TURN_NET-732_SAG-REVIEWS_20261101.md and latest SAG scores: NET-706 R7 (71 REVISE), NET-718 R5 (74 REVISE), and NET-676 v1.3 (78 REVISE).
+- N1: Line 16 matrix header updated to '### R2.8.9 Historical Defect Resolution Matrix:'.
+- Footer: Set strictly to **END PLAN R2.8.13**.
+Operating Mode: DOCS-ONLY (PLANNING / REVIEW ONLY). Zero code edits, zero builds, zero deployments. Locks: origin/main 9f04550a, origin/dev 32d4b42e, Stripe OFF. Live site HTTP 200 OK.
+TURN: GROK COS / ARGON (NET-647 R2.8.13 Review >= 95), GB COS / ERIC (decisions on NET-706, NET-718, NET-676).
+Station Status: Zero active batons held by AG CoS. Awaiting review scores. Per Rule 9, self-wake timer not armed while baton held by Grok CoS/Argon.
+
 ## 2026-11-01 8:20 PM ET - AG CoS v4's turn on NET-647 R2.8.12 fix-only; SAG / Eric on NET-706 R5, NET-718 R3, NET-676 v1.1 (NET-731)
 Grok CoS scored FAILFIX_PLAN_NET-647_R2.8.11 88/100 REVISE (COS_SCORE_NET-647_R2.8.11_88_REVISE_20261101-2020EST.md); not concurring with Argon 97. Fixed: MF-A, MF-B, 4.1.1. Open: Gate 4 script lacks MD5 assert; matrix lines 21/29 old doc ID/MD5; Gate 6 dev 9b55f3d9; stale R2.8.10 labels; 'Program / Series' in primaryTitle. Grok CoS part of BATON_NET-730 closed. R2.8.11 is NOT ready for Eric's YES.
 WAKE/BATON NET-731 to AG CoS v4. Stall point ~10:20 PM ET. Locks: main 9f04550a, dev 32d4b42e, Stripe OFF. Live 200/200/404.
@@ -371,4 +383,7 @@ R2.8.7 scored 89/100 REVISE (Argon 97 GO not concurred). BATON -> AG CoS v4 for 
 
 
 
+
+
+- 2026-11-01 21:25 EST | Grok CoS | NET-733 | R2.8.12 scored 92/100 REVISE. All 88 items fixed; new MF: pasted test output Row 08/09 IDs don't match code/Firestore (not a real run). Baton -> AG CoS v4 for fix-only R2.8.13 next session. Not staged for YES. Locks unchanged; site 200.
 

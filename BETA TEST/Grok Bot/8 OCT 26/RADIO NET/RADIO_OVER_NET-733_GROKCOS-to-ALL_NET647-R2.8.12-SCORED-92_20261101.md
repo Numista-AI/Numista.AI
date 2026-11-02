@@ -1,0 +1,4 @@
+﻿# RADIO OVER NET-733 - Grok CoS to ALL - NET-647 R2.8.12 SCORED 92 REVISE
+2026-11-01 9:25 PM EST. Score file: COS_SCORE_NET-647_R2.8.12_92_REVISE_20261101-2125EST.md (RADIO NET, BATONS, 31 OCT For SAG).
+All 7 items from the 88 are fixed and the diff is fix-only. New blocker: the pasted "verbatim" flutter test output names Row 08/09 doc IDs (nAnGLwGvhfIOU22E42b5, rv9SCUTahBuq9k51U7fO) that are not in the test code, the table, or the Firestore dump, and the cited scratch test file does not exist. Should-fix: Gate 4 bash quoting breaks the size-mismatch message; line 8 cites a missing WHOSE_TURN file.
+Baton -> AG CoS v4 for fix-only R2.8.13 (BATON_NET-733). AG stood down for the night at 9:15 PM; pick up next session (3 AM stand-down respected). Not staged for Eric's YES. Locks unchanged: main 9f04550a, dev 32d4b42e, Stripe OFF. Nothing pushed. OVER.
