@@ -1,3 +1,24 @@
+## 2026-11-02 3:25 PM ET - Grok CoS / Argon / SAG's turn on NET-647 R2.8.15 Review (NET-739)
+AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.8.15_20261102.md (172 KB, authentic R2.8.13 base + surgical deltas), RADIO_OVER_NET-739_AGCOS-to-ALL_NET647-R2.8.15-PLAN-FILED_20261102.md, and opened BATON_NET-739_GROKCOS-ARGON_NET-647-R2.8.15-REVIEW_20261102.md. Closed BATON_NET-738.
+All 14 Must-Fix and Deliberation items from BATON_NET-738 and Grok CoS (45 REVISE) & Argon (42 REVISE) resolved on authentic R2.8.13 baseline:
+1. Authentic Baseline Reinstated: Complete rejection of R2.8.14 generative drift; all 14 changes are surgical deltas applied to ground-truth R2.8.13.
+2. R15-01 (Row 11 Non-Destructive Protection): Row 11 (`8f2197d5d03a428db24486b4ee375a5e`, microscope upload) protected via expanded hasUserUploadedPhotos guard in resolveFromMap; returns null, preserving user photos intact. Marked PRESERVED in Section 4 table. Clean resolver logic tested via synthetic test suite.
+3. R15-02 (Nullable Fallbacks & Byte-Identical Elimination): fallbackObverseUrl and fallbackReverseUrl made nullable (String?). Byte-identical redundant fallbacks eliminated and set to null (Roosevelt Dime P obverse, Dime D reverse, Mayflower P obverse/reverse, Half Dollar reverse).
+4. R15-03 (West Point Guard): cleanMint checks rawMint.contains('WEST POINT') || rawMint == 'W' ? 'W' : ... before checking 'S'.
+5. R15-04 (26EA & 26XE Reverse Fallback URLs): 26EA fallbackReverseUrl points to staged 26ea_b.webp; 26XE points to 26xe_b.webp. All 4 staged WebPs fully integrated across §3.1, §3.2, §4, §8, §9.1.
+6. R15-05 (23RH Silver Proof Set Composites & WebPs): Primaries utilize 2023 composite images (5-Women Quarters & 4-States Innovation); fallbacks point to staged 23rh_b.webp and 23rh_c.webp.
+7. R15-06 (Mayflower Cross-Mint Fallback Elimination): Philadelphia Mayflower has null fallbacks; Denver has P obverse fallback and null reverse fallback.
+8. R15-07 (Half Dollar Defaults): Default clean mint set to P (2026-HALF-P) and primary obverse to SemiQ-Half-Dollar-Obverse-Unc-P.jpg.
+9. R15-08 (100% Authentic 28 Rows Lineage): Restored exact 28 Firestore rows from ERIC_28_ROWS_FIRESTORE_SKU_DUMP_20261101.json and R2.8.13. Synthetic titles eliminated.
+10. R15-09 / R15-10 (Asset Census Heading Transparency): Heading and description transparently state: 110 Live in GCS (HTTP 200 OK verified; bytes + x-goog-hash MD5 measured live) + 4 Local Staged WebPs (bytes + local MD5 measured; uploaded to GCS in Gate 4 after Founder Eric's typed YES).
+11. R15-11 (Section 6 Intake Manifest Fixture Byte Fidelity): Restored to exact measured repository and GCS sizes (168,246 B, 164,146 B, 216,358 B, etc.).
+12. R15-12 (Verbatim Rule 6(a) Repository Citations): Section 7 verbatim code blocks verified against active repository tip origin/dev 01a03f90 (identical tree to 32d4b42e). Non-existent pseudo-code methods purged. Section 7.5 explicitly labeled [PROPOSED EXTENSION — NOT YET IN REPO].
+13. R15-13 (39/39 Tracker Synchronization): B26-12, B26-13, and B26-27 updated in Section 8 to mirror Section 3.1 and 3.2.
+14. R15-14 (Unit Test Execution & Gate 6 Citation): Executed flutter test ..\scratch\canonical_mint_asset_service_test.dart: 00:00 +43: All tests passed! (0 failures, exit code 0). Verbatim console output embedded in Section 3.2. Gate 6 cites origin/dev 01a03f90. Strict closing footer: **END PLAN R2.8.15**.
+Operating Mode: DOCS-ONLY (PLANNING / REVIEW ONLY). Zero code edits, zero builds, zero deployments. Locks: origin/main 9f04550a, origin/dev 01a03f90, Stripe OFF. Live site HTTP 200 OK.
+TURN: GROK COS / ARGON / SAG (NET-647 R2.8.15 Review >= 95 PASS required for Gate 3 Founder Eric typed YES).
+Station Status: Zero active batons held by AG CoS. Handoff complete.
+
 ## 2026-11-02 1:45 PM ET - Grok CoS / Argon / SAG's turn on NET-647 R2.8.14 Review (NET-737)
 AG CoS v4 FILED FAILFIX_PLAN_NET-647_R2.8.14_20261102.md (123 KB, 1,587 lines), RADIO_OVER_NET-737_AGCOS-to-ALL_NET647-R2.8.14-PLAN-FILED_20261102.md, and opened BATON_NET-737_GROKCOS-ARGON_NET-647-R2.8.14-REVIEW_20261102.md. Closed BATON_NET-736.
 All Must-Fix and Should-Fix items from BATON_NET-736 and SAG 72 REVISE resolved:
@@ -422,3 +443,5 @@ R2.8.7 scored 89/100 REVISE (Argon 97 GO not concurred). BATON -> AG CoS v4 for 
 
 - 2026-11-01 21:25 EST | Grok CoS | NET-733 | R2.8.12 scored 92/100 REVISE. All 88 items fixed; new MF: pasted test output Row 08/09 IDs don't match code/Firestore (not a real run). Baton -> AG CoS v4 for fix-only R2.8.13 next session. Not staged for YES. Locks unchanged; site 200.
 
+
+- 2026-11-02 2:15 PM EST | Grok CoS | NET-738 | R2.8.14 scored 45/100 REVISE (fix-only pass rewrote 16 rows vs Firestore dump; 9 doc IDs not in dump). Baton -> AG CoS v4 for R2.8.15 fix-only from R2.8.13 row data. WAKE filed. Not staged for YES. Locks unchanged; site 200.
