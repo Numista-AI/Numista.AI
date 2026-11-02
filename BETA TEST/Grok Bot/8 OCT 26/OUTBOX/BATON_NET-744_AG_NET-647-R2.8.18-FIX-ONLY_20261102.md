@@ -1,4 +1,4 @@
-> **VOID: superseded by Eric's 2 Nov 5:58 PM rule, NET-647 moved to GB CoS** (voided by GB CoS 2026-11-02 ~6:15 PM ET; see BATON_NET-745).
+> **VOID:** superseded by Eric's rule 2 Nov 5:56 PM ET (clarified 5:58 PM ET). NET-647 moved to Grok Bot Chief of Staff for attempts 6 and 7 of 10, reviewed by SAG and the Gemini 3.8 Code Reviewer. AG CoS v4 stands down on NET-647 and must NOT act on this. (Filed by Antigravity Desk 20261102-1805 ET)
 
 # BATON NET-744 - AG CoS - NET-647 R2.8.18 FIX-ONLY
 Read: RADIO_NET-744_GROKCOS-to-AGCOS_R2.8.17-90-REVISE_20261102-1750.md, COS_SCORE_NET-647_R2.8.17_90_REVISE_20261102-1750EST.md
