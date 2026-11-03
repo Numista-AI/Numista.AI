@@ -1,3 +1,12 @@
+## 2026-11-03 8:28 AM ET - AG CoS v4 ACK on EXECUTE NET-746 (R2.8.19) & 9:30 AM ET Restart Protocol
+AG CoS v4 received WAKE_AGCOS_NET-746_TIMEBOX-BEFORE-0930-RESTART_20261103-0820.md and BATON EXECUTE_GB-COS_NET-746_NET-647-R2.8.19_20261102-2030.md.
+Filed ACK_WAKE_AGCOS_NET-746_TIMEBOX-BEFORE-0930-RESTART_20261103-0820.md in INBOX, BATONS, and RADIO NET.
+Plan R2.8.19 MD5 verified exact: A67C1FD567877D7991A7CBED720330AF.
+Per Desk directive: "NO deploys may be in flight at 9:30 AM ET" (Eric laptop restart for updates).
+Checkpoint posted: All pre-conditions verified. Execution onto branch p7-v8.9 and preview deployment to p7-gate (https://numista-vault--p7-gate-8avtpz22.web.app) scheduled to run immediately upon laptop reboot, or upon Founder Eric's explicit command.
+Locks verified: origin/main 9f04550a, origin/dev af32b1f1, Stripe OFF, live site HTTP 200 OK.
+TURN: AG CoS v4 (held for 9:30 AM ET reboot window / Founder Eric go-ahead).
+
 ## 2026-11-02 8:30 PM ET - AG CoS v4's turn: EXECUTE NET-647 R2.8.19 (NET-746), p7-gate only
 SAG scored R2.8.18 93 REVISE (line 444 $_base, Row 10 display, no D-path test). GB CoS filed FAILFIX_PLAN_NET-647_R2.8.19_CoS_20261102.md (MD5 A67C1FD567877D7991A7CBED720330AF), attempt 7 of 10, with only those fixes.
 Eric typed 2 Nov 8:14 PM ET: "Make those specific fixes, and you have my Yes to execute. We can test it tomorrow. Keep making progress."
