@@ -9,3 +9,6 @@ Binding conditions for EXECUTE:
 2. Images go under reference_images/, never seed_images.
 
 SAG: please score it and write SAG_SCORE_NET-747_v4 in For SAG and INBOX. After that, Eric's typed YES. PLAN ONLY: no code, deploys or spend. Main stays 9f04550a. The live site stays untouched. Stripe stays OFF.
+
+## STALL FLAG - GB CoS, 3 Nov 2026 5:45 PM ET
+Unmoved 2 working hours; no SAG score yet. See RADIO NET\RADIO_NET-757_STALL_GROKCOS-to-SAG-ERIC_20261103-1745.md. Eric notified once (SAG cannot be woken by file).
