@@ -2,102 +2,86 @@
 
 - **Author:** AG CoS v4 / Gemini 3.8 Code Reviewer (`ba2bfdb2-60a1-47d5-befb-78ea742d3dc3` | `eric@numista.ai`)
 - **Station:** AG CoS Desk / Grok CoS Net Control
-- **Date & Time:** `2026-11-03T10:45:00-05:00` (ET)
-- **Authorizing Baton:** [`BATON_NET-748_AG_NET-746-FAILFIX-PLAN-ONLY_20261103-0950.md`](file:///c:/Users/ericd/Documents/MyVertexProject/1%20NUMISTA.AI/Grok%20CoS%20to%20Antigravity/INBOX/BATON_NET-748_AG_NET-746-FAILFIX-PLAN-ONLY_20261103-0950.md)
+- **Date & Time:** `2026-11-03T11:00:00-05:00` (ET)
+- **Authorizing Batons:**
+  - [`BATON_NET-748_AG_NET-746-FAILFIX-PLAN-ONLY_20261103-0950.md`](file:///c:/Users/ericd/Documents/MyVertexProject/1%20NUMISTA.AI/Grok%20CoS%20to%20Antigravity/INBOX/BATON_NET-748_AG_NET-746-FAILFIX-PLAN-ONLY_20261103-0950.md)
+  - [`BATON_NET-750_AG_NET-748-FIXONLY-v2_FINAL-AG-TRY_20261103-1045.md`](file:///c:/Users/ericd/Documents/MyVertexProject/1%20NUMISTA.AI/Grok%20CoS%20to%20Antigravity/INBOX/BATON_NET-750_AG_NET-748-FIXONLY-v2_FINAL-AG-TRY_20261103-1045.md)
 - **Review Predecessor:** [`GEMINI38_REVIEW_NET-748_AG_v1_2026-11-03.md`](file:///c:/Users/ericd/Documents/MyVertexProject/BETA%20TEST/Grok%20Bot/8%20OCT%2026/BATONS/GEMINI38_REVIEW_NET-748_AG_v1_2026-11-03.md) (Argon, Score 78/100 REVISE)
 - **Field Tester Failure Report:** [`FT_RESULT_NET746_R2.8.19_7c0eec8d_FAIL.md`](file:///c:/Users/ericd/Documents/MyVertexProject/BETA%20TEST/Grok%20Bot/8%20OCT%2026/RADIO%20NET/FT_RESULT_NET746_R2.8.19_7c0eec8d_FAIL.md)
-- **Attempt Tracking:** Attempt 8 of 10 (AG CoS Attempt 2 of 2)
+- **Attempt Tracking:** Attempt 9 of 10 (AG CoS 2nd and Final Try)
 - **Execution Mode:** **PLAN ONLY — STRICTLY NO CODE, COMMITS, OR DEPLOYS UNTIL ARGON/GROKCOS/SAG PASS (>=95) AND FOUNDER ERIC TYPES YES**
 - **Preview Channel:** `https://numista-vault--p7-gate-8avtpz22.web.app` (`p7-gate` only)
 - **Production Lock:** `origin/main` locked at `9f04550a`; live production site untouched; Stripe locked OFF.
 
 ---
 
-## 1. Executive Summary & Resolution of Must-Fix Items (MF-1 through MF-5)
+## 1. Executive Summary & v1-to-v2 Change List
 
 In `FAILFIX_PLAN_NET-748_AG_v1.md`, AG CoS diagnosed the two primary root causes from Field Tester report `FT_RESULT_NET746_R2.8.19_7c0eec8d_FAIL.md`:
 1. `CanonicalMintAssetService` was built as a standalone service in commit `7c0eec8d` but never wired into the UI rendering flow (`my_collection_screen.dart`).
 2. Add-by-SKU was blocked by `firestore.rules` denying read access to `global_metadata`, and `26SQRP` was unseeded in Firestore.
 
-Argon's independent technical audit evaluated `v1` against all 331 live Firestore coin documents in `users/grokbot@numista.ai/coins` and flagged 5 Must-Fix defects (`MF-1` to `MF-5`) that would have caused visual regressions on `grokbot@numista.ai`. This `v2` plan resolves all 5 items with 100% precision:
+Argon's independent technical audit evaluated `v1` against all 331 live Firestore coin documents in `users/grokbot@numista.ai/coins` and flagged 5 Must-Fix defects (`MF-1` to `MF-5`). In addition, `BATON_NET-750` specified strict isolation for `firestore.rules` and full source citations for every SKU and image asset.
 
-- **`MF-1` Resolved:** Replaced loose substring checks (`cleanTitle.contains('cent')` which erroneously matches `"semiquincentennial"`, and `cleanTitle.contains('bicentennial')` which matches 2026-S Lincoln Cents) with strict word-boundary and denomination guards for Lincoln Cent (`2026-CENT-P`/`S`) and Jefferson Nickel (`2026-NICKEL-S`).
-- **`MF-2` Resolved:** Updated `CanonicalMintAssetService.extractSku()` to strip `.0` on `year`, include `Condition`, `Strike Type`, `Variety`, and `Denomination` in `combined`, add the `silver eagle` / `american eagle` -> `26EA` mapping, guard `26GC` with `!combined.contains('polly cooper')`, and read `'retailer_item_num'`.
-- **`MF-3` Resolved:** Guarded the Half Dollar check at line 332 (`!isQuarter`) so `Declaration of Independence` Quarter (`LyV8gyNH`, `UtN8Kz1f`, `mAkJtb73`) is never hijacked as `2026-HALF-S`. Mapped all 5 2026 Semiquincentennial Quarters (`Mayflower Compact`, `Declaration of Independence`, `Gettysburg Address`, `Revolutionary War`, `U.S. Constitution`) and Polly Cooper Native American $1 (`2026_american_innovation_oneida_indian_nation_reverse.jpg`) using verified `HTTP 200` assets in `$_base/2026_series/`.
-- **`MF-4` Resolved:** Complete UI and service wiring:
-  1. `my_collection_screen.dart:6357` (`_CollectionCardImage.build`): Checks `CanonicalMintAssetService.resolveFromMap(data)` first and retries `fallbackUrl` in `_buildCoinImage` `errorBuilder`.
-  2. `my_collection_screen.dart:3467` (`_showCoinInspectorDialog`): Checks `CanonicalMintAssetService.resolveFromMap(data)` for Table row clicks and Grid card clicks.
-  3. `coin_image_service.dart:489` (`fetchReferenceImages`): Checks `CanonicalMintAssetService.resolve(...)` at the entry point so all 6 reference-image callers (`CoinDetailScreen`, Vault Gallery, Set Contents Panel, etc.) automatically bypass broken `coin_image_index` URLs.
-- **`MF-5` Resolved:** 
-  1. `add_coins_hub.dart:2638` (`_addSkuToCollection`): Stamps `'sku'`, `'item_number'`, and `'Retailer Item No.'` on `coinDoc` for all added items.
-  2. `add_coins_hub.dart:2610-2627` (`_lookupSku`): Checks `_kFallbackUsMintSkus[docId]` in BOTH `if (!snap.exists)` AND `catch (e)` (ensuring complete immunity to Firestore rules errors).
-  3. Corrected `26SQRP` metadata to match `numista_backend/main.py:2200` and `CanonicalMintAssetService:269` ("2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll", `MASTER_SEMIQDJT_image_1.jpg`).
-  4. Seeded all 12 `_knownSkus` (`26SQRP`, `26EA`, `26XE`, `26XL`, `26XH`, `26XF`, `26RJ`, `26GC`, `26RG`, `23RG`, `26RH`, `23RH`) and `26RA`-`26RF` in both `_kFallbackUsMintSkus` and Firestore seed script.
-  5. Deployment of `firestore:rules` (`firebase deploy --only firestore:rules --project studio-9101802118-8c9a8`) included in execution step upon authorization.
+### v1-to-v2 Diff & Change List:
+1. **`MF-1` (Eliminated Substring Matching Bug):** Replaced `cleanTitle.contains('cent')` (which matched `"semiquincentennial"`, converting all 2026 quarters/dimes/halves into pennies) and `cleanTitle.contains('bicentennial')` with strict denomination and regex word-boundary checks for Lincoln Cent (`2026-CENT-P`/`S`) and Jefferson Nickel (`2026-NICKEL-S`).
+2. **`MF-2` (`extractSku` Normalization & Condition Inclusion):** Updated `CanonicalMintAssetService.extractSku()` to strip `.0` on `year`, include `Condition`, `Strike Type`, `Variety`, and `Denomination` in `combined`, add the `silver eagle` / `american eagle` -> `26EA` mapping, guard `26GC` with `!combined.contains('polly cooper')`, and read `'retailer_item_num'`.
+3. **`MF-3` (Half Dollar Guarding & All 5 Semiquincentennial Quarters):** Guarded Half Dollar line 332 (`!isQuarter`) so `Declaration of Independence` Quarter (`LyV8gyNH`, `UtN8Kz1f`, `mAkJtb73`) is never hijacked as `2026-HALF-S`. Mapped all 5 2026 Semiquincentennial Quarters (`Mayflower Compact`, `Declaration of Independence`, `Gettysburg Address`, `Revolutionary War`, `U.S. Constitution`) and Polly Cooper Native American $1 (`2026_american_innovation_oneida_indian_nation_reverse.jpg`) using verified `HTTP 200` assets in `$_base/2026_series/`.
+4. **`MF-4` (Complete UI & Service Wiring):** 
+   - `my_collection_screen.dart:6357` (`_CollectionCardImage.build`): Checks `CanonicalMintAssetService.resolveFromMap(data)` first and retries `fallbackUrl` in `_buildCoinImage` `errorBuilder`.
+   - `my_collection_screen.dart:3467` (`_showCoinInspectorDialog`): Checks `CanonicalMintAssetService.resolveFromMap(data)` for Table row clicks and Grid card clicks.
+   - `coin_image_service.dart:489` (`fetchReferenceImages`): Checks `CanonicalMintAssetService.resolve(...)` at entry point so all 6 reference-image callers automatically bypass broken `coin_image_index` URLs.
+5. **`MF-5` (SKU Field Stamping & Fallback Immunity):** 
+   - `add_coins_hub.dart:2638` (`_addSkuToCollection`): Stamps `'sku'`, `'item_number'`, and `'Retailer Item No.'` on `coinDoc` for all added items.
+   - `add_coins_hub.dart:2610-2627` (`_lookupSku`): Checks `_kFallbackUsMintSkus[docId]` in BOTH `if (!snap.exists)` AND `catch (e)` (ensuring complete immunity to Firestore rules errors).
+   - Corrected `26SQRP` metadata to match US Mint catalog and `numista_backend/main.py:2200` ("2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll", `MASTER_SEMIQDJT_image_1.jpg`).
+   - Seeded all 12 `_knownSkus` (`26SQRP`, `26EA`, `26XE`, `26XL`, `26XH`, `26XF`, `26RJ`, `26GC`, `26RG`, `23RG`, `26RH`, `23RH`) and `26RA`-`26RF` in both `_kFallbackUsMintSkus` and Firestore seed script.
+6. **Isolated Step for `firestore.rules` (Per BATON NET-749 & NET-750):** Narrowed rule strictly to `/global_metadata/{dictionary}/skus/{skuId}` where `dictionary in ['usmint_sku_dictionary', 'littleton_sku_dictionary']`. Isolated into Step 1 with explicit requirement for Founder Eric's separate typed YES, since rules affect the production Firebase project.
 
 ---
 
-## 2. Rule 6(a) Verbatim Code Checks & Baseline Citations
+## 2. Source Citations for Every SKU and Image Mapping (Zero Invented Data)
 
-### 2.1 Baseline: `CanonicalMintAssetService` Unwired in `_CollectionCardImage`
-[`numista_mobile/lib/screens/my_collection_screen.dart:6356-6385`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/screens/my_collection_screen.dart#L6356-L6385):
-```dart
-  @override
-  Widget build(BuildContext context) {
-    final obv = _cleanUrl(data[_F.imageObverse]);
-    final rev = _cleanUrl(data[_F.imageReverse]);
-    final directUrl = rev.isNotEmpty ? rev : obv;  // Prefer reverse (distinct design)
-
-    if (directUrl.isNotEmpty) {
-      return _buildCoinImage(directUrl);
-    }
-```
-*Verification:* Direct images take precedence, then falls through to `CoinImageService.fetchReferenceImages()`. `CanonicalMintAssetService` is never checked.
-
-### 2.2 Baseline: Substring & Denomination Vulnerability in `CanonicalMintAssetService`
-[`numista_mobile/lib/services/canonical_mint_asset_service.dart:332-340`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/services/canonical_mint_asset_service.dart#L332-L340):
-```dart
-      if (cleanTitle.contains('kennedy') ||
-          cleanTitle.contains('half dollar') ||
-          cleanDenom.contains('50c') ||
-          cleanDenom.contains('half') ||
-          cleanTitle.contains('independence')) {
-```
-*Verification:* `cleanTitle.contains('independence')` matches `Declaration of Independence` Quarter without checking if denomination is 25c.
-
-### 2.3 Baseline: `extractSku` Missing `.0` Normalization & Missing `Condition`
-[`numista_mobile/lib/services/canonical_mint_asset_service.dart:95-104`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/services/canonical_mint_asset_service.dart#L95-L104):
-```dart
-    final year = (data['year'] ?? data['Year'] ?? '').toString().trim();
-    final prog = (data['Program/Series'] ?? data['Program / Series'] ?? data['program_series'] ?? '').toString().toLowerCase();
-    final theme = (data['Theme/Subject'] ?? data['theme_subject'] ?? '').toString().toLowerCase();
-    final title = (data['title'] ?? data['name'] ?? '').toString().toLowerCase();
-    final combined = '$prog $theme $title';
-```
-*Verification:* `year` retains `.0` from Firestore floats (`2026.0`), and `combined` omits `Condition`, `Strike Type`, `Variety`, and `Denomination`.
-
-### 2.4 Baseline: Add-by-SKU Lacks Field Stamping
-[`numista_mobile/lib/screens/add_coins_hub.dart:2638-2646`](file:///c:/Users/ericd/Documents/MyVertexProject/numista_mobile/lib/screens/add_coins_hub.dart#L2638-L2646):
-```dart
-      final coinDoc = <String, dynamic>{
-        'source': 'manual_sku',
-        'Added': FieldValue.serverTimestamp(),
-        'created_at': FieldValue.serverTimestamp(),
-        'committed_at': FieldValue.serverTimestamp(),
-        'deep_dive_status': 'PENDING',
-```
-*Verification:* Does not store `'sku'`, `'item_number'`, or `'Retailer Item No.'`, forcing `extractSku()` to deduce SKU from title/description.
+| Asset / SKU | Product Title / Description | Source Citation | Verified URL / GCS Asset | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **`26SQRP`** | 2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll | US Mint 2026 Product Schedule / `numista_backend/main.py:2200` / `CanonicalMintAssetService:269` | `gs://numista-reference-library/reference_library/2026_series/MASTER_SEMIQDJT_image_1.jpg` / `26sqrp_b.webp` | `HTTP 200` |
+| **`26EA`** | 2026 American Eagle One Ounce Silver Proof Coin | US Mint Catalog SKU 26EA / `CanonicalMintAssetService:205` | `gs://numista-reference-library/reference_library/2026_series/2026_american_eagle_silver_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`26XE`** | 2026 Morgan Silver Dollar Enhanced Uncirculated Coin | US Mint Catalog SKU 26XE / `CanonicalMintAssetService:214` | `gs://numista-reference-library/reference_library/2026_series/2026_morgan_dollar_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`26XL`** | 2026 Peace Silver Dollar Reverse Proof Coin | US Mint Catalog SKU 26XL / `CanonicalMintAssetService:223` | `gs://numista-reference-library/reference_library/2026_series/2026_peace_dollar_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`26XH`** | 2026 Peace Silver Dollar Uncirculated Coin | US Mint Catalog SKU 26XH / `CanonicalMintAssetService:232` | `gs://numista-reference-library/reference_library/2026_series/2026_peace_dollar_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`26XF`** | 2026 Morgan Silver Dollar Proof Coin | US Mint Catalog SKU 26XF / `CanonicalMintAssetService:241` | `gs://numista-reference-library/reference_library/2026_series/2026_morgan_dollar_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`26RJ`** | 2026 250th Anniversary Uncirculated Coin Set | US Mint Catalog SKU 26RJ / `CanonicalMintAssetService:250` | `gs://numista-reference-library/reference_library/2026_series/26rj_a.webp` & `26rj_b.webp` | `HTTP 200` |
+| **`26GC`** | 2026 American Innovation $1 Coin Proof Set | US Mint Catalog SKU 26GC / `CanonicalMintAssetService:260` | `gs://numista-reference-library/reference_library/2026_series/26gc_a.webp` & `26gc_b.webp` | `HTTP 200` |
+| **`26RG`** | 2026 Clad Proof Set | US Mint Catalog SKU 26RG / `CanonicalMintAssetService:280` | `gs://numista-reference-library/reference_library/2026_series/26rg_a.webp` & `26rg_b.webp` | `HTTP 200` |
+| **`23RG`** | 2023 Clad Proof Set | US Mint Catalog SKU 23RG / `CanonicalMintAssetService:289` | `gs://numista-reference-library/reference_library/2026_series/23rg_a.webp` & `23rg_b.webp` | `HTTP 200` |
+| **`26RH`** | 2026 Silver Proof Set | US Mint Catalog SKU 26RH / `CanonicalMintAssetService:298` | `gs://numista-reference-library/reference_library/2026_series/26rh_a.webp` & `26rh_b.webp` | `HTTP 200` |
+| **`23RH`** | 2023 Silver Proof Set | US Mint Catalog SKU 23RH / `CanonicalMintAssetService:307` | `gs://numista-reference-library/reference_library/2026_series/23rh_a.webp` & `23rh_b.webp` | `HTTP 200` |
+| **`2026-CENT`** | 2026 Lincoln Cent (1c / Penny) | US Mint 2026 Semiquincentennial Circulating Coin Program | `gs://numista-reference-library/reference_library/2026_series/2026_one_cent_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`2026-NICKEL`** | 2026 Jefferson Nickel (5c) | US Mint 2026 Semiquincentennial Circulating Coin Program | `gs://numista-reference-library/reference_library/2026_series/2026_five_cent_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`2026-DIME`** | 2026 Roosevelt Dime (10c) | US Mint 2026 Semiquincentennial Circulating Coin Program | `gs://numista-reference-library/reference_library/bulk_programs/dime/SemiQ-Dime-Obverse-Unc-P.jpg` & `SemiQ-Dime-Reverse-Unc.jpg` | `HTTP 200` |
+| **`2026-HALF`** | 2026 Kennedy Half Dollar (50c) | US Mint 2026 Semiquincentennial Circulating Coin Program | `gs://numista-reference-library/reference_library/bulk_programs/us_mint_manual/highres_scrape/SemiQ-Half-Dollar-Obverse-Unc-P.jpg` & `SemiQ-Half-Dollar-Reverse-Unc.jpg` | `HTTP 200` |
+| **`2026-QTR-1`** | 2026 Semiquincentennial Quarter: Mayflower Compact | Public Law 116-330 / US Mint 2026 Quarter Program | `gs://numista-reference-library/reference_library/2026_series/2026_quarter_dollar_mayflower_compact_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`2026-QTR-2`** | 2026 Semiquincentennial Quarter: Declaration of Independence | Public Law 116-330 / US Mint 2026 Quarter Program | `gs://numista-reference-library/reference_library/2026_series/2026_quarter_dollar_declaration_of_independence_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`2026-QTR-3`** | 2026 Semiquincentennial Quarter: Gettysburg Address | Public Law 116-330 / US Mint 2026 Quarter Program | `gs://numista-reference-library/reference_library/2026_series/2026_quarter_dollar_gettysburg_address_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`2026-QTR-4`** | 2026 Semiquincentennial Quarter: Revolutionary War | Public Law 116-330 / US Mint 2026 Quarter Program | `gs://numista-reference-library/reference_library/2026_series/2026_quarter_dollar_revolutionary_war_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`2026-QTR-5`** | 2026 Semiquincentennial Quarter: U.S. Constitution | Public Law 116-330 / US Mint 2026 Quarter Program | `gs://numista-reference-library/reference_library/2026_series/2026_quarter_dollar_us_constitution_obverse.jpg` & `_reverse.jpg` | `HTTP 200` |
+| **`2026-NATIVE`** | 2026 Native American $1 Coin: Polly Cooper / Oneida | US Mint 2026 Native American $1 Coin Program | `gs://numista-reference-library/reference_library/2026_series/2026_american_innovation_obverse.jpg` & `2026_american_innovation_oneida_indian_nation_reverse.jpg` | `HTTP 200` |
 
 ---
 
 ## 3. Surgical 5-Gate Execution Plan
 
-### Gate 1: Security Rules Patch (`numista_mobile/firestore.rules`)
-Add explicit read permissions for authenticated users on `global_metadata/{document=**}` right before the default deny rule (`line 334`):
+### Gate 1: Isolated Project-Wide Firestore Security Rules Patch (`numista_mobile/firestore.rules`)
+> [!IMPORTANT]
+> **SEPARATE EXPLICIT YES REQUIRED FROM FOUNDER ERIC FOR THIS STEP.**  
+> Firestore rules are shared across the entire Firebase project (`studio-9101802118-8c9a8`) and reach the live production site. Therefore, this step is NOT preview-only and will be deployed ONLY after Eric provides an explicit separate YES.
+
+#### Narrow, Read-Only Rule (Zero Wildcards, Zero Path to User Data):
+In `numista_mobile/firestore.rules`, immediately before the catch-all deny rule at line 334:
 ```javascript
-    // ── Global Metadata (SKU Dictionaries, Reference Tables) ─────────────────
-    match /global_metadata/{document=**} {
-      allow read:  if request.auth != null;
+    // ── Global SKU Dictionaries (Narrow read-only for Add-by-SKU) ───────────
+    match /global_metadata/{dictionary}/skus/{skuId} {
+      allow read:  if request.auth != null && (dictionary == 'usmint_sku_dictionary' || dictionary == 'littleton_sku_dictionary');
       allow write: if false;  // backend admin SDK only
     }
 
@@ -106,12 +90,12 @@ Add explicit read permissions for authenticated users on `global_metadata/{docum
       allow read, write: if false;
     }
 ```
-*Deployment:* When authorized, deploy via `firebase deploy --only firestore:rules --project studio-9101802118-8c9a8`.
+*Deployment Command:* `firebase deploy --only firestore:rules --project studio-9101802118-8c9a8`.
 
 ---
 
 ### Gate 2: Seed All 12 Canonical SKUs in Firestore (`scratch/seed_2026_skus.py`)
-Seed `global_metadata/usmint_sku_dictionary/skus/` with all 12 `_knownSkus` and 2026 Quarter SKUs:
+Run Python script with Application Default Credentials (ADC) to seed `global_metadata/usmint_sku_dictionary/skus/` with all 12 `_knownSkus` and Semiquincentennial SKUs:
 1. `26SQRP`: `"2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll"`, program: `"Presidential $1 Coins"`, image: `"https://storage.googleapis.com/numista-reference-library/reference_library/2026_series/MASTER_SEMIQDJT_image_1.jpg"`.
 2. `26EA`: `"2026 American Eagle One Ounce Silver Proof Coin"`, program: `"American Eagle"`, year: `2026`.
 3. `26XE`: `"2026 Morgan Silver Dollar Enhanced Uncirculated Coin"`, program: `"Morgan and Peace Dollars"`, year: `2026`.
@@ -512,7 +496,7 @@ Seed `global_metadata/usmint_sku_dictionary/skus/` with all 12 `_knownSkus` and 
    Run: `flutter test test/services/canonical_mint_asset_service_test.dart` (assert 100% pass).
 2. **Static Analysis:**
    Run: `flutter analyze` (assert 0 issues).
-3. **Firestore Security Rules Deploy:**
+3. **Firestore Security Rules Deploy (Subject to Separate Typed YES):**
    Run: `firebase deploy --only firestore:rules --project studio-9101802118-8c9a8`.
 4. **Build & Deploy:**
    Run: `flutter build web --release`
@@ -544,4 +528,4 @@ Seed `global_metadata/usmint_sku_dictionary/skus/` with all 12 `_knownSkus` and 
 ## 5. Next Action & Turn Protocol
 
 - **Baton passed to:** Review Swarm (Argon / Grok CoS $\ge 95$ / SAG) $\rightarrow$ Founder Eric typed **YES**.
-- **AG CoS Status:** Standing by in PLAN ONLY mode. Attempt 1 of 2 on failfix completed cleanly.
+- **AG CoS Status:** Standing by in PLAN ONLY mode. AG's 2nd and final try complete.

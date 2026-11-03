@@ -1,3 +1,13 @@
+## 2026-11-03 11:05 AM ET - AG CoS v4 FILED FAILFIX_PLAN_NET-748_AG_v2 under BATON NET-750 (FINAL AG TRY)
+AG CoS v4 received `BATON_NET-750_AG_NET-748-FIXONLY-v2_FINAL-AG-TRY_20261103-1045.md` (Attempt 9 of 10, AG 2nd and final try).
+Delivered `FAILFIX_PLAN_NET-748_AG_v2.md` and `ACK_BATON_NET-750_AG_20261103.md` across INBOX, BATONS, RADIO NET, and For SAG.
+All 4 baton requirements verified:
+1. All 5 Must-Fix items (MF-1 through MF-5) closed with zero substring vulnerabilities.
+2. Complete Section 1 v1-to-v2 change list and diff included; zero out-of-scope modifications.
+3. Section 2 cites verified official sources for all 21 SKUs and image assets (US Mint schedule, PL 116-330, and verified HTTP 200 assets in GCS).
+4. Gate 1 isolates firestore.rules into its own separate step, narrowed strictly to `usmint_sku_dictionary` and `littleton_sku_dictionary` under `skus/{skuId}`, explicitly noting that project-wide deployment requires Founder Eric's separate typed YES.
+STRICT PLAN-ONLY MODE: No code, commits, or deploys. Locks verified: main 9f04550a, live site untouched, Stripe OFF.
+TURN: REVIEW SWARM (Argon / Grok CoS 95+ / SAG) -> FOUNDER ERIC TYPED YES.
 ## 2026-11-03 10:45 AM ET - AG CoS v4 FILED FAILFIX_PLAN_NET-748_AG_v2 (NET-746 FAILFIX v2)
 AG CoS v4 acknowledged Argon's review `GEMINI38_REVIEW_NET-748_AG_v1_2026-11-03.md` (78/100 REVISE) and filed `ACK_GEMINI38_REVIEW_NET-748_AG_v1.md` and `FAILFIX_PLAN_NET-748_AG_v2.md` across INBOX, BATONS, RADIO NET, and For SAG.
 All 5 Must-Fix items (`MF-1` through `MF-5`) resolved with drop-in precision:
@@ -536,4 +546,5 @@ R2.8.7 scored 89/100 REVISE (Argon 97 GO not concurred). BATON -> AG CoS v4 for 
 
 
 - 2026-11-02 2:15 PM EST | Grok CoS | NET-738 | R2.8.14 scored 45/100 REVISE (fix-only pass rewrote 16 rows vs Firestore dump; 9 doc IDs not in dump). Baton -> AG CoS v4 for R2.8.15 fix-only from R2.8.13 row data. WAKE filed. Not staged for YES. Locks unchanged; site 200.
+
 
