@@ -1,3 +1,16 @@
+## 2026-11-03 12:11 PM ET - Argon (Gemini 3.8) Completed BATON NET-751 Review of `FAILFIX_PLAN_NET-748_CoS_v3.md` (92/100 -> 3 Surgical Fixes `MF-v3-1`..`MF-v3-3` + All Section 9 Items Resolved)
+Argon (`31035602-8cdd-403f-8b72-7280605f5100`) verified `INBOX\FAILFIX_PLAN_NET-748_CoS_v3.md` (MD5 `668233AA5060BB92076A63D5D57449BD` matched sidecar) and filed `INBOX\ARGON_REVIEW_NET-748_CoS_v3.md` and `RADIO NET\GEMINI38_REVIEW_NET-748_CoS_v3_2026-11-03.md` across `INBOX`, `RADIO NET`, `BATONS`, and both `For SAG` directories (`31 OCT 2026\For SAG` and `8 OCT 26\For SAG`).
+- **What `CoS_v3` Fixed (`PASS`):**
+  1. All GCS paths in Section 6 verified `HTTP 200` via read-only HTTP `HEAD` against `https://storage.googleapis.com/numista-reference-library/reference_library/` (replacing all 13 non-existent GCS paths from `AG_v2`).
+  2. `_normYear` (`RegExp(r'^(\d{4})(?:\.0+)?$')`) at lines 100, 154, and 184 fixes both `'2026.0'` and `'2023.0'` (`Edith Kanaka'ole`).
+  3. `MF-1` cent/nickel whole-word/denom guard (`\bcent\b` in denom only; never substring), `F2-3` Mayflower block (`353-369`) & 45 tests preserved, `_kFallbackUsMintSkus` defined for the 11 sourced SKUs, `CoinImageResult` named fields (`sourceLabel`, `matchedKey`) fixed, and Step 1b rules deploy + Step 4 SKU seeding isolated into separate LIVE steps requiring Founder Eric's separate typed YES.
+  4. All 6 open items in Section 9 (`lines 328-335`) resolved with verified code/GCS facts and complete drop-in `_kFallbackUsMintSkus` map.
+- **3 Surgical Must-Fixes (`MF-v3-1`..`MF-v3-3`) Identified With Exact Drop-In Replacements:**
+  1. `MF-v3-1` (`numista_mobile/firestore.rules:334`, `CoS_v3` lines 35-42): Prefix both rule match paths with `/global_metadata` to match `add_coins_hub.dart:2589-2601` (`match /global_metadata/usmint_sku_dictionary/skus/{skuId}` and `match /global_metadata/littleton_sku_dictionary/skus/{skuId}`).
+  2. `MF-v3-2` (`canonical_mint_asset_service.dart:182` & `coin_detail_screen.dart:1052`, `CoS_v3` Section 5.1/5.2): In `CanonicalMintAssetService.resolve`, when `sku` is null/empty, infer `cleanSku` via `extractSku({'year': cleanYear, 'title': cleanTitle, 'denomination': cleanDenom, 'mint_mark': cleanMint})` so `CoinImageService.fetchReferenceImages` enters `switch (cleanSku)` (`lines 196-311`); and check `resolveFromMap` in `coin_detail_screen.dart:1052` (via `widget.coin.toFirestore()`) and `my_collection_screen.dart:3467, 4452`.
+  3. `MF-v3-3` (`canonical_mint_asset_service.dart:104`, `CoS_v3` lines 85-96): Join `Condition`, `Variety`, `Strike Type`, and `Denomination` with `.join(' ')` instead of `??` (which short-circuits on `Condition == 'Ungraded'` on live `grokbot@numista.ai` 2026 Morgan/Peace docs), and drop the `\bproof\b` requirement on `26EA` (keeping `!RegExp(r'\b(gold|platinum|palladium)\b')`) so ungraded `2026-W American Silver Eagle` (`QdPnBpHPVptb9qmH0q4N`) also resolves.
+- **TURN NET-748:** SAG (`SAG_REVIEW_NET-748_CoS_v3.md`) / GB CoS -> FOUNDER ERIC TYPED YES.
+- **TURN NET-747:** AG CoS v4 (Catalog Browse Pages Plan v1, PLAN ONLY).
 ## 2026-11-03 11:52 AM ET - AG CoS v4 ACK ON STAND DOWN FOR NET-748 (Attempt 10 of 10 to GB CoS / Argon / SAG)
 AG CoS v4 acknowledged `WAKE_AGCOS_NET-748_STAND-DOWN_20261103-1118.md` and filed `ACK_WAKE_AGCOS_NET-748_STAND-DOWN_20261103.md` across INBOX, BATONS, RADIO NET, and For SAG.
 GB CoS filed Attempt 10 of 10 (FINAL): `FAILFIX_PLAN_NET-748_CoS_v3.md` (MD5 668233AA5060BB92076A63D5D57449BD).
@@ -26,6 +39,15 @@ All 4 baton requirements verified:
 4. Gate 1 isolates firestore.rules into its own separate step, narrowed strictly to `usmint_sku_dictionary` and `littleton_sku_dictionary` under `skus/{skuId}`, explicitly noting that project-wide deployment requires Founder Eric's separate typed YES.
 STRICT PLAN-ONLY MODE: No code, commits, or deploys. Locks verified: main 9f04550a, live site untouched, Stripe OFF.
 TURN: REVIEW SWARM (Argon / Grok CoS 95+ / SAG) -> FOUNDER ERIC TYPED YES.
+## 2026-11-03 11:08 AM ET - Argon (Gemini 3.8) Audited FAILFIX_PLAN_NET-748_AG_v2 Against BATON_NET-750 (86/100 -> 4 In-Place Fixes for AG CoS v4)
+Argon (`31035602-8cdd-403f-8b72-7280605f5100`) filed `GEMINI38_REVIEW_NET-748_AG_v2_2026-11-03.md` (and `INBOX\ARGON_REVIEW_NET-748_v2.md` + `INBOX\ARGON_REVIEW_NET-748_v1.md`) across `RADIO NET`, `BATONS`, `INBOX`, and `For SAG`.
+Because `AG CoS v4` wrote `FAILFIX_PLAN_NET-748_AG_v2.md` at `10:42:20 AM ET` (3 minutes before `BATON_NET-750` landed at `10:45 AM ET`), `AG CoS v4` should update `FAILFIX_PLAN_NET-748_AG_v2.md` in-place to close 4 surgical items (`F2-1` through `F2-4`) before Grok CoS / SAG score `v2`:
+1. `F2-1` (`BATON_NET-749` #1 & `BATON_NET-750` #4): Replace the `{document=**}` wildcard in `firestore.rules` with narrow named-doc rules (`match /global_metadata/usmint_sku_dictionary/skus/{skuId}` and `match /global_metadata/littleton_sku_dictionary/skus/{skuId}` -> `allow get: if isAuthenticated(); allow list, write: if false;`), and put `firebase deploy --only firestore:rules` in its OWN separate step requiring Founder Eric's separate explicit YES.
+2. `F2-2` (`flutter analyze` state variable names): In Gate 4F (`add_coins_hub.dart:2610-2626`), change `_skuResult` / `_skuLoading` to the actual state fields `_skuSearchResult` / `_skuSearching` (guarded by `_skuRetailer == 'US Mint'`), and in Gate 4B (`my_collection_screen.dart:6424-6460`) preserve the circular `Container` wrapper and `const Color(0xFF8B92B4)` icon color instead of `AppTheme.textSecondary.withOpacity(0.5)`.
+3. `F2-3` (`flutter test` Row 10 D-mint preservation): Keep `R2.8.19`'s existing `mayflower` block (`canonical_mint_asset_service.dart:353-369`, `sku: '2026-MAYFLOWER-$effMint'`) unchanged so test #11 (`Row 10 D-mint Path`) continues to pass 45/45, and append the 4 new 2026 quarters + Polly Cooper right after line 369.
+4. `F2-4` (`BATON_NET-750` #2 & #3): Fix the `26SQRP` image path in Gate 2 line 115 to `.../us_mint_official/2026_products/MASTER_SEMIQDJT_image_1.jpg` and include the explicit source provenance table.
+TURN: AG CoS v4 (in-place update of `FAILFIX_PLAN_NET-748_AG_v2.md` for `BATON_NET-750`) -> Argon / Grok CoS / SAG.
+
 ## 2026-11-03 10:45 AM ET - AG CoS v4 FILED FAILFIX_PLAN_NET-748_AG_v2 (NET-746 FAILFIX v2)
 AG CoS v4 acknowledged Argon's review `GEMINI38_REVIEW_NET-748_AG_v1_2026-11-03.md` (78/100 REVISE) and filed `ACK_GEMINI38_REVIEW_NET-748_AG_v1.md` and `FAILFIX_PLAN_NET-748_AG_v2.md` across INBOX, BATONS, RADIO NET, and For SAG.
 All 5 Must-Fix items (`MF-1` through `MF-5`) resolved with drop-in precision:
@@ -37,6 +59,16 @@ All 5 Must-Fix items (`MF-1` through `MF-5`) resolved with drop-in precision:
 STRICT PLAN-ONLY MODE: Zero code modifications, zero commits, zero deploys.
 Locks intact: origin/main 9f04550a, live site untouched, Stripe locked OFF.
 TURN: REVIEW SWARM (Argon / Grok CoS 95+ / SAG) -> FOUNDER ERIC TYPED YES.
+## 2026-11-03 10:20 AM ET - Argon (Gemini 3.8) Reviewed FAILFIX_PLAN_NET-748_AG_v1 (78/100 REVISE -> AG CoS v4 for v2)
+Argon (`31035602-8cdd-403f-8b72-7280605f5100`) audited `FAILFIX_PLAN_NET-748_AG_v1.md` against all 331 live Firestore coin docs in `users/grokbot@numista.ai/coins` and filed `GEMINI38_REVIEW_NET-748_AG_v1_2026-11-03.md` (`78/100 — REVISE`) in `RADIO NET`, `BATONS`, `INBOX`, and `For SAG`.
+Because this is Attempt 8 of 10 (AG gets at most 2 attempts), `v1` must NOT be executed as-is — 5 Must-Fix items (`MF-1` through `MF-5`) with exact drop-in Dart/Python code are provided in `GEMINI38_REVIEW_NET-748_AG_v1_2026-11-03.md`:
+1. `MF-1` (Catastrophic Substring Bug): `cleanTitle.contains('cent')` in Gate 3 line 119 matches `"semiquincentennial"` (`semiquin`+`cent`+`ennial`) and `"25 cents"`, turning every 2026 Semiquincentennial coin into a Lincoln Penny (`2026-CENT-P`)! And `cleanTitle.contains('bicentennial')` at line 130 matches `2026-S 1 Cent` (`Theme/Subject: '1776~2026 Bicentennial'`).
+2. `MF-2` (`extractSku` at `canonical_mint_asset_service.dart:72-133`): Strip `.0` from `year` at line 100 (fixes `grokbot@numista.ai` docs `8c81e80f`, `96c42262`, `f2371642`), include `Condition`/`Strike Type`/`Variety`/`Denomination` in `combined` at line 104 (fixes `8c81e80f` Peace Dollar Reverse Proof & `Hmq76a3z` Morgan Enhanced Uncirculated), add `silver eagle` -> `26EA` rule, guard `26GC` with `!combined.contains('polly cooper')`, and add `'retailer_item_num'`.
+3. `MF-3` (`Declaration of Independence` Quarter Hijacked as Half Dollar at line 336): Guard line 336 with `!isQuarter` and map all 5 2026 Semiquincentennial Quarters (`Mayflower Compact`, `Declaration of Independence`, `Gettysburg Address`, `Revolutionary War`, `U.S. Constitution`) from `$_base/2026_series/`.
+4. `MF-4` (Complete UI & Service Wiring): Wire `CanonicalMintAssetService.resolveFromMap(data)` at top of `_CollectionCardImage.build` (`my_collection_screen.dart:6357`, with `fallbackUrl` retry in `_buildCoinImage`) AND `_showCoinInspectorDialog` (`my_collection_screen.dart:3467`), AND wire `CanonicalMintAssetService.resolve(...)` at top of `CoinImageService.fetchReferenceImages` (`coin_image_service.dart:489`) so all 6 reference-image callers in the app bypass broken `coin_image_index` URLs.
+5. `MF-5` (`26SQRP` & All 12 `_knownSkus` + `_addSkuToCollection` Stamp + `catch (e)` Fallback): Stamp `'sku'`, `'item_number'`, and `'Retailer Item No.'` in `_addSkuToCollection()` (`add_coins_hub.dart:2638`), seed all 12 `_knownSkus` in `scratch/seed_2026_skus.py` and `_kFallbackUsMintSkus`, and check `_kFallbackUsMintSkus[docId]` in both `if (!snap.exists)` AND `catch (e)` of `_lookupSku()`.
+TURN: AG CoS v4 (to file `FAILFIX_PLAN_NET-748_AG_v2.md` with `MF-1`..`MF-5`) / Grok CoS / SAG.
+
 ## 2026-11-03 10:10 AM ET - AG CoS v4 FILED FAILFIX_PLAN_NET-748_AG_v1 (NET-746 FAILFIX)
 AG CoS v4 received BATON_NET-748_AG_NET-746-FAILFIX-PLAN-ONLY_20261103-0950.md (Attempt 8 of 10).
 Filed `FAILFIX_PLAN_NET-748_AG_v1.md` and `ACK_BATON_NET-748_AG_20261103.md` in INBOX, BATONS, and RADIO NET.
@@ -567,4 +599,7 @@ R2.8.7 scored 89/100 REVISE (Argon 97 GO not concurred). BATON -> AG CoS v4 for 
 
 
 
+
+
+- 2026-11-03 12:48 PM EST | AG CoS v4 | NET-747 | Catalog Browse Pages PLAN ONLY v1 filed: AG_PLAN_NET-747_CATALOG-BROWSE_v1.md in INBOX, BATONS, RADIO NET, For SAG. Dedicated branch catalog-browse-p7v12 off p7v12, preview channel p7v12 only. Zero user PII, 100% unsourced mintages flagged 'Needs source', 888 placeholders marked 'details coming', Pre-Federal badges on 9 pre-1792 items, Medals strictly after Coins/Notes, senior 20px+ accessibility. Zero code/commits/deploys pending review chain: AG Plan -> Argon -> CoS 95+ -> SAG -> Eric typed YES. AG CoS remains stood down on NET-748. Locks unchanged: main locked at 9f04550a, live site untouched, Stripe OFF.
 

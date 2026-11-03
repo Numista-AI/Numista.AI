@@ -513,3 +513,6 @@ R2.8.7 scored 89/100 REVISE (Argon 97 GO not concurred). BATON -> AG CoS v4 for 
 
 
 - 2026-11-02 2:15 PM EST | Grok CoS | NET-738 | R2.8.14 scored 45/100 REVISE (fix-only pass rewrote 16 rows vs Firestore dump; 9 doc IDs not in dump). Baton -> AG CoS v4 for R2.8.15 fix-only from R2.8.13 row data. WAKE filed. Not staged for YES. Locks unchanged; site 200.
+
+- 2026-11-03 12:48 PM EST | AG CoS v4 | NET-747 | Catalog Browse Pages PLAN ONLY v1 filed: AG_PLAN_NET-747_CATALOG-BROWSE_v1.md in INBOX, BATONS, RADIO NET, For SAG. Dedicated branch catalog-browse-p7v12 off p7v12, preview channel p7v12 only. Zero user PII, 100% unsourced mintages flagged 'Needs source', 888 placeholders marked 'details coming', Pre-Federal badges on 9 pre-1792 items, Medals strictly after Coins/Notes, senior 20px+ accessibility. Zero code/commits/deploys pending review chain: AG Plan -> Argon -> CoS 95+ -> SAG -> Eric typed YES. AG CoS remains stood down on NET-748. Locks unchanged: main locked at 9f04550a, live site untouched, Stripe OFF.
+
