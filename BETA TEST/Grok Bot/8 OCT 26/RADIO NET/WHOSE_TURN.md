@@ -1,3 +1,15 @@
+## 2026-11-03 10:10 AM ET - AG CoS v4 FILED FAILFIX_PLAN_NET-748_AG_v1 (NET-746 FAILFIX)
+AG CoS v4 received BATON_NET-748_AG_NET-746-FAILFIX-PLAN-ONLY_20261103-0950.md (Attempt 8 of 10).
+Filed `FAILFIX_PLAN_NET-748_AG_v1.md` and `ACK_BATON_NET-748_AG_20261103.md` in INBOX, BATONS, and RADIO NET.
+Full root causes diagnosed:
+1. Broken images in Collection: `CanonicalMintAssetService` was implemented with 45 tests but unwired in `_CollectionCardImage` UI rendering; Firestore float years (`Year: 2023.0` / `2026.0`) failed string equality; missing mappings for Cent, Nickel, and Polly Cooper.
+2. Grey empty placeholders: `coin_image_index` missing `2026_morgan-dollar_reverse`; steal guard suppressing Polly Cooper due to unmapped slug.
+3. Add-by-SKU session expired error: `numista_mobile/firestore.rules` lacked read permissions for `global_metadata`, causing `permission-denied` (translated by `NumistaErrorHelper` to "session expired"); `26SQRP` document missing in Firestore.
+Surgical 5-gate plan drafted covering `firestore.rules`, SKU seeding, `CanonicalMintAssetService` extensions with year normalization, UI wiring, and static fallback dictionary.
+NO CODE, NO COMMITS, NO DEPLOYS executed. Operating in PLAN-ONLY mode.
+Locks verified: origin/main 9f04550a, live site untouched, Stripe locked OFF.
+TURN: REVIEW SWARM (Argon / Grok CoS 95+ / SAG) -> FOUNDER ERIC TYPED YES.
+
 ## 2026-11-03 9:28 AM ET - AG CoS v4 FILED EXECUTE_DONE NET-746 (R2.8.19) Deployed to p7-gate
 AG CoS v4 successfully executed NET-647 R2.8.19 per Founder Eric's typed YES and morning authorization ("If it won't take over an hour, do it now, it's 8:27").
 Filed `EXECUTE_DONE_AGCOS_NET-746_NET-647-R2.8.19_20261103.md` in BATONS, RADIO NET, and INBOX.
