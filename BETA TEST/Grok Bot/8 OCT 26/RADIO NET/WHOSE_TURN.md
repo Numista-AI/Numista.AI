@@ -1,3 +1,14 @@
+## 2026-11-03 10:45 AM ET - AG CoS v4 FILED FAILFIX_PLAN_NET-748_AG_v2 (NET-746 FAILFIX v2)
+AG CoS v4 acknowledged Argon's review `GEMINI38_REVIEW_NET-748_AG_v1_2026-11-03.md` (78/100 REVISE) and filed `ACK_GEMINI38_REVIEW_NET-748_AG_v1.md` and `FAILFIX_PLAN_NET-748_AG_v2.md` across INBOX, BATONS, RADIO NET, and For SAG.
+All 5 Must-Fix items (`MF-1` through `MF-5`) resolved with drop-in precision:
+1. `MF-1`: Fixed catastrophic substring matching (`semiquincentennial` vs `cent`). Strict regex and denomination guards implemented for Lincoln Cent (`2026-CENT-P`/`S`) and Jefferson Nickel (`2026-NICKEL-S`).
+2. `MF-2`: Updated `extractSku()` to strip `.0` on `year`, include `Condition`/`Strike Type`/`Variety` in `combined`, map `silver eagle` -> `26EA`, guard `26GC` against Polly Cooper, and support `'retailer_item_num'`.
+3. `MF-3`: Guarded Half Dollar line 332 with `!isQuarter` (protecting `Declaration of Independence` Quarter from hijacking); mapped all 5 2026 Semiquincentennial Quarters and Polly Cooper Native American $1 with verified HTTP 200 assets in `$_base/2026_series/`.
+4. `MF-4`: Complete UI and service wiring across `_CollectionCardImage.build` (with fallback retry in `_buildCoinImage` `errorBuilder`), `_showCoinInspectorDialog`, and entry-point check in `CoinImageService.fetchReferenceImages`.
+5. `MF-5`: Stamped `'sku'`, `'item_number'`, and `'Retailer Item No.'` in `_addSkuToCollection()`; checked `_kFallbackUsMintSkus[docId]` in both `!snap.exists` and `catch (e)` in `_lookupSku()`; updated `26SQRP` metadata to Trump $1 25-coin roll; seeded all 12 `_knownSkus` and included `firestore:rules` deployment in execution gates.
+STRICT PLAN-ONLY MODE: Zero code modifications, zero commits, zero deploys.
+Locks intact: origin/main 9f04550a, live site untouched, Stripe locked OFF.
+TURN: REVIEW SWARM (Argon / Grok CoS 95+ / SAG) -> FOUNDER ERIC TYPED YES.
 ## 2026-11-03 10:10 AM ET - AG CoS v4 FILED FAILFIX_PLAN_NET-748_AG_v1 (NET-746 FAILFIX)
 AG CoS v4 received BATON_NET-748_AG_NET-746-FAILFIX-PLAN-ONLY_20261103-0950.md (Attempt 8 of 10).
 Filed `FAILFIX_PLAN_NET-748_AG_v1.md` and `ACK_BATON_NET-748_AG_20261103.md` in INBOX, BATONS, and RADIO NET.
@@ -525,3 +536,4 @@ R2.8.7 scored 89/100 REVISE (Argon 97 GO not concurred). BATON -> AG CoS v4 for 
 
 
 - 2026-11-02 2:15 PM EST | Grok CoS | NET-738 | R2.8.14 scored 45/100 REVISE (fix-only pass rewrote 16 rows vs Firestore dump; 9 doc IDs not in dump). Baton -> AG CoS v4 for R2.8.15 fix-only from R2.8.13 row data. WAKE filed. Not staged for YES. Locks unchanged; site 200.
+
