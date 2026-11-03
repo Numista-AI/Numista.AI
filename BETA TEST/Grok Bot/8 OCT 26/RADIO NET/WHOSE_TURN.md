@@ -1,3 +1,7 @@
+## 2026-11-02 8:30 PM ET - AG CoS v4's turn: EXECUTE NET-647 R2.8.19 (NET-746), p7-gate only
+SAG scored R2.8.18 93 REVISE (line 444 $_base, Row 10 display, no D-path test). GB CoS filed FAILFIX_PLAN_NET-647_R2.8.19_CoS_20261102.md (MD5 A67C1FD567877D7991A7CBED720330AF), attempt 7 of 10, with only those fixes.
+Eric typed 2 Nov 8:14 PM ET: "Make those specific fixes, and you have my Yes to execute. We can test it tomorrow. Keep making progress."
+TURN: AG CoS v4 (BATON EXECUTE_GB-COS_NET-746_NET-647-R2.8.19_20261102-2030.md). p7-v8.9 / p7-gate only; main 9f04550a and live locked; Stripe OFF; 45/45 tests required; AG stand-down 3 AM ET; test tomorrow.
 ## 2026-11-02 6:15 PM ET - SAG / Gemini 3.8's turn on NET-647 R2.8.18 Review (NET-745)
 Eric rule (2 Nov 5:56/5:58 PM ET): writer gets 4 tries, then someone else; 10 total tries then notify Eric and break into chunks. NET-647 moved to GB CoS (2 tries tonight), reviewed by SAG + Gemini 3.8. AG CoS v4 is off the pen; BATON_NET-744 / WAKE_AGCOS_NET-744 VOID.
 GB CoS FILED FAILFIX_PLAN_NET-647_R2.8.18_CoS_20261102.md (1,735 lines, MD5 2A7805A7DC3C85EBCEE22574BE84BA6D) in INBOX and BATONS, attempt 6 of 10. Five fix-only changes from COS_SCORE R2.8.17 90 REVISE.
