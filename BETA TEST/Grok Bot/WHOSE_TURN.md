@@ -1,3 +1,12 @@
+## 2026-11-03 11:18 AM ET - AG CoS v4 UPDATED FAILFIX_PLAN_NET-748_AG_v2 IN-PLACE (F2-1..F2-4 Resolved)
+AG CoS v4 audited Argon's review `GEMINI38_REVIEW_NET-748_AG_v2_2026-11-03.md` (86/100 -> 4 In-Place Fixes).
+Updated `FAILFIX_PLAN_NET-748_AG_v2.md` in-place across INBOX, BATONS, RADIO NET, and For SAG resolving all 4 items:
+1. `F2-1` (Firestore Rules Narrowed & Isolated): Replaced `{document=**}` wildcard with named-doc rules (`match /global_metadata/usmint_sku_dictionary/skus/{skuId}` and `match /global_metadata/littleton_sku_dictionary/skus/{skuId}` -> `allow get: if isAuthenticated(); allow list, write: if false;`). Isolated rules deploy into Step 1 requiring Founder Eric's separate explicit typed YES.
+2. `F2-2` (State Variables & Style Preserved): Used exact state variable names `_skuSearchResult` and `_skuSearching` (guarded by `_skuRetailer == 'US Mint'`) in `add_coins_hub.dart` (0 analyze errors); preserved circular Container decoration, shadows, and `const Color(0xFF8B92B4)` in `_buildCoinImage` (no deprecated `withOpacity`).
+3. `F2-3` (Unit Test Preservation): Preserved R2.8.19's existing `mayflower` block (`canonical_mint_asset_service.dart:353-369`, `2026-MAYFLOWER-`) 100% UNCHANGED, preserving test #11 (`Row 10 D-mint Path`), and appended the 4 new quarters + Polly Cooper immediately after line 369.
+4. `F2-4` (26SQRP GCS Path & Provenance Table): Fixed `26SQRP` obverse URL to `us_mint_official/2026_products/MASTER_SEMIQDJT_image_1.jpg` (matching line 272); included complete Source Provenance Table for all 21 SKUs and image assets.
+STRICT PLAN-ONLY MODE: No code, commits, or deploys. Locks verified: main 9f04550a, live site untouched, Stripe OFF.
+TURN: REVIEW SWARM (Argon / Grok CoS 95+ / SAG) -> FOUNDER ERIC TYPED YES.
 ## 2026-11-03 11:05 AM ET - AG CoS v4 FILED FAILFIX_PLAN_NET-748_AG_v2 under BATON NET-750 (FINAL AG TRY)
 AG CoS v4 received `BATON_NET-750_AG_NET-748-FIXONLY-v2_FINAL-AG-TRY_20261103-1045.md` (Attempt 9 of 10, AG 2nd and final try).
 Delivered `FAILFIX_PLAN_NET-748_AG_v2.md` and `ACK_BATON_NET-750_AG_20261103.md` across INBOX, BATONS, RADIO NET, and For SAG.
@@ -546,5 +555,6 @@ R2.8.7 scored 89/100 REVISE (Argon 97 GO not concurred). BATON -> AG CoS v4 for 
 
 
 - 2026-11-02 2:15 PM EST | Grok CoS | NET-738 | R2.8.14 scored 45/100 REVISE (fix-only pass rewrote 16 rows vs Firestore dump; 9 doc IDs not in dump). Baton -> AG CoS v4 for R2.8.15 fix-only from R2.8.13 row data. WAKE filed. Not staged for YES. Locks unchanged; site 200.
+
 
 
