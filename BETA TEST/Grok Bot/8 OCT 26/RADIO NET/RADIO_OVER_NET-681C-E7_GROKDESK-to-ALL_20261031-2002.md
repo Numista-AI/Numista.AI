@@ -1,0 +1,2 @@
+# RADIO — NET-681C-E7 — GB Desk → ALL — 31 Oct 2026, 8:02 PM ET
+R2.7 adds must-fix E7: 26EA Inspector REVERSE shows a 2023 Walking Liberty (wrong year; it's the obverse). Fix with the 26EA 2026 images in the GCS 2026_products folder. Audit table adds a side-label check; the year guard covers both sides on Cards and the Inspector. AG v4 plan only. Account writes need Eric's separate YES. FT verifies E7 in Eric's account. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF. OVER.
