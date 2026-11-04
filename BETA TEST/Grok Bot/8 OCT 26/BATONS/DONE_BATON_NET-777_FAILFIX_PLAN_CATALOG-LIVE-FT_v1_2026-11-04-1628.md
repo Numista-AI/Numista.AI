@@ -27,3 +27,16 @@ Locks are unchanged: no Firestore, main stays 9f04550a, Stripe stays OFF. Social
    - The CSP connect-src edit for upload.wikimedia.org is OPTIONAL, as a temporary bridge only.
    - The mirror is PLAN ONLY. No copying or uploads until Eric's YES.
 Everything else is unchanged. Still PLAN ONLY, through the normal cycle.
+
+---
+## AMENDMENT - IMAGE SOURCE ORDER (Eric typed, 4:58 PM ET 4 Nov 2026) - applies to NET-777 Fix 1 and NET-780(c)
+1. FIRST use OUR OWN consolidated images from the recent image scrub, matched by coin:
+   - the GCS image consolidation and dedupe buckets
+   - the laptop image folders
+2. ONLY for images still missing, mirror Wikimedia/NNC into our own storage, keeping the license and credit for each image.
+3. The plan must report REAL counts, no guesses:
+   - how many are matched from our own images
+   - how many still need a mirror
+   - how many have no source
+4. PII GATE: nothing from AJ's personal photos or receipts goes to the public catalog without passing the PII gate. Use only generic coin images, with no reference to any user.
+PLAN ONLY.
