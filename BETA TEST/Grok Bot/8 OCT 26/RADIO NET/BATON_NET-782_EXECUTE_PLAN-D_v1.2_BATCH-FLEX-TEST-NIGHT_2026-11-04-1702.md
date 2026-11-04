@@ -22,3 +22,15 @@ NO COLLISION with tonight's NET-760 catalog run (Catalog Research, which must st
 main stays 9f04550a, Stripe stays OFF.
 
 REPORT: file EXECUTE_DONE_NET-782 with the request count, actual spend, pair results and stop time.
+
+---
+## AMENDMENT - FIN OPS WORST CASE (INBOX\FINOPS_WORSTCASE_NET-782.md, 5:06 PM ET)
+The worst case is $4.05 and passes the limit ONLY IF ALL THREE of these hold. Confirm each one in writing in a PREFLIGHT_NET-782.md before the first call:
+1. The model is Gemini 3.8 Flash ONLY.
+2. Hard caps in the script: 6,000 input tokens or fewer and 1,500 output tokens or fewer per request.
+3. Project numista-qc (My Billing Account).
+NO-GO, so STOP and file BLOCKED, if any of these is true:
+- It would use 3.1 Pro (worst case $6.00).
+- It would reuse the main.py calls that allow up to 65,536 output tokens (up to about $98).
+- It would run on numista-morgan-pilot (that collides with NET-760's $50 cap).
+Budgets only send alerts. The script caps are the ONLY hard stop.
