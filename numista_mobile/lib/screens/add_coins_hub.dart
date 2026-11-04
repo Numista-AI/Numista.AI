@@ -36,6 +36,53 @@ String buildAddCoinsHtmlPath(String email, {String apiBase = kApiBaseUrl}) {
 }
 
 class AddCoinsHub extends StatefulWidget {
+  @visibleForTesting
+  static Map<String, dynamic> buildSkuCoinDoc(Map<String, dynamic> data, String itemSku) {
+    final isSetItem = data['item_type'] == 'set';
+    final coinDoc = <String, dynamic>{
+      'source': 'manual_sku',
+      'sku': itemSku,
+      'mint_product_id': itemSku,
+      'Added': FieldValue.serverTimestamp(),
+      'created_at': FieldValue.serverTimestamp(),
+      'committed_at': FieldValue.serverTimestamp(),
+      'deep_dive_status': 'PENDING',
+      'is_demo': false,
+      'is_demo_cleared': false,
+    };
+
+    if (isSetItem) {
+      coinDoc.addAll({
+        'set_id': data['set_id'] ?? '',
+        'item_type': 'set',
+        'is_set': true,
+        'kept_as_set': true,
+        'set_broken_up': false,
+        'Year': data['year']?.toString() ?? '',
+        'Country': 'USA',
+        'Denomination': 'Set',
+        'Condition': 'Uncirculated',
+        'Quantity': 1,
+        'name': data['name'] ?? '',
+        'Program/Series': data['program'] ?? data['program_series'] ?? '',
+        'Theme/Subject': data['description'] ?? '',
+      });
+    } else {
+      coinDoc.addAll({
+        'Year': data['year']?.toString() ?? '',
+        'Mint Mark': data['mint_mark'] ?? '',
+        'Denomination': data['denomination'] ?? '',
+        'Program/Series': data['program_series'] ?? '',
+        'Theme/Subject': data['description'] ?? '',
+        'Condition': data['implied_condition'] ?? 'Uncirculated',
+        'Quantity': 1,
+        'Country': 'United States',
+        'item_type': 'coin',
+      });
+    }
+    return coinDoc;
+  }
+
   final Function(String)? onNavigate;
   final String? initialTabName;
   final bool showCertFullScreen;
@@ -65,6 +112,88 @@ class AddCoinsHub extends StatefulWidget {
   @override
   State<AddCoinsHub> createState() => _AddCoinsHubState();
 }
+
+@visibleForTesting
+const Map<String, Map<String, dynamic>> kFallbackUsMintSkus = {
+  '26EA': {
+    'sku': '26EA',
+    'name': 'American Silver Eagle Proof',
+    'program_series': 'American Silver Eagle',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26XE': {
+    'sku': '26XE',
+    'name': 'Morgan Dollar Enhanced Uncirculated',
+    'program_series': 'Morgan and Peace Silver Dollars',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26XL': {
+    'sku': '26XL',
+    'name': 'Peace Dollar Reverse Proof',
+    'program_series': 'Morgan and Peace Silver Dollars',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26XH': {
+    'sku': '26XH',
+    'name': 'Peace Dollar Uncirculated',
+    'program_series': 'Morgan and Peace Silver Dollars',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26XF': {
+    'sku': '26XF',
+    'name': 'Morgan Dollar Proof',
+    'program_series': 'Morgan and Peace Silver Dollars',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26GC': {
+    'sku': '26GC',
+    'name': 'American Innovation \$1 Proof Set',
+    'program_series': 'American Innovation \$1 Coins',
+    'year': '2026',
+    'item_type': 'set',
+  },
+  '26SQRP': {
+    'sku': '26SQRP',
+    'name': '2026 Semiquincentennial President Donald J. Trump \$1 Coin 25-Coin Roll',
+    'program_series': 'Presidential \$1 Coins',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26RG': {
+    'sku': '26RG',
+    'name': 'Clad Proof Set',
+    'program_series': 'Proof Sets',
+    'year': '2026',
+    'item_type': 'set',
+  },
+  '23RG': {
+    'sku': '23RG',
+    'name': '2023 Clad Proof Set',
+    'program_series': 'Proof Sets',
+    'year': '2023',
+    'item_type': 'set',
+  },
+  '26RH': {
+    'sku': '26RH',
+    'name': 'Silver Proof Set',
+    'program_series': 'Proof Sets',
+    'year': '2026',
+    'item_type': 'set',
+  },
+  '23RH': {
+    'sku': '23RH',
+    'name': '2023 Silver Proof Set',
+    'program_series': 'Proof Sets',
+    'year': '2023',
+    'item_type': 'set',
+  },
+};
+const _kFallbackUsMintSkus = kFallbackUsMintSkus;
 
 class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStateMixin {
   late TabController _tabController;
@@ -2581,9 +2710,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       _skuError = '';
     });
 
+    final docId = rawSku.replaceAll(RegExp(r'[^a-zA-Z0-9\-]'), '_').toUpperCase();
+
     try {
       DocumentSnapshot<Map<String, dynamic>> snap;
-      final docId = rawSku.replaceAll(RegExp(r'[^a-zA-Z0-9\-]'), '_').toUpperCase();
 
       if (_skuRetailer == 'US Mint') {
         snap = await FirebaseFirestore.instance
@@ -2608,6 +2738,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       }
 
       if (!snap.exists) {
+        final fallback = (_skuRetailer == 'US Mint') ? _kFallbackUsMintSkus[docId] : null;
+        if (fallback != null) {
+          setState(() {
+            _skuSearchResult = {...fallback, 'sku': docId};
+            _skuSearching = false;
+          });
+          return;
+        }
         setState(() {
           _skuError = 'SKU "$rawSku" not found in $_skuRetailer dictionary.';
           _skuSearching = false;
@@ -2616,10 +2754,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       }
 
       setState(() {
-        _skuSearchResult = snap.data();
+        final snapData = snap.data();
+        _skuSearchResult = snapData != null ? {...snapData, 'sku': docId} : null;
         _skuSearching = false;
       });
     } catch (e) {
+      final fallback = (_skuRetailer == 'US Mint') ? _kFallbackUsMintSkus[docId] : null;
+      if (fallback != null) {
+        setState(() {
+          _skuSearchResult = {...fallback, 'sku': docId};
+          _skuSearching = false;
+        });
+        return;
+      }
       setState(() {
         _skuError = NumistaErrorHelper.toUserFriendly(e);
         _skuSearching = false;
@@ -2633,48 +2780,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
     try {
       final data = _skuSearchResult!;
-      final isSetItem = data['item_type'] == 'set';
+      final itemSku = (_skuSearchResult?['sku'] ?? _skuSearchResult?['mint_product_id'] ?? _skuCtrl.text.trim().replaceAll(RegExp(r'[^a-zA-Z0-9\-]'), '_').toUpperCase()).toString();
       
-      final coinDoc = <String, dynamic>{
-        'source': 'manual_sku',
-        'Added': FieldValue.serverTimestamp(),
-        'created_at': FieldValue.serverTimestamp(),
-        'committed_at': FieldValue.serverTimestamp(),
-        'deep_dive_status': 'PENDING',
-        // ITEM 6: stamp is_demo: false so real coins remain visible after display filter ships
-        'is_demo': false,
-        'is_demo_cleared': false,
-      };
-
-      if (isSetItem) {
-        coinDoc.addAll({
-          'set_id': data['set_id'] ?? '',
-          'item_type': 'set',
-          'is_set': true,
-          'kept_as_set': true,
-          'set_broken_up': false,
-          'Year': data['year']?.toString() ?? '',
-          'Country': 'USA',
-          'Denomination': 'Set',
-          'Condition': 'Uncirculated',
-          'Quantity': 1,
-          'name': data['name'] ?? '',
-          'Program/Series': data['program'] ?? data['program_series'] ?? '',
-          'Theme/Subject': data['description'] ?? '',
-        });
-      } else {
-        coinDoc.addAll({
-          'Year': data['year']?.toString() ?? '',
-          'Mint Mark': data['mint_mark'] ?? '',
-          'Denomination': data['denomination'] ?? '',
-          'Program/Series': data['program_series'] ?? '',
-          'Theme/Subject': data['description'] ?? '',
-          'Condition': data['implied_condition'] ?? 'Uncirculated',
-          'Quantity': 1,
-          'Country': 'United States',
-          'item_type': 'coin',
-        });
-      }
+      final coinDoc = AddCoinsHub.buildSkuCoinDoc(data, itemSku);
 
       final docRef = await FirebaseFirestore.instance
           .collection(AuthService.coinsPath)

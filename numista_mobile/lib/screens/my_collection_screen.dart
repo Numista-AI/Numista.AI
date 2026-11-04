@@ -20,6 +20,7 @@ import '../services/epn_service.dart';
 import '../services/guest_seed_service.dart';
 import '../services/reference_library_service.dart';
 import '../services/coin_image_service.dart';
+import '../services/canonical_mint_asset_service.dart';
 import '../widgets/coin_set_viewer.dart';
 import '../widgets/set_contents_panel.dart';
 import '../widgets/grade_badge_widget.dart';
@@ -3464,11 +3465,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     // Pre-fetch reference image once (no user photo path only).
     // Capture in closure so FutureBuilder doesn't re-run on every rebuild.
-    final hasUserPhoto = data[_F.imageObverse]?.toString().startsWith('http') == true
-        || data[_F.imageReverse]?.toString().startsWith('http') == true;
+    final hasUserPhoto = CanonicalMintAssetService.hasUserUploadedPhotos(data);
+    final canon = hasUserPhoto ? null : CanonicalMintAssetService.resolveFromMap(data);
     final refFuture = hasUserPhoto
         ? null
-        : CoinImageService.fetchReferenceImages(
+        : (canon != null
+            ? Future.value(CoinImageResult(
+                obverseUrl: canon.obverseUrl,
+                reverseUrl: canon.reverseUrl,
+                attribution: 'U.S. Mint',
+                sourceLabel: 'Canonical Mint Asset',
+                matchedKey: canon.sku,
+              ))
+            : CoinImageService.fetchReferenceImages(
             year:         year,
             mint:         mint.isEmpty ? null : mint,
             denomination: denom.isEmpty ? null : denom,
@@ -3478,7 +3487,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             subject:      _rowField(data, 'theme_subject', _F.themeSubject).isEmpty
                 ? null
                 : _rowField(data, 'theme_subject', _F.themeSubject),
-          );
+              ));
     // refFuture passed into FutureBuilder below
 
     showDialog(
@@ -4434,11 +4443,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   /// or an inviting "Add Your Photo" prompt otherwise.
   // ignore: unused_element — kept for CoinDetailScreen integration (Phase 2)
   Widget _buildCoinVaultGallery(Map<String, dynamic> data) {
-    final obvUrl = data[_F.imageObverse]?.toString() ?? '';
-    final revUrl = data[_F.imageReverse]?.toString() ?? '';
+    final hasUserPhoto = CanonicalMintAssetService.hasUserUploadedPhotos(data);
+    final canon = hasUserPhoto ? null : CanonicalMintAssetService.resolveFromMap(data);
+    final obvUrl = canon?.obverseUrl ?? (data[_F.imageObverse]?.toString() ?? '');
+    final revUrl = canon?.reverseUrl ?? (data[_F.imageReverse]?.toString() ?? '');
     final hasObv = obvUrl.isNotEmpty && obvUrl.startsWith('http');
     final hasRev = revUrl.isNotEmpty && revUrl.startsWith('http');
-    final hasAny = hasObv || hasRev;
+    final hasAny = hasUserPhoto || canon != null || hasObv || hasRev;
 
     // If switching to reverse but no reverse exists, stay on obverse
     final showObverse = _vaultShowObverse || (!hasRev && hasObv);
@@ -6355,6 +6366,14 @@ class _CollectionCardImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canon = CanonicalMintAssetService.resolveFromMap(data);
+    if (canon != null) {
+      final canonUrl = canon.reverseUrl.isNotEmpty ? canon.reverseUrl : canon.obverseUrl;
+      if (canonUrl.isNotEmpty) {
+        return _buildCoinImage(canonUrl);
+      }
+    }
+
     final obv = _cleanUrl(data[_F.imageObverse]);
     final rev = _cleanUrl(data[_F.imageReverse]);
     final directUrl = rev.isNotEmpty ? rev : obv;  // Prefer reverse (distinct design)

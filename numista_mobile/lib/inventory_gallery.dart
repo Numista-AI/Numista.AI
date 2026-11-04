@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'storage_service.dart';
 import 'utils/numista_error_helper.dart';
+import 'services/canonical_mint_asset_service.dart';
 
 const _electricBlue = Color(0xFF4C8CDA);
 const _neuralBronze = Color(0xFF8B6B00);
@@ -128,8 +129,9 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
             itemBuilder: (context, index) {
               final data = coins[index].data();
 
-              final imageUrlObverse = data['image_url_obverse']?.toString();
-              final imageUrlReverse = data['image_url_reverse']?.toString();
+              final canon = CanonicalMintAssetService.resolveFromMap(data);
+              final imageUrlObverse = canon?.obverseUrl ?? data['image_url_obverse']?.toString();
+              final imageUrlReverse = canon?.reverseUrl ?? data['image_url_reverse']?.toString();
 
               // -------------------------------------------------------------
               // DATA MAPPING

@@ -69,6 +69,12 @@ class CanonicalMintAssetService {
     '23RH',
   ];
 
+  static String _normYear(Object? y) {
+    final s = (y ?? '').toString().trim();
+    final m = RegExp(r'^(\d{4})(?:\.0+)?$').firstMatch(s);
+    return m != null ? m.group(1)! : s;
+  }
+
   static String extractSku(Map<String, dynamic> data) {
     for (final k in const <String>[
       'mint_product_id',
@@ -77,6 +83,7 @@ class CanonicalMintAssetService {
       'item_number',
       'Retailer Item No.',
       'retailer_item_no',
+      'retailer_item_num',
     ]) {
       final val = (data[k] ?? '').toString().trim().toUpperCase();
       if (_knownSkus.contains(val)) return val;
@@ -97,11 +104,22 @@ class CanonicalMintAssetService {
         if (tokens.contains(candidate)) return candidate;
       }
     }
-    final year = (data['year'] ?? data['Year'] ?? '').toString().trim();
+    final year = _normYear(data['year'] ?? data['Year']);
     final prog = (data['Program/Series'] ?? data['Program / Series'] ?? data['program_series'] ?? '').toString().toLowerCase();
     final theme = (data['Theme/Subject'] ?? data['theme_subject'] ?? '').toString().toLowerCase();
     final title = (data['title'] ?? data['name'] ?? '').toString().toLowerCase();
-    final combined = '$prog $theme $title';
+    final cond = <Object?>[
+      data['Condition'], data['condition'],
+      data['Variety'], data['variety'],
+      data['Strike Type'], data['strike_type'],
+      data['Denomination'], data['denomination'],
+    ].where((v) => v != null).map((v) => v.toString().toLowerCase()).join(' ');
+    final combined = '$prog $theme $title $cond';
+    if (year == '2026' &&
+        RegExp(r'\b(american|silver)\s+eagle\b').hasMatch(combined) &&
+        !RegExp(r'\b(gold|platinum|palladium)\b').hasMatch(combined)) {
+      return '26EA';
+    }
     if (year == '2026') {
       if (combined.contains('morgan') && combined.contains('enhanced')) return '26XE';
       if (combined.contains('morgan') && combined.contains('proof')) return '26XF';
@@ -151,7 +169,7 @@ class CanonicalMintAssetService {
       (data['description'] ?? '').toString().trim(),
     ].where((s) => s.isNotEmpty).join(' ');
 
-    final year = (data['year'] ?? data['Year'] ?? '').toString().trim();
+    final year = _normYear(data['year'] ?? data['Year']);
     final mintMark =
         (data['mint_mark'] ?? data['mint'] ?? data['Mint Mark'] ?? '').toString().trim();
     final denom =
@@ -179,9 +197,8 @@ class CanonicalMintAssetService {
     String? denomination,
     String? storedObverseUrl,
   }) {
-    final cleanSku = (sku ?? '').trim().toUpperCase();
     final cleanTitle = (title ?? '').trim().toLowerCase();
-    final cleanYear = (year ?? '').trim();
+    final cleanYear = _normYear(year);
     final rawMint = (mintMark ?? '').trim().toUpperCase();
     final cleanDenom = (denomination ?? '').trim().toLowerCase();
     final cleanMint = rawMint.contains('WEST POINT') || rawMint == 'W'
@@ -191,6 +208,16 @@ class CanonicalMintAssetService {
             : (rawMint.contains('D')
                 ? 'D'
                 : (rawMint.contains('P') ? 'P' : rawMint)));
+
+    final rawSku = (sku ?? '').trim().toUpperCase();
+    final cleanSku = rawSku.isNotEmpty
+        ? rawSku
+        : extractSku(<String, dynamic>{
+            'year': cleanYear,
+            'title': cleanTitle,
+            'denomination': cleanDenom,
+            'mint_mark': cleanMint,
+          });
 
     // 1. Exact / Inferred SKU Match
     switch (cleanSku) {
@@ -329,11 +356,15 @@ class CanonicalMintAssetService {
           isGenuine2026: true,
         );
       }
+      final isQuarter = RegExp(r'\b(25c|25¢|quarter)\b').hasMatch(cleanDenom) ||
+          RegExp(r'\bquarter\b').hasMatch(cleanTitle);
+      final isHalf = RegExp(r'\b(50c|50¢|half)\b').hasMatch(cleanDenom) ||
+          RegExp(r'\b(kennedy|half dollar)\b').hasMatch(cleanTitle);
       if (cleanTitle.contains('kennedy') ||
           cleanTitle.contains('half dollar') ||
           cleanDenom.contains('50c') ||
           cleanDenom.contains('half') ||
-          cleanTitle.contains('independence')) {
+          (cleanTitle.contains('independence') && !isQuarter)) {
         final effMint = (cleanMint.isEmpty || cleanMint == 'P') ? 'P' : cleanMint;
         final obvUrl = effMint == 'D'
             ? '$_base/bulk_programs/half_dollar/SemiQ-Half-Dollar-Obverse-Unc-D.jpg'
@@ -364,6 +395,60 @@ class CanonicalMintAssetService {
               ? '$_base/2026_series/2026_quarter_dollar_mayflower_compact_obverse.jpg'
               : null,
           fallbackReverseUrl: null,
+          isGenuine2026: true,
+        );
+      }
+      // 2026 Semiquincentennial quarters (Declaration, Gettysburg, Revolutionary War, Constitution)
+      const qtrs = <String, String>{
+        'declaration of independence': 'declaration_of_independence',
+        'gettysburg': 'gettysburg_address',
+        'revolutionary war': 'revolutionary_war',
+        'constitution': 'us_constitution',
+      };
+      for (final e in qtrs.entries) {
+        if (cleanTitle.contains(e.key) && (isQuarter || !isHalf)) {
+          final effMint = (cleanMint.isEmpty || cleanMint == 'P') ? 'P' : cleanMint;
+          return CanonicalMintAssetPair(
+            sku: '2026-QTR-${e.value.toUpperCase()}-$effMint',
+            obverseUrl: '$_base/2026_series/2026_quarter_dollar_${e.value}_obverse.jpg',
+            reverseUrl: '$_base/2026_series/2026_quarter_dollar_${e.value}_reverse.jpg',
+            isGenuine2026: true,
+          );
+        }
+      }
+      // 2026 Native American $1 (Polly Cooper)
+      if (cleanTitle.contains('polly cooper') ||
+          (RegExp(r'\bnative american\b').hasMatch(cleanTitle) &&
+              (cleanDenom.contains('1') || cleanTitle.contains('dollar')))) {
+        return const CanonicalMintAssetPair(
+          sku: '2026-NATIVE-POLLY',
+          obverseUrl: '$_base/2026_series/2026_native_american_dollar_polly_cooper_obverse.jpg',
+          reverseUrl: '$_base/2026_series/2026_native_american_dollar_polly_cooper_reverse.jpg',
+          isGenuine2026: true,
+        );
+      }
+      // MF-1: cent and nickel, whole word or denomination field only. NEVER substring 'cent'.
+      final isCent = RegExp(r'\b(1c|1¢|one cent|cent|penny)\b').hasMatch(cleanDenom) ||
+          RegExp(r'\b(lincoln cent|one cent|penny)\b').hasMatch(cleanTitle);
+      final isNickel = RegExp(r'\b(5c|5¢|five cents?|nickel)\b').hasMatch(cleanDenom) ||
+          RegExp(r'\b(jefferson nickel|nickel|five cents?)\b').hasMatch(cleanTitle);
+      if (isCent && !isQuarter && !isHalf) {
+        final effMint = cleanMint == 'D' ? 'D' : 'P';
+        return CanonicalMintAssetPair(
+          sku: '2026-CENT-$effMint',
+          obverseUrl: effMint == 'D'
+              ? '$_base/bulk_programs/us_mint_manual/highres_scrape/SemiQ-Penny-Obverse-Unc-D.jpg'
+              : '$_base/bulk_programs/penny/SemiQ-Penny-Obverse-Unc-P.jpg',
+          reverseUrl: '$_base/bulk_programs/penny/SemiQ-Penny-Reverse-Unc.jpg',
+          isGenuine2026: true,
+        );
+      }
+      if (isNickel && !isQuarter && !isHalf) {
+        final effMint = cleanMint == 'D' ? 'D' : 'P';
+        return CanonicalMintAssetPair(
+          sku: '2026-NICKEL-$effMint',
+          obverseUrl: '$_base/bulk_programs/nickel/SemiQ-Nickel-Obverse-Unc-$effMint.jpg',
+          reverseUrl: '$_base/bulk_programs/nickel/SemiQ-Nickel-Reverse-Unc.jpg',
           isGenuine2026: true,
         );
       }

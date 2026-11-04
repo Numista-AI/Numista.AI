@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../services/http_auth_client.dart';
+import '../services/canonical_mint_asset_service.dart';
 import '../utils/numista_error_helper.dart';
 import '../widgets/grade_badge_widget.dart';
 
@@ -2187,7 +2188,9 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   }
 
   Widget _buildCoinThumbnail(Map<String, dynamic> data) {
-    final rawUrl = (data['image_url_obverse'] ??
+    final canon = CanonicalMintAssetService.resolveFromMap(data);
+    final rawUrl = canon?.obverseUrl ??
+        (data['image_url_obverse'] ??
             data['image_url'] ??
             data['obverse_url'] ??
             data['reference_image_url'] ??

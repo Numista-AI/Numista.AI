@@ -34,6 +34,7 @@ import '../services/inspector_service.dart';
 import '../services/melt_value_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/coin_image_service.dart';
+import '../services/canonical_mint_asset_service.dart';
 import '../services/mint_error_service.dart';
 import '../widgets/grade_badge_widget.dart';
 import '../widgets/glossary_tooltip_wrapper.dart';
@@ -1047,11 +1048,23 @@ class _CoinImagePairState extends State<_CoinImagePair> {
   @override
   void initState() {
     super.initState();
-    // gs:// URIs are not displayable by Image.network() — treat as empty
+    // gs:// URIs are not displayable by Image.network() – treat as empty
     // so CoinImageService can fill in a public HTTPS URL from coin_image_index.
-    _obvUrl = _toHttpsUrl(widget.coin.imageUrlObverse);
-    _revUrl = _toHttpsUrl(widget.coin.imageUrlReverse);
-    // Fetch reference images for any side that doesn't have a personal photo
+    final coinMap = <String, dynamic>{
+      ...widget.coin.toFirestore(),
+      'source': widget.coin.source,
+      'Personal Notes': widget.coin.personalNotes,
+    };
+    final canon = CanonicalMintAssetService.resolveFromMap(coinMap);
+    if (canon != null) {
+      _obvUrl = canon.obverseUrl;
+      _revUrl = canon.reverseUrl;
+      _attribution = 'U.S. Mint';
+    } else {
+      _obvUrl = _toHttpsUrl(widget.coin.imageUrlObverse);
+      _revUrl = _toHttpsUrl(widget.coin.imageUrlReverse);
+    }
+    // Fetch reference images for any side that doesn't have a personal photo or canonical asset
     if (_obvUrl.isEmpty || _revUrl.isEmpty) {
       _fetchReferenceImages();
     }

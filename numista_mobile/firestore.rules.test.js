@@ -18,7 +18,7 @@
 
 const { initializeTestEnvironment, assertFails, assertSucceeds } =
   require("@firebase/rules-unit-testing");
-const { doc, setDoc, updateDoc, getDoc } = require("firebase/firestore");
+const { doc, setDoc, updateDoc, getDoc, collection, getDocs } = require("firebase/firestore");
 const fs = require("fs");
 const path = require("path");
 
@@ -439,5 +439,31 @@ test("DENY: coin create with is_demo: true still blocked by coin-level rule", as
       Year: "2025",
       is_demo: true,
     })
+  );
+});
+
+
+// ── NET-748: read-only SKU dictionary lookups ─────────────────────────────────
+test("ALLOW: authenticated getDoc of global_metadata/usmint_sku_dictionary/skus/26SQRP succeeds", async () => {
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    getDoc(doc(db, "global_metadata/usmint_sku_dictionary/skus/26SQRP"))
+  );
+});
+
+test("DENY: unauthenticated getDoc of global_metadata/usmint_sku_dictionary/skus/26SQRP fails", async () => {
+  const unauthDb = testEnv.unauthenticatedContext().firestore();
+  await assertFails(
+    getDoc(doc(unauthDb, "global_metadata/usmint_sku_dictionary/skus/26SQRP"))
+  );
+});
+
+test("DENY: authenticated getDocs (list) on .../skus and setDoc both fail", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    getDocs(collection(db, "global_metadata/usmint_sku_dictionary/skus"))
+  );
+  await assertFails(
+    setDoc(doc(db, "global_metadata/usmint_sku_dictionary/skus/26SQRP"), { name: "test" })
   );
 });

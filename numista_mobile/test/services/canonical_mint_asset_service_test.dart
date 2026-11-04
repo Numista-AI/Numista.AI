@@ -2,6 +2,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:numista_ai/services/canonical_mint_asset_service.dart';
+import 'package:numista_ai/screens/add_coins_hub.dart';
+import 'package:numista_ai/services/coin_image_service.dart';
 
 void main() {
   group('CanonicalMintAssetService - 28 Live Firestore Document Tests + 14 Synthetic Tracker Tests', () {
@@ -505,6 +507,322 @@ void main() {
       expect(pair.reverseUrl, equals('https://storage.googleapis.com/numista-reference-library/reference_library/atb_quarters/2020-america-the-beautiful-quarters-coin-weir-farm-connecticut-uncirculated-reverse.jpg'));
       expect(pair.fallbackObverseUrl, equals('https://storage.googleapis.com/numista-reference-library/reference_library/atb_quarters/2014-america-the-beautiful-quarters-coin-proof-obverse-s.jpg'));
       expect(pair.fallbackReverseUrl, isNull);
+    });
+  });
+
+  group('NET-748 v5 Tests (1 through 21)', () {
+    test('1. _normYear: 2026.0 and 2026 normalize to 2026 through resolveFromMap and extractSku', () {
+      final doc1 = {'year': '2026.0', 'retailer_item_num': '26SQRP'};
+      final doc2 = {'year': '2026', 'retailer_item_num': '26SQRP'};
+      expect(CanonicalMintAssetService.extractSku(doc1), equals('26SQRP'));
+      expect(CanonicalMintAssetService.extractSku(doc2), equals('26SQRP'));
+      final pair1 = CanonicalMintAssetService.resolveFromMap(doc1);
+      final pair2 = CanonicalMintAssetService.resolveFromMap(doc2);
+      expect(pair1, isNotNull);
+      expect(pair2, isNotNull);
+      expect(pair1!.sku, equals('26SQRP'));
+      expect(pair2!.sku, equals('26SQRP'));
+    });
+
+    test('2. ASE proof, 2026: extractSku returns 26EA', () {
+      final doc = {'title': 'American Silver Eagle', 'Condition': 'Proof', 'year': '2026.0'};
+      expect(CanonicalMintAssetService.extractSku(doc), equals('26EA'));
+      final pair = CanonicalMintAssetService.resolveFromMap(doc);
+      expect(pair, isNotNull);
+      expect(pair!.sku, equals('26EA'));
+    });
+
+    test('3. MF-v3-3: ASE ungraded 2026 W returns 26EA', () {
+      final doc = {
+        'year': '2026',
+        'mint': 'W',
+        'Program/Series': 'American Silver Eagle',
+        'Condition': 'Ungraded',
+      };
+      expect(CanonicalMintAssetService.extractSku(doc), equals('26EA'));
+      final pair = CanonicalMintAssetService.resolveFromMap(doc);
+      expect(pair, isNotNull);
+      expect(pair!.sku, equals('26EA'));
+    });
+
+    test('4. Gold Eagle proof does not resolve to 26EA', () {
+      final doc = {'title': 'American Gold Eagle', 'Condition': 'Proof', 'year': '2026'};
+      expect(CanonicalMintAssetService.extractSku(doc), isNot(equals('26EA')));
+    });
+
+    test('5. retailer_item_num 26SQRP extracts 26SQRP and resolves to MASTER_SEMIQDJT_image_1.jpg', () {
+      final doc = {'retailer_item_num': '26SQRP', 'year': '2026'};
+      expect(CanonicalMintAssetService.extractSku(doc), equals('26SQRP'));
+      final pair = CanonicalMintAssetService.resolveFromMap(doc);
+      expect(pair, isNotNull);
+      expect(pair!.obverseUrl, contains('MASTER_SEMIQDJT_image_1.jpg'));
+    });
+
+    test('6. Declaration quarter resolves to 2026-QTR-DECLARATION and not 2026-HALF', () {
+      final pair = CanonicalMintAssetService.resolve(
+        title: 'Declaration of Independence Quarter',
+        denomination: '25c',
+        year: '2026',
+      );
+      expect(pair, isNotNull);
+      expect(pair!.sku, startsWith('2026-QTR-DECLARATION'));
+      expect(pair.sku, isNot(startsWith('2026-HALF')));
+    });
+
+    test('7. Half with independence and denom 50c resolves to 2026-HALF', () {
+      final pair = CanonicalMintAssetService.resolve(
+        title: 'Declaration of Independence Half Dollar',
+        denomination: '50c',
+        year: '2026',
+      );
+      expect(pair, isNotNull);
+      expect(pair!.sku, startsWith('2026-HALF'));
+    });
+
+    test('8. Semiquincentennial Quarter does not resolve to 2026-CENT', () {
+      final pair = CanonicalMintAssetService.resolve(
+        title: 'Semiquincentennial Quarter',
+        denomination: '25c',
+        year: '2026',
+      );
+      if (pair != null) {
+        expect(pair.sku, isNot(startsWith('2026-CENT')));
+      }
+    });
+
+    test('9. Semiquincentennial Dime resolves to 2026-DIME', () {
+      final pair = CanonicalMintAssetService.resolve(
+        title: 'Semiquincentennial Dime',
+        denomination: '10c',
+        year: '2026',
+      );
+      expect(pair, isNotNull);
+      expect(pair!.sku, startsWith('2026-DIME'));
+    });
+
+    test('10. Gettysburg quarter resolves to 2026-QTR-GETTYSBURG_ADDRESS and not cent', () {
+      final pair = CanonicalMintAssetService.resolve(
+        title: 'Lincoln Gettysburg Address Quarter',
+        denomination: '25c',
+        year: '2026',
+      );
+      expect(pair, isNotNull);
+      expect(pair!.sku, startsWith('2026-QTR-GETTYSBURG_ADDRESS'));
+      expect(pair.sku, isNot(startsWith('2026-CENT')));
+    });
+
+    test('11. Cent P / D resolves to exact Penny Obverse Unc paths', () {
+      final pairD = CanonicalMintAssetService.resolve(
+        title: 'Semiquincentennial Cent',
+        denomination: '1c',
+        year: '2026',
+        mintMark: 'D',
+      );
+      expect(pairD, isNotNull);
+      expect(pairD!.obverseUrl, contains('highres_scrape/SemiQ-Penny-Obverse-Unc-D.jpg'));
+
+      final pairP = CanonicalMintAssetService.resolve(
+        title: 'Semiquincentennial Cent',
+        denomination: '1c',
+        year: '2026',
+        mintMark: 'P',
+      );
+      expect(pairP, isNotNull);
+      expect(pairP!.obverseUrl, contains('penny/SemiQ-Penny-Obverse-Unc-P.jpg'));
+    });
+
+    test('12. Nickel P/D resolves to bulk_programs/nickel paths', () {
+      final pairD = CanonicalMintAssetService.resolve(
+        title: 'Semiquincentennial Nickel',
+        denomination: '5c',
+        year: '2026',
+        mintMark: 'D',
+      );
+      expect(pairD, isNotNull);
+      expect(pairD!.obverseUrl, contains('bulk_programs/nickel/'));
+
+      final pairP = CanonicalMintAssetService.resolve(
+        title: 'Semiquincentennial Nickel',
+        denomination: '5c',
+        year: '2026',
+        mintMark: 'P',
+      );
+      expect(pairP, isNotNull);
+      expect(pairP!.obverseUrl, contains('bulk_programs/nickel/'));
+    });
+
+    test('13. Polly Cooper dollar resolves to polly cooper obverse path', () {
+      final pair = CanonicalMintAssetService.resolve(
+        title: 'Polly Cooper Native American Dollar',
+        year: '2026',
+      );
+      expect(pair, isNotNull);
+      expect(pair!.obverseUrl, contains('2026_native_american_dollar_polly_cooper_obverse.jpg'));
+    });
+
+    test('14. Revolutionary War and Constitution quarters resolve to their 2026_series paths', () {
+      final pairRev = CanonicalMintAssetService.resolve(
+        title: 'Revolutionary War Quarter',
+        denomination: '25c',
+        year: '2026',
+      );
+      expect(pairRev, isNotNull);
+      expect(pairRev!.obverseUrl, contains('2026_series/'));
+      expect(pairRev.sku, startsWith('2026-QTR-REVOLUTIONARY_WAR'));
+
+      final pairConst = CanonicalMintAssetService.resolve(
+        title: 'US Constitution Quarter',
+        denomination: '25c',
+        year: '2026',
+      );
+      expect(pairConst, isNotNull);
+      expect(pairConst!.obverseUrl, contains('2026_series/'));
+      expect(pairConst.sku, contains('CONSTITUTION'));
+    });
+
+    test('15. Mayflower D regression guard (F2-3) matches existing line 146', () {
+      final doc = <String, dynamic>{
+        'Year': '2026',
+        'Mint Mark': 'D',
+        'Denomination': 'Quarter Dollar (25C)',
+        'Program/Series': 'United States Semiquincentennial (250th Anniversary)',
+        'Theme/Subject': 'Mayflower Compact & Pilgrim Couple',
+      };
+      expect(CanonicalMintAssetService.hasUserUploadedPhotos(doc), isFalse);
+      final pair = CanonicalMintAssetService.resolveFromMap(doc);
+      expect(pair, isNotNull);
+      expect(pair!.sku, equals('2026-MAYFLOWER-D'));
+      expect(pair.obverseUrl, equals('https://storage.googleapis.com/numista-reference-library/reference_library/bulk_programs/us_mint_manual/highres_scrape/SemiQ-Mayflower-Obverse-Unc-D.jpg'));
+    });
+
+    test('16. User-photo doc (MF-B) with a 2026 cent title resolves to null', () {
+      final doc = <String, dynamic>{
+        'year': '2026',
+        'title': 'Semiquincentennial Cent',
+        'Personal Notes': 'User photo taken via microscope',
+      };
+      expect(CanonicalMintAssetService.resolveFromMap(doc), isNull);
+    });
+
+    test('17. kFallbackUsMintSkus has exactly the 11 SKUs in 4.1 with sku and name', () {
+      const expectedSkus = {
+        '26EA', '26XE', '26XL', '26XH', '26XF', '26GC', '26SQRP', '26RG', '23RG', '26RH', '23RH',
+      };
+      expect(kFallbackUsMintSkus.length, equals(11));
+      expect(kFallbackUsMintSkus.keys.toSet(), equals(expectedSkus));
+      for (final sku in expectedSkus) {
+        final entry = kFallbackUsMintSkus[sku];
+        expect(entry, isNotNull);
+        expect(entry!['sku'], equals(sku));
+        expect(entry['name'], isNotEmpty);
+      }
+    });
+
+    test('18. AddCoinsHub.buildSkuCoinDoc includes sku and mint_product_id', () {
+      final doc = AddCoinsHub.buildSkuCoinDoc({'year': '2026', 'denomination': '25c'}, '26SQRP');
+      expect(doc['sku'], equals('26SQRP'));
+      expect(doc['mint_product_id'], equals('26SQRP'));
+      expect(doc['source'], equals('manual_sku'));
+    });
+
+    test('19. CoinImageService.fetchReferenceImages resolves canonical for 2026 and bypasses for 1962', () async {
+      // 2026 Mayflower
+      final res2026 = await CoinImageService.fetchReferenceImages(
+        year: '2026',
+        series: 'Mayflower',
+        mint: 'D',
+      );
+      expect(res2026.sourceLabel, equals('Canonical Mint Asset'));
+
+      // 1962 cent bypasses canonical hook
+      final res1962 = await CoinImageService.fetchReferenceImages(
+        year: '1962',
+        denomination: '1c',
+        mint: 'D',
+      );
+      expect(res1962.sourceLabel, isNot(equals('Canonical Mint Asset')));
+    });
+
+    test('20. MF-v3-2: resolve infers SKU from title/year alone when no SKU is passed', () {
+      final morgan = CanonicalMintAssetService.resolve(
+        title: 'Morgan Dollar Enhanced Uncirculated',
+        year: '2026',
+      );
+      expect(morgan, isNotNull);
+      expect(morgan!.sku, equals('26XE'));
+
+      final peace = CanonicalMintAssetService.resolve(
+        title: 'Peace Dollar Uncirculated',
+        year: '2026',
+      );
+      expect(peace, isNotNull);
+      expect(peace!.sku, equals('26XH'));
+
+      final ase = CanonicalMintAssetService.resolve(
+        title: 'American Silver Eagle',
+        year: '2026',
+      );
+      expect(ase, isNotNull);
+      expect(ase!.sku, equals('26EA'));
+
+      final sqrp = CanonicalMintAssetService.resolve(
+        title: 'Trump Semiquincentennial President Quarter',
+        year: '2026',
+      );
+      expect(sqrp, isNotNull);
+      expect(sqrp!.sku, equals('26SQRP'));
+
+      final setItem = CanonicalMintAssetService.resolve(
+        title: 'Silver Proof Set',
+        year: '2026',
+      );
+      expect(setItem, isNotNull);
+      expect(setItem!.sku, equals('26RH'));
+    });
+
+    test('21. v5 case guard (SAG MF-1): case-insensitive folding matches identical assets', () {
+      // Repeat Test 2 (ALL-CAPS ASE)
+      final doc2 = {'title': 'AMERICAN SILVER EAGLE', 'Condition': 'PROOF', 'year': '2026.0'};
+      expect(CanonicalMintAssetService.extractSku(doc2), equals('26EA'));
+      final pair2 = CanonicalMintAssetService.resolveFromMap(doc2);
+      expect(pair2, isNotNull);
+      expect(pair2!.sku, equals('26EA'));
+
+      // Repeat Test 6 (Mixed case Declaration Quarter)
+      final pair6 = CanonicalMintAssetService.resolve(
+        title: 'Declaration Of Independence QUARTER',
+        denomination: '25c',
+        year: '2026',
+      );
+      expect(pair6, isNotNull);
+      expect(pair6!.sku, startsWith('2026-QTR-DECLARATION'));
+
+      // Repeat Test 10 (ALL-CAPS Gettysburg Quarter)
+      final pair10 = CanonicalMintAssetService.resolve(
+        title: 'LINCOLN GETTYSBURG ADDRESS QUARTER',
+        denomination: '25C',
+        year: '2026',
+      );
+      expect(pair10, isNotNull);
+      expect(pair10!.sku, startsWith('2026-QTR-GETTYSBURG_ADDRESS'));
+
+      // Repeat Test 13 (lowercase polly cooper)
+      final pair13 = CanonicalMintAssetService.resolve(
+        title: 'polly cooper native american dollar',
+        year: '2026',
+      );
+      expect(pair13, isNotNull);
+      expect(pair13!.obverseUrl, contains('2026_native_american_dollar_polly_cooper_obverse.jpg'));
+
+      // Repeat Test 11 with lowercase mint 'd'
+      final pair11 = CanonicalMintAssetService.resolve(
+        title: 'SEMIQUINCENTENNIAL CENT',
+        denomination: '1c',
+        year: '2026',
+        mintMark: 'd',
+      );
+      expect(pair11, isNotNull);
+      expect(pair11!.obverseUrl, contains('highres_scrape/SemiQ-Penny-Obverse-Unc-D.jpg'));
     });
   });
 }
