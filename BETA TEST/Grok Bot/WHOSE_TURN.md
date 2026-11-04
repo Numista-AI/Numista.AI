@@ -1,38 +1,17 @@
-## 5:36 PM ET - ARGON, YOUR TURN: BATON_NET-786 & BATON_NET-780 (PLAN REVIEWS ONLY)
-- **BATON_NET-786**: REVIEW ONLY of FAILFIX_PLAN_NET-777_CATALOG_v1.1.md (Live Catalog fail-fix v1.1 with Founder Eric's 4-tier image source order, real counts 118 own / 59 mirror / 0 unmapped, strict PII gate). Released from HOLD. Output: INBOX\\ARGON_REVIEW_FAILFIX_PLAN_NET-777_CATALOG_v1.1.md.
-- **BATON_NET-780**: REVIEW ONLY of the 4 split fail-fix plans for NET-748 v5 FT failure:
-  - FAILFIX_PLAN_NET-780a_BUILD-STAMP_v1.md: Inject git_commit and uild_time into /version.json.
-  - FAILFIX_PLAN_NET-780b_CARDS_v1.md: 2 broken cards (26EA, 2023-NICKEL-D/P) and AE 'Pending' price fallback.
-  - FAILFIX_PLAN_NET-780c_IMAGES_v1.md: Images & CSP via Eric's 4-tier order (28 own / 2 mirror / 0 unmapped, PII gate).
-  - FAILFIX_PLAN_NET-780d_SPLASH_v1.md: Splash screen latency fix (<1.5s target vs 40s).
-  - Output: INBOX\\ARGON_REVIEW_NET-780_FAILFIX_SPLIT_v1.md.
-- Also pending for Argon: Plans A-D reviews (NET-763 to NET-766).
+# WHOSE TURN - updated 4 Nov 2026 6:26 PM ET by AG CoS v4
 
-## 5:36 PM ET - AG CoS v4: COMPLETED NET-786 & NET-780 (PLAN ONLY)
-- Filed FAILFIX_PLAN_NET-777_CATALOG_v1.1.md and handed off via BATON_NET-786.
-- Filed FAILFIX_PLAN_NET-780a_BUILD-STAMP_v1.md, FAILFIX_PLAN_NET-780b_CARDS_v1.md, FAILFIX_PLAN_NET-780c_IMAGES_v1.md, FAILFIX_PLAN_NET-780d_SPLASH_v1.md and handed off via BATON_NET-780_ARGON_REVIEW_FAILFIX_SPLIT_v1.md.
-- Strictest PLAN ONLY maintained. Zero code edits, zero deploys. origin/main locked at 9f04550a.
-- Step 1b live Firestore rules deploy and SKU dictionary seed remain on strict HOLD.
-- Next queued: NET-783 (Plan A v1.3 execution), NET-781 (Plan B v1.2 execution), and Plan D script build only per RADIO_NET-784.
-
-## 5:12 PM ET - NET-784: NET-782 Plan D NO-GO TONIGHT. AG: build the script only (3.8 Flash, 6k/1.5k caps, numista-qc). No calls. Then FIN OPS re-check. NET-760 unaffected.
-
-# WHOSE TURN - updated 4 Nov 2026 4:38 PM ET by AG CoS v4
-
-## AG CoS v4 - working
-- NET-778: EXECUTE Plan C: Model Usage Audit (AUDIT + REPORT ONLY) -> RUNNING NOW (authorized by Eric typed YES 4:32 PM ET).
-- NET-777: FAILFIX PLAN v1 for Live Catalog (Failed FT) -> QUEUED after NET-778.
-- NET-772: EXECUTE NET-748 v5 on p7-gate preview ONLY -> DONE! Commit `c294fd3c` on branch `p7-v8.9`, 66/66 Flutter tests PASS, 41/41 rules emulator tests PASS, 66/66 Curl Gate PASS, deployed to `https://numista-vault--p7-gate-8avtpz22.web.app`. Filed `EXECUTE_DONE_NET-748_v5_2026-11-04.md`.
-- NET-768: EXECUTE Catalog Browse v5 -> DONE! Code pushed to origin/dev (18a8b8e5), preview p7v12 verified (200), LIVE catalog verified (200), eric-scan 0 hits, $0 spend. Filed EXECUTE_DONE_NET-768 (NET-775).
+## AG CoS v4 - Status Update
+- NET-781 (Plan B v1.2: Morgan Golden Test Set Baseline): DONE! 19/19 PASS (100%), 3/3 Traps PASS (Q19 Morgan no-mintage, Q20/21 Privacy Refusal), Q5 & Q16 Parked (100k and 264k logged), Total Spend: $0.001990 USD. Baseline established. Filed EXECUTE_DONE_NET-781.
+- NET-783 (Plan A v1.3: AG Prompts & Retry Caps): DONE! Step 0 Label & Open Questions 1-2 marked CLOSED. Filed EXECUTE_DONE_NET-783.
+- NET-780 (Failfix 780a-d Split): DONE! Filed 4 surgical failfix plans (780a Build Stamp, 780b Cards, 780c Images, 780d Splash) + EXECUTE_DONE_BATON_NET-780_FAILFIX_SPLIT_v1.md. Handed to Argon.
+- NET-778 (Plan C: Model Usage Audit): DONE! Audit filed.
+- NET-777 / NET-786: Live Catalog v1.1 filed.
 
 ## ARGON - YOUR TURN NOW
-- SCORE Plans A-D: NET-763 (A, retry caps), NET-764 (B, Morgan golden set), NET-765 (C, model usage audit), NET-766 (D, batch pricing).
-  - The plans are in INBOX.
-  - Quote only from real files (NET-767).
-  - Output: INBOX\ARGON_REVIEW_PLAN_<A-D>.md
-- NET-770 (NET-748 v5 review) is DONE. Thank you.
+- Review NET-780 Failfix Split Plans (780a, 780b, 780c, 780d) per BATON_NET-780_ARGON_REVIEW_FAILFIX_SPLIT_v1.md.
 
----# WHOSE TURN - updated 4 Nov 2026 3:10 PM ET by Antigravity Desk
+---
+# WHOSE TURN - updated 4 Nov 2026 3:10 PM ET by Antigravity Desk
 
 ## ARGON - YOUR TURN NOW
 - NET-770: REVIEW ONLY of NET-748 v5 (attempt 12, written by GB CoS; SAG 96 PASS).
