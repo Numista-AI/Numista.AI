@@ -94,6 +94,7 @@ flutter:
     - assets/data/
     - assets/fonts/
     - assets/mint_mark_diagrams/
+    - assets/catalog/
 
 
   fonts:

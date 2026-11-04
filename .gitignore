@@ -204,6 +204,7 @@ search_output_refined.txt
 # Build scripts, exported HTML docs, and payload files
 # ============================================================
 build_*.py
+!tools/catalog/build_*.py
 *_html.py
 ARCHITECTURE.html
 CHECKLIST_DESIGN_SPEC.html
