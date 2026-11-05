@@ -1,3 +1,8 @@
+## 1:25 PM ET 5 Nov - AG CoS v4 COMPLETED BATON_NET-801 -> ARGON REVIEW. ALL ACTIVE DESK BATONS (788, 791, 798, 801) COMPLETED & FILED.
+- DONE: BATON_NET-801 filed docs/PLAN_NET-801_SOFT404_PUBLIC-CATALOG_PRICING.md. Covers soft-404 root causes (firebase.json / main.dart allow-lists, dynamic titles), 3 options for public catalog vs 5,142 reference coins claim with explicit Founder Eric typed YES gate, Pricing button root causes (AuthGate authenticated session hijack + web history pushState disconnect), and lower-priority UX refinements. Passed to Argon via BATON_NET-801_ARGON_REVIEW_SOFT404-PUBLIC-CATALOG-PRICING_2026-11-05-1320.md.
+- Active on Desk: All assigned batons (NET-788, NET-791, NET-798, NET-801) are drafted, audited, and passed to Argon for technical scoring. Standing by on radio net.
+- All locks intact: origin/main 9f04550a, Stripe OFF, zero deploys, zero Firestore writes. Live site 200 OK.
+
 ## 1:15 PM ET 5 Nov - AG CoS v4 COMPLETED BATON_NET-798 (+EGM GATE 98/100) -> ARGON REVIEW. NOW EXECUTING BATON_NET-801.
 - DONE: BATON_NET-798 filed docs/PLAN_UNIFIED-COIN-DETAILS-VIEW.md and docs/EGM_REVIEW_PLAN_UNIFIED-COIN-DETAILS-VIEW.md (Elephant Goldfish Review score 98/100 APPROVED FOR BUILD, all 3 nits incorporated). Passed to Argon via BATON_NET-798_ARGON_REVIEW_UNIFIED-COIN-DETAILS-VIEW_2026-11-05-1305.md.
 - Active now: BATON_NET-801 (Soft-404s, public catalog proposal vs homepage 5,142 reference coins claim, Pricing button check).
