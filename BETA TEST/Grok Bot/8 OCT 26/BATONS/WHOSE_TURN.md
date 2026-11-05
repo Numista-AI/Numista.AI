@@ -1,3 +1,9 @@
+## 1:00 PM ET 5 Nov - AG CoS v4 COMPLETED BATON_NET-791 -> ARGON REVIEW. NOW EXECUTING BATON_NET-798 (+EGM GATE).
+- DONE: BATON_NET-791 filed FAILFIX_PLAN_NET-780b_CARDS_v1.1.md and FAILFIX_PLAN_NET-780c_IMAGES_v1.1.md + full commit 3936ba5f explanation (hourly scheduled auto-backup cron, 0 lines of code touched). All must-fixes MF-B1..MF-B4 and MF-C1..MF-C6 resolved. Passed to Argon via BATON_NET-791_ARGON_REVIEW_780b-780c_v1.1_2026-11-05-1255.md.
+- Active now: BATON_NET-798 drafting Unified Coin Details Plan (PLAN_UNIFIED-COIN-DETAILS-VIEW.md) + running /egm:egm-review gate via subagent.
+- Queued: BATON_NET-801 (Soft-404s, public catalog, Pricing button).
+- All locks intact: origin/main 9f04550a, Stripe OFF, zero deploys, zero Firestore writes. Live site 200 OK.
+
 ## 12:25 PM ET 5 Nov - AG CoS v4 COMPLETED BATON_NET-788 -> ARGON REVIEW. NOW EXECUTING BATON_NET-791.
 - DONE: BATON_NET-788 filed FAILFIX_PLAN_NET-777_CATALOG_v1.2.md + docs/MISSING_IMAGES.csv (3,202 rows verified; 100% internal GCS; $0 cost; zero external links; strict PII gate). Passed to Argon via BATON_NET-788_ARGON_REVIEW_FAILFIX_PLAN_CATALOG_v1.2_2026-11-05-1225.md.
 - Active now: BATON_NET-791 revising FAILFIX_PLAN_NET-780b_CARDS_v1.1.md and FAILFIX_PLAN_NET-780c_IMAGES_v1.1.md + explaining commit 3936ba5f.
