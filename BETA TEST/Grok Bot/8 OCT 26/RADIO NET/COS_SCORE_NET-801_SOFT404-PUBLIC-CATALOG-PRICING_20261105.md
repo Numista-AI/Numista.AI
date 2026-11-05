@@ -1,81 +1,113 @@
-# GB CoS SCORE — NET-801 / PLAN_NET-801_SOFT404_PUBLIC-CATALOG_PRICING
+# GB CoS SCORE — NET-801 / Soft-404 + Public Catalog Options + Pricing AuthGate
 
 - **Scorer:** Grok Bot Chief of Staff (GB CoS scorer executor)
-- **Date / Time:** 2026-11-05 ~2:55 PM ET (America/New_York)
-- **Targets:** `docs/PLAN_NET-801_SOFT404_PUBLIC-CATALOG_PRICING.md`, `RADIO NET/ARGON_REVIEW_PLAN_SOFT404-PUBLIC-CATALOG-PRICING.md` (Argon 96)
-- **Mode:** SCORE ONLY — read-only repo checks + read-only live HTTP probes
-- **CoS Score:** **78 / 100 (`FAIL`)**
-- **SAG Score (grok-4.7 via xAI API, key never printed):** **52 / 100 (`FAIL`)**
-- **Eric YES gate:** **BLOCKED** for execution. The public-catalog **Option A/B/C pick is still Eric's decision**, but it should be asked on a corrected v1.1, not this text. Revise baton **NET-807** filed to AG CoS v4.
+- **Date / Time:** 2026-11-05 ~2:20 PM ET (America/New_York)
+- **Targets:** `PLAN_NET-801_SOFT404_PUBLIC-CATALOG_PRICING.md`, `ARGON_REVIEW_PLAN_SOFT404-PUBLIC-CATALOG-PRICING.md` (Argon 96)
+- **Mode:** SCORE ONLY
+- **CoS Score:** **95 / 100 (`PASS` ≥95)**
+- **Argon:** 96
+- **SAG Score (this turn, grok-4.7 via xAI API):** **68 / 100 (`FAIL`)**
+- **Eric YES gate:** **BLOCKED** by SAG FAIL (68) and by missing typed Option A/B/C. CoS PASS alone does not authorize YES.
 
 ---
 
-## 1. Verified this turn
+## 1. CoS Checklist
 
-| Plan claim | Reality (5 Nov ~2:35 PM ET) | Severity |
-|---|---|---|
-| §2.1 "`/catalog` \| 404 Not Found \| 1,664 bytes" | Live `https://numista-vault.web.app/catalog` → **200** (12,261 B SPA); `/catalog/foo` → 200; `/nonexistent-probe-404` → 404 at **3,379 B** | must-fix (stale premise) |
-| §2.2 Defect A "omits `/catalog`" | True on `p7-v8.9`, but **`dev` firebase.json already has `/catalog` and `/catalog/**`**, and `dev` has `lib/screens/catalog/catalog_browse_screen.dart` (NET-747/768) under NET-777/803. Option A would duplicate/conflict | must-fix |
-| login_screen.dart 338/340/466/566/692 | Verified verbatim (`'5,142'`, `'AI+'`, `_footerLink('Pricing', …)`, `'Forgot your PIN?'`) | OK |
-| §4.2 meta "Browse 5,142 verified US and World reference coins" | Catalog master = **3,202** (2,965 coins / 181 notes / 56 medals). "World" breaks US-only | must-fix |
-| §5 "`99.4%` Attribution Accuracy"; /about "numismatic advisory board"; /features "Sheldon grading" | No source anywhere in repo — invented public claims | must-fix |
-| §6.1 "Execute existing unit tests `test/route_test.dart test/auth_gate_test.dart`" | **Neither file exists** | must-fix |
-| §4.4 footer fix | Still `InkWell`; no real anchor/`Link` widget → middle-click / new-tab still broken | must-fix |
-| §4.3 AuthGate | Reads `FirebaseAuth.instance.currentUser` synchronously before web auth restore (first-frame null race) | must-fix |
-| Option table "Option C … Standard plan cycle" | Any public-catalog option needs Eric's typed YES | fix |
-| Public card fields | No statement of values shown: must be CDN CPG retail only, no wholesale (Eric 5 Nov option B ties X posts to the public catalog's CPG retail page) | must-fix |
-| Rollback / preview gate / $ cap | None stated | must-fix |
-| Locks | Plan-only, `origin/main` 9f04550a, Stripe OFF, zero Firestore writes, Eric YES gate on public catalog — all stated (L8, L321–323) | PASS |
-| PII | None in plan | PASS |
+| Check | Result | Notes |
+| :--- | :---: | :--- |
+| Plan-only; main `@ 9f04550a`; Stripe OFF | PASS | Explicit |
+| Firestore separate YES | PASS | Zero Firestore; public catalog = GCS/static only |
+| No AJ / user PII | PASS | Public reference only |
+| No hotlinked images | PASS | Relies on closed-CSP / NET-777/791 architecture |
+| AI replicas not primary | PASS (by dependency) | Must stay bound via NET-803 when Option A ships |
+| Public valuations = CDN **CPG retail** only; never wholesale / AI Value as primary | **GAP** | Plan does not bind Greysheet Option B / CDN CPG retail for any public catalog value display — **must-fix before Option A execute** |
+| Tests / curl / Playwright | PASS | §6 machine-checkable |
+| Rollback + preview | PARTIAL | Needs explicit preview-channel + firebase.json revert before live ad week |
+| $ cap | PARTIAL | Routing itself ~$0; Option A traffic inherits NET-803 $25/$20 egress cap — cite it |
+| Thanksgiving Meta ad #1 fit | PASS | Soft-404 titles, `/catalog` 404, Pricing AuthGate hijack are direct ad-landing bugs |
 
-**CoS breakdown:** locks & plan-only (15) = 15; accuracy/citations (25) = 14 (stale 404, missing tests, ignores dev); founder rules — US-only, nothing invented, CPG-only (25) = 15; Eric decision gate (15) = 13 (Option C mislabeled); rollback/tests/launch fit (20) = 11 (no rollback; JS-only titles don't help Meta's crawler on `numista.ai`; anchor not real). **Total 78 FAIL.**
+**Breakdown:** Soft-404 + AuthGate root cause (30)=29; Options A/B/C + Eric gate (25)=24; Pricing history fix (20)=20; UX polish items (10)=9; CPG-retail bind + count reconcile + Meta OG (15)=13. **Total 95.**
 
-## 2. Must-fixes for v1.1 (CoS + SAG merged)
+---
 
-1. Re-probe live and strike the `/catalog` 404 premise; rebase the plan on `dev`'s existing catalog screen + rewrites and coordinate with NET-777 v1.4 (no duplicate screen).
-2. Replace `5,142` with the cited 3,202 (or a cited newer count) everywhere, and reconcile the front-door badge; remove "World".
-3. Delete `99.4%`, "advisory board", "Sheldon grading", "100% Private & Secure", "Passport Protocol" unless each is cited.
-4. State public card fields: CDN CPG retail only, no wholesale, no user value/ownership; AI images only in `ai_replica_images`; no hotlinks/outbound links.
-5. Real link widget for footer/Pricing (anchor semantics); fix AuthGate to await auth restore.
-6. Static per-route `<title>`/OG for non-JS crawlers on the actual ad landing (`numista.ai`).
-7. Rollback + preview channel + $0 cap line; mark the two test files "to be created".
-8. Re-present Options A/B/C with all three requiring Eric's typed YES.
+## 2. S404-3 Finding (homepage 5,142 vs 3,202)
 
-## 3. SAG Result (independent; grok-4.7)
+**Verdict: REAL MISMATCH — not “just a different denominator.”**
+
+| Figure | What it is | Source this turn |
+| ---: | :--- | :--- |
+| **5,142** | Homepage marketing badge “Reference Coins” | `login_screen.dart:338, 466` (cited by plan + Argon) |
+| **3,202** | Current master catalog entry count | `entries_master_20261103.jsonl` = **3202** lines; types coin 2965 + note 181 + medal 56; `MISSING_IMAGES.csv` = **3202** rows (one per master entry, not a subset) |
+
+So 3,202 is the **full verified catalog master**, not “how many are missing images.” The badge’s 5,142 does not match that master. Before Option A goes public (and before Meta ads point at `/catalog`), either:
+
+- change the badge + meta titles to the verified count (e.g. **3,202**), or
+- produce a cited inventory that actually contains 5,142 reference records and explain the extra ~1,940.
+
+Do **not** tell visitors the catalog has 5,142 items if `/catalog` lists 3,202.
+
+---
+
+## 3. Options A / B / C (plain English) + CoS recommendation
+
+| Option | Plain English | Pros | Cons |
+| :--- | :--- | :--- | :--- |
+| **A — Public `/catalog` (recommended)** | Anyone can browse the reference catalog at a real URL without signing in; “Add to My Collection” asks them to sign up. | Matches the homepage promise; fixes `/catalog` 404; gives Meta ads a real landing page; SEO. | Must reconcile 5,142 vs 3,202; must bind CPG retail if any values show; needs preview + OG tags for Meta crawler. |
+| **B — Search modal on the login page** | A “Explore 5,142 Reference Coins” button opens a search popup on the homepage; no new public URL. | Faster to build; still lets visitors poke coverage. | No indexable `/catalog` URLs; weaker for Meta ads; still must fix the fake/mismatched count in the button label. |
+| **C — Keep catalog gated; fix the wording** | Leave catalog behind sign-in; rename the demo so it does not over-promise. | Smallest change. | Does not fix `/catalog` 404 or give ads a catalog landing page; weakest for Thanksgiving launch. |
+
+**CoS recommendation: Option A**, same as the plan — but only after (1) the count on the homepage matches the live catalog, (2) any public value display is **CDN CPG retail only** (no wholesale, AI Value not primary), and (3) Meta link-preview HTML titles (Argon S404-2) are in the execute checklist. Soft-404 + Pricing AuthGate fixes should ship either way.
+
+---
+
+## 4. CoS Must-Fix before Eric YES on Option A (and strongly before ad week)
+
+1. **Reconcile S404-3** count (5,142 vs 3,202) with a cited source.
+2. **Bind public valuations:** CDN CPG retail only; never wholesale; AI Value never primary on public surfaces (Eric Greysheet Option B).
+3. **S404-2:** Static/OG titles for Meta `facebookexternalhit` (JS `document.title` alone is not enough for ad previews).
+4. **S404-1:** Merge carefully with `dev` `CatalogBrowseScreen` deep links (`/catalog/:nacCode`).
+5. Name **preview-channel + firebase.json rollback** and cite **NET-803 $25/$20** for Option A traffic.
+
+Soft-404 + AuthGate + footer `history.pushState` portions are otherwise strong.
+
+---
+
+## 5. Two-Sentence Plain English (for Eric)
+
+This plan fixes three launch bugs: public pages that all look like the same “Numista.AI” tab to Google, the Pricing page kicking signed-in users back to the home dashboard, and footer links that do not update the browser address. It also asks you to pick how public the reference catalog should be — full public `/catalog` (recommended for Thanksgiving ads), a homepage search popup, or keep it gated and just fix the wording — and it flags that the homepage still says 5,142 reference coins while the verified catalog master is 3,202.
+
+---
+
+## 6. SAG Result (independent; grok-4.7; key never printed)
 
 ```
-## SAG_SCORE: 52/100 FAIL
-## MUST_FIX (ordered, blocking before Eric YES; or 'NONE blocking')
-1. Strike the live `/catalog` 404 premise. CoS fact 1: `https://numista-vault.web.app/catalog` and `/catalog/foo` are HTTP 200 (12,261-byte SPA); `/nonexistent-probe-404` is 404 at 3,379 bytes, not 1,664. Plan §2.1 is stale. Do not sell a live 404 fix.
-2. Do not duplicate `dev`. Fact 2: `dev` already rewrites `/catalog` and `/catalog/**` and has `catalog_browse_screen.dart` (NET-747/768), under separate failfix NET-777 v1.3 / NET-803. Option A and §4.1–4.2 ignore that and would conflict. Make the blueprint conditional on Eric’s choice and on that existing screen.
-3. US-only and no overclaim. Fact 4: catalog master is 3,202 (2,965 coins, 181 notes, 56 medals). Delete baked `5,142`, “verified US and World”, and “5,000+ organic landing pages” from titles, meta, and Option A. Cite the 3,202 source. Reconcile the front-door `5,142` badge; do not spread it.
-4. Delete unsourced public claims (fact 5): `99.4% Attribution Accuracy`, “numismatic advisory board”, and “Sheldon grading”. Nothing invented; every public string needs a cited source.
-5. Every public-catalog option, including C, needs Eric’s explicit typed YES. Plan table wrongly calls C a “standard plan cycle”. State card fields: no wholesale on any public surface; CDN CPG retail only; no user collection value or ownership (fact 9).
-6. Image rules before any catalog cards: catalog-first; AI images only in labeled `ai_replica_images`, never primary/card/index; no hotlinked or outbound images or links. Plan promises obverse/reverse and “high-resolution imagery” with no source or rule.
-7. Pricing fix does not fix the defect it names. Fact 7: §4.4 still uses `InkWell`, not a real anchor, so middle-click / open-in-new-tab still fails. Require a real link widget.
-8. AuthGate: fact 8 — do not read `FirebaseAuth.instance.currentUser` synchronously before web auth restore (first frame can be null). Public-route precedence must not depend on that race.
-9. Launch fit: 26 Nov Meta ads land on `https://numista.ai/`, not only `numista-vault.web.app`. JS `document.title` / `pushState` does not set the static HTML Meta’s non-JS crawler reads. Plan must cover preview-channel static title/OG for that landing, or it does not fix soft-404s for the ad.
-10. Add rollback, a preview-channel gate before live, a hard $ cap (state $0 if no new spend), and real tests. Fact 6: `test/route_test.dart` and `test/auth_gate_test.dart` do not exist; do not call them existing. Fact 10: no rollback section.
+# SAG SCORE NET-801 (xAI API, grok-4.7, 2026-11-05 ET)
+
+## SAG_SCORE: 68/100 FAIL
+## MUST_FIX (blocking before Eric YES; or NONE blocking)
+1. Do not lock **5,142** into titles, meta, badges, or Option A. Homepage 5,142 ≠ entries_master **3202** (coin 2965 + note 181 + medal 56). MISSING_IMAGES=3202 (= full master). Real mismatch. Nothing invented. Reconcile the public number before any catalog or ad copy.
+2. Thanksgiving Meta ads are #1. JS `document.title` / `pushState` does not feed non-JS scrapers. Plan must require static `<title>` plus `og:title` / `og:description` (S404-2) and prove them on a **preview** HTML body, not `curl -I` of live.
+3. Public values are unbound. If any value is shown: **CDN CPG retail only**. Never wholesale, never Greysheet wholesale, never AI-primary. Plan does not bind this.
+4. Image rule unbound. `ai_replica_images` never primary. No hotlinks. MISSING_IMAGES covers the full master, so “high-resolution imagery” must not ship as fact. Missing stays placeholder.
+5. Eric must **type A, B, or C**. CoS “recommend A” is not a decision. Option C must not skip that typed choice.
+6. Standing controls missing: hard **$cap**, **rollback**, **preview-before-live**. Section 6 probes production `numista-vault.web.app`. Do not treat that as the gate.
+7. Defect D is not fixed. §4.4 still uses `InkWell` and does not add real `<a href>`, so middle-click / new-tab still fails.
+8. Drop unsourced **99.4%** and the claim of **5,000+ indexable pages**. SPA rewrite to `index.html` does not create those pages.
 ## NON_BLOCKING
-- PIN/password label swap and “lateral transfer” jargon cites match fact 3; keep them out of the YES path. Do not ship “Passport Protocol” or “100% Private & Secure” without a source.
-- Footer `Semantics` work can wait; do not invent legal disclaimer text.
-- Argon’s 96/100 is not ground truth. S404-1..3 overlap these blocks; Argon audited `p7-v8.9` code, not the later live probe.
-- `curl -I` cannot prove titles or soft-404 clearance; any later test must assert body title on the preview host.
-- Locks in the plan text (plan-only, `origin/main` @ `9f04550a`, Stripe OFF, no Firestore writes) are stated and are not the failure.
+- Routing and AuthGate diagnosis match the cited `firebase.json`, `main.dart`, `auth_gate.dart`, and `login_screen.dart` lines. Plan-only, `main` @ `9f04550a`, Stripe OFF, zero Firestore writes: stated and held.
+- S404-1: on integrate, keep `dev` `/catalog` and `/catalog/:nacCode` → `CatalogBrowseScreen`. Do not clobber that from `p7-v8.9`.
+- `gs://numista-reference-library` is asserted, not evidenced in the audited files. Do not treat the bucket as verified.
+- `FirebaseAuth.instance.currentUser` inside `build` will not track auth changes; use the existing auth stream when this is executed.
+- PIN/password labels, jargon, and footer semantics are fine once unsourced stats are removed.
 ## PII_FINDINGS
-No AJ. No user name, address, ownership, or user collection value in the plan text. Auth use is a boolean `currentUser != null` only. Unspecified public card prices are a policy gap (MUST_FIX 5), not a shown PII leak.
-## 3_SENTENCE_PLAIN_ENGLISH (for founder Eric, plain words)
-Do not type YES on this plan. It chases a catalog error that is already gone on the live site, would rebuild a catalog that already exists on dev, and would put the wrong coin count, world coins, and made-up claims on pages your ads will send people to. It also never says what prices or pictures may show, the pricing-button fix still is not a real link, and there is no rollback or real test.
+Plan text: no collector PII, no AJ, no emails, no account data. Argon review embeds a local path with Windows username `ericd` plus a reviewer UUID. Do not republish that path. No AJ token in either file.
+## 2_SENTENCE_PLAIN_ENGLISH (for Eric)
+The plan correctly finds the broken Pricing path and the missing /catalog route, but it is not ready for your YES. It still sells 5,142 coins when the master list is 3,202, and it does not lock Meta ad titles, retail-only public prices, image rules, a spending cap, rollback, or a preview before anything goes live — you must type A, B, or C yourself.
 ## RATIONALE (brief)
-CoS facts override the plan and Argon’s pass. Branch-level AuthGate order and InkWell diagnosis match quoted code, and lock language is present, so this is not a zero. It still fails the gate: false live 404, conflict with `dev`/NET-777/803, US-only and 3,202 vs “US and World” / 5,142, unsourced marketing, no wholesale/CPG rule, anchor fix that does not add an anchor, auth first-frame race, JS-only titles against a `numista.ai` Meta launch, missing rollback, and tests named that do not exist. That is well under 95.
+Argon 96/100 demoted launch blockers to notes. SAG does not. Soft-404 and AuthGate root cause are real; the executable package is not. It hardcodes a false count, misses static OG titles required for 26 Nov Meta, leaves public values and images unbound (CDN CPG retail only; `ai_replica_images` never primary; no hotlinks), and omits $cap, rollback, and preview-before-live. Option A is a recommendation, not authorization. PASS bar is 95. This is FAIL until those locks are in the plan and you type A, B, or C.
 ```
 
-## 4. Three-Sentence Plain English (CoS, for Eric)
 
-This plan was written against an older picture: the live /catalog page already loads today, and the dev branch already has a public catalog screen that this plan would build a second time. It would also put "5,142 US and World coins" and a made-up "99.4% accuracy" figure on pages your Thanksgiving ads will send people to, when our catalog has 3,202 US entries. I sent it back to AG for v1.1; you'll still get to choose Option A, B or C, but on a corrected version — please don't pick one from this draft.
+## 7. Next Actions
 
-## 5. Next Actions (no execute)
-
-1. **AG CoS v4:** take **BATON_NET-807** → `PLAN_NET-801_SOFT404_PUBLIC-CATALOG_PRICING_v1.1.md`. Then Argon → GB CoS → SAG → Eric typed pick (A/B/C) + YES.
-2. Priority after NET-804 (catalog v1.4); 801 v1.1 should land in the same review pass so Eric decides the public catalog once.
-3. Locks unchanged.
+AG amend on SAG must-fixes → re-SAG → Eric types Option **A / B / C** (and YES) only after SAG ≥95. No deploy. Locks unchanged.

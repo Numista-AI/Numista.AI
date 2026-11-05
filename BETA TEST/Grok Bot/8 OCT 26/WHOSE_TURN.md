@@ -1,3 +1,17 @@
+## 3:15 PM ET 5 Nov - AG CoS v4 COMPLETED BATON_NET-804 (v1.4 Catalog Browse Plan + Scrubbed CSV) -> ARGON REVIEW -> GROK BOT CoS -> SAG -> ERIC TYPED YES.
+- **NET-804 (Failfix Plan v1.4 & Scrubbed CSV Filed):** Resolved both SAG blocking must-fixes (CoS 97 / SAG 92 on v1.3):
+  1. §2.D tier table synchronized to exact live CSV counts: 2,354 Tier 1 / 639 Tier 2 / 181 Tier 3 / 1 Tier 4 / 27 Tier 5 = 3,202 total master records.
+  2. §5.C verified constructor signature for `MorganChatPopout` (`initialQuery: 'Tell me about the $coinName$coinYear'`, required `onClose: () => Navigator.of(dialogCtx).pop()`, centered `Dialog` wrapper).
+  3. Cleaned all 147 dirty facility strings in `mint_mark` into valid tokens in `{'', 'P', 'D', 'S', 'W', 'O', 'CC'}`; reclassified 27 post-1929 private medals to Tier 5 (`In Copyright / Excluded from PD Ingestion until Licensed`).
+  4. Specified Cloud Billing budget Pub/Sub alert + Cloud Function `stop-public-egress` at $25.00/mo hard cap.
+  5. Condition C1 flag-only pre-federal filter (`item['is_pre_federal'] == true || item['pre_federal'] == true`).
+  6. Removed outbound `(source)` link (`dev:catalog_browse_screen.dart:1010-1017`) and `Foreign Coins` tab (`dev:598-603`).
+  7. Rollback commands pinned to baseline commit `9f04550a`.
+- **Target Deliverables Filed:** `docs/FAILFIX_PLAN_NET-777_CATALOG_v1.4.md` and scrubbed `docs/MISSING_IMAGES.csv` mirrored to `INBOX/`, `BATONS/`, and `RADIO NET/`.
+- **Handoff:** Filed `DONE_BATON_NET-804` and `BATON_NET-804_ARGON_REVIEW` passing to Argon (Gemini 3.8).
+- **Next on AG CoS Desk:** `BATON_NET-805` (780b/780c v1.2), then `BATON_NET-806` (Unified Coin Details v1.1), then `BATON_NET-807` (Soft-404s v1.1).
+- **TURN:** Argon (`ARGON_REVIEW_FAILFIX_PLAN_CATALOG_v1.4.md`) -> Grok Bot CoS (`>= 95`) -> Stand Alone Grok (SAG, `>= 95`) -> Founder Eric typed YES. All standing locks intact (`origin/main` at `9f04550a`, Stripe OFF, zero deploys, zero Firestore writes).
+
 ## 2:55 PM ET 5 Nov - GB CoS SCORED ALL 4 (SAG grok-4.7 ran on each) -> ALL FAIL <95 -> REVISE BATONS NET-804..807 TO AG CoS v4. ERIC: NO YES NEEDED YET.
 - **NET-803 (catalog v1.3, Thanksgiving critical path):** Argon 98 / **CoS 85 FAIL / SAG 70 FAIL**. AI-replica rule closed; rollback, CSV, $ cap, MorganChatPopout only partial. New: plan cites wrong file (real: `lib/screens/catalog/catalog_browse_screen.dart` on `dev`), live `(source)` outbound link + `Foreign Coins` tab not removed, Franklin Mint medals falsely labeled PD, "hard cap" is alerts only. -> `BATON_NET-804` (v1.4). Score: `COS_SCORE_NET-803_FAILFIX-777-v1.3_20261105.md`.
 - **NET-791 (780b/780c v1.1):** Argon 96/96 / **CoS 82 FAIL / SAG 67 FAIL**. Nickel regex can't match "5¢"; AI-value fallback vs CPG rule; 780c census contradicts MISSING_IMAGES.csv; `eric` regex hits 578 "American" paths; denylist guard. -> `BATON_NET-805`.
