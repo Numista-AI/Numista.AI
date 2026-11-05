@@ -1,8 +1,8 @@
-# Eric Beta Test Issue Tracker (31 Oct 2026)
+# Eric Beta Test Issue Tracker (5 Nov 2026)
 
-Total 39 | Open 39 | Not in any plan 1 | Repeated 10 | Founder confirmed 0
+Total 57 | Open status (5 Nov Cert # Add) 18 | Not in any plan 1 | Repeated 13 | Founder confirmed 0
 
-Status counts: {'Fixed on p7-gate, FT PASS': 14, 'Unverified': 14, 'Not in any plan': 1, 'Fixed but FT FAIL': 2, 'In plan (R2.7)': 7, 'In plan (R2.8)': 1}
+Status counts: {'Fixed on p7-gate, FT PASS': 11, 'Unverified': 14, 'Not in any plan': 1, 'Fixed but FT FAIL': 5, 'In plan (R2.7)': 7, 'In plan (R2.8)': 1, 'Open': 18}
 
 |ID|Dates reported|Eric's words|Screen / area|Screenshot|Plan / ticket|Status|Last evidence|Next step|
 |---|---|---|---|---|---|---|---|---|
@@ -11,23 +11,23 @@ Status counts: {'Fixed on p7-gate, FT PASS': 14, 'Unverified': 14, 'Not in any p
 |B26-3|26 Oct|Unable to save|Edit Coin > Save|26OCT SS 3|NET-565|Unverified|No FT result for NET-565; NET647 FT #9 Save error on Set Location, fixed in R2.6 FT #4|Add Edit-Save to R2.8 FT checklist|
 |B26-4|26 Oct|Morgan would only accept image files (not the PDF invoice)|Morgan AI chat attachments|none|none|Not in any plan|26 OCT docx only|Decide: let Morgan accept PDF invoices; add to R2.8 or UX backlog|
 |B26-5|26 Oct; 27 Oct AM; 27 Oct PM; 29 Oct|Two ways to add by Cert, 2 ways by photo... Very confusing! / Mint Set vs Upload Files vs Upload a list?|Add Coins screen|26OCT SS 4; 27OCT SS 1; 29OCT slides 3-4|NET-585; Plan v3 I-01|Unverified|FT_RESULT_NET627 did not test I-01|Put I-01 on R2.8 FT checklist with a founder walk-through|
-|B26-6|26 Oct; 27 Oct AM; 29 Oct|1 or 2 more clicks than it needed to be / clicked Upload Files, which I didn't need to|Invoice upload flow|26OCT SS 4-6; 29OCT slide 4|Plan v3 I-02; NET-647|Unverified|No FT click-count check found|Count clicks in R2.8 FT|
+|B26-6 (+B05N-16)|26 Oct; 27 Oct AM; 29 Oct; 5 Nov|1 or 2 more clicks than it needed to be / clicked Upload Files, which I didn't need to / Cert # Add still too many clicks (C-)|Invoice upload + Add by Cert #|26OCT SS 4-6; 29OCT slide 4; 5NOV Cert # Add|Plan v3 I-02; NET-647; REPEAT B05N-16|Unverified|No FT click-count check found; 5 Nov Cert # Add C- (placeholders 25/30, not counted)|Field Tester count clicks now and after Cert # Add fixes; goal = fewer + intuitive|
 |B26-7|26 Oct|Wish I could enter the storage location right from this screen|Review Queue|26OCT SS 6|NET-585|Unverified|NET-585 execute file only; no FT|Add to R2.8 FT checklist|
-|B26-8|26 Oct; 29 Oct|Had to scroll down (again) to get to next step|Bulk Import / Review Queue|26OCT SS 5-6; 29OCT slides 6, 9, 12|NET-647 #3-5|Fixed on p7-gate, FT PASS|FT_RESULT_NET647 #3, #4, #5 PASS|Founder retest|
+|B26-8 (+B05N-3)|26 Oct; 29 Oct; 5 Nov|Had to scroll down (again) to get to next step / Cert # Add next step below the fold, no cue|Bulk Import / Review Queue / Add by Cert #|26OCT SS 5-6; 29OCT slides 6, 9, 12; 5NOV SS 2-5|NET-647 #3-5; REPEAT B05N-3|Fixed but FT FAIL|FT_RESULT_NET647 #3-5 PASS on grokbot; REPEAT 5 Nov Cert # Add — next step still below fold|Auto-advance/scroll each step; FT retest on Cert # Add|
 |B27-1|27 Oct AM|July 4th Privy eligible... I don't know if we need that|Trump $1 roll row|27OCT SS 3|Plan v3 I-04a|Unverified|Not on any FT checklist|Add to R2.8 FT|
 |B27-2|27 Oct AM|Added it via Edit, which then automatically saved it to my collection|Edit in Review Hub|27OCT SS 3|Plan v3 I-04c|Fixed on p7-gate, FT PASS|FT_RESULT_NET627 I-04c PASS|Founder retest|
 |B27-3|27 Oct AM|Hitting Select All appeared to initiate a Delete|Review Hub|27OCT SS 4|Plan v3 I-05|Fixed on p7-gate, FT PASS|FT_RESULT_NET627 I-05 PASS|Founder retest|
 |B27-4|27 Oct AM|Commit Selected... hard to read... does it delete or add?|Review Hub button|27OCT SS 4|Plan v3 I-06|Fixed on p7-gate, FT PASS|FT_RESULT_NET627 I-06 PASS|Founder retest|
-|B27-5 (+E2, E4a, FT R2.6 #1)|27 Oct AM; 27 Oct PM; 31 Oct|None of the 3 had images... or valuations / STILL no images, no valuations. NOT GOOD / placeholders; Valuation Pending|My Collection cards + Review thumbnails|27OCT SS 5; 1351 SS 3; 31 Oct E2/E4|Plan v3 I-07/PM-01; R2.7 Q2, E2, E4a|Fixed but FT FAIL|FT_RESULT_NET631 PASS on grokbot, then FT_RESULT_NET673_R2.6 FAIL (gold $ placeholders); E2/E4 still in Eric's account|R2.7 fix + FT PASS in Eric's real account|
+|B27-5 (+E2, E4a, FT R2.6 #1, B05N-7, B05N-8)|27 Oct AM; 27 Oct PM; 31 Oct; 5 Nov|None of the 3 had images... or valuations / STILL no images, no valuations. NOT GOOD / Cert # Add: No Obverse photo yet; Est. Value $0.00|My Collection cards + Review thumbnails + Add by Cert #|27OCT SS 5; 1351 SS 3; 31 Oct E2/E4; 5NOV SS 8-10, 16|Plan v3 I-07/PM-01; R2.7 Q2, E2, E4a; REPEAT B05N-7/8|Fixed but FT FAIL|FT_RESULT_NET631 PASS on grokbot, then FT_RESULT_NET673_R2.6 FAIL; E2/E4 still wrong; REPEAT 5 Nov Cert 8321797-003|R2.7 fix + FT PASS in Eric's real account; Cert # Add catalog photo default + CDN retail|
 |B27-6 (+E4b)|27 Oct AM; 31 Oct|American Innovation had Unspecified for grade|Collection card grade|27OCT SS 5; 31 Oct E4|Plan v3 I-08; R2.7 E4b|In plan (R2.7)|Never FT tested; still wrong 31 Oct|R2.7 FT in Eric's account|
 |B27-7|27 Oct AM|No rhyme or reason to how coins were sorted|My Collection|27OCT SS 5|Plan v3 I-09|Unverified|Not on any FT checklist|Add to R2.8|
-|B27-8|27 Oct AM|I thought we did away with Google Images button?|Coin Inspector|27OCT SS 6|Plan v3 I-10|Fixed on p7-gate, FT PASS|FT_RESULT_NET627 P1 Google Images PASS|Founder retest|
+|B27-8 (+B05N-15)|27 Oct AM; 5 Nov|I thought we did away with Google Images button? / Google Images + Kaggle panel still on Inspector (spins forever)|Coin Inspector|27OCT SS 6; 5NOV SS 10|Plan v3 I-10; REPEAT B05N-15|Fixed but FT FAIL|FT_RESULT_NET627 P1 Google Images PASS on grokbot; REPEAT 5 Nov — Google Images + Kaggle still present, Kaggle spins|REMOVE Google Images + Kaggle; FT retest in Eric's account; no off-site photo buttons|
 |B27-9|27 Oct AM|Generate AI Report Now opened a state picker for estate tax... move to Estate Planning|My Collection CTA|27OCT SS 7|Plan v3 I-11|Unverified|FT_RESULT_NET627 AI Report CTA SKIP|Add to R2.8|
 |B27-10|27 Oct AM|Replace Generate AI Report Now with something that will fill images and values|My Collection CTA|27OCT SS 5, SS 7|Plan v3 I-12|Unverified|FT_RESULT_NET627 SKIP|Add to R2.8|
-|B27-11|27 Oct AM; 27 Oct PM|Impossible to read due to text/background colors... I prefer gold and black|Table view, card details|27OCT SS 7, 8, 10; 1351 SS 6-7|Plan v3 I-13; PM-06|Fixed on p7-gate, FT PASS|FT_RESULT_NET631 cream contrast PASS; NET647 PASS (gold/black preference not checked)|Founder retest; confirm gold/black|
+|B27-11 (+B05N-12)|27 Oct AM; 27 Oct PM; 5 Nov|Impossible to read due to text/background colors... I prefer gold and black / Cert detail white-on-off-white|Table view, card details, coin detail|27OCT SS 7, 8, 10; 1351 SS 6-7; 5NOV SS 18|Plan v3 I-13; PM-06; REPEAT B05N-12|Fixed but FT FAIL|FT_RESULT_NET631 cream contrast PASS on grokbot; REPEAT 5 Nov SS 18 white on off-white in detail view|Site-wide WCAG AA contrast; FT retest; confirm gold/black|
 |B27-12|27 Oct AM|Financials, Provenance, AI Insights... should also be present in Card view|Card view detail|27OCT SS 8|Plan v3 I-14|Unverified|Not on any FT checklist|Add to R2.8|
 |B27-13|27 Oct AM|AI Insights had large gaps and/or unreadable text|Table view AI Insights|27OCT SS 9|Plan v3 I-15|Unverified|Not on any FT checklist|Add to R2.8|
-|B27-14|27 Oct AM|Legislation Matched was blank|Table view|27OCT SS 10|Plan v3 I-16|Unverified|Not on any FT checklist|Add to R2.8|
+|B27-14 (+B05N-13)|27 Oct AM; 5 Nov|Legislation Matched was blank / Cert detail History generic, no Legislation/Laws tab|Table view / Coin detail|27OCT SS 10; 5NOV Cert # Add|Plan v3 I-16; REPEAT B05N-13|Unverified|Not on any FT checklist; REPEAT 5 Nov — still no Laws tab|Add Laws tab (authorizing Act, Congress.gov only); FT retest|
 |B27PM-1|27 Oct PM|No duplicates flagged|Review Hub duplicate check|1351 SS 1|NET-616 PM-02|Fixed on p7-gate, FT PASS|FT_RESULT_NET631 dup amber PASS; NET647 FT unconfirmed|Re-confirm in R2.8 FT|
 |B27PM-2|27 Oct PM|Can't tell if I have two 2026 Uncirculated Coin Sets|My Collection cards + detail|1351 SS 3-4|NET-616 PM-04|Unverified|FT_RESULT_NET627 two-SKU check SKIP|Add to R2.8|
 |B27PM-3|27 Oct PM|Set I just uploaded did not have 250th Anniversary under Theme/Subject|Search results|1351 SS 5|NET-616 PM-05|Fixed on p7-gate, FT PASS|FT_RESULT_NET627 SAG2 theme stamped|Founder retest|
@@ -41,7 +41,41 @@ Status counts: {'Fixed on p7-gate, FT PASS': 14, 'Unverified': 14, 'Not in any p
 |E1|31 Oct|Peace and Morgan share the same eagle photo|Eric's collection cards|31 Oct (Eric report)|R2.7 E1|In plan (R2.7)|FAILFIX_PLAN_NET-647_R2.7|Review cycle, then FT in Eric's account|
 |E3|31 Oct|Unc Set card shows packaging|Eric's collection card|31 Oct|R2.7 E3/Q4|In plan (R2.7)|FAILFIX_PLAN_NET-647_R2.7|Review cycle, then FT in Eric's account|
 |E5|31 Oct|Titles are truncated|Eric's collection cards|31 Oct|R2.7 E5|In plan (R2.7)|FAILFIX_PLAN_NET-647_R2.7|Review cycle, then FT in Eric's account|
-|E6|31 Oct|2026 dimes show a 2025 Roosevelt image in the Inspector|Coin Inspector|31 Oct|R2.7 E6 (NET-681C)|In plan (R2.7)|FAILFIX_PLAN_NET-647_R2.7 section E6 + ACK NET-681C|Review cycle, then FT in Eric's account|
+|E6 (+B05N-10)|31 Oct; 5 Nov|2026 dimes show a 2025 Roosevelt image in the Inspector / Cert reverse missing then upside-down, obverse missing|Coin Inspector / Collection card|31 Oct; 5NOV SS 11-13|R2.7 E6 (NET-681C); REPEAT B05N-10|In plan (R2.7)|FAILFIX_PLAN_NET-647_R2.7 section E6 + ACK NET-681C; REPEAT 5 Nov image orientation/missing|Review cycle + Cert # Add: both sides upright, Inspector shows new image immediately|
 |E7|31 Oct|2026-W Silver Eagle Reverse tab shows a 2023 Walking Liberty|Coin Inspector|31 Oct|R2.7 E7 (NET-681C addendum)|In plan (R2.7)|FAILFIX_PLAN_NET-647_R2.7 section E7|Review cycle, then FT in Eric's account|
 |FT-2|31 Oct|Only 9 of 11 cards show|Review Queue (FT, grokbot)|shots_net673 06b|R2.7 Q3|In plan (R2.7)|FT_RESULT_NET673_R2.6 FAIL|R2.7 FT|
 |E8|31 Oct|Get my account 100% right|Whole account|31 Oct|R2.8 (NET-681D)|In plan (R2.8)|ACK NET-681D|Write R2.8, full review cycle|
+|B05N-1|5 Nov|Page said it can't look up NGC certs, but the ngccoin.com link worked. Confusing. Grade C- overall.|Add by Cert #|5NOV SS 1-4|none (REPEAT theme: leave-site)|Open|Cert # Add Beta test; NGC 8321797-003 1958 PF67 Washington quarter; Eric decision recorded|Numista.Ai fills EVERY field from NGC inside the site — user never leaves. FT retest|
+|B05N-2|5 Nov|Clicking Look Up seemed to do something, but nothing visibly changed|Add by Cert # Look Up|5NOV SS 1-4|none|Open|Cert # Add Beta test|Visible loading/result feedback on Look Up; FT retest|
+|B05N-3|5 Nov|Next step is below the fold; nothing tells you to scroll|Add by Cert #|5NOV SS 2-5|REPEAT of B26-8|Open|REPEAT of B26-8 (scroll-to-next); Eric YES to auto-advance|Each step auto-advances or scrolls to next; FT retest|
+|B05N-4|5 Nov|Coin Name / Description left blank; denomination showed 25C — not US Mint canonical|Add by Cert # form|5NOV SS 2|none|Open|Eric: every field filled; name = US Mint canonical e.g. Washington Quarter (Proof); denom Quarter Dollar never 25C|Auto-fill all fields from NGC + Catalog; FT retest|
+|B05N-5|5 Nov|No purchase price / date / bought-from on Add by Cert form — put price in Notes; Cost $0.00|Add by Cert # form|5NOV SS 5, 10, 15, 16|none|Open|Eric decision: add Price paid, Date bought, Bought from to Add by Cert form|Add three purchase fields to form; FT retest|
+|B05N-6|5 Nov|After Confirm, left on same page with no next step; Add by Cert # back-link text does nothing (only arrow works)|Add by Cert # post-Confirm|5NOV SS 6-7|none|Open|Eric YES: go to new coin in My Collection with Coin added banner + Add another|Post-Confirm → My Collection + banner + Add another; FT retest|
+|B05N-7|5 Nov|Uploaded photo not used as coin image — says No Obverse photo yet|Coin Inspector / card|5NOV SS 8-10|REPEAT of B27-5|Open|REPEAT of B27-5 (missing images); Eric: default Catalog photo, keep uploads, later prompt to prefer own|Default Catalog photo; keep user uploads; later prompt; FT retest|
+|B05N-8|5 Nov|Est. Value $0.00 and no AI Value even after cost entered|Coin financials|5NOV SS 10, 16|REPEAT of B27-5|Open|REPEAT of B27-5 (no valuations); Eric: CDN retail for grade; else face value + Value pending AI estimate; never below face|CDN retail / face+pending; never $0.00 below face; FT retest|
+|B05N-9|5 Nov|Melt Value N/A on a 90% silver 1958 quarter|Coin financials|5NOV SS 11|none|Open|1958 Washington quarter is 90% silver; Eric: compute melt from current silver price|Melt from Catalog metal + live Ag price; FT retest|
+|B05N-10|5 Nov|Reverse photo didn't show in Inspector, then upside-down on card; obverse missing|Coin Inspector / Collection card|5NOV SS 11-13|REPEAT of E6|Open|REPEAT of E6 (wrong/missing Inspector images); Eric: both sides upright; Inspector shows new image immediately|Upright both sides; Inspector immediate refresh; FT retest|
+|B05N-11|5 Nov|Can only edit coin by switching Cards → Table and clicking pencil|My Collection / Inspector|5NOV SS 15-16|none|Open|Eric: add Edit button in Coin Inspector|Edit in Inspector; FT retest|
+|B05N-12|5 Nov|White text on off-white background in coin detail view — unreadable|Coin detail view|5NOV SS 18|REPEAT of B27-11|Open|REPEAT of B27-11 (contrast); Eric: site-wide WCAG AA|WCAG AA contrast site-wide; FT retest|
+|B05N-13|5 Nov|History tab is generic; no Legislation / Laws tab|Coin detail tabs|5NOV Cert # Add|REPEAT of B27-14|Open|REPEAT of B27-14 (Legislation blank); Eric: Laws tab with authorizing Act, Congress.gov links only|Add Laws tab; Congress.gov only; FT retest|
+|B05N-14|5 Nov|Known Errors shows 1999 NJ quarter clipped-planchet example on a 1958 Washington quarter|Known Errors|5NOV SS 19|none|Open|Eric: error examples must match same coin type and series|Same-type/series Known Errors only; FT retest|
+|B05N-15|5 Nov|Google Images button + Similar in Reference Library / Kaggle panel (Tap to Expand spins forever) — remove; don't send users off-site for photos|Coin Inspector|5NOV SS 10|REPEAT of B27-8|Open|REPEAT / REGRESSION of B27-8 after FT PASS; Eric: remove both; most users don't know Kaggle; never send off-site for photos|REMOVE Google Images + Kaggle; FT retest; no off-site photo buttons|
+|B05N-16|5 Nov|Too many clicks overall (C-). 25 and 30 were placeholders — did not count|Add by Cert # flow|5NOV Cert # Add (whole flow)|REPEAT of B26-6|Open|REPEAT of B26-6 (extra clicks); Eric: FT counts actual clicks now and after fixes; goal fewer + intuitive; no fixed number|FT click-count baseline + after-fix; reduce clicks; FT retest|
+|B05N-17|5 Nov|Metal typed by hand and misspelled Silve; cannot edit Metal from Inspector. Site should have known 1958 quarter = 90% Silver from NGC + Catalog|Coin Inspector Metal|5NOV SS 20 Silve no edit.png (chat attachment)|none|Open|Eric chat screenshot 5 Nov; Metal must auto-fill from Catalog by year/type; Melt depends on it|Auto-fill Metal from Catalog; Edit in Inspector; FT retest|
+|B05N-18|5 Nov|Live eBay Check — KEEP. Already in eBay Affiliate program. Verify every eBay link carries our affiliate tag|Live eBay Check|5NOV Cert # Add|none (KEEP)|Open|Eric: we are already in eBay Affiliate; keep the control; verify commission tags|Verify affiliate tag on every eBay outbound link; FT retest|
+
+## 5 Nov 2026 Cert # Add source
+
+Laptop: `C:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\5 NOV 2026\Cert # Add Beta test` (SS 1-19 + docx + SS 20 Silve no edit.png)
+
+Test coin: 1958 NGC PF67 Washington quarter, cert 8321797-003. Overall grade from Eric: **C-**.
+
+## REPEAT / regression links (Eric angry about recurring issues)
+
+- **B05N-15** → **B27-8** Google Images (was FT PASS on p7-gate; back on 5 Nov + Kaggle spinner)
+- **B05N-12** → **B27-11** contrast (was FT PASS; white-on-off-white again SS 18)
+- **B05N-7 / B05N-8** → **B27-5** missing images + valuations
+- **B05N-10** → **E6** wrong/missing Inspector images + orientation
+- **B05N-3** → **B26-8** scroll / below-the-fold next step
+- **B05N-16** → **B26-6** too many clicks
+- **B05N-13** → **B27-14** Legislation / Laws tab
