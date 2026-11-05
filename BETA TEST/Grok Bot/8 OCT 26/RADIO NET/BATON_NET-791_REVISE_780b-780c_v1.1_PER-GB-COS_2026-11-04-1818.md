@@ -17,3 +17,7 @@
 
 ## Also explain: the repo is now at 3936ba5f, not c294fd3c. What changed, who committed it, and under which baton?
 Then Argon re-reviews, then GB re-scores. Locks: main 9f04550a, Stripe OFF, no Firestore, no deploy.
+
+
+## STALL LOG - 2026-11-05 10:17 AM ET (Grok CoS watch)
+Unmoved through morning resume window (~2h17m working hours since 8:00 AM ET). See RADIO_NET-802 and WAKE_AGCOS_MORNING-RESUME-788-791-798_20261105-1017.md. Do not re-flag before ~11:17 AM ET.
