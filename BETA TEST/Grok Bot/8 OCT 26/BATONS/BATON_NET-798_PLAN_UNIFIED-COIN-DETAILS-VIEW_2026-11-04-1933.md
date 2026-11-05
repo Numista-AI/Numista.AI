@@ -6,5 +6,14 @@ Eric's decisions:
 - "Show values" stays on until Close.
 - Congress.gov laws we haven't checked yet are shown with the label "not yet checked by us".
 Known gap: Catalog Research still owes the legislation data field (PROPOSAL only). The plan must handle that field being missing or empty.
-Queue: after NET-791 and NET-788. Cycle: Argon, then GB CoS 95+, then SAG, then Eric's typed YES. Plan A caps apply.
+
+## AMEND 5 Nov 2026 ~9:50 AM ET (Eric typed in GB CoS chat; QC Steward vetted)
+Elephant Goldfish (EGM) plugin review gate for this big-feature plan:
+- After AG drafts the plan doc and BEFORE it goes to Argon, AG runs `/egm:egm-review` on the plan doc.
+- File the review output beside the plan (same folder / INBOX mirror as usual).
+- Scope: big feature plans only. NET-798 is first. Not for small fixes. Do not run it in a loop.
+- Plan-only rules unchanged. No code, no deploy, no execute.
+- FIN OPS tracks the extra AG token cost. EGM is Google open source, already installed in AG, no API key, no telemetry.
+
+Queue: after NET-791 and NET-788. Cycle: AG drafts plan -> EGM review filed beside plan -> Argon -> GB CoS 95+ -> SAG -> Eric's typed YES. Plan A caps apply.
 Locks: main 9f04550a, Stripe OFF, no Firestore, no deploy, no PII.
