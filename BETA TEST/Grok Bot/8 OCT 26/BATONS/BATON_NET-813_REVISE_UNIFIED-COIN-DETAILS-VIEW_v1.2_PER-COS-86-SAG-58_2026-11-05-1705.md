@@ -12,4 +12,4 @@ Fix:
 6. **Evidence boundaries:** checked catalog laws win; arbitrary Congress errors/timeouts yield labeled empty state, never invented law. AI Estimate remains experimental and never displaces positive CDN retail in primary slot. Private Purchase/Melt stays behind owner Show values and never on guest surface.
 
 Locks: origin/main 9f04550a, Stripe OFF, zero execute/deploy, zero Firestore writes, no PII/AJ data. PLAN ONLY.
-Chain: AG → Argon → GB CoS (95+) → SAG (95+) → Eric typed YES.
+Chain: AG -> GB CoS (95+) -> SAG (95+) -> Eric typed YES. (Argon dropped Eric YES 6:07 PM ET 5 Nov FIN OPS; file GROKCOS_REVIEW on DONE.)

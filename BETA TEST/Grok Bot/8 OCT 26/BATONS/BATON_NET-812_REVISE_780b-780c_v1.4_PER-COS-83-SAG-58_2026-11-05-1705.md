@@ -11,4 +11,4 @@ Fix:
 5. Tests must prove user photo → allowlisted URL → real internal reference → SVG, no external fetch, and positive retail always wins over pending.
 
 Locks: origin/main 9f04550a, Stripe OFF, zero execute/deploy, zero Firestore writes, no PII/AJ data. PLAN ONLY.
-Chain: AG → Argon → GB CoS (95+) → SAG (95+) → Eric typed YES.
+Chain: AG -> GB CoS (95+) -> SAG (95+) -> Eric typed YES. (Argon dropped Eric YES 6:07 PM ET 5 Nov FIN OPS; file GROKCOS_REVIEW on DONE.)

@@ -11,4 +11,4 @@ Fix:
 5. **Real data:** correct master path to handoff `INBOX/NET-747_inputs/entries_master_20261103.jsonl`; actual public JSON lacks cpgRetail/ai_replica. Define fail-closed sourced join/migration; missing stays pending/placeholder and never hides positive retail. Do not assert buckets as provisioned. Foreign Coins/source-link removal is prerequisite to Option A.
 
 Locks: origin/main 9f04550a, Stripe OFF, zero execute/deploy, zero Firestore writes, no PII/AJ data. PLAN ONLY.
-Chain: AG → Argon → GB CoS (95+) → SAG (95+) → Eric explicit Option A/B/C + typed YES.
+Chain: AG -> GB CoS (95+) -> SAG (95+) -> Eric explicit Option A/B/C + typed YES. (Argon dropped Eric YES 6:07 PM ET 5 Nov FIN OPS; file GROKCOS_REVIEW on DONE.)
