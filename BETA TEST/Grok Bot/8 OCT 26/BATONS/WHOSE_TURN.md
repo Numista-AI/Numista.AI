@@ -1,26 +1,27 @@
-# WHOSE TURN - updated 4 Nov 2026 6:26 PM ET by AG CoS v4
+# WHOSE TURN - updated 4 Nov 2026 6:45 PM ET by Argon (Gemini 3.8)
 
-## AG CoS v4 - Status Update
+## Argon (Gemini 3.8) - Status Update (All Current Argon Review Batons DONE)
+- **BATON_NET-780 (Failfix 780a-d Split v1):** DONE (5:52 PM ET)! Scored `95/100` composite (`780a`: 96 PASS, `780b`: 92 CONDITIONAL PASS with 2 execution must-fixes `B1` & `B2`, `780c`: 96 PASS, `780d`: 97 PASS). Filed `INBOX\ARGON_REVIEW_NET-780_FAILFIX_SPLIT_v1.md` and `RADIO NET\ARGON_REVIEW_NET-780_FAILFIX_SPLIT_v1.md`. GB CoS scored `NET-780` (`INBOX\GB_COS_SCORE_NET-780.md`) and issued `BATON_NET-791` to AG CoS v4 for `780b v1.1` and `780c v1.1`.
+- **BATON_NET-786 (`FAILFIX_PLAN_NET-777_CATALOG_v1.1.md`):** DONE (5:52 PM ET)! Scored `95/100` PASS (`INBOX\ARGON_REVIEW_FAILFIX_PLAN_CATALOG_v1.1.md` & `INBOX\ARGON_REVIEW_FAILFIX_PLAN_NET-777_CATALOG_v1.1.md`). Per `BATON_NET-788`, `v1.1` is superseded by `v1.2`; Argon is standing by to score `FAILFIX_PLAN_NET-777_CATALOG_v1.2.md` as soon as AG CoS v4 files it.
+- **BATON_NET-763 to NET-766 (Plans A–D Reviews) & BATON_NET-770 (`NET-748 v5`):** ALL DONE (3:31–3:53 PM ET)!
+  - `INBOX\ARGON_REVIEW_PLAN_A_AG_Prompts_RetryCaps.md` (`96/100 PASS`)
+  - `INBOX\ARGON_REVIEW_PLAN_B_Morgan_Golden_Test_Set.md` (`96/100 PASS`)
+  - `INBOX\ARGON_REVIEW_PLAN_C_Model_Usage_Audit.md` (`96/100 PASS`)
+  - `INBOX\ARGON_REVIEW_PLAN_D_Batch_Pricing_Nightly_Runs.md` (`96/100 PASS`)
+  - `INBOX\ARGON_REVIEW_NET-748_v5.md` (`96/100 PASS`)
+- **RADIO_NET-790 (Standing Directive — No Silo / Proactive Site & Product Checks):** ACKED (`ACK_RADIO_NET-790_ARGON_2026-11-04.md`). Argon will include proactive site/product cross-checks (`https://numista.ai` and `/catalog`) in every review.
+
+## AG CoS v4 - YOUR TURN NOW
+- **BATON_NET-788:** Amend `NET-777` to `v1.2` (`FAILFIX_PLAN_NET-777_CATALOG_v1.2.md` — NO outbound links/hotlinks, standing `MISSING_IMAGES` CSV + acquisition plan) -> then Argon scores `v1.2`.
+- **BATON_NET-791:** Revise `780b` and `780c` to `v1.1` per `INBOX\GB_COS_SCORE_NET-780.md` + explain `3936ba5f` commit -> then Argon re-reviews `780b v1.1` & `780c v1.1`.
+- **Queued PLAN-ONLY Batons after Failfix Plans:** `BATON_NET-787` (Invoice Normalize Flash vs Pro Quality Gate) and `BATON_NET-792`..`BATON_NET-796` (Demo Vault & Table/Modal/Spinner plans).
+
+## AG CoS v4 - Earlier Status Update (6:26 PM ET)
 - NET-781 (Plan B v1.2: Morgan Golden Test Set Baseline): DONE! 19/19 PASS (100%), 3/3 Traps PASS (Q19 Morgan no-mintage, Q20/21 Privacy Refusal), Q5 & Q16 Parked (100k and 264k logged), Total Spend: $0.001990 USD. Baseline established. Filed EXECUTE_DONE_NET-781.
 - NET-783 (Plan A v1.3: AG Prompts & Retry Caps): DONE! Step 0 Label & Open Questions 1-2 marked CLOSED. Filed EXECUTE_DONE_NET-783.
 - NET-780 (Failfix 780a-d Split): DONE! Filed 4 surgical failfix plans (780a Build Stamp, 780b Cards, 780c Images, 780d Splash) + EXECUTE_DONE_BATON_NET-780_FAILFIX_SPLIT_v1.md. Handed to Argon.
 - NET-778 (Plan C: Model Usage Audit): DONE! Audit filed.
 - NET-777 / NET-786: Live Catalog v1.1 filed.
-
-## ARGON - YOUR TURN NOW
-- Review NET-780 Failfix Split Plans (780a, 780b, 780c, 780d) per BATON_NET-780_ARGON_REVIEW_FAILFIX_SPLIT_v1.md.
-
----
-# WHOSE TURN - updated 4 Nov 2026 3:10 PM ET by Antigravity Desk
-
-## ARGON - YOUR TURN NOW
-- NET-770: REVIEW ONLY of NET-748 v5 (attempt 12, written by GB CoS; SAG 96 PASS).
-  - Baton: RADIO NET\BATON_NET-770_ARGON_REVIEW_NET-748_v5_2026-11-04-1405.md (a copy is also in INBOX).
-  - Files in INBOX: NET-748_v5_PLAN.md, SAG_PREVIEW_NET-748_v5.md, SAG_SCORE_NET-748_v5.md.
-  - Quote only from real files (see NET-767). Check the drift to ca4e3d33. Weigh SAG's 4 advisories.
-  - Output: INBOX\ARGON_REVIEW_NET-748_v5.md
-  - Nothing executes.
-- Also pending for Argon: NET-763 to NET-766 (Plans A-D reviews).
 
 ## AG CoS v4 - working
 - NET-768: EXECUTE Catalog Browse v5 (Steps 1Ã¢â‚¬â€œ4 complete; code pushed to origin/dev at commit 18a8b8e5; web bundle built; Step 5 live deploy gated on Eric's Firebase CLI re-auth). See PROGRESS_NET-773.
