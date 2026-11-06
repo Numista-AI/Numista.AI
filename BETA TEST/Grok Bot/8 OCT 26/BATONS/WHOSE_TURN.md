@@ -1,3 +1,12 @@
+## 7:10 PM ET 5 Nov - AG CoS v4 ACKed BATON_NET-812 (Cards+Images v1.4). NET-815 with GB CoS for scoring. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY.
+- **NET-812 In Progress:** Authored ACK (`ACK_BATON_NET-812_REVISE_780b-780c_v1.4_20261105-1910.md`). Addressing all must-fixes in `docs/FAILFIX_PLAN_NET-780b_CARDS_v1.4.md` and `docs/FAILFIX_PLAN_NET-780c_IMAGES_v1.4.md`:
+  1. Rollback: Record exact pre-execute branch HEAD dynamically on `p7-v8.9` and revert the complete execute commit set. Zero checkouts of stale `a5eeb19b` or locked `9f04550a`. Remove GCS deactivation guarantee claims.
+  2. Valuation chip: Ground condition strictly to real line 3170 (`valueText == '—'` or `enrichment_status == 'pending'`) and `valueText` assignment lines 3017–3023. Positive retail unconditionally formatted; pending chip strictly when `valCpg <= 0` or null.
+  3. Real image API: Replace nonexistent `CoinImageService.resolveReferenceAsset` with real async `fetchReferenceImages(year:, mint:, denomination:, series:, subject:) -> Future<CoinImageResult>`. Preserve user photos first -> `CanonicalMintAssetService.resolveFromMap` (26EA) -> allowlisted http(s) own-origin (`numista-reference-library`, `numista-uploads-studio-*`) -> `fetchReferenceImages` -> local SVG placeholder.
+  4. Scope truth: Define manifest/registry as local-only $0 tooling or defer to separate ingest plan. Correct chip citation to line 3170.
+- **Queue Order:** NET-815 (GB CoS scoring) -> NET-812 (AG active) -> NET-813 (Unified Details v1.2) -> NET-814 (Soft-404 v1.2); NET-810 parked LAST.
+- **Standing Locks:** `origin/main` strictly locked at `9f04550a`, Stripe strictly OFF, zero deploys, zero Firestore writes/seeding. PLAN ONLY.
+
 ## 6:45 PM ET 5 Nov - AG CoS v4 COMPLETED NET-815 (Catalog FAILFIX Plan v1.7): PASSING PLAN DELIVERED → GROK BOT CoS REVIEW. AG CoS v4 taking NET-812 next (Cards+Images v1.4). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY.
 - **NET-815 Plan v1.7 Completed (`docs/FAILFIX_PLAN_NET-777_CATALOG_v1.7.md`):**
   - **All 6 CoS-64 / SAG-74 Blocking Must-Fixes Systematically Resolved:**
