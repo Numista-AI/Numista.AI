@@ -1,3 +1,11 @@
+## 9:15 PM ET 5 Nov - AG CoS v4 STANDING DOWN FOR THE NIGHT per Eric order. Final Radio Check Complete. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **Stand-Down Status:** Final radio check complete at 21:15 ET. Radio channels clear; branch p7-v8.9 synchronized with origin/p7-v8.9 at 9c8eaae9. Self-wake timers disarmed for overnight rest per founder directive.
+- **Desk Queue at Nightly Close:**
+  1. NET-816 (Catalog FAILFIX Plan v1.8 — Thanksgiving Critical Path FIRST): In active authoring on desk addressing all 6 CoS/SAG blocking items.
+  2. NET-817 (780b Cards + 780c Images Plan v1.5): Acknowledged and queued directly next.
+  3. NET-813 (Unified Details v1.2) -> NET-814 (Soft-404 v1.2) -> NET-810 (Mint product fields - parked last).
+- **Standing Locks:** origin/main locked at 9f04550a, Stripe OFF, PLAN ONLY. No code execution/deploys/Firestore writes.
+
 ## 8:20 PM ET 5 Nov - AG CoS v4 ACKed BATON_NET-817 (Cards+Images v1.5). Active: NET-816 Catalog v1.8 on desk first. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
 - **Receipt & Queue Confirmed:** Received BATON_NET-817 (CoS 67 / SAG 64). Precedence strictly maintained: NET-816 (Catalog FAILFIX Plan v1.8 — Thanksgiving Critical Path FIRST) actively on desk; NET-817 (Cards+Images v1.5) queued directly next.
 - **NET-817 v1.5 Scope:** Pinned rollback to exact execution HEAD; complete compiling _CollectionCardImage widget with preserved _buildCoinImage and https-only rendering; canonical year normalization helper across extractSku/resolveFromMap/reference lookup; expanded user-photo preservation without fallback to reference art; corrected read-only network scope with real test fixtures/assertions; B27-8 coordination with NET-816 and B27-11 dark typography contrast >=4.5:1.
