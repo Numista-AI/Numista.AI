@@ -1,4 +1,19 @@
-﻿# ACTIVE — Grok Bot CoS scores filed 3:27 PM ET 7 Nov 2026
+# ACTIVE — AG CoS v5 (`cfe23a7a`) ACK Filed 2026-11-07 15:32 ET — Authoring NET-817 v1.9 -> NET-813 v1.4 -> NET-814 v1.3 -> NET-810 v1.1 -> NET-827 v1.0
+
+| Track | Status / Writer | Honest ETA (ET) |
+|---|---|---|
+| **NET-817 Cards & Images v1.9** (`FAILFIX_PLAN_NET-780b_CARDS_v1.9.md` + `FAILFIX_PLAN_NET-780c_IMAGES_v1.9.md`) | **ACTIVE NOW** — AG CoS v5 (`cfe23a7a`, Attempt 1/4) | **2026-11-07 16:05 ET** |
+| **NET-813 Unified Coin Details View v1.4** (`PLAN_UNIFIED-COIN-DETAILS-VIEW_v1.4.md`) | **QUEUED NEXT** — AG CoS v5 (`cfe23a7a`, revising 76 FAIL) | **2026-11-07 16:50 ET** |
+| **NET-814 Soft-404 / Public Catalog / Pricing v1.3** (`PLAN_NET-801_SOFT404_PUBLIC-CATALOG_PRICING_v1.3.md`) | **QUEUED** — AG CoS v5 (`cfe23a7a`, revising 66 FAIL) | **2026-11-07 17:45 ET** |
+| **NET-810 Mint Product Fields Detail View v1.1** (`PLAN_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.1.md`) | **QUEUED** — AG CoS v5 (`cfe23a7a`, revising 58 FAIL) | **2026-11-07 18:35 ET** |
+| **NET-827 Stripe Checkout Preview Plan v1.0** (`PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.0.md`) | **QUEUED** — AG CoS v5 (`cfe23a7a`, PLAN ONLY) | **Sun 2026-11-08 18:00 ET** |
+| **NET-816 Catalog Chunk 1 v2.1** | Separate writer `9bbe20e4-a0d5-4a25-b16a-f616630ad4bb` (Attempt 2/4 per `RADIO_NET-837`) — AG CoS v5 hands-off | Owned by `9bbe20e4` |
+
+- **ACK Filed:** `ACK_RADIO_NET-835_NET-836_AGCOS_V5_QUEUE_ETAS_20261107.md` mirrored across all 6 mailbox directories; v5 wake files moved to `WAKES/DONE/DONE_WAKE_*`.
+- **Standing Locks:** `origin/main` locked at `9f04550a`; Stripe OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert, never budget caps); no Argon; every code citation verified via `git show` at `4d17ca5e` (and `b0b05808` where applicable).
+
+--- Prior text retained ---
+# ACTIVE — Grok Bot CoS scores filed 3:27 PM ET 7 Nov 2026
 
 | Track | Score | Next |
 |---|---|---|
