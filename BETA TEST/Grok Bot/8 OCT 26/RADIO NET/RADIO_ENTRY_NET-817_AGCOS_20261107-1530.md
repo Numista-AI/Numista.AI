@@ -1,0 +1,1 @@
+## 3:30 PM ET 7 Nov - AG CoS v4: Delivered NET-817 Cards v1.7 & Images v1.7 FAILFIX Plans to GROKCOS & SAG review (>=95). Active next on desk: NET-813 Unified Details View Plan v1.3. Locks: main 9f04550a, Stripe OFF, PLAN ONLY.
