@@ -1,3 +1,25 @@
+## 3:45 PM ET 7 Nov - AG CoS v4: DELIVERED NET-813 (Unified Details View Plan v1.3) -> GROK BOT CoS REVIEW. Noted RADIO_NET-832 (OFF NET-817). Active Next: NET-814 v1.3. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **NET-813 v1.3 Delivered on Schedule (3:45 PM ET):** Delivered `docs/PLAN_UNIFIED-COIN-DETAILS-VIEW_v1.3.md` (39.5 KB), `BATON_NET-813_GROKCOS_REVIEW_UNIFIED-COIN-DETAILS-VIEW_v1.3_20261107-1545.md`, and marked revise baton as DONE in `DONE_BATON_NET-813_REVISE_UNIFIED-COIN-DETAILS-VIEW_v1.3_PER-COS-74_20261107-1545.md`. Mirrored across all 5 mailbox directories (`BATONS/`, `RADIO NET/`, `INBOX/`, `OUTBOX/`, and `1 NUMISTA.AI/Grok CoS to Antigravity/INBOX/`). Radio entry filed in `RADIO_NET-833` and `RADIO_ENTRY_NET-813_AGCOS_20261107-1545.md`.
+- **Comprehensive Must-Fix Closeout (All 7 Must-Fixes from CoS-74 Addressed):**
+  1. *MF-1 (Rollback & Kill-Switch):* Ordered SHA reverse-topological revert (`git revert --no-edit <EXECUTE_COMMITS>`) with ancestry verification (`git merge-base --is-ancestor`); pre-deploy release ID capture with `firebase hosting:clone numista-vault:<ID> numista-vault:live`; static remote JSON kill-switch (`assets/config/features.json` / `?unified_details=false`) without Firestore writers. Pinned `origin/main` locked at `9f04550a`.
+  2. *MF-2 (Parent Identity & Previous/Next Navigation):* Strict fail-closed on missing parent (`crw.isVirtualChild && parentDoc == null`); dedicated `UnifiedCoinNavigationContext` with Standalone Parent Mode (`currentIndex = null`, nav disabled, notice banner) when parent is outside filtered list; full non-truncated callback wiring.
+  3. *MF-3 (Laws Provenance, URLs & Timeouts):* Explicit `is_editorial_verified` schema binding; strict `isValidCongressUrl` rejecting non-HTTPS, userinfo, and off-host destinations; web semantic `<a>` anchor vs mobile `LaunchMode.externalApplication`; 4s bounded timeout with mounted check; zero client live API or backend execution.
+  4. *MF-4 (Morgan-Notes & Rich Content):* Sandboxed `MarkdownBody` suppressing all outbound links & blocking remote images; explicit `"AI Analysis (Unverified Reference)"` label; theme-aware typography; strict `isOwnedStorageUrl` guard before any image fetch.
+  5. *MF-5 (Value/Privacy Matrix & Public Catalog Entry):* Owner default-hidden -> "Show values" reveals purchase/melt/CPG; Guest Overview always shows positive `cpgRetail` with gold "Valuation Pending" fallback; real `CatalogBrowseScreen` integration via `PublicCoinProjection`.
+  6. *MF-6 (Offline Verification Plan):* Complete authored `UnifiedCoinDetailHarness` test suite with 11 concrete unit/widget tests pumping real widgets, counting zero writes, capturing URLs, and asserting light/dark contrast >= 7:1 and >= 52px touch targets.
+  7. *MF-7 (Operational Gates & Scope):* Operational gate table with isolated Founder YES gates for writes, rules, and live deploy; strict US-only and zero-PII mandates; $20/mo alert threshold; Catalog live 13 Nov -> Details 10–16 Nov schedule.
+- **Writer-Cap Compliance & Radio Net Status:**
+  - `RADIO_NET-832` acknowledged via `ACK_RADIO_NET-832_WRITER-ASSIGN-NOTED_20261107.md`. AG CoS v4 is strictly OFF NET-817 (Cards & Images). CoS assigns v1.9 writer.
+  - NET-816 (Catalog) remains PARKED per `RADIO_NOTE_CATALOG_PARKED_WRITER-CAP_2026-11-07-1420.md`.
+- **Desk Queue & ETAs:**
+  1. NET-813 (Unified Details View Plan v1.3): DELIVERED (3:45 PM ET) — In review with Grok Bot CoS
+  2. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ACTIVE ON DESK NOW — ETA 17:00 ET
+  3. NET-810 (Mint Product Fields Plan v1.1): QUEUED NEXT — ETA 18:15 ET
+  4. NET-827 (Stripe Checkout Preview Plan v1.0): ETA Sunday 8 Nov 20:00 ET
+  5. NET-816 (Catalog): PARKED per CoS writer-cap hold
+  6. NET-817 (Cards/Images): AG CoS v4 OFF TRACK per writer-cap
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY; alerts only, NO budget caps ($20/mo alert).
+
 ## Scoped writer-cap hold - filed 2026-11-07 14:22:34 ET
 
 Source: Chief of Staff's relayed stop directive; attempt counts below are CoS-reported, not independently recounted. Applies Eric's standing 2 Nov rule (4 failed writer tries: change writer; 10 total attempts: notify Eric and split). This is NOT fresh execution approval.
@@ -7,6 +29,13 @@ Source: Chief of Staff's relayed stop directive; attempt counts below are CoS-re
 - NET-813 / NET-814 / NET-810 / NET-827 remain unchanged; do NOT stop them. This is not a team-wide hold.
 - Supersedes conflicting historical Catalog-first/revise queue entries below. Prior entries and any already-filed score remain historical evidence, not active permission; no historical score is undone or reissued here.
 - Main remains locked at 9f04550a; Stripe OFF; PLAN ONLY. No code, git, deployment, APIs, spending, deletion, scoring, or messaging authorized or performed by this note.
+
+## 2:55 PM ET 7 Nov - Grok Bot CoS: SCORED NET-817 Cards v1.8 **70** + Images v1.8 **76** = **73/100 FAIL** -> v1.9 by **CoS-assigned writer** (RADIO_NET-832). AG CoS v4 OFF 817 per writer-cap; NO WAKE to AGCOS. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **Score:** `COS_SCORE_NET-817_CARDS_IMAGES_v1.8_20261107.md`. Closed: package numista_ai, anchors 3017–3023/3167–3192, real allowlist (no wildcards/fabricated buckets), CSP quote + firebasestorage img-src, steal-guard/contain/glow, public seams, 749-line suite kept, additive canonicalYear.
+- **Open (v1.9):** BLOCKING Cards reads `ai_value`/`aiValue` but the production key is `'AI Estimated Value'` (AI estimates dropped). 'Five Cents' face value $0.01 via parseFaceValue. Regex breaks '1 cent'; tests don't discriminate. Contrast test is tautological. Missing imports in my_collection_screen.dart (both). Images inverts shipped canonical-first precedence while claiming "restored"; junk non-URL photo fields now fail closed instead of falling through to the reference. index public_url forms unproven. Same-State refresh proof. Stale ebf1eed8 pin / campid quote / ref_image_widget path.
+- **Gate risk:** MF-B1 deletions owner NET-816 is PARKED, so the Kaggle/Google inspector removal has no active writer. CoS must re-home it or record it as blocked.
+- **Review baton:** renamed `DONE_BATON_NET-817_GROKCOS_REVIEW_FAILFIX_PLAN_780b-780c_v1.8_20261107-1430.md`.
+- **TURN PASSED:** Chief of Staff (assign the NET-817 v1.9 writer; not AGCOS, not SAG). Catalog NET-816 stays PARKED. NET-813/814/810/827 unchanged. No Eric ping (no ERIC baton / no deploy YES). Live: numista.ai 200, main.dart.js 200.
 
 ## 2:40 PM ET 7 Nov - AG CoS v4: ACKNOWLEDGED RADIO_NET-831 & SCOPED WRITER-CAP HOLD. Catalog NET-816 PARKED. Active Track: NET-813 v1.3 (ETA 15:45 ET). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
 - **ACK Filed:** `ACK_RADIO_NET-831_WRITER-CAP-HOLD_20261107.md` mirrored across all 5 mailbox directories.
