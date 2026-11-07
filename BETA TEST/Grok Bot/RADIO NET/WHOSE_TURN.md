@@ -1,3 +1,24 @@
+## 1:00 PM ET 7 Nov - AG CoS v4: DELIVERED NET-817 (CARDS v1.6 + IMAGES v1.6) -> GROK BOT CoS REVIEW. Active next: NET-816 (Catalog v1.10). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **NET-817 Delivered on Schedule (1:00 PM ET):** Delivered `docs/FAILFIX_PLAN_NET-780b_CARDS_v1.6.md`, `docs/FAILFIX_PLAN_NET-780c_IMAGES_v1.6.md`, and `BATON_NET-817_GROKCOS_REVIEW_FAILFIX_PLAN_780b-780c_v1.6_20261107-1300.md`. Physically mirrored and verified across all 5 directories (`BATONS/`, `RADIO NET/`, `INBOX/`, `OUTBOX/`, and `1 NUMISTA.AI/Grok CoS to Antigravity/INBOX/`). Marked incoming review baton as DONE in `DONE_BATON_NET-817_GROKCOS_REVIEW_FAILFIX_PLAN_780b-780c_v1.5_20261106-2140.md`.
+- **v1.6 Closeouts (CoS-65 8 Must-Fixes + Beta Retest Bundle B):**
+  1. Structural Deletions: Anchored diffs on dev (`b0b05808`) and p7 (`4d17ca5e`). Single deletion owner is NET-816 for Google/Kaggle button/handler/inspector; NET-817 cleanly removes inspector loader (p7:5250–5278) and fields (p7:149–152) with zero orphaned syntax. KEEP Live eBay Check (`_onSearchEbay`, p7:4410) with affiliate tags (`campid`, `customid`) strictly preserved per B05N-18 and `RADIO_NET-825`.
+  2. Universal `canonicalYear`: Personal Notes strictly excluded (`canonical_mint_asset_service.dart:160–161` anti-bleed); parses direct 4-digit years and direct dual dates (`1776-2026` -> `'2026'`); empty aliases cannot mask populated aliases; negative counterexamples verified.
+  3. User-Photo Aliases: Full extraction of camelCase `imageObverse`/`imageReverse` (`canonical_mint_asset_service.dart:44–49`) plus `image_url_*`, `stored_*`, and snake_case; empty aliases cannot mask valid later aliases; rejected uploads fail closed to user placeholder, never reference art; immediate refresh (B05N-12); reverse rotation correction (B05N-10).
+  4. Whole-Class Replacement: Anchored replacement of `_CollectionCardImage` (declaration line 6356 to closing brace 6480) retaining `_buildCoinImage`.
+  5. Request Lifecycle & Allowlist: Semantic `_RequestKey` caching; skips unnecessary reference reads when direct user photo exists; 5s timeout with empty terminal state; grounded allowlist to verified GCS buckets (`/numista-vault.firebasestorage.app/`, `/numista-ai-images/`), user uploads, and relative same-origin.
+  6. Real Offline Behavioral Tests: `canonical_mint_asset_service_test.dart` and widget test suites in `my_collection_card_pricing_test.dart` and `collection_card_image_test.dart`.
+  7. Spending Controls: Hard $0.00 spend cap and $25 limit permanently deleted per Eric's standing rule; alerts only at $20/mo.
+  8. Operational Boundaries: Separate Eric typed YES for code execution, preview deployment, and Firestore writes/rules; US-only scope; 3:00 AM stand-down; laptop + GCS AI image backups; dynamic pre-execute SHA rollback.
+- **Active Desk Queue & ETAs:**
+  1. NET-817 (Cards v1.6 + Images v1.6): DELIVERED (1:00 PM ET) — in review with Grok Bot CoS and SAG (>=95).
+  2. NET-816 (Catalog FAILFIX Plan v1.10): Thanksgiving Critical Path FIRST — ACTIVE ON DESK — ETA 14:15 ET
+  3. NET-813 (Unified Details View Plan v1.3): ETA 15:30 ET
+  4. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ETA 16:45 ET
+  5. NET-810 (Mint Product Fields Plan v1.1): ETA 18:00 ET
+  6. NET-827 (Stripe Checkout Preview Plan v1.0): ETA Sunday 8 Nov 20:00 ET
+- **TURN PASSED:** Turn passed to Grok Bot CoS and Stand Alone Grok (SAG, grok-4.7) for independent review scoring (>=95).
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY (no execution, no deployment, no Firestore writes without Founder Eric typed YES); build target p7-gate preview only; alerts only, NO budget caps.
+
 ## 7:10 PM ET 5 Nov - AG CoS v4 ACKed BATON_NET-812 (Cards+Images v1.4). NET-815 with GB CoS for scoring. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY.
 - **NET-812 In Progress:** Authored ACK (`ACK_BATON_NET-812_REVISE_780b-780c_v1.4_20261105-1910.md`). Addressing all must-fixes in `docs/FAILFIX_PLAN_NET-780b_CARDS_v1.4.md` and `docs/FAILFIX_PLAN_NET-780c_IMAGES_v1.4.md`:
   1. Rollback: Record exact pre-execute branch HEAD dynamically on `p7-v8.9` and revert the complete execute commit set. Zero checkouts of stale `a5eeb19b` or locked `9f04550a`. Remove GCS deactivation guarantee claims.
