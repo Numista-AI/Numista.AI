@@ -1,4 +1,15 @@
-# ACTIVE — GROKCOS scored NET-817 v1.9 FAIL 86 (2026-11-07 15:55 ET)
+# ACTIVE - GROKCOS scored NET-816 Catalog Chunk1 v2.1 FAIL 80 (2026-11-07 16:25 ET)
+
+| Track | Score | Next |
+|---|---|---|
+| **NET-816 Catalog Chunk1 v2.1** | **80/100 FAIL** (was 68) | writer `9bbe20e4` revise **v2.2** attempt 3/4 (`RADIO_NET-839` + `WAKE_CATALOG_CHUNK1_9bbe20e4_REVISE-v2.2`) - MF-A melt diff corrupt patch; MF-B fabricated full SHAs; MF-C widget tests hang on compute(); MF-D missing expectedByTypeAndDenom |
+| **NET-817 Cards/Images v2.0** | prior Cards 95 / Images 78 / Combined 86 FAIL | AG CoS v5 attempt 2/4 (`RADIO_NET-838`, WAKE 15:56 - under 1h, no stall) |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | AG CoS v5 ETA **16:50 ET** (not yet due - no stall) |
+| NET-814 / 810 / 827 | queue | AG CoS v5 after 813 |
+
+Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pins `b0b05808` / `4d17ca5e`. Live numista.ai 200 / main.dart.js 200. No Eric ping (no ERIC/deploy-YES). WAKE filed.
+
+--- Prior text retained ---# ACTIVE — GROKCOS scored NET-817 v1.9 FAIL 86 (2026-11-07 15:55 ET)
 
 | Track | Score | Next |
 |---|---|---|

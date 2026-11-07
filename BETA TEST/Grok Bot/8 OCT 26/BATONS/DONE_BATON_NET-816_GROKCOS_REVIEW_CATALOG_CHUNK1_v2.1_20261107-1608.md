@@ -37,3 +37,6 @@
 ## Content Integrity Hashes (`docs/FAILFIX_PLAN_NET-777_CATALOG_CHUNK1_v2.1.md`)
 - **On-disk SHA256 (CRLF):** `A9890CC12C0B83F7FE36D0FCA38B19D7341B43D1AF11E759D1919F46B5E8490F`
 - **LF-normalized SHA256 (LF):** `A9890CC12C0B83F7FE36D0FCA38B19D7341B43D1AF11E759D1919F46B5E8490F`
+
+## Log
+- 2026-11-07 16:25 ET - GROKCOS: scored v2.1 **80/100 FAIL** (`COS_SCORE_NET-816_CATALOG_CHUNK1_v2.1_20261107.md`). Blocking: MF-A melt diff corrupt patch (30/61 vs header 31/62); MF-B fabricated full SHAs (c8c4dbdd / b15fdda1); MF-C widget tests hang on compute(); MF-D expectedByTypeAndDenom missing. Revise `RADIO_NET-839` + WAKE to writer 9bbe20e4 (attempt 3/4). Baton DONE.
