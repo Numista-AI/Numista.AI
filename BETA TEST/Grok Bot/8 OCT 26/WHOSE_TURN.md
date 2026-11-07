@@ -1,3 +1,24 @@
+## 2:15 PM ET 7 Nov - AG CoS v4: DELIVERED NET-816 (CATALOG FAILFIX PLAN v1.10) -> GROK BOT CoS REVIEW. Active next: NET-817 (Cards v1.7 + Images v1.7). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **NET-816 Delivered on Schedule (2:15 PM ET):** Delivered `docs/FAILFIX_PLAN_NET-777_CATALOG_v1.10.md`, `BATON_NET-816_GROKCOS_REVIEW_FAILFIX_PLAN_CATALOG_v1.10_20261107-1415.md`. Physically mirrored across all 5 directories (`BATONS/`, `RADIO NET/`, `INBOX/`, `OUTBOX/`, and `1 NUMISTA.AI/Grok CoS to Antigravity/INBOX/`). Marked incoming revise baton as DONE in `DONE_BATON_NET-816_REVISE_FAILFIX_NET-777_CATALOG_v1.10_PER-COS-65_20261107-1048.md`.
+- **v1.10 Closeouts (CoS-65 8 Must-Fixes + Beta Retest Bundle C):**
+  1. Structural Deletions: Pinned dev (`b0b05808`) line 3796 (`_buildSimilarCoinsInspector(),`) and method block lines 5501–5637 removed leaving line 5638 closer; state fields 149–150 and loader removed. Pinned p7 (`4d17ca5e`) Google 3531–3548 and handler 4387–4406; inspector 3820 and 5549–5684; inspector loader 5252–5278 and fields 149–152. Outbound eBay search (`_onSearchEbay`, line 4410 on p7) strictly PRESERVED with affiliate tags per B05N-18 and `RADIO_NET-825`. NET-816 is single deletion owner.
+  2. Image Guard: `@visibleForTesting static bool isOwnedStorageUrl(String? url)` exposed in `CatalogBrowseScreen`. Dropped `/numista-public-catalog/`. Verified allowlist admits only HTTPS `storage.googleapis.com` with `/numista-vault.firebasestorage.app/` or `/numista-ai-images/`, `*.firebasestorage.app`, and relative same-origin (`/`). Applied identically to card primary/type images and modal `_buildModalImage`.
+  3. Known Errors: Grounded in real `CoinModel.programSeries`, `strikeType`, `variety`. Non-breaking additive fields `series`/`coinTypes` on `MintError`. Strict fail-closed rule on blank metadata in `MintErrorService.matchesCoin`. Backend `GreysheetErrorService` and `greysheet_error_routes.py` updated with series/coin_type filtering.
+  4. Retail Grounding: Grounded in `entries_master_20261103.jsonl` (3,202 verified entries). Full dry-run report schema specified. Missing retail displays face value with "Value pending AI estimate" chip (closing B05N-8); zero $0.00 fallback.
+  5. Navigation: Real `window.addEventListener('popstate', ...)` and `removeEventListener` modal close. `_openAskMorgan` router patch for standalone public catalog (`main.dart:166–179`) using safe web navigation (`launchUrl`).
+  6. Scope Additions / Bundle C: Concrete B05N-9 silver melt calculation code/formulas (1958 quarter = 5.625g silver = 0.18084 troy oz). Concrete B05N-17 composition auto-fill mapping table. History at lines 865–873 sanitized. Legislation grounded in real `numista_backend/coin_legislation_map.py` with Congress.gov links only (closing B05N-13). `_buildMintageRow` patched to suppress row when null/empty/'Needs source' and remove outbound `(source)` link.
+  7. Real Test Suite: Public testable APIs with full unit and widget tests pumping widgets and asserting retail, allowlist, known error blank-metadata fail-closed, popstate, silver melt, composition, and legislation.
+  8. Ops & Spend Controls: Non-force rollback path (`git revert` without force push); US-only scope; 3:00 AM stand-down; AI-image backup gate; alerts only at $20/mo, zero budget caps.
+- **Active Desk Queue & ETAs:**
+  1. NET-816 (Catalog FAILFIX Plan v1.10): DELIVERED (2:15 PM ET) — in review with Grok Bot CoS and SAG (>=95).
+  2. NET-817 (Cards v1.7 + Images v1.7): ACTIVE ON DESK — ETA 15:30 ET
+  3. NET-813 (Unified Details View Plan v1.3): ETA 16:45 ET
+  4. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ETA 18:00 ET
+  5. NET-810 (Mint Product Fields Plan v1.1): ETA 19:15 ET
+  6. NET-827 (Stripe Checkout Preview Plan v1.0): ETA Sunday 8 Nov 20:00 ET
+- **TURN PASSED:** Turn passed to Grok Bot CoS and Stand Alone Grok (SAG, grok-4.7) for independent review scoring (>=95).
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY (no execution, no deployment, no Firestore writes without Founder Eric typed YES); build target p7-gate preview only; alerts only, NO budget caps.
+
 ## 1:25 PM ET 7 Nov - AG CoS v4: ACK RADIO NET-828 (REVISE ORDER NET-817 v1.7 INGESTED). CoS-76 scorecard ingested (Cards 84, Images 68). Active on desk: NET-816 (Catalog v1.10) FIRST per Desk Note -> then NET-817 v1.7. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
 - **Revise Order Ingested:** Ingested RADIO_NET-828 and COS_SCORE_NET-817_CARDS_IMAGES_v1.6_20261107.md (76/100 FAIL; Cards 84, Images 68). Filed ACK_RADIO_NET-828_REVISE-817-v1.7_20261107.md across all mailboxes. WAKE moved to DONE.
 - **Grok Bot CoS Desk Note Followed:** Desk note orders continuing Thanksgiving Critical Path NET-816 (Catalog FAILFIX Plan v1.10, ETA 14:15 ET) as ACTIVE ON DESK FIRST, slotting NET-817 v1.7 immediately following Catalog v1.10 delivery.
