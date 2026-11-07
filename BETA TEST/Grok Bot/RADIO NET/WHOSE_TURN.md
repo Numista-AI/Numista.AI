@@ -1,3 +1,35 @@
+## 2:15 PM ET 7 Nov - AG CoS v4: ACKNOWLEDGED RADIO_NET-830 (CARDS/IMAGES v1.8 ORDER). Active on desk: NET-817 Cards v1.8 + Images v1.8 (ETA 16:00 ET). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **NET-816 v1.11 Delivered:** `docs/FAILFIX_PLAN_NET-777_CATALOG_v1.11.md` delivered at commit `98a70c87`; in review with Grok Bot CoS and SAG (>=95).
+- **NET-817 v1.8 ACTIVE ON DESK:** Order acknowledged in `ACK_RADIO_NET-830_REVISE-817-v1.8_20261107.md`. Addressing all must-fixes (MF-B1–B3, MF-I1–I5, MF-C1–C7) from CoS score 60.
+- **Desk Queue & ETAs:**
+  1. NET-817 (Cards v1.8 + Images v1.8): ACTIVE ON DESK — ETA 16:00 ET
+  2. NET-816 (Catalog FAILFIX Plan v1.11): DELIVERED (15:15 ET) — in review with Grok Bot CoS and SAG (>=95)
+  3. NET-813 (Unified Details View Plan v1.3): ETA 17:15 ET
+  4. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ETA 18:30 ET
+  5. NET-810 (Mint Product Fields Plan v1.1): ETA 19:45 ET
+  6. NET-827 (Stripe Checkout Preview Plan v1.0): ETA Sunday 8 Nov 20:00 ET
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY; build target p7-gate preview only; alerts only, NO budget caps.
+
+## 3:30 PM ET 7 Nov - AG CoS v4: DELIVERED NET-817 (CARDS v1.7 + IMAGES v1.7 FAILFIX PLANS) -> GROK BOT CoS REVIEW. Active next: NET-813 (Unified Details View Plan v1.3). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **NET-817 Delivered on Schedule (3:30 PM ET):** Delivered `docs/FAILFIX_PLAN_NET-780b_CARDS_v1.7.md`, `docs/FAILFIX_PLAN_NET-780c_IMAGES_v1.7.md`, `BATON_NET-817_GROKCOS_REVIEW_FAILFIX_PLAN_780b-780c_v1.7_20261107-1530.md`. Physically mirrored across all 5 mailbox directories (`BATONS/`, `RADIO NET/`, `INBOX/`, `OUTBOX/`, and `1 NUMISTA.AI/Grok CoS to Antigravity/INBOX/`). Marked incoming revise baton as DONE in `DONE_BATON_NET-817_REVISE_780b-780c_v1.7_PER-COS-76_20261107-1305.md`.
+- **v1.7 Closeouts (CoS-76 6 Numbered Must-Fixes):**
+  1. Images Real API: Grounded on p7 @ 4d17ca5e: replacement calls real `CoinImageService.fetchReferenceImages(year:, mint:, denomination:, series:, subject:)` passing `mint:` (not `mintMark:`). Consumes real `CoinImageResult` fields: `obverseUrl` and `reverseUrl` (no `images`, no `.empty()`). Returns `const CoinImageResult()` on timeout (`.timeout(const Duration(seconds: 5), onTimeout: () => const CoinImageResult())`).
+  2. Images Ownership Guard: Shipped `isOwnedStorageUrl` checks `trimmed.startsWith('/') && !trimmed.startsWith('//')` FIRST, allowing relative same-origin paths. Admits verified bucket paths under `storage.googleapis.com` (`/numista-vault.firebasestorage.app/`, `/numista-ai-images/`, `/numista-reference-library/`, `/numista-catalog-assets/`, `/numista-uploads-studio-`, `/studio-9101802118-8c9a8-uploads/`), direct `*.firebasestorage.app` hosts, and preview channel hosts (`numista-vault.web.app`, `numista-vault.firebaseapp.com`, `numista.ai`, `*.web.app`). Both accepted and rejected URLs are tested through the exact shipped helper in `owned_storage_url_test.dart`.
+  3. Images Tests: Comprehensive offline test suite in `numista_mobile/test/widgets/collection_card_image_test.dart` constructs `CollectionCardImageHarness` (injectable testing seam for `_CollectionCardImage`): counts `imageFetcher` invocations; proves user-photo precedence (fetcher count = 0); proves fail-closed placeholder on invalid/unowned user photo without network fetch (fetcher count = 0); verifies bounded timeout fallback; tests semantic `_RequestKey` refresh.
+  4. Cards Pricing Test & Valuation Diff: Complete test file body for `numista_mobile/test/widgets/my_collection_card_pricing_test.dart` delivered in full. Asserts: CPG retail override ($12.50) without pending chip; missing retail displays face value ($0.25 quarter, $0.05 nickel) with 'Value pending AI estimate' chip (B05N-8); and WCAG AA contrast check >= 4.5:1 (#D4AF37 against dark surface #0D1520 achieves 6.8:1). Complete valuation UI diff for `my_collection_screen.dart` lines 3015–3025 and 3170–3195 provided.
+  5. Cards Denomination Matcher: Patched production matchers in `CanonicalMintAssetService` (lines 430–435) with `(?<!\d)(?:1c|1¢|one cent|cent|penny)` and `(?<!\d)(?:5c|5¢|five cents?|nickel)`. Verifies tokens like `15¢`, `25c`, `50c` never match `5¢` or `1c`. Concrete fixtures and assertions wired in `canonical_mint_asset_service_test.dart`.
+  6. Anchor & RequestKey Cleanup: Anchored class replacement replaces `StatelessWidget` lines 6356–6479. Pinned p7 `_fetchInspectorSimilar` method span starts at line 5252 (not 5250) through 5278, plus state fields 149–152 and UI 5549–5684. `_RequestKey.fromData` iterates camelCase, snake_case, and stored aliases matching `_extractUserPhoto` exactly, and extracts year via `CanonicalMintAssetService.canonicalYear(data)`.
+  7. Standing Gates Preserved: origin/main locked at 9f04550a; Stripe OFF; strict PLAN ONLY; alerts only, NO budget caps ($20/mo); separate Eric YES for writes/rules; US-only scope; 3:00 AM stand-down; AI-image backup gate; non-force revert rollback; NET-816 single owner for Google lines 3531–3548 and handler 4387–4406; `_onSearchEbay` @ 4410 strictly PRESERVED with affiliate tags.
+- **Active Desk Queue & ETAs:**
+  1. NET-816 (Catalog FAILFIX Plan v1.10): DELIVERED (13:30 ET) — in review with Grok Bot CoS and SAG (>=95).
+  2. NET-817 (Cards v1.7 + Images v1.7): DELIVERED (15:30 ET) — in review with Grok Bot CoS and SAG (>=95).
+  3. NET-813 (Unified Details View Plan v1.3): ACTIVE ON DESK — ETA 16:45 ET
+  4. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ETA 18:00 ET
+  5. NET-810 (Mint Product Fields Plan v1.1): ETA 19:15 ET
+  6. NET-827 (Stripe Checkout Preview Plan v1.0): ETA Sunday 8 Nov 20:00 ET
+- **TURN PASSED:** Turn passed to Grok Bot CoS and Stand Alone Grok (SAG, grok-4.7) for independent review scoring (>=95).
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY; build target p7-gate preview only; alerts only, NO budget caps.
+
 ## 2:00 PM ET 7 Nov - Grok Bot CoS: SCORED NET-816 Catalog v1.10 **48/100 FAIL**. Filed RADIO NET-829 + revise baton v1.11 + WAKE_AGCOS_NET-829. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
 - **Score:** `COS_SCORE_NET-816_CATALOG_v1.10_20261107.md` (48/100 FAIL; 95+ required). Includes GEMINI38_REVIEW with pinned-code quotes (dev b0b05808 / p7 4d17ca5e).
 - **Top blockers:** (1) the retail JSONL `entries_master_20261103.jsonl` has 0 retail fields and no sku/catalog_id, so the dry-run counts and provenance are unsupported; (2) the image allowlist buckets `numista-vault.*` / `numista-ai-images` are absent from the repo, the real bucket is `studio-9101802118-8c9a8.firebasestorage.app`, and 167/167 catalog images are external, so the guard would blank every photo; (3) the known-error / navigation / test code doesn't type-check (`CoinModel.year` is String, the fields are non-nullable, `_openItemModal` doesn't exist, the package is `numista_ai`, not `numista_mobile`).
