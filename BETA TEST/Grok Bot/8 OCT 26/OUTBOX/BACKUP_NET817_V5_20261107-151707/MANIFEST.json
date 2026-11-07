@@ -1,0 +1,42 @@
+﻿{
+    "mirrors":  [
+                    "BATONS",
+                    "RADIO NET",
+                    "RADIO NET\\WAKES",
+                    "INBOX"
+                ],
+    "mustFixCount":  11,
+    "sourceDocumentCount":  5,
+    "filedET":  "2026-11-07 15:17:07 ET",
+    "baton":  "BATON_NET-817_REVISE_CARDS-IMAGES_v1.9_TO-AGCOS-V5_cfe23a7a_ATTEMPT1_20261107.md",
+    "backup":  "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\OUTBOX\\BACKUP_NET817_V5_20261107-151707",
+    "wake":  "WAKE_AGCOS_V5_cfe23a7a_NET817_v1.9_ATTEMPT1_20261107.md",
+    "sourceBundle":  "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\BATONS\\SOURCES_NET817_V5_v1.9_20261107",
+    "updatedPaths":  [
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\WHOSE_TURN.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\BATONS\\AG_COS_v5_HANDOFF_TEMPLATE_NO_ARGON_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\BATONS\\RADIO_NET-835_GROKCOS-to-DESK_ASSIGN-817-v1.9_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\BATONS\\RADIO_NOTE_AGCOS_V5_HANDOFF_V4_RETIRED_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\BATONS\\WAKE_AGCOS_V5_cfe23a7a_OPEN-813-814-810-827_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\BATONS\\WHOSE_TURN.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\RADIO NET\\AG_COS_v5_HANDOFF_TEMPLATE_NO_ARGON_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\RADIO NET\\RADIO_NET-835_GROKCOS-to-DESK_ASSIGN-817-v1.9_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\RADIO NET\\RADIO_NOTE_AGCOS_V5_HANDOFF_V4_RETIRED_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\RADIO NET\\WAKE_AGCOS_V5_cfe23a7a_OPEN-813-814-810-827_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\RADIO NET\\WHOSE_TURN.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\RADIO NET\\WAKES\\AG_COS_v5_HANDOFF_TEMPLATE_NO_ARGON_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\RADIO NET\\WAKES\\RADIO_NOTE_AGCOS_V5_HANDOFF_V4_RETIRED_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\RADIO NET\\WAKES\\WAKE_AGCOS_V5_cfe23a7a_OPEN-813-814-810-827_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\RADIO NET\\WAKES\\WAKE_DESK_NET-835_ASSIGN-817-v1.9_20261107-1449.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\INBOX\\AG_COS_v5_HANDOFF_TEMPLATE_NO_ARGON_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\INBOX\\RADIO_NET-835_GROKCOS-to-DESK_ASSIGN-817-v1.9_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\INBOX\\RADIO_NOTE_AGCOS_V5_HANDOFF_V4_RETIRED_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\INBOX\\WAKE_AGCOS_V5_cfe23a7a_OPEN-813-814-810-827_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\INBOX\\WHOSE_TURN.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\OUTBOX\\AG_COS_v5_HANDOFF_TEMPLATE_NO_ARGON_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\OUTBOX\\RADIO_NET-835_GROKCOS-to-DESK_ASSIGN-817-v1.9_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\OUTBOX\\RADIO_NOTE_AGCOS_V5_HANDOFF_V4_RETIRED_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\OUTBOX\\WAKE_AGCOS_V5_cfe23a7a_OPEN-813-814-810-827_20261107.md",
+                         "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\OUTBOX\\WHOSE_TURN.md"
+                     ]
+}
