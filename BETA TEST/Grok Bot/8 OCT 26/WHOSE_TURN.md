@@ -1,3 +1,43 @@
+## 10:25 AM ET 7 Nov - AG CoS v4: ACK RADIO NET-825 (BETA RETEST FIX ORDER INGESTED). Converging 18 B05N + 3 B07N items into 3 bundles across 5 in-flight plans. Active on desk: NET-817 (Cards v1.6 + Images v1.6). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **Beta Retest Fix Order Ingested:** Ingested RADIO_NET-825 and ERIC_BETA_ISSUE_TRACKER_20261107 authorized directly by Founder Eric (10:14 and 10:17 AM ET). Filed ACK_RADIO_NET-825_BETA-RETEST_20261107.md across all mailboxes. WAKE moved to DONE.
+- **Three Coordinated Bundles & Contradiction Resolution:**
+  - Bundle A (Cert Intake & Owner Detail - NET-813 v1.3): KEEP Live eBay Check (B05N-18, reversing NET-813 v1.2 deletion); single primary lookup action with distinct pending/result/error states (B07N-1, B05N-2); explicit provider vs OCR distinction (B07N-2, B05N-1); canonical US Mint naming/denomination fill (B07N-3, B05N-4); auto-scroll above the fold (B05N-3); purchase fields on Add by Cert form (B05N-5); save navigation with full back-link clickability (B05N-6); Inspector Edit without switching to Table (B05N-11); real click baseline measurement (B05N-16).
+  - Bundle B (Cards, Photos & Contrast - NET-817 v1.6 + NET-813): Closing B05N-7, 10, 12, 15; single removal owner for Google/Kaggle; user-photo aliases preserved (camelCase + snake_case); user photos take strict precedence; immediate refresh without modal close; rotation correction for upside-down reverse; WCAG AA >= 4.5:1 text contrast.
+  - Bundle C (Catalog Identity, Composition, Valuation, Errors, Laws - NET-816 v1.9 + NET-813): Closing B05N-8, 9, 13, 14, 17; delivered in FAILFIX_PLAN_NET-777_CATALOG_v1.9.md at 10:20 ET; face-value fallback with pending AI chip; automatic 90% silver composition & real-time melt; series+type+year error matching; Congress.gov Laws tab.
+- **Active Desk Queue & ETAs:**
+  1. NET-816 (Catalog FAILFIX Plan v1.9): DELIVERED (10:20 ET) — in review with Grok Bot CoS and SAG (>=95).
+  2. NET-817 (Cards v1.6 + Images v1.6): ACTIVE ON DESK — ETA 13:00 ET
+  3. NET-813 (Unified Details View Plan v1.3): ETA 14:30 ET
+  4. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ETA 16:00 ET
+  5. NET-810 (Mint Product Fields Plan v1.1): ETA 17:30 ET
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY (no execution, no deployment, no Firestore writes without Founder Eric typed YES); build target p7-gate preview only; alerts only, NO budget caps.
+
+## 10:20 AM ET 7 Nov - AG CoS v4: DELIVERED NET-816 (Catalog FAILFIX Plan v1.9) -> GROK BOT CoS REVIEW. Active next: NET-817 (Cards v1.6 + Images v1.6). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **NET-816 Delivered Ahead of Schedule:** Delivered docs/FAILFIX_PLAN_NET-777_CATALOG_v1.9.md and BATON_NET-816_GROKCOS_REVIEW_FAILFIX_PLAN_CATALOG_v1.9_20261107-1020.md (delivered at 10:20 ET, ahead of 11:30 ET target). Marked incoming revise order DONE in DONE_BATON_NET-816_REVISE_FAILFIX_NET-777_CATALOG_v1.9_20261107-1020.md. Physically mirrored and verified across all 5 directories.
+- **v1.9 Closeouts:** All 8 CoS-60 must-fixes and Beta Tracker Bundle C items resolved:
+  1. Complete branch-specific structural deletions on pinned dev (b0b05808): Google Images confirmed absent; Kaggle inspector invocation line 3796 and implementation lines 5501-5637 cleanly removed with zero orphaned braces or spreads.
+  2. Dual-renderer image host guard & CSP reconciliation: _isOwnedStorageUrl applied to both _CatalogCard and modal _buildModalImage (catalog_browse_screen.dart:903-923), enforcing HTTPS, verified bucket ownership (storage.googleapis.com with /numista-vault.firebasestorage.app/ or /numista-ai-images/), and relative same-origin; zero plain HTTP and zero third-party hotlinks fail-closed.
+  3. Complete known errors matching across Library and Greysheet: series + type + year matching across callers (coin_detail_screen.dart:3507-3551) and backend (greysheet_error_routes.py:48-67), preventing 1999 NJ error on 1958 Washington quarter; blank metadata fails closed.
+  4. Grounded CPG retail migration: fictitious data/cpg_retail_master_2026.json eliminated; grounded in 3,202 verified entries (entries_master_20261103.jsonl); missing retail falls back to face value with 'Value pending AI estimate' chip (closing B05N-8); zero \.00 or below-face values.
+  5. Deep-link navigation & Ask Morgan router fix: web browser history interop (#item={id}, popstate modal close on browser Back); patched _openAskMorgan to use safe web URL navigation (launchUrl('/?route=AiChatScreen&prompt=...')) with fallback in standalone public catalog.
+  6. Scope additions & Site Auditor fixes: Laws tab with Congress.gov links only (closing B05N-13); 1796-97 stubs with distinct X post link data; self-hosted mint plate crops; _buildMintageRow patched to suppress row when null/empty/'Needs source', and outbound (source) link deleted; raw context IDs hidden.
+  7. Real behavioral tests: comprehensive test suite pumping widgets and asserting retail numeric, string, missing, face-value fallback, owned/external image pre-fetch, positive/negative error matching, and contrast.
+  8. Integration & spend controls: development on dev; named preview channel; main locked at 9f04550a; hard spending limit completely removed (\ cap deleted, alerts only at \/mo) per Eric's standing rule; dated back-schedule targeting Friday, 13 Nov go-live.
+- **TURN PASSED:** Turn passed to Grok Bot CoS and Stand Alone Grok (SAG, grok-4.7) for independent review scoring (>=95).
+- **AG CoS Active Next:** AG CoS taking up NET-817 (FAILFIX_PLAN_NET-780b_CARDS_v1.6.md + FAILFIX_PLAN_NET-780c_IMAGES_v1.6.md) - ETA 13:00 ET.
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY (no execution, no deployment, no Firestore writes without Founder Eric typed YES).
+
+## 9:55 AM ET 7 Nov - AG CoS v4: ACK RADIO NET-823 & NET-824 (REVISE ORDERS INGESTED). Active on desk: NET-816 (Catalog v1.9) FIRST. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **Revise Orders Ingested:** Ingested Task Master NET-823 and NET-824 filed under Founder Eric typed authorization (9:16 and 9:17 AM ET). Filed ACK_RADIO_NET-823_NET-824_REVISE-ORDERS_20261107-0955.md across all 5 mailboxes. WAKEs moved to RADIO NET/WAKES/DONE/.
+- **Closeout Architecture:** Addressing every numbered must-fix across all score files with closeout tables: syntax on Google removal, origin/dev coordinates, fail-closed modal image guards, valid CPG data paths, canonicalYear precision, camelCase user-photo aliases, real behavioral tests, complete removal of budget caps (alerts only per Eric rule), /catalog remaining public, and explicit dependency architecture for NET-810.
+- **Active Desk Queue & ETAs:**
+  1. NET-816 (Catalog FAILFIX Plan v1.9): Thanksgiving Critical Path FIRST - ETA 11:30 ET (ON DESK)
+  2. NET-817 (Cards v1.6 + Images v1.6): ETA 13:00 ET
+  3. NET-813 (Unified Details View Plan v1.3): ETA 14:30 ET
+  4. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ETA 16:00 ET
+  5. NET-810 (Mint Product Fields Plan v1.1): ETA 17:30 ET
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY (no execution, no deployment, no Firestore writes without Founder Eric typed YES).
+
 ﻿## 9:20 AM ET 7 Nov - WATCH: Morning resume confirmed. Task Master (Eric YES 9:16) already filed CoS scores + NET-823/824 revise orders + WAKEs. Watch retracted colliding NET-823 baton and superseded parallel 816 score draft. GROKCOS 816 review baton DONE. Live smoke OK. No Eric ping from watch. Locks: main 9f04550a, Stripe OFF, PLAN ONLY.
 ## 9:02 AM ET 7 Nov - AG CoS v4: DAY SHIFT ACTIVE / RESUMED PER ERIC RADIO CHECK. ACK NET-822. ALL 5 PLANS IN REVIEW WITH GROKCOS & SAG (>=95). Standing by on radio net. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
 - **Morning Resumption:** Nightly 03:00 AM ET stand-down completed and quota fully refreshed. Resumed operations upon Founder Eric morning radio check. Filed ACK_RADIO_NET-822_STAND-DOWN-0300_20261107-0902.md.
