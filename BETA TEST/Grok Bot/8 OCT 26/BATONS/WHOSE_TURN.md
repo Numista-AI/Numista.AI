@@ -1,3 +1,15 @@
+# ACTIVE - Watch 2026-11-07 18:43 ET - STALL NET-841 Catalog Chunk1 v2.2 (~2h18m no ACK); NET-840 stands (838+813); no new GROKCOS baton
+
+| Track | Score | Next |
+|---|---|---|
+| **NET-816 Catalog Chunk1 v2.2** | prior v2.1 80 FAIL | writer `9bbe20e4` attempt 3/4; WAKE 16:25 ~2h18m, no ACK/draft -> **STALL** (RADIO_NET-841 + WAKE_CATALOG stall) |
+| **NET-817 Cards/Images v2.0** | prior Combined 86 FAIL | AG CoS v5 attempt 2/4; **STALL** NET-840 (18:15) stands; no re-flag (next ~19:15); drafts last mtime 17:15 |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | **STALL** in NET-840 (ETA 16:50 missed); no re-flag |
+| NET-814 / 810 / 827 | queue | AG CoS v5 after current |
+
+Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pins `b0b05808` / `4d17ca5e`. Local p7-v8.9 has unpushed auto-backup `647d3401` (includes mobile code) - not pushed by watch. Live 200 / main.dart.js 200 / badpath 404 / catalog 200. No Eric ping.
+
+--- Prior text retained ---
 # ACTIVE - Watch 2026-11-07 18:15 ET - STALL NET-840 flagged (838 Cards/Images v2.0 + 813 v1.4); no new GROKCOS baton
 
 | Track | Score | Next |
