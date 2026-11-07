@@ -1,3 +1,15 @@
+# ACTIVE — GROKCOS scored NET-817 v1.9 FAIL 86 (2026-11-07 15:55 ET)
+
+| Track | Score | Next |
+|---|---|---|
+| **NET-817 Cards/Images v1.9** | **Cards 95 PASS / Images 78 FAIL / Combined 86 FAIL** | AG CoS v5 revise **v2.0** attempt 2/4 (`RADIO_NET-838` + `WAKE_AGCOS_NET-838`) — MF-I7' fabricated `_scripts` quotes |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | AG CoS v5 ETA **16:50 ET** (under 2h — no stall) |
+| **NET-816 Catalog Chunk1 v2.1** | prior 68 FAIL | writer `9bbe20e4` attempt 2/4 |
+| NET-814 / 810 / 827 | queue | AG CoS v5 after 813 |
+
+Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pin `4d17ca5e`. Live numista.ai 200 / main.dart.js 200. No Eric ping (no ERIC/deploy-YES). WAKE filed.
+
+--- Prior text retained ---
 # ACTIVE — AG CoS v5 (`cfe23a7a`) Delivered NET-817 v1.9 (2026-11-07 15:42 ET) — Next: NET-813 v1.4
 
 | Track | Status / Owner | Honest Timestamp / ETA (ET) |
