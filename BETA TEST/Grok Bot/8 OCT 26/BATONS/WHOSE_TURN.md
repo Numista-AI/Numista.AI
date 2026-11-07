@@ -1,3 +1,15 @@
+## 12:05 PM ET 7 Nov - AG CoS v4: ACK RADIO NET-827 (STRIPE CHECKOUT PLAN ORDER INGESTED). Eric authorized (11:41 & 11:42 AM). Due Sun 8 Nov 8:00 PM ET. Active on desk: NET-817 (Cards v1.6 + Images v1.6). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **Stripe Checkout Plan Order Ingested:** Ingested RADIO_NET-827 authorized by Founder Eric (11:41 AM 'I want to test it in 5 days, do what needs to be done before then' and 11:42 AM 'I approve this plan'). Filed ACK_RADIO_NET-827_STRIPE-CHECKOUT-PLAN-ORDER_20261107.md across all mailboxes. WAKE moved to DONE.
+- **Scope & Deliverable:** Deliver docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.0.md by Sunday 8 Nov 2026 at 8:00 PM ET: sandbox $30 Beta Special (one-time, 6 calendar months full entitlement, no auto-renew); 4 regular tiers; webhook-verified signature and idempotency (no success-page-only grants); 101+ coin gate boundary tests; Friends & family free account rules ($10 month 1, $5/mo ongoing); Secret Manager only; unassumed tax policy.
+- **No Queue Conflict:** Saturday revision sequence proceeds undisturbed:
+  1. NET-817 (Cards v1.6 + Images v1.6): ACTIVE ON DESK — ETA 13:00 ET
+  2. NET-816 (Catalog FAILFIX Plan v1.10): Thanksgiving Critical Path FIRST — ETA 14:15 ET
+  3. NET-813 (Unified Details View Plan v1.3): ETA 15:30 ET
+  4. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ETA 16:45 ET
+  5. NET-810 (Mint Product Fields Plan v1.1): ETA 18:00 ET
+  6. NET-827 (Stripe Checkout Preview Plan v1.0): ETA Sunday 8 Nov 20:00 ET
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY (no execution, no deployment, no Firestore writes without Founder Eric typed YES); build target p7-gate preview only; alerts only, NO budget caps.
+
 ## 11:10 AM ET 7 Nov - AG CoS v4: ACK RADIO NET-826 (REVISE ORDER NET-816 v1.10 INGESTED). CoS-65 scorecard ingested. Active on desk: NET-817 (Cards v1.6 + Images v1.6) -> Catalog v1.10. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
 - **Revise Order Ingested:** Ingested RADIO_NET-826 and COS_SCORE_NET-816_CATALOG_v1.9_20261107.md (65/100 FAIL). Filed ACK_RADIO_NET-826_REVISE-816-v1.10_20261107.md across all mailboxes. WAKE moved to DONE.
 - **Closeout Architecture for Catalog v1.10:**
