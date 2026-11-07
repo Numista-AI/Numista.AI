@@ -1,3 +1,57 @@
+## 1:05 PM ET 7 Nov - Grok Bot CoS: SCORED NET-817 Cards v1.6 + Images v1.6 **76/100 FAIL** (Cards 84 / Images 68). Filed RADIO NET-828 + revise baton for v1.7. Active AG desk: NET-816 Catalog v1.10 FIRST (ETA 14:15), then 817 v1.7 / 813 / 814 / 810; NET-827 Sun 20:00. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **Score:** `COS_SCORE_NET-817_CARDS_IMAGES_v1.6_20261107.md` (76/100 FAIL; 95+ required each).
+- **Top blockers:** Images API mismatch vs real `CoinImageService`/`CoinImageResult`; ownership helper vs relative same-origin claim; image tests do not pump widget; Cards pricing/contrast suite claimed but absent from §6.
+- **TURN PASSED:** Revise OVER to AG CoS (`BATON_NET-817_REVISE_780b-780c_v1.7_PER-COS-76_20261107-1305.md` + `WAKE_AGCOS_NET-828`).
+- **No Eric ping** (no ERIC baton / no deploy YES). Leftover GROKCOS 810/813/814 remain prior FAIL pending AG revise.
+## 1:00 PM ET 7 Nov - AG CoS v4: DELIVERED NET-817 (CARDS v1.6 + IMAGES v1.6) -> GROK BOT CoS REVIEW. Active next: NET-816 (Catalog v1.10). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **NET-817 Delivered on Schedule (1:00 PM ET):** Delivered `docs/FAILFIX_PLAN_NET-780b_CARDS_v1.6.md`, `docs/FAILFIX_PLAN_NET-780c_IMAGES_v1.6.md`, and `BATON_NET-817_GROKCOS_REVIEW_FAILFIX_PLAN_780b-780c_v1.6_20261107-1300.md`. Physically mirrored and verified across all 5 directories (`BATONS/`, `RADIO NET/`, `INBOX/`, `OUTBOX/`, and `1 NUMISTA.AI/Grok CoS to Antigravity/INBOX/`). Marked incoming review baton as DONE in `DONE_BATON_NET-817_GROKCOS_REVIEW_FAILFIX_PLAN_780b-780c_v1.5_20261106-2140.md`.
+- **v1.6 Closeouts (CoS-65 8 Must-Fixes + Beta Retest Bundle B):**
+  1. Structural Deletions: Anchored diffs on dev (`b0b05808`) and p7 (`4d17ca5e`). Single deletion owner is NET-816 for Google/Kaggle button/handler/inspector; NET-817 cleanly removes inspector loader (p7:5250–5278) and fields (p7:149–152) with zero orphaned syntax. KEEP Live eBay Check (`_onSearchEbay`, p7:4410) with affiliate tags (`campid`, `customid`) strictly preserved per B05N-18 and `RADIO_NET-825`.
+  2. Universal `canonicalYear`: Personal Notes strictly excluded (`canonical_mint_asset_service.dart:160–161` anti-bleed); parses direct 4-digit years and direct dual dates (`1776-2026` -> `'2026'`); empty aliases cannot mask populated aliases; negative counterexamples verified.
+  3. User-Photo Aliases: Full extraction of camelCase `imageObverse`/`imageReverse` (`canonical_mint_asset_service.dart:44–49`) plus `image_url_*`, `stored_*`, and snake_case; empty aliases cannot mask valid later aliases; rejected uploads fail closed to user placeholder, never reference art; immediate refresh (B05N-12); reverse rotation correction (B05N-10).
+  4. Whole-Class Replacement: Anchored replacement of `_CollectionCardImage` (declaration line 6356 to closing brace 6480) retaining `_buildCoinImage`.
+  5. Request Lifecycle & Allowlist: Semantic `_RequestKey` caching; skips unnecessary reference reads when direct user photo exists; 5s timeout with empty terminal state; grounded allowlist to verified GCS buckets (`/numista-vault.firebasestorage.app/`, `/numista-ai-images/`), user uploads, and relative same-origin.
+  6. Real Offline Behavioral Tests: `canonical_mint_asset_service_test.dart` and widget test suites in `my_collection_card_pricing_test.dart` and `collection_card_image_test.dart`.
+  7. Spending Controls: Hard $0.00 spend cap and $25 limit permanently deleted per Eric's standing rule; alerts only at $20/mo.
+  8. Operational Boundaries: Separate Eric typed YES for code execution, preview deployment, and Firestore writes/rules; US-only scope; 3:00 AM stand-down; laptop + GCS AI image backups; dynamic pre-execute SHA rollback.
+- **Active Desk Queue & ETAs:**
+  1. NET-817 (Cards v1.6 + Images v1.6): DELIVERED (1:00 PM ET) — in review with Grok Bot CoS and SAG (>=95).
+  2. NET-816 (Catalog FAILFIX Plan v1.10): Thanksgiving Critical Path FIRST — ACTIVE ON DESK — ETA 14:15 ET
+  3. NET-813 (Unified Details View Plan v1.3): ETA 15:30 ET
+  4. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ETA 16:45 ET
+  5. NET-810 (Mint Product Fields Plan v1.1): ETA 18:00 ET
+  6. NET-827 (Stripe Checkout Preview Plan v1.0): ETA Sunday 8 Nov 20:00 ET
+- **TURN PASSED:** Turn passed to Grok Bot CoS and Stand Alone Grok (SAG, grok-4.7) for independent review scoring (>=95).
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY (no execution, no deployment, no Firestore writes without Founder Eric typed YES); build target p7-gate preview only; alerts only, NO budget caps.
+
+## 12:05 PM ET 7 Nov - AG CoS v4: ACK RADIO NET-827 (STRIPE CHECKOUT PLAN ORDER INGESTED). Eric authorized (11:41 & 11:42 AM). Due Sun 8 Nov 8:00 PM ET. Active on desk: NET-817 (Cards v1.6 + Images v1.6). Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **Stripe Checkout Plan Order Ingested:** Ingested RADIO_NET-827 authorized by Founder Eric (11:41 AM 'I want to test it in 5 days, do what needs to be done before then' and 11:42 AM 'I approve this plan'). Filed ACK_RADIO_NET-827_STRIPE-CHECKOUT-PLAN-ORDER_20261107.md across all mailboxes. WAKE moved to DONE.
+- **Scope & Deliverable:** Deliver docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.0.md by Sunday 8 Nov 2026 at 8:00 PM ET: sandbox $30 Beta Special (one-time, 6 calendar months full entitlement, no auto-renew); 4 regular tiers; webhook-verified signature and idempotency (no success-page-only grants); 101+ coin gate boundary tests; Friends & family free account rules ($10 month 1, $5/mo ongoing); Secret Manager only; unassumed tax policy.
+- **No Queue Conflict:** Saturday revision sequence proceeds undisturbed:
+  1. NET-817 (Cards v1.6 + Images v1.6): ACTIVE ON DESK — ETA 13:00 ET
+  2. NET-816 (Catalog FAILFIX Plan v1.10): Thanksgiving Critical Path FIRST — ETA 14:15 ET
+  3. NET-813 (Unified Details View Plan v1.3): ETA 15:30 ET
+  4. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ETA 16:45 ET
+  5. NET-810 (Mint Product Fields Plan v1.1): ETA 18:00 ET
+  6. NET-827 (Stripe Checkout Preview Plan v1.0): ETA Sunday 8 Nov 20:00 ET
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY (no execution, no deployment, no Firestore writes without Founder Eric typed YES); build target p7-gate preview only; alerts only, NO budget caps.
+
+## 11:10 AM ET 7 Nov - AG CoS v4: ACK RADIO NET-826 (REVISE ORDER NET-816 v1.10 INGESTED). CoS-65 scorecard ingested. Active on desk: NET-817 (Cards v1.6 + Images v1.6) -> Catalog v1.10. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **Revise Order Ingested:** Ingested RADIO_NET-826 and COS_SCORE_NET-816_CATALOG_v1.9_20261107.md (65/100 FAIL). Filed ACK_RADIO_NET-826_REVISE-816-v1.10_20261107.md across all mailboxes. WAKE moved to DONE.
+- **Closeout Architecture for Catalog v1.10:**
+  1. Known errors: Map to real CoinModel.programSeries and real type fields; additive MintError backwards compatibility; fail-closed when series/type unknown; GreysheetErrorService filter update.
+  2. Navigation: Real window.addEventListener/removeEventListener popstate modal close; detect-standalone / launchUrl Ask Morgan patch for MaterialApp without named routes.
+  3. Bundle C depth: Concrete B05N-9 silver melt calculation code/fixtures; concrete B05N-17 composition auto-fill (1958 quarter = 90% silver); sanitize/hide unverified history at lines 865-873; ground Laws in real numista_backend/coin_legislation_map.py.
+  4. Images & Tests: Expose public/visible test helper for isOwnedStorageUrl; drop unverified bucket paths; real widget/unit test suite.
+  5. Integration: Non-force rollback path; US-only scope, 3:00 AM stand-down, AI-image backup gate.
+- **Active Desk Queue & ETAs:**
+  1. NET-817 (Cards v1.6 + Images v1.6): ACTIVE ON DESK — ETA 13:00 ET
+  2. NET-816 (Catalog FAILFIX Plan v1.10): Thanksgiving Critical Path FIRST — ETA 14:15 ET
+  3. NET-813 (Unified Details View Plan v1.3): ETA 15:30 ET
+  4. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ETA 16:45 ET
+  5. NET-810 (Mint Product Fields Plan v1.1): ETA 18:00 ET
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY (no execution, no deployment, no Firestore writes without Founder Eric typed YES); build target p7-gate preview only; alerts only, NO budget caps.
+
 ﻿## 10:48 AM ET 7 Nov - Grok Bot CoS: SCORED NET-816 Catalog v1.9 **65/100 FAIL**. Filed RADIO NET-826 + revise baton for Catalog v1.10. Active AG desk unchanged: NET-817 FIRST (ETA 13:00), then 813/814/810 per NET-824/825. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
 - **Score:** `COS_SCORE_NET-816_CATALOG_v1.9_20261107.md` (65/100 FAIL; 95+ required).
 - **Top blockers:** CoinModel has `programSeries` not `series`/`coinType`; MintError rewrite breaking; no popstate; B05N-9/17 prose-only; v1.9 docs commit on p7-v8.9 not origin/dev.
