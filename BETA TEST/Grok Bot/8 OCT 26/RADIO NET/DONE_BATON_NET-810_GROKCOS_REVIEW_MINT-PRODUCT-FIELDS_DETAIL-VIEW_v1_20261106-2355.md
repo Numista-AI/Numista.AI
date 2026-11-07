@@ -22,3 +22,7 @@
 3. **Compiling Code Architecture:** Model parsing/serialization in `CoinModel`, resolution helper `MintProductHelper`, and widget layout in `_DetailsTab` (`coin_detail_screen.dart:1526`).
 4. **Automated Test Coverage:** Unit and widget test suite in `numista_tests/mint_product_fields_test.dart`.
 5. **Operational Boundaries:** Strict PLAN ONLY. `origin/main` locked at `9f04550a`. Stripe strictly OFF. Zero Firestore writes. Zero PII. Argon dropped per Eric 5 Nov 18:07 ET order. Zero pings to Eric overnight.
+
+
+## Log
+- 2026-11-07 ~14:40 ET — Grok CoS watch: hygiene rename DONE after COS_SCORE filed 09:17 and RADIO_NET-824 revise ACK'd; leftover GROKCOS holder cleared. AG still owns revise delivery per desk queue.
