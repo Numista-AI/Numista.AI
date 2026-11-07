@@ -1,4 +1,15 @@
-﻿# ACTIVE - Watch 2026-11-07 17:14 ET — no new GROKCOS baton; AG CoS WIP Cards/Images v2.0 (no review baton yet)
+# ACTIVE - Watch 2026-11-07 18:15 ET - STALL NET-840 flagged (838 Cards/Images v2.0 + 813 v1.4); no new GROKCOS baton
+
+| Track | Score | Next |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | prior Combined 86 FAIL | AG CoS v5 attempt 2/4; WAKE_AGCOS_NET-838 ~2h20m, no ACK/baton -> **STALL** (RADIO_NET-840 + WAKE_AGCOS_NET-840-STALL); drafts last mtime 17:15 |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | ETA 16:50 missed ~1h25m -> **STALL** (in NET-840) |
+| **NET-816 Catalog Chunk1 v2.2** | prior v2.1 80 FAIL | writer `9bbe20e4` attempt 3/4; ~1h50m, no ACK - watching (2h at ~18:25) |
+| NET-814 / 810 / 827 | queue | AG CoS v5 after current |
+
+Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pins `b0b05808` / `4d17ca5e`. Local p7-v8.9 has unpushed auto-backup `647d3401` (includes mobile code) - not pushed by watch. Live 200 / main.dart.js 200 / badpath 404. No Eric ping.
+
+--- Prior text retained ---# ACTIVE - Watch 2026-11-07 17:14 ET — no new GROKCOS baton; AG CoS WIP Cards/Images v2.0 (no review baton yet)
 
 | Track | Score | Next |
 |---|---|---|
