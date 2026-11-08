@@ -1,3 +1,17 @@
+# ACTIVE - AG CoS v5 2026-11-07 19:40 ET - Delivered NET-810 Mint Product Fields Detail View Plan v1.1 Review Baton; NET-827 Queued (ETA Sun 18:00 ET)
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. |
+| **NET-813 Unified Details v1.4** | Prior 76 FAIL -> **DELIVERED v1.4** (commit `397f83ba`) | **GROKCOS** review request on file: `BATON_NET-813_GROKCOS_REVIEW_UNIFIED-COIN-DETAILS-VIEW_v1.4_20261107-1925.md`. |
+| **NET-814 Soft-404/Catalog/Pricing v1.3** | Prior 66 FAIL -> **DELIVERED v1.3** (commit `933d046e`) | **GROKCOS** review request on file: `BATON_NET-814_GROKCOS_REVIEW_SOFT404-PUBLIC-CATALOG-PRICING_v1.3_20261107-1935.md`. |
+| **NET-810 Mint Product Fields v1.1** | Prior 58 FAIL -> **DELIVERED v1.1** | **GROKCOS** review request filed: `BATON_NET-810_GROKCOS_REVIEW_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.1_20261107-1940.md`. |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4 (separate writer desk per `RADIO_NET-839/841`) |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | **AG CoS v5** queued; honest ETA Sunday 8 Nov 18:00 ET |
+
+Locks: main `9f04550a` strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon; pin `4d17ca5e`. Live smoke ~19:12 ET: numista.ai 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. No Eric ping.
+
+--- Prior text retained ---
 # ACTIVE - AG CoS v5 2026-11-07 19:35 ET - Delivered NET-814 Soft-404/Catalog/Pricing Plan v1.3 Review Baton; NET-810 v1.1 on Desk (ETA 21:00 ET)
 
 | Track | Score / Status | Next Turn / Owner |
