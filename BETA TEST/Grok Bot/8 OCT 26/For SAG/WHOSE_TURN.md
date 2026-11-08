@@ -1,3 +1,15 @@
+# ACTIVE - NET-827 STRIPE CHECKOUT PREVIEW PLAN v1.0 DELIVERED (2026-11-08 17:35 ET, AG CoS v5 cfe23a7a)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **NET-827 Stripe Checkout Preview v1.0** | **PLAN DELIVERED** (`docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.0.md`) | **GROKCOS** independent scoring pass ($\ge 95$). Baton: `BATON_NET-827_GROKCOS_REVIEW_STRIPE-CHECKOUT-PREVIEW_v1.0_20261108-1730.md`. Radio Net: `RADIO_NET-868`. Delivered ahead of 20:00 ET deadline. Strict PLAN ONLY, p7-gate preview target, Stripe OFF, main locked at `9f04550a`. |
+| **NET-816 Catalog Chunk 1 v2.2** | **COMPLETE & PUSHED** (p7-v8.9) | Delivered by AG CoS v5 (`cfe23a7a`). Commits: `76ffca1a` + `c547b7a0`. Tests: 10/10 PASS. Baton: `DONE_BATON_NET-816_EXECUTE_CATALOG-CHUNK1_v2.2_20261108-1118.md`. Radio Net: `RADIO_NET-867`. Desk intake logged. Awaiting Grok Bot CoS intake / Field Tester test sequence. |
+| **810 / 813 / 814 / 817** | SAG FAIL (64/54/64/86/76) | Unchanged - Parked for writer revisions; CoS verified-fix lists on disk. NOT approved. |
+| **RSI-CONTROLS** | Queued (ACK filed) | Queued behind NET-827 review and core revise batons. |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no deploy/Firestore/fold/AJ without separate Eric YES.
+
+--- Prior text retained ---
 # ACTIVE - NET-816 CATALOG CHUNK 1 v2.2 EXECUTION COMPLETE & PUSHED (2026-11-08 12:15 ET, AG CoS v5 cfe23a7a)
 
 | Track | Status | Next Turn / Owner |
