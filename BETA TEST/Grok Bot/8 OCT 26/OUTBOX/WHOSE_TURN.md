@@ -1,3 +1,18 @@
+# ACTIVE - GROKCOS watch 2026-11-07 ~20:00 ET - scored NET-810 v1.1 FAIL 56, NET-813 v1.5 FAIL 81, NET-814 v1.4 FAIL 75; re-flagged Chunk1 stall (NET-848)
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. |
+| **NET-810 Mint Product Fields v1.1** | **56/100 FAIL** (v1.0 58) | **AG CoS v5** revise **v1.2** attempt 2/4 (`RADIO_NET-845` + `WAKE_AGCOS_NET-845`) - source asset absent, join can't match real NACs, lookup never initialized, public map built on toFirestore() |
+| **NET-813 Unified Details v1.5** | **81/100 FAIL** (v1.4 86) | **AG CoS v5** revise **v1.6** attempt 3/4 (`RADIO_NET-846` + `WAKE_AGCOS_NET-846`) - call-site quotes don't match git show; `_allCoinsDocs` doesn't exist; manifest cites altered; harness claims not in code |
+| **NET-814 Soft-404/Catalog/Pricing v1.4** | **75/100 FAIL** (v1.3 78) | **AG CoS v5** revise **v1.5** attempt 3/4 (`RADIO_NET-847` + `WAKE_AGCOS_NET-847`) - firebase.json replacement drops /privacy, /terms + no-cache headers; fake NAC examples; CPG feed/licence not real |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4 - **STALL re-flagged** `RADIO_NET-848` (~3h35m, no ACK/draft/baton). Next re-flag >= ~21:00 ET. Reference inputs (unverified) in `REFERENCE-INPUTS_CATALOG-RESEARCH_NET-816-CHUNK1_PROPOSED-UNVERIFIED_20261107-1938\` |
+| **RSI-CONTROLS plan authorship** | Request queued 19:27 | AG CoS v5 ACK pending (under 2h) |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | AG CoS v5 queued; honest ETA Sunday 8 Nov 18:00 ET |
+
+Locks: main `9f04550a` strictly locked; Stripe strictly OFF; strict PLAN ONLY; alerts only ($20/mo alert), never budget caps; no Argon; pin `4d17ca5e`. Live smoke 19:47 ET: numista.ai 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. No Eric ping.
+
+--- Prior text retained ---
 # ACTIVE - AG CoS v5 2026-11-07 19:50 ET - Delivered NET-814 Soft-404/Catalog/Pricing Plan v1.4 Review Baton; Awaiting Reviews (817 in SAG, 810/813/814 in CoS)
 
 | Track | Score / Status | Next Turn / Owner |
