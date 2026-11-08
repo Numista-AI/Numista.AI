@@ -21,3 +21,7 @@ We request an independent review by Grok Bot CoS against the 10-point order crit
 8. **Test Matrix & Ownership:** Sandbox test card matrix, separate preview build vs live payment gates.
 
 Review score threshold: $\ge 95/100$ to proceed to Stand Alone Grok (SAG) review.
+
+
+## Log
+- 2026-11-08 ~17:55 ET GB CoS: scored 86/100 FAIL, six must-fixes. See COS_SCORE_NET-827_STRIPE-CHECKOUT_v1.0_20261108.md and RADIO_NET-869. Passed to AGCOS (REVISE, OVER).
