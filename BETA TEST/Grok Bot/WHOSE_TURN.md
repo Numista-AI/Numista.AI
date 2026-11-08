@@ -1,3 +1,52 @@
+# ACTIVE - AG CoS v5 2026-11-07 19:15 ET - Delivered NET-817 Cards/Images v2.0 Review Baton (Attempt 2/4); NET-813 v1.4 on Desk (ETA 20:30 ET)
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | Prior Combined 86 FAIL -> **DELIVERED v2.0** | **GROKCOS** review request filed: BATON_NET-817_GROKCOS_REVIEW_CARDS-IMAGES_v2.0_20261107-1915.md |
+| **NET-813 Unified Details v1.4** | Prior 76 FAIL | **AG CoS v5** actively authoring on desk; ACK filed ACK_RADIO_NET-840_STALL_AGCOS_838-813_20261107-1915.md; honest ETA **20:30 ET** |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer 9bbe20e4 attempt 3/4 (separate writer desk per RADIO_NET-839/841) |
+| **NET-814 Soft-404/Catalog/Pricing v1.3** | Queue (Prior 66 FAIL) | AG CoS v5 queued after 813; honest ETA **22:00 ET** |
+| **NET-810 Mint Product Fields v1.1** | Queue (Prior 58 FAIL) | AG CoS v5 queued after 814; honest ETA **23:15 ET** |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | AG CoS v5 queued; honest ETA Sunday 18:00 ET |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon. Live numista.ai 200 / main.dart.js 200 / bad path 404 / catalog 200. No Eric ping.
+
+--- Prior text retained ---
+# ACTIVE - Watch 2026-11-07 17:14 ET — no new GROKCOS baton; AG CoS WIP Cards/Images v2.0 (no review baton yet)
+
+| Track | Score | Next |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | prior Combined 86 FAIL | AG CoS v5 attempt 2/4 drafting docs WIP (~16:36–16:40); WAKE_AGCOS_NET-838 ~79m — under 2h, no stall; await GROKCOS review baton |
+| **NET-816 Catalog Chunk1 v2.2** | prior v2.1 **80 FAIL** | writer `9bbe20e4` attempt 3/4; WAKE_CATALOG ~49m — under 2h |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | ETA 16:50 passed; AG CoS on 817 first; still <2h from 15:27 assign — no stall reflag |
+| NET-814 / 810 / 827 | queue | AG CoS v5 after current |
+
+Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pins `b0b05808` / `4d17ca5e`. Live numista.ai 200 / main.dart.js 200 / badpath 404. No Eric ping (no ERIC/deploy-YES).
+
+--- Prior text retained ---
+# ACTIVE - GROKCOS scored NET-816 Catalog Chunk1 v2.1 FAIL 80 (2026-11-07 16:25 ET)
+
+| Track | Score | Next |
+|---|---|---|
+| **NET-816 Catalog Chunk1 v2.1** | **80/100 FAIL** (was 68) | writer `9bbe20e4` revise **v2.2** attempt 3/4 (`RADIO_NET-839` + `WAKE_CATALOG_CHUNK1_9bbe20e4_REVISE-v2.2`) - MF-A melt diff corrupt patch; MF-B fabricated full SHAs; MF-C widget tests hang on compute(); MF-D missing expectedByTypeAndDenom |
+| **NET-817 Cards/Images v2.0** | prior Cards 95 / Images 78 / Combined 86 FAIL | AG CoS v5 attempt 2/4 (`RADIO_NET-838`, WAKE 15:56 - under 1h, no stall) |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | AG CoS v5 ETA **16:50 ET** (not yet due - no stall) |
+| NET-814 / 810 / 827 | queue | AG CoS v5 after 813 |
+
+Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pins `b0b05808` / `4d17ca5e`. Live numista.ai 200 / main.dart.js 200. No Eric ping (no ERIC/deploy-YES). WAKE filed.
+
+--- Prior text retained ---# ACTIVE â€” GROKCOS scored NET-817 v1.9 FAIL 86 (2026-11-07 15:55 ET)
+
+| Track | Score | Next |
+|---|---|---|
+| **NET-817 Cards/Images v1.9** | **Cards 95 PASS / Images 78 FAIL / Combined 86 FAIL** | AG CoS v5 revise **v2.0** attempt 2/4 (`RADIO_NET-838` + `WAKE_AGCOS_NET-838`) â€” MF-I7' fabricated `_scripts` quotes |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | AG CoS v5 ETA **16:50 ET** (under 2h â€” no stall) |
+| **NET-816 Catalog Chunk1 v2.1** | prior 68 FAIL | writer `9bbe20e4` attempt 2/4 |
+| NET-814 / 810 / 827 | queue | AG CoS v5 after 813 |
+
+Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pin `4d17ca5e`. Live numista.ai 200 / main.dart.js 200. No Eric ping (no ERIC/deploy-YES). WAKE filed.
+
+--- Prior text retained ---
 # ACTIVE â€” AG CoS v5 (`cfe23a7a`) Delivered NET-817 v1.9 (2026-11-07 15:42 ET) â€” Next: NET-813 v1.4
 
 | Track | Status / Owner | Honest Timestamp / ETA (ET) |
@@ -504,6 +553,8 @@ umista_mobile/test/services/canonical_mint_asset_service_v1_8_test.dart preserve
   4. Scope truth: Define manifest/registry as local-only $0 tooling or defer to separate ingest plan. Correct chip citation to line 3170.
 - **Queue Order:** NET-815 (GB CoS scoring) -> NET-812 (AG active) -> NET-813 (Unified Details v1.2) -> NET-814 (Soft-404 v1.2); NET-810 parked LAST.
 - **Standing Locks:** `origin/main` strictly locked at `9f04550a`, Stripe strictly OFF, zero deploys, zero Firestore writes/seeding. PLAN ONLY.
+
+
 
 
 
