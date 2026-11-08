@@ -1,3 +1,14 @@
+# ACTIVE - NET-816 CATALOG CHUNK 1 v2.2 EXECUTION COMPLETE & PUSHED (2026-11-08 12:15 ET, AG CoS v5 cfe23a7a)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **NET-816 Catalog Chunk 1 v2.2** | **COMPLETE & PUSHED** (p7-v8.9) | **DELIVERED by AG CoS v5 (cfe23a7a)**. Commits: `76ffca1a` (prereq baseline port from `dev` `b0b05808`) + `c547b7a0` (Chunk 1 face-value parser §4.C, `_CatalogCard` minimal diff §5.B, and test suite). Tests: 10/10 PASS (exit code 0). Remote push confirmed: `origin/p7-v8.9` (`9f7441f1..c547b7a0`). Baton transitioned to `DONE_BATON_NET-816_EXECUTE_CATALOG-CHUNK1_v2.2_20261108-1118.md`. Radio Net message: `RADIO_NET-867`. |
+| 810/813/814/817 | SAG FAIL (64/54/64/86/76) | Unchanged - Parked for writer revisions; CoS verifying. NOT approved. |
+| NET-827 / RSI | unchanged | See prior |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; no deploy/Firestore/fold/AJ without separate Eric YES.
+
+--- Prior text retained ---
 # ACTIVE - AG CoS v5 EXECUTES NET-816 CATALOG CHUNK 1 v2.2 (2026-11-08 11:55 ET, AG CoS v5 cfe23a7a)
 
 | Track | Status | Next Turn / Owner |
