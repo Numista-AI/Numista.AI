@@ -1,13 +1,13 @@
-# ACTIVE - GROKCOS scored NET-813 v1.4 FAIL 86 and NET-814 v1.3 FAIL 78 (2026-11-07 19:35 ET)
+# ACTIVE - AG CoS v5 2026-11-07 19:40 ET - Delivered NET-810 Mint Product Fields v1.1 Review Baton; NET-813 v1.5 / NET-814 v1.4 on Desk
 
 | Track | Score / Status | Next Turn / Owner |
 |---|---|---|
-| **NET-813 Unified Details v1.4** | **86/100 FAIL** (was 76) | **AG CoS v5** revise **v1.5** attempt 2/4 (`RADIO_NET-843` + `WAKE_AGCOS_NET-843`). Blocking: fictional CoinModel fields; unwired/vacuous tests; mid-nav `targetIdx`; `rootBundle ?v=`. |
-| **NET-814 Soft-404/Catalog/Pricing v1.3** | **78/100 FAIL** (was 66) | **AG CoS v5** revise **v1.4** attempt 2/4 (`RADIO_NET-844` + `WAKE_AGCOS_NET-844`). Blocking: `hosting:releases:list` still invalid; no per-coin OG; invented image bucket; `package:numista_mobile` imports. |
-| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. Left intact. |
-| **NET-810 Mint Product Fields v1.1** | Prior 58 FAIL | **AG CoS v5** on desk ETA **21:00 ET** per AG's 19:35 header (not a stall — just delivered 814). |
-| **NET-827 Stripe Checkout Preview v1.0** | Queue | AG CoS v5 queued; honest ETA Sunday 18:00 ET |
-| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4; `RADIO_NET-841` stall stands. Finished scoring ~19:34 ET, before the ~19:43 re-flag window — **no re-flag this run**. No ACK / v2.2 draft / GROKCOS review baton since 18:43. |
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. |
+| **NET-810 Mint Product Fields v1.1** | Prior 58 FAIL -> **DELIVERED v1.1** | **GROKCOS** review request filed: `BATON_NET-810_GROKCOS_REVIEW_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.1_20261107-1940.md`. |
+| **NET-813 Unified Details v1.5** | Prior 86 FAIL (up from 76) -> **ON DESK NOW** | **AG CoS v5** actively revising per `RADIO_NET-843`; honest ETA **20:45 ET** |
+| **NET-814 Soft-404/Catalog/Pricing v1.4** | Prior 78 FAIL (up from 66) -> **QUEUED NEXT** | **AG CoS v5** actively revising per `RADIO_NET-844`; honest ETA **21:45 ET** |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4 (separate writer desk per `RADIO_NET-839/841`) |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | **AG CoS v5** queued; honest ETA Sunday 8 Nov 18:00 ET |
 
 Locks: main `9f04550a` strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon; pin `4d17ca5e`. Live smoke ~19:12 ET: numista.ai 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. No Eric ping.
 
@@ -91,8 +91,7 @@ Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pins `b0b05808` / `4d17
 
 Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pins `b0b05808` / `4d17ca5e`. Live numista.ai 200 / main.dart.js 200. No Eric ping (no ERIC/deploy-YES). WAKE filed.
 
---- Prior text retained ---
-# ACTIVE — GROKCOS scored NET-817 v1.9 FAIL 86 (2026-11-07 15:55 ET)
+--- Prior text retained ---# ACTIVE — GROKCOS scored NET-817 v1.9 FAIL 86 (2026-11-07 15:55 ET)
 
 | Track | Score | Next |
 |---|---|---|
@@ -258,7 +257,8 @@ umista-catalog-assets) and open wildcards (*.firebasestorage.app, *.web.app) are
   5. MF-I2 (Reachable Helpers & Public Seam): isOwnedStorageUrl declared as a public top-level function in lib/utils/owned_storage_url.dart. extractUserPhoto declared in lib/utils/collection_image_utils.dart. Encapsulated in public widget CollectionCardImage in lib/widgets/collection_card_image.dart with injectable imageFetcher.
   6. MF-I3 (Restored Shipped Display Policy & Steal-Guard): Canonical asset and user photos both prefer reverse. Reverse-only user photos render reverse with fail-closed security guard. Steal-guard (:6409Ã¢â‚¬â€œ6417) strictly preserved. Coin visual integrity preserved with BoxFit.contain and gold circular glow (lurRadius: 14), preventing edge cropping.
   7. MF-I4 (CSP Truth): Quoted irebase.json:276 verbatim. Added https://firebasestorage.googleapis.com to img-src so Firebase Storage user photos render without CSP violation.
-  8. MF-I5 (Images Tests): Added _RequestKey refresh test (pumpWidget with Year changed from '' to populated increments fetch count to 2). Real bucket fixtures tested. Rejected malicious forms tested. Proved esolveFromMap returns null for 1964 Kennedy Half Dollar fixture.
+  8. MF-I5 (Images Tests): Added _RequestKey refresh test (pumpWidget with Year changed from '' to populated increments fetch count to 2). Real bucket fixtures tested. Rejected malicious forms tested. Proved 
+esolveFromMap returns null for 1964 Kennedy Half Dollar fixture.
   9. MF-C1 (Correct Valuation Anchors): Grounded on real lines 3017Ã¢â‚¬â€œ3023 and 3167Ã¢â‚¬â€œ3192. Line 3015 displayTitle tail is strictly untouched.
   10. MF-C2 (Valuation Precedence & Enrichment State): CPG Retail (alCpg > 0) -> AI Value (m[_F.aiValue]) -> Face Value fallback + amber "Value pending AI estimate" chip. Retains enrichment_status == 'pending' handling. Consistent with table columns :534Ã¢â‚¬â€œ538 and :3338Ã¢â‚¬â€œ3345.
   11. MF-C3 (Face Value Correctness): Directly reuses existing production parser MeltValueService.parseFaceValue(rawDenom, qty: 1). Renders 'Ã¢â‚¬â€' with pending chip when unknown rather than '.00'.
@@ -266,7 +266,8 @@ umista-catalog-assets) and open wildcards (*.firebasestorage.app, *.web.app) are
   13. MF-C5 (Preserve Suite & Regex Fix): New test file 
 umista_mobile/test/services/canonical_mint_asset_service_v1_8_test.dart preserves existing 749-line suite. Production regex updated with (?!\w) so 1Ã‚Â¢ and 5Ã‚Â¢ match cleanly while preventing false positives on 15Ã‚Â¢ or 25c.
   14. MF-C6 (Contrast Truth): Theme-aware styling: #D4AF37 on #1E2937 (7.00:1) and #0D1520 (8.72:1) in dark mode (passes WCAG AAA >= 7.0:1); #856404 on #FFFFFF (5.49:1) and #F5F5F0 (5.02:1) in light mode (passes WCAG AA >= 4.5:1).
-  15. MF-C7 (Additive canonicalYear): Inserted at line 76 after _normYear without altering esolveFromMap.
+  15. MF-C7 (Additive canonicalYear): Inserted at line 76 after _normYear without altering 
+esolveFromMap.
 - **Desk Queue & ETAs:**
   1. NET-816 (Catalog FAILFIX Plan v1.11): DELIVERED (15:15 ET) Ã¢â‚¬â€ in review with Grok Bot CoS and SAG (>=95)
   2. NET-817 (Cards v1.8 + Images v1.8): DELIVERED (14:30 ET) Ã¢â‚¬â€ in review with Grok Bot CoS and SAG (>=95)
@@ -610,7 +611,6 @@ umista_mobile/test/services/canonical_mint_asset_service_v1_8_test.dart preserve
   4. Scope truth: Define manifest/registry as local-only $0 tooling or defer to separate ingest plan. Correct chip citation to line 3170.
 - **Queue Order:** NET-815 (GB CoS scoring) -> NET-812 (AG active) -> NET-813 (Unified Details v1.2) -> NET-814 (Soft-404 v1.2); NET-810 parked LAST.
 - **Standing Locks:** `origin/main` strictly locked at `9f04550a`, Stripe strictly OFF, zero deploys, zero Firestore writes/seeding. PLAN ONLY.
-
 
 
 
