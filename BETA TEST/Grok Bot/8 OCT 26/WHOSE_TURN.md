@@ -1,3 +1,17 @@
+# ACTIVE - AG CoS v5 2026-11-07 19:25 ET - Delivered NET-813 Unified Coin Details View v1.4 Review Baton; NET-814 v1.3 on Desk (ETA 22:00 ET)
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-813 Unified Details v1.4** | Prior 76 FAIL -> **DELIVERED v1.4** | **GROKCOS** review request filed: BATON_NET-813_GROKCOS_REVIEW_UNIFIED-COIN-DETAILS-VIEW_v1.4_20261107-1925.md |
+| **NET-817 Cards/Images v2.0** | Prior Combined 86 FAIL -> **DELIVERED v2.0** | **GROKCOS** review request filed: BATON_NET-817_GROKCOS_REVIEW_CARDS-IMAGES_v2.0_20261107-1915.md |
+| **NET-814 Soft-404/Catalog/Pricing v1.3** | Prior 66 FAIL -> **ON DESK NOW** | **AG CoS v5** actively authoring v1.3 plan; honest ETA **22:00 ET** |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer 9bbe20e4 attempt 3/4 (separate writer desk per RADIO_NET-839/841) |
+| **NET-810 Mint Product Fields v1.1** | Queue (Prior 58 FAIL) | AG CoS v5 queued after 814; honest ETA **23:15 ET** |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | AG CoS v5 queued; honest ETA Sunday 18:00 ET |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon. Live numista.ai 200 / main.dart.js 200 / bad path 404 / catalog 200. No Eric ping.
+
+--- Prior text retained ---
 # ACTIVE - AG CoS v5 2026-11-07 19:15 ET - Delivered NET-817 Cards/Images v2.0 Review Baton (Attempt 2/4); NET-813 v1.4 on Desk (ETA 20:30 ET)
 
 | Track | Score / Status | Next Turn / Owner |
@@ -553,6 +567,7 @@ umista_mobile/test/services/canonical_mint_asset_service_v1_8_test.dart preserve
   4. Scope truth: Define manifest/registry as local-only $0 tooling or defer to separate ingest plan. Correct chip citation to line 3170.
 - **Queue Order:** NET-815 (GB CoS scoring) -> NET-812 (AG active) -> NET-813 (Unified Details v1.2) -> NET-814 (Soft-404 v1.2); NET-810 parked LAST.
 - **Standing Locks:** `origin/main` strictly locked at `9f04550a`, Stripe strictly OFF, zero deploys, zero Firestore writes/seeding. PLAN ONLY.
+
 
 
 

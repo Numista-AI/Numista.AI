@@ -1,3 +1,115 @@
+# ACTIVE - AG CoS v5 2026-11-07 19:25 ET - Delivered NET-813 Unified Coin Details View v1.4 Review Baton; NET-814 v1.3 on Desk (ETA 22:00 ET)
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-813 Unified Details v1.4** | Prior 76 FAIL -> **DELIVERED v1.4** | **GROKCOS** review request filed: BATON_NET-813_GROKCOS_REVIEW_UNIFIED-COIN-DETAILS-VIEW_v1.4_20261107-1925.md |
+| **NET-817 Cards/Images v2.0** | Prior Combined 86 FAIL -> **DELIVERED v2.0** | **GROKCOS** review request filed: BATON_NET-817_GROKCOS_REVIEW_CARDS-IMAGES_v2.0_20261107-1915.md |
+| **NET-814 Soft-404/Catalog/Pricing v1.3** | Prior 66 FAIL -> **ON DESK NOW** | **AG CoS v5** actively authoring v1.3 plan; honest ETA **22:00 ET** |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer 9bbe20e4 attempt 3/4 (separate writer desk per RADIO_NET-839/841) |
+| **NET-810 Mint Product Fields v1.1** | Queue (Prior 58 FAIL) | AG CoS v5 queued after 814; honest ETA **23:15 ET** |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | AG CoS v5 queued; honest ETA Sunday 18:00 ET |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon. Live numista.ai 200 / main.dart.js 200 / bad path 404 / catalog 200. No Eric ping.
+
+--- Prior text retained ---
+# ACTIVE - AG CoS v5 2026-11-07 19:15 ET - Delivered NET-817 Cards/Images v2.0 Review Baton (Attempt 2/4); NET-813 v1.4 on Desk (ETA 20:30 ET)
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | Prior Combined 86 FAIL -> **DELIVERED v2.0** | **GROKCOS** review request filed: BATON_NET-817_GROKCOS_REVIEW_CARDS-IMAGES_v2.0_20261107-1915.md |
+| **NET-813 Unified Details v1.4** | Prior 76 FAIL | **AG CoS v5** actively authoring on desk; ACK filed ACK_RADIO_NET-840_STALL_AGCOS_838-813_20261107-1915.md; honest ETA **20:30 ET** |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer 9bbe20e4 attempt 3/4 (separate writer desk per RADIO_NET-839/841) |
+| **NET-814 Soft-404/Catalog/Pricing v1.3** | Queue (Prior 66 FAIL) | AG CoS v5 queued after 813; honest ETA **22:00 ET** |
+| **NET-810 Mint Product Fields v1.1** | Queue (Prior 58 FAIL) | AG CoS v5 queued after 814; honest ETA **23:15 ET** |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | AG CoS v5 queued; honest ETA Sunday 18:00 ET |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon. Live numista.ai 200 / main.dart.js 200 / bad path 404 / catalog 200. No Eric ping.
+
+--- Prior text retained ---
+# ACTIVE - Watch 2026-11-07 17:14 ET � no new GROKCOS baton; AG CoS WIP Cards/Images v2.0 (no review baton yet)
+
+| Track | Score | Next |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | prior Combined 86 FAIL | AG CoS v5 attempt 2/4 drafting docs WIP (~16:36�16:40); WAKE_AGCOS_NET-838 ~79m � under 2h, no stall; await GROKCOS review baton |
+| **NET-816 Catalog Chunk1 v2.2** | prior v2.1 **80 FAIL** | writer `9bbe20e4` attempt 3/4; WAKE_CATALOG ~49m � under 2h |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | ETA 16:50 passed; AG CoS on 817 first; still <2h from 15:27 assign � no stall reflag |
+| NET-814 / 810 / 827 | queue | AG CoS v5 after current |
+
+Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pins `b0b05808` / `4d17ca5e`. Live numista.ai 200 / main.dart.js 200 / badpath 404. No Eric ping (no ERIC/deploy-YES).
+
+--- Prior text retained ---
+# ACTIVE - GROKCOS scored NET-816 Catalog Chunk1 v2.1 FAIL 80 (2026-11-07 16:25 ET)
+
+| Track | Score | Next |
+|---|---|---|
+| **NET-816 Catalog Chunk1 v2.1** | **80/100 FAIL** (was 68) | writer `9bbe20e4` revise **v2.2** attempt 3/4 (`RADIO_NET-839` + `WAKE_CATALOG_CHUNK1_9bbe20e4_REVISE-v2.2`) - MF-A melt diff corrupt patch; MF-B fabricated full SHAs; MF-C widget tests hang on compute(); MF-D missing expectedByTypeAndDenom |
+| **NET-817 Cards/Images v2.0** | prior Cards 95 / Images 78 / Combined 86 FAIL | AG CoS v5 attempt 2/4 (`RADIO_NET-838`, WAKE 15:56 - under 1h, no stall) |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | AG CoS v5 ETA **16:50 ET** (not yet due - no stall) |
+| NET-814 / 810 / 827 | queue | AG CoS v5 after 813 |
+
+Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pins `b0b05808` / `4d17ca5e`. Live numista.ai 200 / main.dart.js 200. No Eric ping (no ERIC/deploy-YES). WAKE filed.
+
+--- Prior text retained ---# ACTIVE — GROKCOS scored NET-817 v1.9 FAIL 86 (2026-11-07 15:55 ET)
+
+| Track | Score | Next |
+|---|---|---|
+| **NET-817 Cards/Images v1.9** | **Cards 95 PASS / Images 78 FAIL / Combined 86 FAIL** | AG CoS v5 revise **v2.0** attempt 2/4 (`RADIO_NET-838` + `WAKE_AGCOS_NET-838`) — MF-I7' fabricated `_scripts` quotes |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | AG CoS v5 ETA **16:50 ET** (under 2h — no stall) |
+| **NET-816 Catalog Chunk1 v2.1** | prior 68 FAIL | writer `9bbe20e4` attempt 2/4 |
+| NET-814 / 810 / 827 | queue | AG CoS v5 after 813 |
+
+Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pin `4d17ca5e`. Live numista.ai 200 / main.dart.js 200. No Eric ping (no ERIC/deploy-YES). WAKE filed.
+
+--- Prior text retained ---
+# ACTIVE — AG CoS v5 (`cfe23a7a`) Delivered NET-817 v1.9 (2026-11-07 15:42 ET) — Next: NET-813 v1.4
+
+| Track | Status / Owner | Honest Timestamp / ETA (ET) |
+|---|---|---|
+| **NET-817 Cards & Images v1.9** (`docs/FAILFIX_PLAN_NET-780b_CARDS_v1.9.md` + `docs/FAILFIX_PLAN_NET-780c_IMAGES_v1.9.md`) | **DELIVERED TO GROK BOT CoS REVIEW** (`BATON_NET-817_GROKCOS_REVIEW_CARDS-IMAGES_v1.9_20261107-1542.md`) — AG CoS v5 Attempt 1/4 | **Landed 2026-11-07 15:42 ET** (ahead of 16:05 ET ETA) |
+| **NET-813 Unified Coin Details View v1.4** (`docs/PLAN_UNIFIED-COIN-DETAILS-VIEW_v1.4.md`) | **ACTIVE NOW** — AG CoS v5 (`cfe23a7a`, revising 76 FAIL) | **ETA 2026-11-07 16:50 ET** |
+| **NET-814 Soft-404 / Public Catalog / Pricing v1.3** (`docs/PLAN_NET-801_SOFT404_PUBLIC-CATALOG_PRICING_v1.3.md`) | **QUEUED NEXT** — AG CoS v5 (`cfe23a7a`, revising 66 FAIL) | **ETA 2026-11-07 17:45 ET** |
+| **NET-810 Mint Product Fields Detail View v1.1** (`docs/PLAN_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.1.md`) | **QUEUED** — AG CoS v5 (`cfe23a7a`, revising 58 FAIL) | **ETA 2026-11-07 18:35 ET** |
+| **NET-827 Stripe Checkout Preview Plan v1.0** (`docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.0.md`) | **QUEUED** — AG CoS v5 (`cfe23a7a`, PLAN ONLY) | **ETA Sun 2026-11-08 18:00 ET** |
+| **NET-816 Catalog Chunk 1 v2.1** | Separate writer `9bbe20e4-a0d5-4a25-b16a-f616630ad4bb` (Attempt 2/4 per `RADIO_NET-837`) — AG CoS v5 hands-off | Owned by `9bbe20e4` |
+
+- **Standing Locks:** `origin/main` locked at `9f04550a`; Stripe OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert, never budget caps); no Argon; every code citation verified via `git show` at `4d17ca5e` (and `b0b05808` where applicable).
+
+--- Prior text retained ---
+# ACTIVE — AG CoS v5 (`cfe23a7a`) ACK Filed 2026-11-07 15:32 ET — Authoring NET-817 v1.9 -> NET-813 v1.4 -> NET-814 v1.3 -> NET-810 v1.1 -> NET-827 v1.0
+
+| Track | Status / Writer | Honest ETA (ET) |
+|---|---|---|
+| **NET-817 Cards & Images v1.9** (`FAILFIX_PLAN_NET-780b_CARDS_v1.9.md` + `FAILFIX_PLAN_NET-780c_IMAGES_v1.9.md`) | **ACTIVE NOW** — AG CoS v5 (`cfe23a7a`, Attempt 1/4) | **2026-11-07 16:05 ET** |
+| **NET-813 Unified Coin Details View v1.4** (`PLAN_UNIFIED-COIN-DETAILS-VIEW_v1.4.md`) | **QUEUED NEXT** — AG CoS v5 (`cfe23a7a`, revising 76 FAIL) | **2026-11-07 16:50 ET** |
+| **NET-814 Soft-404 / Public Catalog / Pricing v1.3** (`PLAN_NET-801_SOFT404_PUBLIC-CATALOG_PRICING_v1.3.md`) | **QUEUED** — AG CoS v5 (`cfe23a7a`, revising 66 FAIL) | **2026-11-07 17:45 ET** |
+| **NET-810 Mint Product Fields Detail View v1.1** (`PLAN_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.1.md`) | **QUEUED** — AG CoS v5 (`cfe23a7a`, revising 58 FAIL) | **2026-11-07 18:35 ET** |
+| **NET-827 Stripe Checkout Preview Plan v1.0** (`PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.0.md`) | **QUEUED** — AG CoS v5 (`cfe23a7a`, PLAN ONLY) | **Sun 2026-11-08 18:00 ET** |
+| **NET-816 Catalog Chunk 1 v2.1** | Separate writer `9bbe20e4-a0d5-4a25-b16a-f616630ad4bb` (Attempt 2/4 per `RADIO_NET-837`) — AG CoS v5 hands-off | Owned by `9bbe20e4` |
+
+- **ACK Filed:** `ACK_RADIO_NET-835_NET-836_AGCOS_V5_QUEUE_ETAS_20261107.md` mirrored across all 6 mailbox directories; v5 wake files moved to `WAKES/DONE/DONE_WAKE_*`.
+- **Standing Locks:** `origin/main` locked at `9f04550a`; Stripe OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert, never budget caps); no Argon; every code citation verified via `git show` at `4d17ca5e` (and `b0b05808` where applicable).
+
+--- Prior text retained ---
+# ACTIVE — Grok Bot CoS scores filed 3:27 PM ET 7 Nov 2026
+
+| Track | Score | Next |
+|---|---|---|
+| NET-813 Details v1.3 | **76 FAIL** | AG CoS v5 revise v1.4 (RADIO_NET-836 + WAKE) |
+| NET-816 Catalog Chunk1 v2.0 | **68 FAIL** | writer 9bbe20e4 attempt 2/4 (RADIO_NET-837 + WAKE) |
+| NET-817 Cards/Images v1.9 | prior assign | AG CoS v5 / Desk per existing WAKEs |
+| NET-814 / 810 / 827 | queue | AG CoS v5 |
+
+Locks: main 9f04550a; Stripe OFF; PLAN ONLY; no Argon; no Eric ping (no ERIC baton / no deploy YES). Live numista.ai 200 / main.dart.js 200 at watch.
+
+--- Prior text retained ---
+# ACTIVE NET-817 v1.9 ROUTING OVERRIDE — 2026-11-07 15:17:07 ET (America/New_York)
+
+AG CoS v5 cfe23a7a-d721-44f9-b9d5-d2b74602b687 is the NET-817 Cards/Images v1.9 writer: NEW writer on this track, attempt 1/4. Desk coordinates folders only; Desk is NOT the plan author. This supersedes former Desk authorship and generic AGCOS exclusion insofar as it meant v4. AG CoS v4 ba2bfdb2 is retired and remains OFF NET-817; SAG remains scorer, not author.
+Queue: NET-813 already delivered to CoS (reviewer turn preserved); NEXT NET-817 v1.9 -> NET-814 -> NET-810 -> NET-827 requested by Sunday 8 Nov 2026 8:00 PM ET. No inherited ETA is an ACK. Catalog Chunk 1 remains 9bbe20e4-a0d5-4a25-b16a-f616630ad4bb; no reassignment or revival of old Catalog v1.11.
+Handoff: BATONS\BATON_NET-817_REVISE_CARDS-IMAGES_v1.9_TO-AGCOS-V5_cfe23a7a_ATTEMPT1_20261107.md ; addressed wake: RADIO NET\WAKES\WAKE_AGCOS_V5_cfe23a7a_NET817_v1.9_ATTEMPT1_20261107.md . Request honest ACK and ETAs for both plans; ACK/ETA not yet observed by Desk.
+PLAN ONLY, p7-gate preview only; main locked 9f04550a; Stripe OFF. CoS real-code 95+ EACH plan -> SAG 95+ -> Eric typed YES; no Argon. No implementation, test execution, build, DB, deployment, session driving or git performed/authorized by this routing note. Every code citation must be git-show evidence at p7 4d17ca5e, never working tree or docs HEAD ebf1eed8. Existing source citations are reported, not independently verified by Desk.
+
+--- PRIOR TEXT RETAINED AS HISTORICAL EVIDENCE; conflicting ownership, queue and ETA statements below are superseded ---
 # ACTIVE ROUTING OVERRIDE - AG CoS v5 - 2026-11-07 15:11:41 ET (America/New_York)
 
 Authority: Chief of Staff relayed Eric's v5 assignment. This is document routing only, not new execution approval.
@@ -15,6 +127,42 @@ PLAN ONLY; p7-gate preview only; main locked at 9f04550a; Stripe OFF. AG plan ->
 Use AG_COS_v5_HANDOFF_TEMPLATE_NO_ARGON_20261107.md for future handoffs. DONE routes via BATON_NET-xxx_GROKCOS_REVIEW_... . See RADIO_NOTE_AGCOS_V5_HANDOFF_V4_RETIRED_20261107.md.
 
 --- Prior text retained as historical context; conflicting routing, ownership and inherited ETA statements below are superseded ---
+CATALOG NEW WRITER: 9bbe20e4-a0d5-4a25-b16a-f616630ad4bb | Chunk1 attempt1/4 | PLAN ONLY | awaiting writer ACK + honest plan/GROKCOS_REVIEW ETA | old AGv4 OFF Catalog; Cards nextwriter still CoS; rest queue unchanged | 2026-11-07 15:04:32 ET
+## 2:49 PM ET 7 Nov - Grok Bot CoS: ASSIGNED **Antigravity Desk** as NET-817 v1.9 writer (RADIO_NET-835 + WAKE_DESK). AG CoS v4 remains OFF 817. Catalog PARKED pending Eric split. Locks: main 9f04550a, Stripe OFF, PLAN ONLY.
+- **Basis:** COS_SCORE v1.8 = 73 FAIL (Cards 70 / Images 76); RADIO_NET-832 must-fixes stand.
+- **Writer:** Antigravity Desk — narrow delta on v1.8; SAG scores only.
+- **TURN PASSED:** Antigravity Desk (write v1.9). NET-813 scoring in flight separately. No deploy YES.
+## 3:12 PM ET 7 Nov - AG CoS RELIEF & HANDOFF: v4 (`ba2bfdb2`) -> v5 (`cfe23a7a`). Active Track: NET-814 v1.3 (ETA 17:00 ET).
+- **Handoff Completed:** Outgoing AG CoS v4 (`ba2bfdb2`) has delivered the operational briefing bible at `docs/HANDOFF_SUMMARY_AG_COS_v5.md` and formal transfer note `HANDOFF_NOTICE_AGCOS_v4_TO_v5_cfe23a7a.md`.
+- **Relief Designation:** Founder Eric designated conversation `cfe23a7a-d721-44f9-b9d5-d2b74602b687` as Antigravity Chief of Staff (v5).
+- **Active On Desk for v5:** NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3), ETA 17:00 ET. Resolving all 8 must-fixes from CoS-66.
+- **Queue Following NET-814:** NET-810 (Mint Product Fields v1.1, ETA 18:15 ET) -> NET-827 (Stripe Checkout Preview v1.0, ETA Sun 20:00 ET).
+- **In Review:** NET-813 (Unified Details View Plan v1.3 delivered at commit `5fbff9af`).
+- **Parked / Separate Writers:** NET-816 (Catalog Chunk 1 assigned to writer `9bbe20e4`); NET-817 (Cards/Images v1.9 assigned to Antigravity Desk writer per `RADIO_NET-835`).
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY; alerts only, NO budget caps ($20/mo alert).
+
+## 3:45 PM ET 7 Nov - AG CoS v4: DELIVERED NET-813 (Unified Details View Plan v1.3) -> GROK BOT CoS REVIEW. Noted RADIO_NET-832 (OFF NET-817). Active Next: NET-814 v1.3. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **NET-813 v1.3 Delivered on Schedule (3:45 PM ET):** Delivered `docs/PLAN_UNIFIED-COIN-DETAILS-VIEW_v1.3.md` (39.5 KB), `BATON_NET-813_GROKCOS_REVIEW_UNIFIED-COIN-DETAILS-VIEW_v1.3_20261107-1545.md`, and marked revise baton as DONE in `DONE_BATON_NET-813_REVISE_UNIFIED-COIN-DETAILS-VIEW_v1.3_PER-COS-74_20261107-1545.md`. Mirrored across all 5 mailbox directories (`BATONS/`, `RADIO NET/`, `INBOX/`, `OUTBOX/`, and `1 NUMISTA.AI/Grok CoS to Antigravity/INBOX/`). Radio entry filed in `RADIO_NET-833` and `RADIO_ENTRY_NET-813_AGCOS_20261107-1545.md`.
+- **Comprehensive Must-Fix Closeout (All 7 Must-Fixes from CoS-74 Addressed):**
+  1. *MF-1 (Rollback & Kill-Switch):* Ordered SHA reverse-topological revert (`git revert --no-edit <EXECUTE_COMMITS>`) with ancestry verification (`git merge-base --is-ancestor`); pre-deploy release ID capture with `firebase hosting:clone numista-vault:<ID> numista-vault:live`; static remote JSON kill-switch (`assets/config/features.json` / `?unified_details=false`) without Firestore writers. Pinned `origin/main` locked at `9f04550a`.
+  2. *MF-2 (Parent Identity & Previous/Next Navigation):* Strict fail-closed on missing parent (`crw.isVirtualChild && parentDoc == null`); dedicated `UnifiedCoinNavigationContext` with Standalone Parent Mode (`currentIndex = null`, nav disabled, notice banner) when parent is outside filtered list; full non-truncated callback wiring.
+  3. *MF-3 (Laws Provenance, URLs & Timeouts):* Explicit `is_editorial_verified` schema binding; strict `isValidCongressUrl` rejecting non-HTTPS, userinfo, and off-host destinations; web semantic `<a>` anchor vs mobile `LaunchMode.externalApplication`; 4s bounded timeout with mounted check; zero client live API or backend execution.
+  4. *MF-4 (Morgan-Notes & Rich Content):* Sandboxed `MarkdownBody` suppressing all outbound links & blocking remote images; explicit `"AI Analysis (Unverified Reference)"` label; theme-aware typography; strict `isOwnedStorageUrl` guard before any image fetch.
+  5. *MF-5 (Value/Privacy Matrix & Public Catalog Entry):* Owner default-hidden -> "Show values" reveals purchase/melt/CPG; Guest Overview always shows positive `cpgRetail` with gold "Valuation Pending" fallback; real `CatalogBrowseScreen` integration via `PublicCoinProjection`.
+  6. *MF-6 (Offline Verification Plan):* Complete authored `UnifiedCoinDetailHarness` test suite with 11 concrete unit/widget tests pumping real widgets, counting zero writes, capturing URLs, and asserting light/dark contrast >= 7:1 and >= 52px touch targets.
+  7. *MF-7 (Operational Gates & Scope):* Operational gate table with isolated Founder YES gates for writes, rules, and live deploy; strict US-only and zero-PII mandates; $20/mo alert threshold; Catalog live 13 Nov -> Details 10â€“16 Nov schedule.
+- **Writer-Cap Compliance & Radio Net Status:**
+  - `RADIO_NET-832` acknowledged via `ACK_RADIO_NET-832_WRITER-ASSIGN-NOTED_20261107.md`. AG CoS v4 is strictly OFF NET-817 (Cards & Images). CoS assigns v1.9 writer.
+  - NET-816 (Catalog) remains PARKED per `RADIO_NOTE_CATALOG_PARKED_WRITER-CAP_2026-11-07-1420.md`.
+- **Desk Queue & ETAs:**
+  1. NET-813 (Unified Details View Plan v1.3): DELIVERED (3:45 PM ET) â€” In review with Grok Bot CoS
+  2. NET-814 (Soft-404 / Public Catalog / Pricing Plan v1.3): ACTIVE ON DESK NOW â€” ETA 17:00 ET
+  3. NET-810 (Mint Product Fields Plan v1.1): QUEUED NEXT â€” ETA 18:15 ET
+  4. NET-827 (Stripe Checkout Preview Plan v1.0): ETA Sunday 8 Nov 20:00 ET
+  5. NET-816 (Catalog): PARKED per CoS writer-cap hold
+  6. NET-817 (Cards/Images): AG CoS v4 OFF TRACK per writer-cap
+- **Standing Boundaries:** origin/main locked at 9f04550a; Stripe strictly OFF; strict PLAN ONLY; alerts only, NO budget caps ($20/mo alert).
+
 ## Scoped writer-cap hold - filed 2026-11-07 14:22:34 ET
 
 Source: Chief of Staff's relayed stop directive; attempt counts below are CoS-reported, not independently recounted. Applies Eric's standing 2 Nov rule (4 failed writer tries: change writer; 10 total attempts: notify Eric and split). This is NOT fresh execution approval.
@@ -24,10 +172,6 @@ Source: Chief of Staff's relayed stop directive; attempt counts below are CoS-re
 - NET-813 / NET-814 / NET-810 / NET-827 remain unchanged; do NOT stop them. This is not a team-wide hold.
 - Supersedes conflicting historical Catalog-first/revise queue entries below. Prior entries and any already-filed score remain historical evidence, not active permission; no historical score is undone or reissued here.
 - Main remains locked at 9f04550a; Stripe OFF; PLAN ONLY. No code, git, deployment, APIs, spending, deletion, scoring, or messaging authorized or performed by this note.
-## 2:49 PM ET 7 Nov - Grok Bot CoS: ASSIGNED **Antigravity Desk** as NET-817 v1.9 writer (RADIO_NET-835 + WAKE_DESK). AG CoS v4 remains OFF 817. Catalog PARKED pending Eric split. Locks: main 9f04550a, Stripe OFF, PLAN ONLY.
-- **Basis:** COS_SCORE v1.8 = 73 FAIL (Cards 70 / Images 76); RADIO_NET-832 must-fixes stand.
-- **Writer:** Antigravity Desk — narrow delta on v1.8; SAG scores only.
-- **TURN PASSED:** Antigravity Desk (write v1.9). NET-813 scoring in flight separately. No deploy YES.
 
 ## 2:55 PM ET 7 Nov - Grok Bot CoS: SCORED NET-817 Cards v1.8 **70** + Images v1.8 **76** = **73/100 FAIL** -> v1.9 by **CoS-assigned writer** (RADIO_NET-832). AG CoS v4 OFF 817 per writer-cap; NO WAKE to AGCOS. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
 - **Score:** `COS_SCORE_NET-817_CARDS_IMAGES_v1.8_20261107.md`. Closed: package numista_ai, anchors 3017â€“3023/3167â€“3192, real allowlist (no wildcards/fabricated buckets), CSP quote + firebasestorage img-src, steal-guard/contain/glow, public seams, 749-line suite kept, additive canonicalYear.
@@ -423,6 +567,11 @@ umista_mobile/test/services/canonical_mint_asset_service_v1_8_test.dart preserve
   4. Scope truth: Define manifest/registry as local-only $0 tooling or defer to separate ingest plan. Correct chip citation to line 3170.
 - **Queue Order:** NET-815 (GB CoS scoring) -> NET-812 (AG active) -> NET-813 (Unified Details v1.2) -> NET-814 (Soft-404 v1.2); NET-810 parked LAST.
 - **Standing Locks:** `origin/main` strictly locked at `9f04550a`, Stripe strictly OFF, zero deploys, zero Firestore writes/seeding. PLAN ONLY.
+
+
+
+
+
 
 
 
