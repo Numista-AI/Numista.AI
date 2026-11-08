@@ -1,3 +1,17 @@
+# ACTIVE - AG CoS v5 2026-11-07 19:35 ET - Delivered NET-814 Soft-404/Catalog/Pricing Plan v1.3 Review Baton; NET-810 v1.1 on Desk (ETA 21:00 ET)
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. |
+| **NET-813 Unified Details v1.4** | Prior 76 FAIL -> **DELIVERED v1.4** (commit `397f83ba`) | **GROKCOS** review request on file: `BATON_NET-813_GROKCOS_REVIEW_UNIFIED-COIN-DETAILS-VIEW_v1.4_20261107-1925.md`. |
+| **NET-814 Soft-404/Catalog/Pricing v1.3** | Prior 66 FAIL -> **DELIVERED v1.3** | **GROKCOS** review request filed: `BATON_NET-814_GROKCOS_REVIEW_SOFT404-PUBLIC-CATALOG-PRICING_v1.3_20261107-1935.md`. |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4 (separate writer desk per `RADIO_NET-839/841`) |
+| **NET-810 Mint Product Fields v1.1** | Prior 58 FAIL -> **ON DESK NOW** | **AG CoS v5** actively authoring on desk; honest ETA **21:00 ET** |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | AG CoS v5 queued; honest ETA Sunday 18:00 ET |
+
+Locks: main `9f04550a` strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon; pin `4d17ca5e`. Live smoke ~19:12 ET: numista.ai 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. No Eric ping.
+
+--- Prior text retained ---
 # ACTIVE - GROKCOS scored NET-817 Cards/Images v2.0 PASS 96/95 (2026-11-07 19:20 ET)
 
 | Track | Score / Status | Next Turn / Owner |
@@ -40,13 +54,13 @@ Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (pre
 Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon. Live numista.ai 200 / main.dart.js 200 / bad path 404 / catalog 200. No Eric ping.
 
 --- Prior text retained ---
-# ACTIVE - Watch 2026-11-07 17:14 ET � no new GROKCOS baton; AG CoS WIP Cards/Images v2.0 (no review baton yet)
+# ACTIVE - Watch 2026-11-07 17:14 ET � no new GROKCOS baton; AG CoS WIP Cards/Images v2.0 (no review baton yet)
 
 | Track | Score | Next |
 |---|---|---|
-| **NET-817 Cards/Images v2.0** | prior Combined 86 FAIL | AG CoS v5 attempt 2/4 drafting docs WIP (~16:36�16:40); WAKE_AGCOS_NET-838 ~79m � under 2h, no stall; await GROKCOS review baton |
-| **NET-816 Catalog Chunk1 v2.2** | prior v2.1 **80 FAIL** | writer `9bbe20e4` attempt 3/4; WAKE_CATALOG ~49m � under 2h |
-| **NET-813 Unified Details v1.4** | prior 76 FAIL | ETA 16:50 passed; AG CoS on 817 first; still <2h from 15:27 assign � no stall reflag |
+| **NET-817 Cards/Images v2.0** | prior Combined 86 FAIL | AG CoS v5 attempt 2/4 drafting docs WIP (~16:36�16:40); WAKE_AGCOS_NET-838 ~79m � under 2h, no stall; await GROKCOS review baton |
+| **NET-816 Catalog Chunk1 v2.2** | prior v2.1 **80 FAIL** | writer `9bbe20e4` attempt 3/4; WAKE_CATALOG ~49m � under 2h |
+| **NET-813 Unified Details v1.4** | prior 76 FAIL | ETA 16:50 passed; AG CoS on 817 first; still <2h from 15:27 assign � no stall reflag |
 | NET-814 / 810 / 827 | queue | AG CoS v5 after current |
 
 Locks: main `9f04550a`; Stripe OFF; PLAN ONLY; no Argon; pins `b0b05808` / `4d17ca5e`. Live numista.ai 200 / main.dart.js 200 / badpath 404. No Eric ping (no ERIC/deploy-YES).
@@ -229,7 +243,8 @@ umista-catalog-assets) and open wildcards (*.firebasestorage.app, *.web.app) are
   5. MF-I2 (Reachable Helpers & Public Seam): isOwnedStorageUrl declared as a public top-level function in lib/utils/owned_storage_url.dart. extractUserPhoto declared in lib/utils/collection_image_utils.dart. Encapsulated in public widget CollectionCardImage in lib/widgets/collection_card_image.dart with injectable imageFetcher.
   6. MF-I3 (Restored Shipped Display Policy & Steal-Guard): Canonical asset and user photos both prefer reverse. Reverse-only user photos render reverse with fail-closed security guard. Steal-guard (:6409Ã¢â‚¬â€œ6417) strictly preserved. Coin visual integrity preserved with BoxFit.contain and gold circular glow (lurRadius: 14), preventing edge cropping.
   7. MF-I4 (CSP Truth): Quoted irebase.json:276 verbatim. Added https://firebasestorage.googleapis.com to img-src so Firebase Storage user photos render without CSP violation.
-  8. MF-I5 (Images Tests): Added _RequestKey refresh test (pumpWidget with Year changed from '' to populated increments fetch count to 2). Real bucket fixtures tested. Rejected malicious forms tested. Proved esolveFromMap returns null for 1964 Kennedy Half Dollar fixture.
+  8. MF-I5 (Images Tests): Added _RequestKey refresh test (pumpWidget with Year changed from '' to populated increments fetch count to 2). Real bucket fixtures tested. Rejected malicious forms tested. Proved 
+esolveFromMap returns null for 1964 Kennedy Half Dollar fixture.
   9. MF-C1 (Correct Valuation Anchors): Grounded on real lines 3017Ã¢â‚¬â€œ3023 and 3167Ã¢â‚¬â€œ3192. Line 3015 displayTitle tail is strictly untouched.
   10. MF-C2 (Valuation Precedence & Enrichment State): CPG Retail (alCpg > 0) -> AI Value (m[_F.aiValue]) -> Face Value fallback + amber "Value pending AI estimate" chip. Retains enrichment_status == 'pending' handling. Consistent with table columns :534Ã¢â‚¬â€œ538 and :3338Ã¢â‚¬â€œ3345.
   11. MF-C3 (Face Value Correctness): Directly reuses existing production parser MeltValueService.parseFaceValue(rawDenom, qty: 1). Renders 'Ã¢â‚¬â€' with pending chip when unknown rather than '.00'.
@@ -237,7 +252,8 @@ umista-catalog-assets) and open wildcards (*.firebasestorage.app, *.web.app) are
   13. MF-C5 (Preserve Suite & Regex Fix): New test file 
 umista_mobile/test/services/canonical_mint_asset_service_v1_8_test.dart preserves existing 749-line suite. Production regex updated with (?!\w) so 1Ã‚Â¢ and 5Ã‚Â¢ match cleanly while preventing false positives on 15Ã‚Â¢ or 25c.
   14. MF-C6 (Contrast Truth): Theme-aware styling: #D4AF37 on #1E2937 (7.00:1) and #0D1520 (8.72:1) in dark mode (passes WCAG AAA >= 7.0:1); #856404 on #FFFFFF (5.49:1) and #F5F5F0 (5.02:1) in light mode (passes WCAG AA >= 4.5:1).
-  15. MF-C7 (Additive canonicalYear): Inserted at line 76 after _normYear without altering esolveFromMap.
+  15. MF-C7 (Additive canonicalYear): Inserted at line 76 after _normYear without altering 
+esolveFromMap.
 - **Desk Queue & ETAs:**
   1. NET-816 (Catalog FAILFIX Plan v1.11): DELIVERED (15:15 ET) Ã¢â‚¬â€ in review with Grok Bot CoS and SAG (>=95)
   2. NET-817 (Cards v1.8 + Images v1.8): DELIVERED (14:30 ET) Ã¢â‚¬â€ in review with Grok Bot CoS and SAG (>=95)
