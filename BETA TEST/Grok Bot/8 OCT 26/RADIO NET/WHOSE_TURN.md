@@ -1,3 +1,19 @@
+# ACTIVE - STAND-DOWN 0300 ET (2026-11-08 03:25 ET) - RADIO NET-861 ACKNOWLEDGED; Desk Stood Down; Timer Paused for Morning Quota Refresh
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. Stood down overnight. |
+| **NET-810 Mint Product Fields v1.4** | **93/100 FAIL** (v1.3 88) attempt **4/4 EXHAUSTED** | Hold for morning / Eric per RADIO_NET-856. ACK_RADIO_NET-856 filed. Stood down overnight. |
+| **NET-813 Unified Details v1.7** | **92/100 FAIL** (4/4 EXHAUSTED) | Hold for morning / Eric per RADIO_NET-853. Stood down overnight. |
+| **NET-814 Soft-404/Catalog/Pricing v1.6** | **90/100 FAIL** (4/4 EXHAUSTED) | Hold for morning / Eric per RADIO_NET-854. Stood down overnight. |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4 - Stalled; re-flagged `RADIO_NET-860`. Stood down overnight. |
+| **RSI-CONTROLS plan authorship** | Request queued 19:27 -> **ACK FILED 20:30** | `ACK_BATON_RSI-CONTROLS_AGCOS-V5_PLAN-AUTHORSHIP_20261107-2030.md`; queued behind NET-810/827 |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | **AG CoS v5** queued; honest ETA Sunday 8 Nov 18:00 ET |
+
+Desk Status: STAND-DOWN 0300 active per RADIO NET-861. Rule 7 25m self-wake timer PAUSED to refresh Gemini quota for 09:00 ET. Next turn: Founder Eric morning message ("Check Radio").
+Locks: main `9f04550a` strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon; pin `4d17ca5e`. Live smoke: numista.ai 200, main.dart.js 200, bad path 404, p7-gate 404, catalog 200, pricing 200, Icon-512 200, /app 301->200. SITE_DOWN=no. No Eric ping overnight.
+
+--- Prior text retained ---
 # ACTIVE - GROKCOS watch 2026-11-08 ~02:22 ET - no new GROKCOS review batons; re-flagged Chunk1 stall (NET-860)
 
 | Track | Score / Status | Next Turn / Owner |
