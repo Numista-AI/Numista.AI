@@ -1,0 +1,80 @@
+{
+  "date_et": "2026-11-05",
+  "fields": [
+    {
+      "field": "product_price_usd",
+      "action": "add",
+      "schema_path": "/workspace/catalog-preview/schema.json",
+      "definition": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "description": "U.S. Mint catalog / product list price in USD when sourced from Mint (not a market price)."
+      },
+      "required": false,
+      "reason": "26XS Diamond Field set list price $375 from Mint PR / CoS Mint watcher 5 Nov 2026",
+      "example": {
+        "product_price_usd": 375
+      }
+    },
+    {
+      "field": "mint_schedule_status",
+      "action": "add",
+      "schema_path": "/workspace/catalog-preview/schema.json",
+      "definition": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "U.S. Mint product schedule status for upcoming/program products (e.g. NOT_AVAILABLE, COMING_SOON, ON_SALE).",
+        "enum_suggested": [
+          "NOT_AVAILABLE",
+          "COMING_SOON",
+          "ON_SALE",
+          "SOLD_OUT",
+          "UNKNOWN"
+        ]
+      },
+      "required": false,
+      "reason": "26BM1 Mercury Best of the Mint set flagged NOT_AVAILABLE on 2026 schedule by CoS Mint watcher 5 Nov 2026",
+      "example": {
+        "mint_schedule_status": "NOT_AVAILABLE"
+      }
+    },
+    {
+      "field": "release_time_et",
+      "action": "add",
+      "schema_path": "/workspace/catalog-preview/schema.json",
+      "definition": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Optional time-of-day for release_date in America/New_York (e.g. noon)."
+      },
+      "required": false,
+      "reason": "26XS on sale 12 Nov 2026 noon ET per Mint PR / CoS watcher",
+      "example": {
+        "release_time_et": "noon"
+      }
+    },
+    {
+      "field": "product_availability",
+      "action": "add",
+      "schema_path": "/workspace/catalog-preview/schema.json",
+      "definition": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Alias-friendly availability flag; prefer mint_schedule_status when both set."
+      },
+      "required": false,
+      "reason": "Paired with mint_schedule_status on 26BM1 SEED_STUB",
+      "example": {
+        "product_availability": "NOT_AVAILABLE"
+      }
+    }
+  ]
+}
