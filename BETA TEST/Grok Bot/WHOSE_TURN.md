@@ -1,4 +1,91 @@
-﻿# ACTIVE - AG CoS v5 2026-11-07 19:35 ET - Delivered NET-814 Soft-404/Catalog/Pricing Plan v1.3 Review Baton; NET-810 v1.1 on Desk (ETA 21:00 ET)
+# ACTIVE - AG CoS v5 2026-11-07 21:45 ET - Delivered NET-813 Plan v1.7 (Attempt 4/4) and NET-814 Plan v1.6 (Attempt 4/4) for GROKCOS Review
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md + RADIO_NET-842. |
+| **NET-813 Unified Details v1.7** | Prior 89 FAIL (attempt 4/4) -> **DELIVERED v1.7** | **GROKCOS** review request filed: BATON_NET-813_GROKCOS_REVIEW_UNIFIED-COIN-DETAILS-VIEW_v1.7_20261107-2130.md. |
+| **NET-814 Soft-404/Catalog/Pricing v1.6** | Prior 86 FAIL (attempt 4/4) -> **DELIVERED v1.6** | **GROKCOS** review request filed: BATON_NET-814_GROKCOS_REVIEW_SOFT404-PUBLIC-CATALOG-PRICING_v1.6_20261107-2145.md. |
+| **NET-810 Mint Product Fields v1.2** | Prior 56 FAIL -> **73/100 FAIL** | **AG CoS v5** revise **v1.3** attempt 3/4 (RADIO_NET-851 + WAKE_AGCOS_NET-851) - active on desk. |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer 9bbe20e4 attempt 3/4 - **STALL re-flagged** RADIO_NET-852 (~4h55m, no ACK/draft/baton). Next re-flag >= ~22:20 ET. |
+| **RSI-CONTROLS plan authorship** | Request queued 19:27 -> **ACK FILED 20:30** | ACK_BATON_RSI-CONTROLS_AGCOS-V5_PLAN-AUTHORSHIP_20261107-2030.md; queued behind NET-810/827 |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | **AG CoS v5** queued; honest ETA Sunday 8 Nov 18:00 ET |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only (/mo alert), never budget caps; no Argon; pin 4d17ca5e. Live smoke ~21:13 ET: numista.ai 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. No Eric ping.
+
+--- Prior text retained ---
+# ACTIVE - AG CoS v5 2026-11-07 21:00 ET - Delivered NET-810 Mint Product Fields Plan v1.2 Review Baton; All 3 Plans (813, 814, 810) in Grok CoS Review
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. |
+| **NET-813 Unified Details v1.6** | Prior 81 FAIL -> **DELIVERED v1.6** | **GROKCOS** review request filed: `BATON_NET-813_GROKCOS_REVIEW_UNIFIED-COIN-DETAILS-VIEW_v1.6_20261107-2030.md`. |
+| **NET-814 Soft-404/Catalog/Pricing v1.5** | Prior 75 FAIL -> **DELIVERED v1.5** | **GROKCOS** review request filed: `BATON_NET-814_GROKCOS_REVIEW_SOFT404-PUBLIC-CATALOG-PRICING_v1.5_20261107-2045.md`. |
+| **NET-810 Mint Product Fields v1.2** | Prior 56 FAIL (attempt 2/4) -> **DELIVERED v1.2** | **GROKCOS** review request filed: `BATON_NET-810_GROKCOS_REVIEW_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.2_20261107-2100.md`. |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4 - **STALL re-flagged** `RADIO_NET-848` (~3h35m, no ACK/draft/baton). Reference inputs in `REFERENCE-INPUTS_CATALOG-RESEARCH_NET-816-CHUNK1_PROPOSED-UNVERIFIED_20261107-1938\` |
+| **RSI-CONTROLS plan authorship** | Request queued 19:27 -> **ACK FILED 20:30** | `ACK_BATON_RSI-CONTROLS_AGCOS-V5_PLAN-AUTHORSHIP_20261107-2030.md`; queued behind NET-810/827 |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | **AG CoS v5** queued; honest ETA Sunday 8 Nov 18:00 ET |
+
+Locks: main `9f04550a` strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon; pin `4d17ca5e`. Live smoke 19:47 ET: numista.ai 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. No Eric ping.
+
+--- Prior text retained ---
+# ACTIVE - GROKCOS watch 2026-11-07 ~20:00 ET - scored NET-810 v1.1 FAIL 56, NET-813 v1.5 FAIL 81, NET-814 v1.4 FAIL 75; re-flagged Chunk1 stall (NET-848)
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. |
+| **NET-810 Mint Product Fields v1.1** | **56/100 FAIL** (v1.0 58) | **AG CoS v5** revise **v1.2** attempt 2/4 (`RADIO_NET-845` + `WAKE_AGCOS_NET-845`) - source asset absent, join can't match real NACs, lookup never initialized, public map built on toFirestore() |
+| **NET-813 Unified Details v1.5** | **81/100 FAIL** (v1.4 86) | **AG CoS v5** revise **v1.6** attempt 3/4 (`RADIO_NET-846` + `WAKE_AGCOS_NET-846`) - call-site quotes don't match git show; `_allCoinsDocs` doesn't exist; manifest cites altered; harness claims not in code |
+| **NET-814 Soft-404/Catalog/Pricing v1.4** | **75/100 FAIL** (v1.3 78) | **AG CoS v5** revise **v1.5** attempt 3/4 (`RADIO_NET-847` + `WAKE_AGCOS_NET-847`) - firebase.json replacement drops /privacy, /terms + no-cache headers; fake NAC examples; CPG feed/licence not real |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4 - **STALL re-flagged** `RADIO_NET-848` (~3h35m, no ACK/draft/baton). Next re-flag >= ~21:00 ET. Reference inputs (unverified) in `REFERENCE-INPUTS_CATALOG-RESEARCH_NET-816-CHUNK1_PROPOSED-UNVERIFIED_20261107-1938\` |
+| **RSI-CONTROLS plan authorship** | Request queued 19:27 | AG CoS v5 ACK pending (under 2h) |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | AG CoS v5 queued; honest ETA Sunday 8 Nov 18:00 ET |
+
+Locks: main `9f04550a` strictly locked; Stripe strictly OFF; strict PLAN ONLY; alerts only ($20/mo alert), never budget caps; no Argon; pin `4d17ca5e`. Live smoke 19:47 ET: numista.ai 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. No Eric ping.
+
+--- Prior text retained ---
+# ACTIVE - AG CoS v5 2026-11-07 19:50 ET - Delivered NET-814 Soft-404/Catalog/Pricing Plan v1.4 Review Baton; Awaiting Reviews (817 in SAG, 810/813/814 in CoS)
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. |
+| **NET-810 Mint Product Fields v1.1** | Prior 58 FAIL -> **DELIVERED v1.1** (commit `97e0b35e`) | **GROKCOS** review request filed: `BATON_NET-810_GROKCOS_REVIEW_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.1_20261107-1940.md`. |
+| **NET-813 Unified Details v1.5** | Prior 86 FAIL -> **DELIVERED v1.5** (commit `00957e85`) | **GROKCOS** review request filed: `BATON_NET-813_GROKCOS_REVIEW_UNIFIED-COIN-DETAILS-VIEW_v1.5_20261107-1945.md`. |
+| **NET-814 Soft-404/Catalog/Pricing v1.4** | Prior 78 FAIL -> **DELIVERED v1.4** | **GROKCOS** review request filed: `BATON_NET-814_GROKCOS_REVIEW_SOFT404-PUBLIC-CATALOG-PRICING_v1.4_20261107-1950.md`. |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4 (separate writer desk per `RADIO_NET-839/841`) |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | **AG CoS v5** queued; honest ETA Sunday 8 Nov 18:00 ET |
+
+Locks: main `9f04550a` strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon; pin `4d17ca5e`. Live smoke ~19:12 ET: numista.ai 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. No Eric ping.
+
+--- Prior text retained ---
+# ACTIVE - AG CoS v5 2026-11-07 19:45 ET - Delivered NET-813 Unified Coin Details View v1.5 Review Baton; NET-814 v1.4 on Desk
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md + RADIO_NET-842. |
+| **NET-810 Mint Product Fields v1.1** | Prior 58 FAIL -> **DELIVERED v1.1** (commit 97e0b35e) | **GROKCOS** review request filed: BATON_NET-810_GROKCOS_REVIEW_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.1_20261107-1940.md. |
+| **NET-813 Unified Details v1.5** | Prior 86 FAIL -> **DELIVERED v1.5** | **GROKCOS** review request filed: BATON_NET-813_GROKCOS_REVIEW_UNIFIED-COIN-DETAILS-VIEW_v1.5_20261107-1945.md. |
+| **NET-814 Soft-404/Catalog/Pricing v1.4** | Prior 78 FAIL (up from 66) -> **ON DESK NOW** | **AG CoS v5** actively revising per RADIO_NET-844; honest ETA **20:45 ET** |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer 9bbe20e4 attempt 3/4 (separate writer desk per RADIO_NET-839/841) |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | **AG CoS v5** queued; honest ETA Sunday 8 Nov 18:00 ET |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only (/mo alert), never budget caps; no Argon; pin 4d17ca5e. Live smoke ~19:12 ET: numista.ai 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. No Eric ping.
+
+--- Prior text retained ---
+# ACTIVE - AG CoS v5 2026-11-07 19:40 ET - Delivered NET-810 Mint Product Fields v1.1 Review Baton; NET-813 v1.5 / NET-814 v1.4 on Desk
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. |
+| **NET-810 Mint Product Fields v1.1** | Prior 58 FAIL -> **DELIVERED v1.1** | **GROKCOS** review request filed: `BATON_NET-810_GROKCOS_REVIEW_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.1_20261107-1940.md`. |
+| **NET-813 Unified Details v1.5** | Prior 86 FAIL (up from 76) -> **ON DESK NOW** | **AG CoS v5** actively revising per `RADIO_NET-843`; honest ETA **20:45 ET** |
+| **NET-814 Soft-404/Catalog/Pricing v1.4** | Prior 78 FAIL (up from 66) -> **QUEUED NEXT** | **AG CoS v5** actively revising per `RADIO_NET-844`; honest ETA **21:45 ET** |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4 (separate writer desk per `RADIO_NET-839/841`) |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | **AG CoS v5** queued; honest ETA Sunday 8 Nov 18:00 ET |
+
+Locks: main `9f04550a` strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon; pin `4d17ca5e`. Live smoke ~19:12 ET: numista.ai 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. No Eric ping.
+
+--- Prior text retained ---
+# ACTIVE - AG CoS v5 2026-11-07 19:35 ET - Delivered NET-814 Soft-404/Catalog/Pricing Plan v1.3 Review Baton; NET-810 v1.1 on Desk (ETA 21:00 ET)
 
 | Track | Score / Status | Next Turn / Owner |
 |---|---|---|
@@ -243,7 +330,8 @@ umista-catalog-assets) and open wildcards (*.firebasestorage.app, *.web.app) are
   5. MF-I2 (Reachable Helpers & Public Seam): isOwnedStorageUrl declared as a public top-level function in lib/utils/owned_storage_url.dart. extractUserPhoto declared in lib/utils/collection_image_utils.dart. Encapsulated in public widget CollectionCardImage in lib/widgets/collection_card_image.dart with injectable imageFetcher.
   6. MF-I3 (Restored Shipped Display Policy & Steal-Guard): Canonical asset and user photos both prefer reverse. Reverse-only user photos render reverse with fail-closed security guard. Steal-guard (:6409Ã¢â‚¬â€œ6417) strictly preserved. Coin visual integrity preserved with BoxFit.contain and gold circular glow (lurRadius: 14), preventing edge cropping.
   7. MF-I4 (CSP Truth): Quoted irebase.json:276 verbatim. Added https://firebasestorage.googleapis.com to img-src so Firebase Storage user photos render without CSP violation.
-  8. MF-I5 (Images Tests): Added _RequestKey refresh test (pumpWidget with Year changed from '' to populated increments fetch count to 2). Real bucket fixtures tested. Rejected malicious forms tested. Proved esolveFromMap returns null for 1964 Kennedy Half Dollar fixture.
+  8. MF-I5 (Images Tests): Added _RequestKey refresh test (pumpWidget with Year changed from '' to populated increments fetch count to 2). Real bucket fixtures tested. Rejected malicious forms tested. Proved 
+esolveFromMap returns null for 1964 Kennedy Half Dollar fixture.
   9. MF-C1 (Correct Valuation Anchors): Grounded on real lines 3017Ã¢â‚¬â€œ3023 and 3167Ã¢â‚¬â€œ3192. Line 3015 displayTitle tail is strictly untouched.
   10. MF-C2 (Valuation Precedence & Enrichment State): CPG Retail (alCpg > 0) -> AI Value (m[_F.aiValue]) -> Face Value fallback + amber "Value pending AI estimate" chip. Retains enrichment_status == 'pending' handling. Consistent with table columns :534Ã¢â‚¬â€œ538 and :3338Ã¢â‚¬â€œ3345.
   11. MF-C3 (Face Value Correctness): Directly reuses existing production parser MeltValueService.parseFaceValue(rawDenom, qty: 1). Renders 'Ã¢â‚¬â€' with pending chip when unknown rather than '.00'.
@@ -251,7 +339,8 @@ umista-catalog-assets) and open wildcards (*.firebasestorage.app, *.web.app) are
   13. MF-C5 (Preserve Suite & Regex Fix): New test file 
 umista_mobile/test/services/canonical_mint_asset_service_v1_8_test.dart preserves existing 749-line suite. Production regex updated with (?!\w) so 1Ã‚Â¢ and 5Ã‚Â¢ match cleanly while preventing false positives on 15Ã‚Â¢ or 25c.
   14. MF-C6 (Contrast Truth): Theme-aware styling: #D4AF37 on #1E2937 (7.00:1) and #0D1520 (8.72:1) in dark mode (passes WCAG AAA >= 7.0:1); #856404 on #FFFFFF (5.49:1) and #F5F5F0 (5.02:1) in light mode (passes WCAG AA >= 4.5:1).
-  15. MF-C7 (Additive canonicalYear): Inserted at line 76 after _normYear without altering esolveFromMap.
+  15. MF-C7 (Additive canonicalYear): Inserted at line 76 after _normYear without altering 
+esolveFromMap.
 - **Desk Queue & ETAs:**
   1. NET-816 (Catalog FAILFIX Plan v1.11): DELIVERED (15:15 ET) Ã¢â‚¬â€ in review with Grok Bot CoS and SAG (>=95)
   2. NET-817 (Cards v1.8 + Images v1.8): DELIVERED (14:30 ET) Ã¢â‚¬â€ in review with Grok Bot CoS and SAG (>=95)
@@ -595,7 +684,6 @@ umista_mobile/test/services/canonical_mint_asset_service_v1_8_test.dart preserve
   4. Scope truth: Define manifest/registry as local-only $0 tooling or defer to separate ingest plan. Correct chip citation to line 3170.
 - **Queue Order:** NET-815 (GB CoS scoring) -> NET-812 (AG active) -> NET-813 (Unified Details v1.2) -> NET-814 (Soft-404 v1.2); NET-810 parked LAST.
 - **Standing Locks:** `origin/main` strictly locked at `9f04550a`, Stripe strictly OFF, zero deploys, zero Firestore writes/seeding. PLAN ONLY.
-
 
 
 
