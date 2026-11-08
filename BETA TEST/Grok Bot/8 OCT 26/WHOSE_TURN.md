@@ -1,3 +1,18 @@
+# ACTIVE - GROKCOS watch 2026-11-07 ~21:52 ET - scored NET-813 v1.7 FAIL 92 (4/4 exhausted), NET-814 v1.6 FAIL 90 (4/4 exhausted), NET-810 v1.3 FAIL 88 (revise v1.4 4/4)
+
+| Track | Score / Status | Next Turn / Owner |
+|---|---|---|
+| **NET-817 Cards/Images v2.0** | **Cards 96 PASS / Images 95 PASS / Combined 95.5 PASS** | **SAG** independent review >=95, then Eric typed YES. Pointer: `BATON_NET-817_SAG_REVIEW_CARDS-IMAGES_v2.0_20261107-1920.md` + `RADIO_NET-842`. |
+| **NET-813 Unified Details v1.7** | **92/100 FAIL** (v1.6 89) attempt **4/4 EXHAUSTED** | Hold for morning / Eric. No v1.8 revise wake. `RADIO_NET-853`. Remaining: Test 11 harness API/`writeCount` tautology; Test 12 invented CoinModel fields; Test 13 widget never reads `harness.clock`; Test 14 no `currentParentIndex` getter; §4.1 quote labels off-by-two. |
+| **NET-814 Soft-404/Catalog/Pricing v1.6** | **90/100 FAIL** (v1.5 86) attempt **4/4 EXHAUSTED** | Hold for morning / Eric. No v1.7 revise wake. `RADIO_NET-854`. Remaining: §3.4 still invents 1921-P `og:image`/`twitter:image`; `item['nac']` vs `nac_code`. |
+| **NET-810 Mint Product Fields v1.3** | **88/100 FAIL** (v1.2 73) attempt **3/4** | **AG CoS v5** revise **v1.4** attempt 4/4 (`RADIO_NET-855` + `WAKE_AGCOS_NET-855`). Citations/real 2024-W ASE/`is_placeholder` gate/named input closed; remaining unused FakeFirestore, `package:numista_mobile` vs `numista_ai`, handmade privacy map, `toFirestore` quotes drop `, _coin.id`. |
+| **NET-816 Catalog Chunk 1 v2.2** | Prior v2.1 80 FAIL | Writer `9bbe20e4` attempt 3/4 - last stall `RADIO_NET-852` at 21:20. **Not re-flagged** this run (next >= ~22:20 ET). |
+| **RSI-CONTROLS plan authorship** | Request queued 19:27 -> **ACK FILED 20:30** | `ACK_BATON_RSI-CONTROLS_AGCOS-V5_PLAN-AUTHORSHIP_20261107-2030.md`; queued behind NET-810/827 |
+| **NET-827 Stripe Checkout Preview v1.0** | Queue | **AG CoS v5** queued; honest ETA Sunday 8 Nov 18:00 ET |
+
+Locks: main `9f04550a` strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no Argon; pin `4d17ca5e`. Live smoke ~21:43 ET: SITE_DOWN=no (not re-pinged). No Eric ping.
+
+--- Prior text retained ---
 # ACTIVE - AG CoS v5 2026-11-07 22:00 ET - Delivered NET-810 Plan v1.3 (Attempt 3/4) for GROKCOS Review; NET-813 v1.7 & NET-814 v1.6 In Review
 
 | Track | Score / Status | Next Turn / Owner |
