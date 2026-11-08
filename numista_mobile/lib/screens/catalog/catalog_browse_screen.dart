@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../services/melt_value_service.dart';
 
 class CatalogBrowseScreen extends StatefulWidget {
   final String? initialQuery;
@@ -1085,6 +1086,13 @@ class _CatalogCard extends StatelessWidget {
     final badge = item['status_badge'] as String?;
     final year = item['year']?.toString() ?? 'Undated';
     final denom = item['denomination']?.toString() ?? '';
+    final isMedal = item['type'] == 'medal';
+    final faceVal = isMedal ? 0.0 : MeltValueService.parseFaceValue(denom);
+    final faceValText = faceVal > 0
+        ? (faceVal == 0.005 ? r'$0.005' : '\$${faceVal.toStringAsFixed(2)}')
+        : '\u2014';
+    final rawAiEst = (item['AI Estimated Value'] ?? item['ai_estimated_value'])?.toString().trim() ?? '';
+    final hasAiEst = rawAiEst.isNotEmpty && rawAiEst != 'Pending';
 
     return InkWell(
       onTap: onTap,
@@ -1146,6 +1154,46 @@ class _CatalogCard extends StatelessWidget {
                   'type photo (date may differ)',
                   style: TextStyle(fontSize: 12, color: Color(0xFF6B6B6B), fontStyle: FontStyle.italic),
                 ),
+              ),
+
+            const SizedBox(height: 6),
+            if (isMedal)
+              const Text(
+                'No face value',
+                style: TextStyle(fontSize: 13, color: Color(0xFF6B6B6B)),
+              )
+            else
+              Row(
+                children: [
+                  Text(
+                    faceValText,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F5FAD),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3CD),
+                        border: Border.all(color: const Color(0xFFFFEEBA)),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        hasAiEst ? 'AI Est: $rawAiEst' : 'Face value \u00b7 No retail estimate',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF856404),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
