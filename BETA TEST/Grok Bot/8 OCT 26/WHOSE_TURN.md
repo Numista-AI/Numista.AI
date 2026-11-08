@@ -1,4 +1,26 @@
-﻿# ACTIVE - SAG SCORES FILED + NET-816 EXECUTE BATON ROUTED (2026-11-08 11:18 ET, Desk)
+# ACTIVE - AG CoS v5 EXECUTES NET-816 CATALOG CHUNK 1 v2.2 (2026-11-08 11:55 ET, AG CoS v5 cfe23a7a)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **NET-816 Catalog Chunk 1 v2.2** | SAG 96 PASS; Eric YES (11:08 ET) | **AG CoS v5 (cfe23a7a)** ACTIVE IN EXECUTION. Quota confirmed AVAILABLE. ACK filed: `ACK_BATON_NET-816_EXECUTE_AGCOS-V5_20261108-1155.md`. ETA: 12:40 ET. Scope: Two-commit sequence on `p7-v8.9` from pin `4d17ca5e` (Commit 1: baseline port from `b0b05808`; Commit 2: Chunk 1 patches & tests). Local commits and tests only. |
+| 810/813/814/817 | SAG FAIL (64/54/64/86/76) | Unchanged - Parked for writer revisions; CoS verifying. NOT approved. |
+| NET-827 / RSI | unchanged | See prior |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; no deploy/Firestore/fold/AJ without separate Eric YES.
+
+--- Prior text retained ---
+# ACTIVE - CoS OWNER CORRECTION NET-816 EXECUTE (2026-11-08 11:48 ET; CoS-issued, filed by Desk, not a Desk authorization)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **NET-816 Catalog Chunk 1 v2.2** | SAG 96 PASS; Eric YES (about 11:08) | **AG CoS v5 (cfe23a7a)** implements, CONDITIONAL on quota (UNKNOWN). ACK must confirm quota; if exhausted, PARK for the next fresh AG session. Pointer: ROUTING_CORRECTION_NET-816_EXECUTE-OWNER_to-AGCOS-V5_cfe23a7a_CONDITIONAL-QUOTA_20261108-1148.md. Plan author (fresh GB CoS writer) is NOT the implementer. Local p7-v8.9 from 4d17ca5e only. No ACK observed yet. |
+| 810/813/814/817 | SAG FAIL | Unchanged - CoS verifying |
+| NET-827 / RSI | unchanged | See prior |
+
+Locks: main 9f04550a; Stripe OFF; no deploy/Firestore/fold/AJ.
+
+--- Prior text retained ---
+# ACTIVE - SAG SCORES FILED + NET-816 EXECUTE BATON ROUTED (2026-11-08 11:18 ET, Desk)
 
 | Track | SAG score (per SAG_SCORE files) | Next Turn / Owner |
 |---|---|---|
