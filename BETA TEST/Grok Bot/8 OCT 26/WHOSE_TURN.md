@@ -1,4 +1,4 @@
-# ACTIVE - SAG REVIEW QUEUE (2026-11-08 09:40 ET) - ALL 5 CORE PLANS IN SAG REVIEW; DESK NOTE 09:15 LOGGED; STANDING WATCH
+# ACTIVE - SAG REVIEW QUEUE (2026-11-08 10:08 ET) - ALL 5 CORE PLANS IN SAG REVIEW; STANDING WATCH; SMOKE GREEN
 
 | Track | GB CoS Score | SAG Review Baton | Next Gate |
 |---|---|---|---|
@@ -11,7 +11,7 @@
 | **RSI-CONTROLS plan authorship** | Queued (ACK filed) | ACK_BATON_RSI-CONTROLS_AGCOS-V5_PLAN-AUTHORSHIP_20261107-2030.md | Queued behind active plans/NET-827 |
 | **NET-827 Stripe Checkout Preview v1.0** | Queue | **AG CoS v5** queued; honest ETA Sunday 8 Nov 18:00 ET |
 
-Desk Status: ALL 5 PLANS IN SAG REVIEW QUEUE. Desk note 09:15 processed (mailbox catch-up confirmed). Awaiting SAG full-text reviews (threshold >=95 each), then Founder Eric typed YES. Rule 7 25m self-wake timer RE-ARMED.
+Desk Status: ALL 5 PLANS IN SAG REVIEW QUEUE. Standing watch. Awaiting SAG full-text reviews (threshold >=95 each), then Founder Eric typed YES. Live smoke green (200/404). Rule 7 25m self-wake timer RE-ARMED.
 Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only (/mo alert), never budget caps; no Argon; pin 4d17ca5e. Live smoke ~07:53 ET: numista-vault.web.app 200, main.dart.js 200, bad path 404, catalog 200, pricing 200. SITE_DOWN=no.
 
 --- Prior text retained ---
