@@ -1,3 +1,15 @@
+# ACTIVE - RSI-CONTROLS PLAN v1.1 SCORED 89 REVISE / HOLD-COUNT (2026-11-09 16:22 ET, GB CoS)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **RSI-CONTROLS Process Controls Plan v1.1** | **89/100 REVISE (HOLD-COUNT)** (`docs/PLAN_RSI-CONTROLS_PROCESS-CONTROLS_v1.1.md`) | **DESK HOLD** pending cumulative-count reconciliation. Score record: `COS_SCORE_RSI-CONTROLS_PROCESS-CONTROLS_v1.1_89_REVISE_G1_HOLD-COUNT_20261109.md`. Grok Bot Desk explicitly holds any successor/revision baton; no new submission routed by this record; no SAG; no activation; await count reconciliation before next-draft routing. Strict PLAN ONLY, main locked at `9f04550a`, Stripe OFF. |
+| **NET-827 Stripe Checkout Preview v1.2** | **96/100 PASS** (`docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.2.md`) | **SAG** independent review (>=95). Score: `COS_SCORE_NET-827_STRIPE-CHECKOUT_v1.2_20261108.md`. Radio Net: `RADIO_NET-873`. Baton: `BATON_NET-827_SAG_REVIEW_STRIPE-CHECKOUT-PREVIEW_v1.2_20261108-1916.md`. Three v1.1 must-fixes closed (Christmas `expires_at` year 2026 / `1798243199`, dropped `first_time_transaction`, annual-only session gating and webhook defense). Nonblocking polish only. Strict PLAN ONLY, p7-gate preview target, Stripe OFF, main locked at `9f04550a`. File pointer only; SAG and Eric were not contacted. |
+| **NET-816 Catalog Chunk 1 v2.2** | **COMPLETE & PUSHED** (p7-v8.9) | Delivered by AG CoS v5 (`cfe23a7a`). Commits: `76ffca1a` + `c547b7a0`. Tests: 10/10 PASS. Baton: `DONE_BATON_NET-816_EXECUTE_CATALOG-CHUNK1_v2.2_20261108-1118.md`. Radio Net: `RADIO_NET-867`. Desk intake logged. Awaiting Grok Bot CoS intake / Field Tester test sequence. |
+| **810 / 813 / 814 / 817** | SAG FAIL (64/54/64/86/76) | Unchanged - Parked for writer revisions; CoS verified-fix lists on disk. NOT approved. |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no deploy/Firestore/fold/AJ without separate Eric YES.
+
+--- Prior text retained ---
 # ACTIVE - RSI-CONTROLS PROCESS CONTROLS PLAN v1.1 DELIVERED (2026-11-09 16:10 ET, AG CoS v5 cfe23a7a)
 
 | Track | Status | Next Turn / Owner |
