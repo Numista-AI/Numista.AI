@@ -1,3 +1,15 @@
+# ACTIVE - RSI-CONTROLS PROCESS CONTROLS PLAN v1.1 DELIVERED (2026-11-09 16:10 ET, AG CoS v5 cfe23a7a)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **RSI-CONTROLS Process Controls Plan v1.1** | **PLAN v1.1 DELIVERED** (`docs/PLAN_RSI-CONTROLS_PROCESS-CONTROLS_v1.1.md`) | **GROKCOS** review ($\ge 95$). Baton: `BATON_RSI-CONTROLS_GROKCOS_REVIEW_PROCESS-CONTROLS_v1.1_20261109-1610.md`. Radio Net: `RADIO_NET-876`. Includes dedicated Closure Map (`docs/CLOSURE_MAP_RSI-CONTROLS_v1.1.md`) resolving all 6 must-fix groups (MF-1: Eric's verbatim "still failing after 4 tries", no consecutive loophole, multi-review deduplication, no reset bypass; MF-2: Eric's verbatim "If NO ONE gets it right by 10 total attempts", permits 10th review before halt, child counters inherit parent history and require explicit proposal awaiting Eric typed YES; MF-3: delivered unique packet identity, pre-delivery withdrawal=0, post-delivery withdrawal retains history, external hold=0, denominator=unique submissions; MF-4: honest box-clock DTG, verified disk receipts, unverified counts labeled illustrative; MF-5: no exclusive policy overlays, no extra ACK approval tier, track-specific automated test suites, case-appropriate empirical FT proof; MF-6: proposed watch blocks UNAPPLIED, boolean flags are config specs not implemented rollback, no instant restore claim without adapter evidence, rollback cannot disable 4/10 safeguards). Attempt 2 for AG CoS v5. Strict PLAN ONLY, main locked at `9f04550a`, Stripe OFF. |
+| **NET-827 Stripe Checkout Preview v1.2** | **96/100 PASS** (`docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.2.md`) | **SAG** independent review (>=95). Score: `COS_SCORE_NET-827_STRIPE-CHECKOUT_v1.2_20261108.md`. Radio Net: `RADIO_NET-873`. Baton: `BATON_NET-827_SAG_REVIEW_STRIPE-CHECKOUT-PREVIEW_v1.2_20261108-1916.md`. Three v1.1 must-fixes closed (Christmas `expires_at` year 2026 / `1798243199`, dropped `first_time_transaction`, annual-only session gating and webhook defense). Nonblocking polish only. Strict PLAN ONLY, p7-gate preview target, Stripe OFF, main locked at `9f04550a`. File pointer only; SAG and Eric were not contacted. |
+| **NET-816 Catalog Chunk 1 v2.2** | **COMPLETE & PUSHED** (p7-v8.9) | Delivered by AG CoS v5 (`cfe23a7a`). Commits: `76ffca1a` + `c547b7a0`. Tests: 10/10 PASS. Baton: `DONE_BATON_NET-816_EXECUTE_CATALOG-CHUNK1_v2.2_20261108-1118.md`. Radio Net: `RADIO_NET-867`. Desk intake logged. Awaiting Grok Bot CoS intake / Field Tester test sequence. |
+| **810 / 813 / 814 / 817** | SAG FAIL (64/54/64/86/76) | Unchanged - Parked for writer revisions; CoS verified-fix lists on disk. NOT approved. |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no deploy/Firestore/fold/AJ without separate Eric YES.
+
+--- Prior text retained ---
 # ACTIVE - RSI-CONTROLS PROCESS CONTROLS PLAN v1.0 DELIVERED (2026-11-09 15:50 ET, AG CoS v5 cfe23a7a)
 
 | Track | Status | Next Turn / Owner |
