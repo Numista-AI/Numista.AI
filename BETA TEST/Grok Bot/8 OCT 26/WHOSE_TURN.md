@@ -1,3 +1,15 @@
+# ACTIVE - RSI-CONTROLS PLAN v1.2 SCORED 92 REVISE / DESK HOLD (2026-11-09 17:16 ET, GB CoS)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **RSI-CONTROLS Process Controls Plan v1.2** | **92/100 REVISE** (`docs/PLAN_RSI-CONTROLS_PROCESS-CONTROLS_v1.2.md`) | **DESK HOLD / GROKCOS** successor baton routing. Score record: `COS_SCORE_RSI-CONTROLS_PROCESS-CONTROLS_v1.2_92_REVISE_20261109.md`. Score 92/100 REVISE (MF1 -2, MF2 0, MF3 -2, MF4 -2, MF5 -2, MF6 0). Grok Bot CoS explicit instruction: "This record authorizes score filing only, NOT a successor baton. Keep any next revision waiting for further direction; no SAG request/pass or activation." Cumulative counters: AG CoS v5 Attempt 3 of 4 (3/4) scored; Documented Track Attempt 5 of 10 (5/10) scored. If successor revision baton is routed by Grok Bot Desk or Founder Eric directs, next revision will be AG CoS v5 Attempt 4 of 4 (final try for this writer) and Documented Track Attempt 6 of 10. Desk on watch hold pending Grok Bot Desk successor revision baton routing or Founder Eric direction. Strict PLAN ONLY, main locked at `9f04550a`, Stripe OFF. |
+| **NET-827 Stripe Checkout Preview v1.2** | **96/100 PASS** (`docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.2.md`) | **SAG** independent review (>=95). Score: `COS_SCORE_NET-827_STRIPE-CHECKOUT_v1.2_20261108.md`. Radio Net: `RADIO_NET-873`. Baton: `BATON_NET-827_SAG_REVIEW_STRIPE-CHECKOUT-PREVIEW_v1.2_20261108-1916.md`. Three v1.1 must-fixes closed (Christmas `expires_at` year 2026 / `1798243199`, dropped `first_time_transaction`, annual-only session gating and webhook defense). Nonblocking polish only. Strict PLAN ONLY, p7-gate preview target, Stripe OFF, main locked at `9f04550a`. File pointer only; SAG and Eric were not contacted. |
+| **NET-816 Catalog Chunk 1 v2.2** | **COMPLETE & PUSHED** (p7-v8.9) | Delivered by AG CoS v5 (`cfe23a7a`). Commits: `76ffca1a` + `c547b7a0`. Tests: 10/10 PASS. Baton: `DONE_BATON_NET-816_EXECUTE_CATALOG-CHUNK1_v2.2_20261108-1118.md`. Radio Net: `RADIO_NET-867`. Desk intake logged. Awaiting Grok Bot CoS intake / Field Tester test sequence. |
+| **810 / 813 / 814 / 817** | SAG FAIL (64/54/64/86/76) | Unchanged - Parked for writer revisions; CoS verified-fix lists on disk. NOT approved. |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no deploy/Firestore/fold/AJ without separate Eric YES.
+
+--- Prior text retained ---
 # ACTIVE - RSI-CONTROLS PROCESS CONTROLS PLAN v1.2 DELIVERED (2026-11-09 17:25 ET, AG CoS v5 cfe23a7a)
 
 | Track | Status | Next Turn / Owner |
