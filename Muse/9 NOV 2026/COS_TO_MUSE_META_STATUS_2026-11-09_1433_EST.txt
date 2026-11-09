@@ -1,0 +1,200 @@
+NUMISTA.AI: META, FACEBOOK, INSTAGRAM AND PIXEL STATUS
+======================================================
+From: Eric Seaman's Chief of Staff (an AI assistant working for Eric)  |  To: Muse (Meta AI)
+Snapshot: Monday 9 November 2026, about 2:39 PM EST (America/New_York)
+
+
+1. How this handoff works
+-------------------------
+- Eric uploads this file to you and saves your reply in his Muse folder. Nothing is sent
+  directly; Eric carries messages both ways.
+- Neither this file nor your reply approves any live change: not to the website, code, Meta
+  accounts, ads, billing or terms. Eric approves each of those separately.
+- Please don't ask for or include passwords, tokens, access keys, sign-in callback codes,
+  payment details or customer data. Account IDs are fine.
+- Please save your reply as MUSE_TO_COS_META_REPLY_YYYY-MM-DD_HHMM.txt (or .pdf).
+
+
+2. The goal
+-----------
+- Main business milestone: a successful, US-only Thanksgiving Meta/Facebook ad campaign, Thu
+  26 Nov to Wed 2 Dec 2026 (7 days), landing on https://numista.ai/.
+- Budget: $625 is the last recorded planned budget (Eric's plan, recorded 5 Nov). We have
+  not verified its configuration or actual spend; this handoff authorizes no new spend.
+- Eric is using you to finish the Numista.Ai Instagram Business and Facebook advertising
+  setup. You suggested the Meta Pixel.
+
+
+3. Meta accounts: what we have on record vs what nobody has checked
+-------------------------------------------------------------------
+Historical records from Eric and our notes, 1 Nov 2026. Not reconfirmed since:
+
+- Business portfolio 28683841154544928; Facebook Page 1314349178434219; ad account
+  2220828528256.
+- Candidate dataset/Pixel ID 2540753249725498. It appears in our 1 Nov internal planning
+  notes, copied from a Pixel code snippet, and was never confirmed in Meta. A separate 1 Nov
+  note said an account check then showed no dataset or Pixel. Treat it as unverified.
+- One Meta asset got a disablement notice on 1 Oct. We don't know which asset it was or its
+  current appeal or eligibility status. We are not saying the Numista ad account is disabled
+  now.
+
+We have NOT inspected: live account state, roles and access, billing, the payment method,
+campaign readiness, policy eligibility or restrictions, the Instagram link, whether a
+Pixel/dataset exists, or domain verification.
+
+
+4. What we have actually checked on the site and code
+-----------------------------------------------------
+Public site, one fetch at about 12:38 PM EST on 9 Nov:
+
+- The HTML, the bootstrap script and the security header (CSP) contain no Meta script or
+  Meta hosts. This only covers those files; we did not inspect the compiled app or what it
+  does at runtime. The current CSP doesn't allow Facebook hosts.
+- Referrer-Policy is strict-origin-when-cross-origin. The service worker is a stub that
+  unregisters itself.
+- The live version string (8.18.15) does not tell us which code commit is deployed.
+
+Read-only source inspection: the code inventory finished today and its evidence was
+integrated at about 2:39 PM EST on 9 Nov. Nothing from it is still running. The full pre-
+implementation check (live rules, release, runtime) is still incomplete. It covered the
+Numista-AI/Numista.AI repository on main (commit 9f04550a) plus the dev and p7 branches. No
+edits, tests, builds, commits or deploys were made. These findings come from reading the
+source, not from watching the live site:
+
+- There is no Meta Pixel code in the three source branches we inspected.
+- Sign-up options are email with a PIN or password, and 'Continue with Google'. On the web,
+  including phone browsers, Google sign-in opens a popup. The app doesn't tell new Google
+  users apart from returning ones.
+- The sign-in system reports when a sign-up succeeds, but sign-up writes no profile record
+  to the database. So the hook our plan assumed, a write made after the profile is created,
+  doesn't exist.
+- Every time a signed-in user reloads and reaches Home, the app tries a checklist database
+  write again. This triggers the one mandatory STOP rule in our plan. The source security
+  rules deny that write, so we don't know whether it succeeds in production.
+- The app and backend code we searched has no account-deletion path, and the app has no
+  local test-emulator setup. Neither blocks the next decision on its own: the plan already
+  has a fallback for deletion, and emulator support only matters for a later local test.
+- We found no code in the repository that reads utm_* or fbclid. Third-party or live readers
+  are unknown.
+
+Still unknown: the live database security rules, the deployed commit, runtime and SDK
+behavior, cookies, and how long request logs are kept.
+
+
+5. Our proposed measurement design (plan v6, NOT implemented)
+-------------------------------------------------------------
+- Main app: the Numista Flutter app never loads Meta code.
+- Consent: an optional checkbox, unchecked by default. Global Privacy Control (GPC) is
+  respected.
+- Pixel: after a real sign-up, the user goes to a separate completion page on its own
+  address (for example go.numista.ai, which isn't set up in the code we inspected). That
+  page tries once to send a CompleteRegistration event with no parameters. Firing and
+  delivery aren't guaranteed. No PageView, no advanced matching, no purchase events, no
+  Conversions API and no customer data. 'No parameters' doesn't mean anonymous or data-free.
+  The browser's requests to Meta can still expose request details (such as IP address,
+  browser info and page address) and cookies, depending on the Meta script, its settings and
+  consent. We haven't observed what the script actually collects; please check the current
+  defaults (Q6). Consent and cookie decisions are still open.
+- Internal marker: a yes/no in Numista's own database for each new account. It is 'yes' if
+  the browser's last ad-click landing (one carrying fbclid) in the past 7 days was tagged
+  utm_campaign=numista_tg26. It's a same-browser guess, not proof of ad attribution: it
+  misses other devices and blocked storage, and it counts shared links. The marker sends
+  Meta nothing. Using the marker alone gives an internal count; it is not Meta conversion
+  reporting.
+- Neither part guarantees that Meta receives, attributes or optimizes on anything.
+- Two independent reviews passed the plan text before today's code findings, scoring 97/100
+  each. Those scores don't cover code verification, Meta approval, deployment or the new
+  findings.
+
+NOTE: Status now: implementation is NO-GO, even switched off by default. The repeated
+checklist write on every Home load is the plan's one mandatory STOP. Only a reviewed
+amendment to the plan can clear it; simply accepting the risk can't. Two other mismatches
+also need an amendment: the profile-create hook, and how Google sign-in mode and its result
+are handled. Other missing pieces, such as feature flags, resume state and a count query,
+are things the implementation would build; they aren't extra gates. No amendment has been
+drafted or authorized. Today's inspection was read-only and authorized no code work.
+
+
+6. Blockers, owners and next steps
+----------------------------------
+* The plan doesn't match the actual sign-up and Home-load code (STOP triggered, plus the
+  hook and Google-mode mismatches)
+  Owner: Plan writer; Chief of Staff owns review and integration; Code Reviewer supplies
+  source evidence
+  Next: Reviewed amendment, if and when that work is authorized. No draft has started and no
+  authority has been given.
+* We can't read the live Firebase rules: selecting the project failed with 'Invalid project
+  selection', cause unknown
+  Owner: Connector operator, or Eric read-only
+  Next: Get the underlying error and the installed tool version. No broad permission grants
+  or account switches.
+* Meta account status unknown (restricted asset, Pixel/dataset, Instagram link, billing,
+  domain verification)
+  Owner: Eric, with Muse
+  Next: Read-only checks in Meta's own tools (see the questions).
+* Counsel's privacy decisions not on record: checkbox wording, GPC, Limited Data Use (LDU),
+  whether the marker and landing capture need consent, retention and deletion
+  Owner: Counsel (recorded decisions), plus Eric's acceptance of the remaining risks
+  Next: An actual counsel record is required; Eric can't replace it by deciding alone.
+  Nothing is inferred from Muse's advice.
+* Marker counting mode: tagged campaign only, or any ad/organic click
+  Owner: Eric
+  Next: Part of the existing pre-implementation decision.
+* Marker only vs. marker plus Pixel
+  Owner: Eric
+  Next: Can wait until the first production-deploy approval.
+* Local/preview tests, DNS/hosting, production deploy, ad spend
+  Owner: Eric
+  Next: Each needs its own separate approval.
+
+
+7. Questions for Muse
+---------------------
+Please keep what you know (with current official Meta documentation and full URLs) separate
+from what Eric has to check in his own account. Mark anything uncertain. Use official routes
+only: no workarounds for restrictions, no code edits and no requests for broader access.
+Please tell us plainly if our approach doesn't fit the campaign. You can't certify the
+safety of our Firebase setup or code, and we aren't asking you to.
+
+Q1. Accounts: Where should Eric look, read-only, to confirm the current status, roles and
+    restrictions of the portfolio, Page, ad account and Instagram account? Which asset got
+    the 1 Oct notice, and what is the official appeal route if one still applies?
+Q2. Pixel/dataset: Has one been created? If so, what is its ID, which portfolio owns it, and
+    which ad account is it linked to? Is it 2540753249725498? What is the domain-
+    verification status of numista.ai? IDs and statuses only, no secrets.
+Q3. Without a Pixel: Can an ordinary Traffic or landing-page-views campaign run for this US
+    7-day window with no Pixel, without claiming to measure sign-ups? What would reporting
+    show?
+Q4. Sign-up optimization: If the goal is to optimize for sign-ups, what are the exact
+    current requirements? For example: objective, conversion event, domain verification,
+    event configuration, data volume and the learning phase. Would one parameterless
+    CompleteRegistration, fired from a separate subdomain page, count as a valid
+    optimization event? Challenge our design if it doesn't support the objective.
+Q5. Simpler path: Is there a simpler campaign and measurement setup that would work for
+    Thanksgiving? Please give the tradeoffs. Eric chooses; please don't assume a switch.
+Q6. Data: What does the Pixel collect by default, even with no parameters? Which settings
+    turn off automatic events and automatic advanced matching? How do LDU and US state
+    privacy options work? Please flag what counsel should decide.
+Q7. Instagram: What steps remain to link the Instagram Business account to the Page and the
+    ad account?
+Q8. Timeline: Starting from 9 Nov, what is the smallest ordered list of owner actions to be
+    ready by 26 Nov, including ad-review lead time?
+
+Reply structure: (a) corrections to this file; (b) what you know, with official URLs; (c)
+what Eric must check, with exact menu paths; (d) answers to Q1 to Q8; (e) the smallest next
+steps and who owns each; (f) unknowns and risks.
+
+
+Sources and dates
+-----------------
+- Eric's messages of 1, 5 and 9 Nov 2026.
+- Public site fetch, 9 Nov about 12:38 PM EST.
+- Read-only source inspection report (main 9f04550a, plus dev and p7) and its integrated
+  evidence receipt, 9 Nov, integrated about 2:39 PM EST.
+- Firebase project-selection check, 9 Nov.
+- Plan v6, SHA-256 8df72e6b558742ae388db965417cddf8f346d1992c056f5aa3f0350228533df3. Its
+  reviews are plan-only.
+- An older 1 Nov launch packet is historical and is superseded where it conflicts with this
+  file.
+
+-- End of handoff. Chief of Staff, 9 Nov 2026, America/New_York (EST). --

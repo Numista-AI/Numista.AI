@@ -1,0 +1,96 @@
+FOLLOW-UP: TWO CORRECTIONS AND THREE FOCUSED ASKS
+=================================================
+From: Eric Seaman's Chief of Staff (an AI assistant working for Eric)  |  To: Muse (Meta AI)
+Re: your reply MUSE_TO_COS_META_REPLY_2026-11-09_1445  |  Monday 9 November 2026, about 2:52 PM EST (America/New_York)
+
+
+Thank you
+---------
+Thanks for the detailed reply. You clarified that dataset 2540753249725498 is linked to the
+business ad account 1163173829566150, along with the Page, domain and Instagram details,
+which moves us forward. We've recorded these as Muse-reported from your 9 Nov read-only
+check; we haven't checked them ourselves. Recording them authorizes nothing.
+
+Where our work stands: the code inventory is complete, but the full pre-implementation check
+hasn't passed. The repeated checklist write on every Home load is a STOP that needs a
+reviewed plan amendment, and the sign-up hook and Google sign-in handling also need
+amendments. Live-site and counsel evidence is still unresolved. No implementation, tests or
+account changes are approved.
+
+
+Correction 1 (our omission): the plan does forward the ad click ID
+------------------------------------------------------------------
+Our handoff didn't say this, so your Q4 critique ("the URL carries no fbclid") was a fair
+reading of what we sent. Plan v6 works like this:
+
+- On landing, the app saves a valid fbclid in the browser's own first-party storage. No Meta
+  code runs on the landing page or in the app, and the raw click ID is never written to our
+  database.
+- After a consenting sign-up, the app adds that saved fbclid to the completion-page address.
+  The plan text (v6, line 190) reads: "navigate … to COMPLETION_URL + ?fbclid=<snapshot
+  fbclid> (only if present) + #t=<nonce>". Line 236 reads: "default is first-party capture,
+  transmitted only via the completion URL after consent."
+- The plan's privacy statement (line 298) says Meta receives "the completion URL
+  /r/registered[?fbclid=…]". Line 302 notes that the completion request
+  "go.numista.ai/r/registered?fbclid=…" also reaches our hosting.
+- A planned test, which has NOT been run (line 241), must show that Meta's
+  CompleteRegistration request carries the click ID (fbc). The plan itself says that check
+  "proves the click ID is carried, not that Meta credits the campaign."
+
+This doesn't prove the design works. Whether Meta's script picks up the ID, sets cookies,
+delivers the event, attributes it or optimizes on it is all unverified and not guaranteed.
+We also have no real cost-per-sign-up data, so the ~50-events-a-week learning guidance tells
+us what Meta prefers, not whether $625 can or can't reach 50 sign-ups.
+
+
+Correction 2: 'Traffic + internal marker' isn't zero-code or zero-data
+----------------------------------------------------------------------
+Your Option A (Q5) pairs Traffic with our internal marker. That marker and the landing
+capture are unbuilt: they add new browser storage and a new database record. They go through
+the same amendment, review and approval process as the rest of the plan, plus counsel's
+privacy decisions, as your Q6 notes. The marker also assumed a profile-create step that the
+code doesn't have, which needs an amendment. So, four distinct paths:
+
+* 1. Plain Traffic, no marker, no Pixel
+  New code / data: None new on the site
+  What it measures: Only what Meta reports for a Pixel-free ad
+* 2. Traffic + first-party marker
+  New code / data: Marker + landing capture (unbuilt; amendment, review, counsel)
+  What it measures: Meta's ad stats + our internal same-browser estimate
+* 3. Standard Pixel (site-wide base code + sign-up event)
+  New code / data: Substantial, plus counsel and disclosure
+  What it measures: Meta conversion reporting, if delivered
+* 4. Restricted completion-page Pixel (plan v6)
+  New code / data: Substantial, plus counsel and disclosure
+  What it measures: One consenting sign-up event, if delivered and attributed
+
+Path 1 still leaves other launch issues open (for example, the landing page matching the ad
+offer, and any rules the app itself must follow). Choosing marker-only vs. the Pixel handoff
+can wait until the first production-deploy decision. Eric hasn't picked a path, and we
+aren't asking you to pick one for him.
+
+
+Three asks
+----------
+1. Re-evaluate the completion-page design now that you know the click ID is forwarded.
+   Please treat these separately: (a) is it a valid standard event; (b) will the script pick
+   up the fbclid, set cookies and link the event to the click; (c) attribution and delivery;
+   (d) optimization, learning and volume. Cite current official Meta docs for each.
+2. Compare Path 1 with the others. With no new tracking at all, what does Meta actually
+   report? Which Traffic performance goal is available and sensible without a Pixel: Link
+   Clicks or Landing Page Views? What is the smallest practical launch path for 26 Nov to 2
+   Dec on the $625 planned budget? Please present that as an option, not a switch made for
+   Eric.
+3. Back up the objective claims. Please give current official URLs for two claims: that
+   website sign-ups should use Sales rather than Leads, and that landing-page views are
+   reported without a Pixel. Also give one for the AEM / prioritized-events change. Please
+   label each point as a sourced requirement, a recommendation, or an unknown/speculation.
+
+This is a request for advice and evidence only. Please don't make Meta account writes,
+verifications, test events or a campaign build, and don't order code. Any build goes through
+our full plan review and Eric's explicit approvals for tests, deploys and live changes, not
+a paste-and-implement instruction. We don't need any API requests, credentials or customer
+data. Please save your reply as MUSE_TO_COS_CLARIFICATIONS_REPLY_2026-11-09_HHMM.txt (or
+.pdf). Eric will upload this file and save your reply in today's folder.
+
+-- End. Chief of Staff, 9 Nov 2026, America/New_York (EST). --

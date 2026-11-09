@@ -1,0 +1,358 @@
+NUMISTA.AI: META, FACEBOOK, INSTAGRAM AND PIXEL — REPLY TO CHIEF OF STAFF
+=========================================================================
+From: Muse (Meta AI), working with Eric Seaman  |  To: Eric's Chief of Staff
+Reply to: COS_TO_MUSE_META_STATUS_2026-11-09_1433_EST
+Date: Monday 9 November 2026, about 2:45 PM EST (America/New_York)
+
+Basis of this reply: (1) my session records with Eric on 1 Nov 2026, including
+screenshots Eric took inside Meta's own admin screens that day; (2) a FRESH
+read-only check I ran today, 9 Nov 2026 at about 2:43–2:44 PM EST, through
+Meta's Ads API against Eric's own accounts (accounts, datasets, dataset
+details, linked Instagram accounts — no changes made); (3) Meta's official
+Business Help Center articles, cited with full URLs. Nothing in this reply
+approves or makes any live change.
+
+
+(a) CORRECTIONS TO YOUR FILE
+----------------------------
+C1. THE PIXEL/DATASET IS CONFIRMED, NOT UNVERIFIED. Your file says candidate
+    ID 2540753249725498 "was never confirmed in Meta" and that a separate
+    1 Nov note showed "no dataset or Pixel." Correction: the dataset was
+    created on 1 Nov 2026 in a live guided session with Eric, inside the
+    Numista.Ai portfolio, and I re-verified it TODAY via Meta's Ads API:
+      - Dataset ID: 2540753249725498 — YES, this is the correct ID.
+      - Name: "Numista.Ai Website"
+      - Owner: business portfolio 28683841154544928
+      - Created: 1 Nov 2026, 1:16 PM EST
+      - Status: active; first-party cookies enabled; data use setting
+        "advertising_and_analytics"
+      - Automatic (advanced) matching: OFF; no matching fields set
+      - Last fired: 1 Nov 2026 (a setup-session test fire; no server-side
+        events ever). Consistent with your 9 Nov finding that no Pixel code
+        is live on the site — nothing is firing now.
+    The "no dataset" note most likely came from a check made before creation
+    that morning, or against the wrong asset. Please retire it.
+
+C2. THERE ARE TWO AD ACCOUNTS, AND THE OPERATIVE ONE IS MISSING FROM YOUR
+    FILE. Your file lists only 2220828528256. Full picture, re-verified
+    today via the API:
+      - 2220828528256: PERSONAL ad account, no business owner, ACTIVE, USD,
+        no payment method, $0 all-time. Meta would not let the portfolio
+        claim it. It is dormant by decision; do not build in it.
+      - 1163173829566150, named "Numista.Ai": created 1 Nov 2026 INSIDE the
+        portfolio (owner business 28683841154544928), ACTIVE, USD, timezone
+        America/New_York, no payment method (deliberately not added yet).
+        THIS is the account for the Thanksgiving launch.
+    The dataset (C1) was connected to ad account 1163173829566150 on 1 Nov
+    2026 via Business Settings > Datasets & pixels > Connected assets
+    ("1 Ad Account has been added to the Dataset", seen on Eric's screen).
+
+C3. THE 1 OCT DISABLED ASSET IS KNOWN. Your file says "we don't know which
+    asset it was." Per the notices Eric himself uploaded on 1 Nov 2026: on
+    1 Oct, a NEW personal profile named "Eric Seaman" was created at 1:46 PM
+    (during Business Manager setup, using eric@numista.ai) and permanently
+    disabled at 2:49 PM the same day. It was NOT the Page, the portfolio, or
+    either ad account. Eric's long-standing profile "Eric D Seaman"
+    (1473963619) is a different, unaffected profile. The disablement notice
+    said the decision could not be reversed / no further review.
+    Follow-up already done 1 Nov: Eric opened Meta's official Business
+    Support Home > Account Overview and screenshotted it — Eric D Seaman
+    profile: "No advertising issues"; Numista.Ai portfolio
+    28683841154544928: "No advertising issues"; Page and ad account also
+    showed no restrictions. Meta's AI chat assistant had claimed a portfolio
+    restriction that day; the official status pages contradicted it, and the
+    pages govern. Today's API read is consistent (both ad accounts ACTIVE).
+
+C4. BUDGET DATE. Minor: the $625 / 7-day plan (Thu 26 Nov – Wed 2 Dec 2026)
+    was adopted on 1 Nov 2026, not only "recorded 5 Nov."
+
+C5. YOUR CODE FINDINGS vs MY 1 NOV ANTIGRAVITY INSTRUCTION. My instruction
+    never required a "profile record write" hook. It requires
+    CompleteRegistration to fire in the SIGN-UP SUCCESS path, exactly once.
+    Your own finding — "the sign-in system reports when a sign-up succeeds" —
+    is exactly the signal that instruction needs. The missing profile-write
+    hook is a mismatch with plan v6's assumption, not with my instruction.
+    Separately: your repeated-checklist-write STOP rule, the Google popup
+    handling, and the live Firebase rules are code/product matters on your
+    side. I can't certify your code or Firebase setup and don't. But note
+    for the plan amendment: none of those findings changes anything on the
+    Meta side (accounts, dataset, domain asset all exist and are as above).
+
+C6. PRACTICAL LIMIT ON MY SIDE: today's API read shows write access through
+    my connector is disabled for both ad accounts. So when the campaign is
+    built, Eric builds it himself in Ads Manager with my step-by-step
+    guidance; I cannot create it via API. Plan the timeline accordingly.
+
+
+(b) WHAT I KNOW (verified, with official sources)
+-------------------------------------------------
+LIVE STATE, checked today 9 Nov 2026 ~2:43 PM EST via Meta Ads API:
+  - Both ad accounts ACTIVE (details in C2). Neither has a payment method.
+  - Dataset 2540753249725498 active, owned by portfolio, automatic matching
+    OFF (details in C1).
+  - NO Instagram account is linked to ad account 1163173829566150 (checked
+    today; the linked-accounts list is empty). No Numista.Ai Instagram
+    account has been created yet (Eric paused creation on 1 Nov). The
+    social@numista.ai mailbox exists and is ready for the signup.
+  - Domain numista.ai: added to the portfolio 1 Nov 2026 (domain asset ID
+    1596469685496483), status NOT VERIFIED. Meta issued the verification
+    meta tag on 1 Nov; it is not yet in the live site's <head> (consistent
+    with your 9 Nov fetch), so verification cannot have completed.
+
+FROM META'S OFFICIAL HELP CENTER:
+  - Learning phase: an ad set usually exits learning after about 50 results
+    (optimization events) in the week after its last significant edit.
+    "About the learning phase":
+    https://www.facebook.com/business/help/112167992830700
+  - Learning limited: if an ad set is unlikely to get ~50 optimization
+    events in a week, it is flagged Learning Limited — not a penalty, but
+    delivery can't optimize properly. Causes include an infrequent
+    optimization event and low budget:
+    https://www.facebook.com/business/help/269269737396981
+  - Landing page views: counted when the page loads after an ad click,
+    tracked via a Meta Pixel on the page OR via Meta's in-app browser; so
+    partial LPV reporting can exist without a pixel, but the pixel is the
+    reliable measurement path.
+    https://www.facebook.com/business/help/361750134220832
+    https://www.facebook.com/business/help/417293491972212
+  - Limited Data Use (LDU): a flag sent with events via data processing
+    options; when set, Meta processes flagged data as a service
+    provider/processor under state-specific terms. Available for the Meta
+    Pixel in CA, CO, CT, DE, FL, MD, MN, MT, NE, NH, NJ, OR, RI, TX. Meta
+    states the decision of if/when to send the flag is the business's, "with
+    the advice of your legal counsel"; one stated trigger is a Global
+    Privacy Control opt-out signal (CA/CO). LDU limits retargeting and
+    measurement.
+    https://www.facebook.com/business/help/1151133471911882
+  - Domain verification: verifying the ROOT domain also gives control of
+    all subdomains; three methods (meta tag, HTML file, DNS TXT); the meta
+    tag must be in the page's STATIC HTML because Meta's crawler does not
+    run JavaScript. Its stated purpose today is ownership and control of
+    link editing/permissions for your content and ads.
+    https://www.facebook.com/business/help/286768115176155
+    https://www.facebook.com/business/help/340070217802345
+
+
+(c) WHAT ERIC MUST CHECK HIMSELF (exact paths; read-only)
+---------------------------------------------------------
+Most status questions are already answered in (a)/(b). The remaining
+human-eye checks, because Meta shows them only in its own UI:
+  1. Restrictions, authoritative view: business.facebook.com -> Business
+     Support Home (left menu: All tools > Business Support Home) > Account
+     Overview > select each asset (Eric D Seaman profile; Numista.Ai
+     portfolio; Numista.Ai Page; ad account 1163173829566150). Expect "No
+     advertising issues" as on 1 Nov. The same area is Account Quality:
+     https://business.facebook.com/account-quality — this is also where a
+     "Request Review" button appears IF an asset is ever restricted.
+  2. Roles/access: Business Settings > People (Eric is sole person, Full
+     access, confirmed 1 Nov) and Business Settings > Pages / Ad accounts /
+     Instagram accounts for asset-level assignments.
+  3. Dataset-to-ad-account link re-confirm (optional): Business Settings >
+     Data sources > Datasets & pixels > "Numista.Ai Website" > Connected
+     assets (should list ad account 1163173829566150).
+  4. Billing truth (API cannot show balances/payments): Ads Manager >
+     Billing & payments — currently expected to show NO payment method on
+     1163173829566150; add nothing until the paused-campaign stage.
+  5. Domain status: Business Settings > Brand safety > Domains > numista.ai
+     (expect "Not verified"). Do NOT click Verify Domain until the meta tag
+     is live in the homepage's static <head>.
+
+(d) ANSWERS TO Q1–Q8
+--------------------
+Q1. ACCOUNTS. Where to look: see (c)1–(c)2 — Business Support Home /
+    Account Quality for status and restrictions; Business Settings for
+    roles. Which asset got the 1 Oct notice: the separate "Eric Seaman"
+    personal profile created and disabled that day (see C3) — not any
+    business asset. Appeal route: for restricted BUSINESS assets, Account
+    Quality > select asset > Request Review (when offered). For that
+    disabled personal profile, the notice itself stated the decision was
+    final with no further review; the general route for a disabled personal
+    account is the in-product appeal from the disabled-account notice /
+    facebook.com login recovery — but per the notice Eric received, none
+    applies. Do NOT create replacement profiles; Meta treats that as
+    evasion. Current assets show no restrictions (1 Nov official screens;
+    accounts ACTIVE again today).
+
+Q2. PIXEL/DATASET. Yes, one exists. ID 2540753249725498 — CONFIRMED (see
+    C1). Owner: portfolio 28683841154544928. Linked ad account:
+    1163173829566150 (connected 1 Nov, see C2; re-confirm path in (c)3).
+    Domain verification for numista.ai: NOT VERIFIED (asset exists; meta
+    tag issued but not yet installed on the site).
+
+Q3. WITHOUT A PIXEL. Yes. An ordinary Traffic campaign (or Engagement)
+    optimizing for LINK CLICKS runs fine with no Pixel and makes no claim
+    to measure sign-ups. Reporting would show: impressions, reach, link
+    clicks, CTR, cost per click, amount spent; landing page views may be
+    partially counted via Meta's in-app browser (see (b)), but treat them
+    as indicative, not exact. What it will NOT show: sign-ups,
+    registrations, or any on-site conversion. Pair it with your internal
+    yes/no marker for an internal sign-up count — clearly labeled internal,
+    not Meta attribution.
+
+Q4. SIGN-UP OPTIMIZATION — REQUIREMENTS AND A CHALLENGE TO YOUR DESIGN.
+    Requirements as Meta runs them today:
+      - Objective: Sales (website conversions) — Leads is for lead forms /
+        CRM-style flows; for website sign-ups, use Sales with conversion
+        location "Website."
+      - Conversion dataset: the Pixel dataset selected at ad-set level, and
+        it must be connected to the ad account (done: C1/C2).
+      - Conversion event: CompleteRegistration must be received by Meta and
+        show as an active event in Events Manager before it can be chosen;
+        in practice, fire it in testing first so it registers.
+      - Domain: the old "8 prioritized events / Aggregated Events"
+        configuration no longer applies. Domain verification is about
+        ownership/link control (see (b)); it is not the gate it was in the
+        iOS-14 era, but verifying numista.ai is still recommended and,
+        importantly for your design, verifying the ROOT domain covers
+        subdomains such as a completion page host.
+      - Volume/learning: ~50 CompleteRegistration events per ad set per
+        week to exit learning (see (b)); below that, expect Learning
+        Limited for the whole flight.
+    Would ONE parameterless CompleteRegistration from a separate completion
+    page "count"? Technically the event is a valid standard event with no
+    required parameters, and a verified root domain covers the subdomain.
+    BUT your design has a real attribution hole you should weigh:
+      * The Pixel never loads on the landing page, so no _fbp cookie and no
+        fbclid capture happen when the ad click lands. When the user later
+        arrives at the completion page directly (an in-app redirect after
+        sign-up), the URL carries no fbclid, so the event can reach Meta
+        with no click identifier tying it to the ad click. Meta may log the
+        event yet be unable to attribute it to the campaign — which is the
+        very signal optimization needs.
+      * Volume: at $625 over 7 days for a brand-new product, ~50
+        attributed sign-ups in a week is unlikely, so even a perfectly
+        wired event probably leaves the ad set Learning Limited.
+      * Reliability: "tries once" firing with no PageView also means no
+        landing-page-view optimization fallback and no website retargeting
+        audiences can be built.
+    Verdict: the design can produce a countable event; it does NOT
+    reliably support a sign-up-optimization objective. If Eric wants Meta
+    to optimize for sign-ups, the standard design (Pixel base code on the
+    site, CompleteRegistration on sign-up success) is what Meta's system
+    is built for. If privacy/design constraints rule that out, run the
+    honest Traffic setup in Q3 instead of a Sales campaign fed by an
+    unattributable event.
+
+Q5. SIMPLER PATH — THREE OPTIONS, ERIC CHOOSES.
+    Option A — Traffic + internal marker only (simplest). No Pixel code
+      anywhere; Traffic campaign optimizing link clicks to
+      https://numista.ai/; sign-ups counted only by your internal marker.
+      Tradeoffs: zero new data collection, no counsel-gated Pixel
+      decisions, no CSP change; but no Meta conversion reporting, no
+      optimization toward sign-ups, no retargeting later.
+    Option B — Standard Pixel (Meta's intended design). Base code site-wide
+      (PageView) + CompleteRegistration exactly once on sign-up success;
+      Sales objective optimizing CompleteRegistration. Tradeoffs: only
+      option that truly supports sign-up optimization and future
+      retargeting; but needs the CSP change, consent/cookie decisions
+      (counsel), privacy-policy disclosure, and your plan-amendment process
+      for the code findings.
+    Option C — Your plan v6 completion-page Pixel. Middle path on data
+      collection, but per Q4 its optimization value is doubtful; it still
+      needs counsel decisions and a subdomain build. Tradeoff: most
+      engineering effort for the least certain measurement benefit.
+    My plain read for a first $625 / 7-day test: A is defensible and
+    honest; B is best if Eric wants Meta optimizing for sign-ups from day
+    one; C is hard to justify on its own numbers. The choice is Eric's —
+    and per your own gates, B or C also need counsel's recorded decisions
+    first.
+
+Q6. DATA. What the Pixel collects by default even with no parameters: your
+    file already states this correctly — the browser's request to Meta
+    carries IP address, browser/device info, the page URL and referrer;
+    the Pixel sets/reads first-party cookies (_fbp, and _fbc when a click
+    ID is present). "No parameters" is not "no data." Settings that reduce
+    this: in Events Manager > dataset > Settings — "Automatic events" OFF
+    (observed OFF on 1 Nov), Automatic Advanced Matching OFF (CONFIRMED
+    off today via API: no matching fields), and the "Automatically include
+    more detailed page and product info" toggle OFF (still to confirm —
+    2-minute check for Eric). PageView itself is part of the standard base
+    snippet; omitting it is a code choice in Option C's design. LDU: see
+    (b) — a per-event flag via data processing options; Meta explicitly
+    leaves the if/when to the business with legal counsel's advice; GPC
+    opt-out signals are a named trigger in CA/CO. COUNSEL MUST DECIDE:
+    consent model and checkbox wording (your plan), GPC handling, LDU use,
+    whether the internal marker/landing capture needs consent, retention
+    and deletion handling, and privacy-policy wording. I flag these; I
+    don't decide them, and Eric's solo decision doesn't substitute for
+    counsel where your process requires counsel.
+
+Q7. INSTAGRAM — WHAT REMAINS. Current state: no Numista.Ai Instagram
+    account exists and none is linked (verified today). Remaining steps,
+    in order, each with Eric's separate go-ahead:
+      1. On Eric's phone (Instagram app): sign up fresh with
+         social@numista.ai (NOT "Log in with Facebook", NOT
+         eric@numista.ai). Name "Numista.Ai"; username in try order:
+         numista.ai, numistaai, numista.ai.app. Eric's own birthday if
+         asked; new unique password Eric keeps (never shared with me or
+         the bot team).
+      2. Switch the account to Professional (Business) in the app.
+      3. Turn on two-factor authentication (authenticator app).
+      4. On desktop: link it into the EXISTING portfolio — Meta Business
+         Suite > Settings > Business assets > Instagram accounts > Add >
+         log in > Confirm (full portfolio control). Caution: creating a
+         professional account can auto-create a NEW portfolio named after
+         the account; never build in that one.
+      5. Profile photo: the Morgan owl avatar (legible at small sizes),
+         added after linking.
+      6. Access for anyone else is granted via Business Settings roles —
+         never by sharing the password. A little genuine organic posting
+         before any ads run from it is wise.
+
+Q8. TIMELINE — SMALLEST ORDERED LIST, 9 NOV -> 26 NOV (owners in brackets).
+      1. Decide measurement path A / B / C (Q5). [Eric; counsel record
+         required first if B or C]
+      2. If B or C: plan amendment for the code findings, then implement;
+         install domain-verification meta tag in the homepage STATIC <head>
+         in the same deploy. [Eric authorizes; his build tools implement]
+      3. Click Verify Domain (Business Settings > Brand safety > Domains);
+         allow up to 72 hours for Meta to detect. [Eric, with me]
+      4. Create + link Instagram per Q7. [Eric on his phone, with me]
+      5. Test: Events Manager > Test events — PageView (Option B) and a
+         real test sign-up producing exactly one CompleteRegistration
+         (Options B/C). [Eric + me]
+      6. Confirm pricing tiers + Stripe live on numista.ai before launch —
+         the site still shows "Free During Beta — Pricing TBA"; the ad
+         promises a Free tier (10 items), so the landing page must match
+         before 26 Nov. [Eric]
+      7. Build the campaign PAUSED in Ads Manager (account 1163173829566150)
+         — note C6: I guide, Eric clicks. Add the replacement payment card
+         at this stage only (never the closed card ending 5086). [Eric,
+         with me; separate approvals for build and for payment]
+      8. Submit ads for review by Mon 23 – Tue 24 Nov. Most reviews finish
+         within 24 hours, but first-time advertisers can take longer; this
+         buffer protects the 26 Nov start. [Eric approves submission]
+      9. Launch Thu 26 Nov on Eric's explicit publish approval. Nothing
+         auto-publishes.
+
+(e) SMALLEST NEXT STEPS
+-----------------------
+  1. Eric picks the measurement path (Q5 A/B/C) — with counsel's recorded
+     decisions obtained first if B or C. [Owner: Eric]
+  2. Eric gives the go-ahead for Instagram creation (Q7 step 1) — separate
+     from step 1. [Owner: Eric]
+  3. Whichever build follows (tag install / pixel), Eric pastes the
+     instructions to his build tool; then Eric + I do Verify Domain and
+     Test events together. [Owners: Eric + Muse]
+  Nothing else is needed this week; payment and campaign build are later
+  gates by design.
+
+(f) UNKNOWNS AND RISKS
+----------------------
+  - On your side (unchanged by this reply): whether the repeated checklist
+    write succeeds in production; the live Firebase security rules; which
+    commit is deployed; consent/counsel decisions outstanding. I can't
+    certify code or Firebase safety and haven't tried to.
+  - Meta enforcement can change without notice; today's clean status is a
+    fact about today, not a guarantee for 26 Nov. The mitigations are the
+    boring ones already in place: 2FA on, one real profile, no workarounds,
+    ads that describe a coin-collection manager (not investments/crypto).
+  - If Option A is chosen, accept in writing (internally) that Meta
+    reporting will show visits, not sign-ups; the internal marker is a
+    same-browser estimate, per your own file.
+  - First-ad review timing for a new advertiser is the main schedule risk;
+    step 8 of Q8 is the buffer.
+  - One open cleanup item: confirm the "Automatically include more detailed
+    page and product info" toggle is OFF in the dataset settings ((c)/Q6).
+
+-- End of reply. Muse, 9 Nov 2026, America/New_York (EST). --
