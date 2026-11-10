@@ -1,3 +1,39 @@
+# ACTIVE - RSI-CONTROLS PROCESS CONTROLS PLAN v1.4 SCORED 100 PLAN PASS (CoS G1) / SAG PACKET READY (2026-11-09 19:15 ET, AG CoS v5 cfe23a7a)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **RSI-CONTROLS Process Controls Plan v1.4** | **100/100 PLAN PASS (CoS G1)** (`docs/PLAN_RSI-CONTROLS_PROCESS-CONTROLS_v1.4.md`) | **SAG** manual independent review ($\ge 95$). Target: Plan v1.4 (SHA-256 `f07505baa3e3a93c06d2950fba21a3a44d766168b47b7eb219a2c619f1a2172f`, 505 lines). CoS G1 Score: `COS_SCORE_RSI-CONTROLS_PROCESS-CONTROLS_v1.4_100_PLAN-PASS_20261109.md` (100/100 PLAN PASS; all 6 must-fix groups closed: MF1, MF2, MF3, MF4, MF5, MF6). Authored by fresh replacement writer `GB-RSI-Replacement-20261109-A` (Try 1/4; Documented Track Attempt 7/10) following AG CoS v5 retirement at Try 4/4 (94 REVISE). CoS Adjudication: `COS_ADVISORY_ADJUDICATION_RSI-CONTROLS_v1.4_20261109.md`. Manual review packet: `For SAG/9 NOV 2026/SAG_FULL-PLAN_REVIEW_PACKET_RSI-CONTROLS_v1.4.md` and prompt `For SAG/9 NOV 2026/SAG_PASTE_PROMPT_RSI-CONTROLS_v1.4.txt`. File pointer only; SAG and Eric were not contacted. Strict PLAN ONLY, main locked at `9f04550a`, Stripe OFF. |
+| **NET-827 Stripe Checkout Preview v1.2** | **96/100 PASS** (`docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.2.md`) | **SAG** independent review (>=95). Score: `COS_SCORE_NET-827_STRIPE-CHECKOUT_v1.2_20261108.md`. Radio Net: `RADIO_NET-873`. Baton: `BATON_NET-827_SAG_REVIEW_STRIPE-CHECKOUT-PREVIEW_v1.2_20261108-1916.md`. Three v1.1 must-fixes closed (Christmas `expires_at` year 2026 / `1798243199`, dropped `first_time_transaction`, annual-only session gating and webhook defense). Nonblocking polish only. Strict PLAN ONLY, p7-gate preview target, Stripe OFF, main locked at `9f04550a`. File pointer only; SAG and Eric were not contacted. |
+| **NET-816 Catalog Chunk 1 v2.2** | **COMPLETE & PUSHED** (p7-v8.9) | Delivered by AG CoS v5 (`cfe23a7a`). Commits: `76ffca1a` + `c547b7a0`. Tests: 10/10 PASS. Baton: `DONE_BATON_NET-816_EXECUTE_CATALOG-CHUNK1_v2.2_20261108-1118.md`. Radio Net: `RADIO_NET-867`. Desk intake logged. Awaiting Grok Bot CoS intake / Field Tester test sequence. |
+| **810 / 813 / 814 / 817** | SAG FAIL (64/54/64/86/76) | Unchanged - Parked for writer revisions; CoS verified-fix lists on disk. NOT approved. |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no deploy/Firestore/fold/AJ without separate Eric YES.
+
+--- Prior text retained ---
+# ACTIVE - RSI-CONTROLS PROCESS CONTROLS PLAN v1.3 DELIVERED (2026-11-09 18:45 ET, AG CoS v5 cfe23a7a)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **RSI-CONTROLS Process Controls Plan v1.3** | **PLAN v1.3 DELIVERED** (`docs/PLAN_RSI-CONTROLS_PROCESS-CONTROLS_v1.3.md`) | **GROKCOS** review ($\ge 95$). Baton: `BATON_RSI-CONTROLS_GROKCOS_REVIEW_PROCESS-CONTROLS_v1.3_20261109-1845.md`. Radio Net: `RADIO_NET-878`. Includes dedicated Closure Map (`docs/CLOSURE_MAP_RSI-CONTROLS_v1.3.md`) resolving strictly the 4 material must-fix groups (MF1, MF3, MF4, MF5) from CoS G1 92 REVISE record and bundled precision items: MF-1 (terminal non-passing disposition defined, trigger reconciled so attempt 4 terminal non-pass consistently triggers mandatory writer retirement, pending reviews explicitly non-terminal); MF-3 (historical primary-message ledger rule codified, per-delivered-packet velocity metric, rework rate numerator defined across all terminal non-passes); MF-4 (honest receipts with explicit assertion/catalog/pinned labels, all full 40-character commit SHAs, cited recoverable Eric transcript around position 6 and Founder Eric primary rule at Desk position 1257, 3:11 widget noted as CoS relay, nuanced timestamp provenance); MF-5 (aligned with track scope, permitted skips, and authorized Stripe test-mode operations; skips distinguished from empirical proof); Bundled Precision (MF2 post-review alignment with terminal SAY-AGAIN/withdrawal; MF6 read-only declarative watch configuration constraints). AG CoS v5 Attempt 4 of 4 (4/4) — FINAL WRITER ATTEMPT; Documented Track Attempt 6 of 10 (6/10) with historical residual caveat per CoS Adjudication. Strict PLAN ONLY, main locked at `9f04550a`, Stripe OFF. |
+| **NET-827 Stripe Checkout Preview v1.2** | **96/100 PASS** (`docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.2.md`) | **SAG** independent review (>=95). Score: `COS_SCORE_NET-827_STRIPE-CHECKOUT_v1.2_20261108.md`. Radio Net: `RADIO_NET-873`. Baton: `BATON_NET-827_SAG_REVIEW_STRIPE-CHECKOUT-PREVIEW_v1.2_20261108-1916.md`. Three v1.1 must-fixes closed (Christmas `expires_at` year 2026 / `1798243199`, dropped `first_time_transaction`, annual-only session gating and webhook defense). Nonblocking polish only. Strict PLAN ONLY, p7-gate preview target, Stripe OFF, main locked at `9f04550a`. File pointer only; SAG and Eric were not contacted. |
+| **NET-816 Catalog Chunk 1 v2.2** | **COMPLETE & PUSHED** (p7-v8.9) | Delivered by AG CoS v5 (`cfe23a7a`). Commits: `76ffca1a` + `c547b7a0`. Tests: 10/10 PASS. Baton: `DONE_BATON_NET-816_EXECUTE_CATALOG-CHUNK1_v2.2_20261108-1118.md`. Radio Net: `RADIO_NET-867`. Desk intake logged. Awaiting Grok Bot CoS intake / Field Tester test sequence. |
+| **810 / 813 / 814 / 817** | SAG FAIL (64/54/64/86/76) | Unchanged - Parked for writer revisions; CoS verified-fix lists on disk. NOT approved. |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no deploy/Firestore/fold/AJ without separate Eric YES.
+
+--- Prior text retained ---
+# ACTIVE - RSI-CONTROLS PLAN v1.3 AUTHORING STARTED (2026-11-09 18:35 ET, AG CoS v5 cfe23a7a)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **RSI-CONTROLS Process Controls Plan v1.3** | **AUTHORING (ETA 19:15 ET)** (`docs/PLAN_RSI-CONTROLS_PROCESS-CONTROLS_v1.3.md`) | **AGCOS v5 (`cfe23a7a`)** authoring v1.3 per baton `BATON_RSI-CONTROLS_AGCOS_REVISE_PROCESS-CONTROLS_v1.2-to-v1.3_20261109-1830.md`. ACK: `ACK_BATON_RSI-CONTROLS_AGCOS_REVISE_v1.2-to-v1.3_20261109-1835.md`. AG CoS v5 Attempt 4 of 4 (final try for this writer); Documented Track Attempt 6 of 10. Resolving strictly the 4 material must-fix groups from CoS G1 92 REVISE record (MF1, MF3, MF4, MF5) + bundled precision. Strict PLAN ONLY, main locked at `9f04550a`, Stripe OFF. |
+| **NET-827 Stripe Checkout Preview v1.2** | **96/100 PASS** (`docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.2.md`) | **SAG** independent review (>=95). Score: `COS_SCORE_NET-827_STRIPE-CHECKOUT_v1.2_20261108.md`. Radio Net: `RADIO_NET-873`. Baton: `BATON_NET-827_SAG_REVIEW_STRIPE-CHECKOUT-PREVIEW_v1.2_20261108-1916.md`. Three v1.1 must-fixes closed (Christmas `expires_at` year 2026 / `1798243199`, dropped `first_time_transaction`, annual-only session gating and webhook defense). Nonblocking polish only. Strict PLAN ONLY, p7-gate preview target, Stripe OFF, main locked at `9f04550a`. File pointer only; SAG and Eric were not contacted. |
+| **NET-816 Catalog Chunk 1 v2.2** | **COMPLETE & PUSHED** (p7-v8.9) | Delivered by AG CoS v5 (`cfe23a7a`). Commits: `76ffca1a` + `c547b7a0`. Tests: 10/10 PASS. Baton: `DONE_BATON_NET-816_EXECUTE_CATALOG-CHUNK1_v2.2_20261108-1118.md`. Radio Net: `RADIO_NET-867`. Desk intake logged. Awaiting Grok Bot CoS intake / Field Tester test sequence. |
+| **810 / 813 / 814 / 817** | SAG FAIL (64/54/64/86/76) | Unchanged - Parked for writer revisions; CoS verified-fix lists on disk. NOT approved. |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no deploy/Firestore/fold/AJ without separate Eric YES.
+
+--- Prior text retained ---
 # ACTIVE - RSI-CONTROLS PLAN v1.2 SCORED 92 REVISE / DESK HOLD (2026-11-09 17:16 ET, GB CoS)
 
 | Track | Status | Next Turn / Owner |
