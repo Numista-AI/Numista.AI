@@ -9,6 +9,7 @@
 class MeltValueService {
   // ── Silver (Ag) troy oz per coin by denomination ───────────────────────────
   static const _ag90 = {
+    'half dime':   0.03617,   // Nominal 1.25g (1853+ 1.24g) × 90% ÷ 31.1035
     'dime':        0.07234,   // 2.5g × 90% = 2.25g Ag ÷ 31.1035
     'quarter':     0.18084,   // 6.25g × 90% = 5.625g Ag ÷ 31.1035
     'half':        0.36169,   // 12.5g × 90% = 11.25g Ag ÷ 31.1035
@@ -186,19 +187,32 @@ class MeltValueService {
       if (combined.contains('silver eagle') || combined.contains('99.9') || combined.contains('.999') || combined.contains('fine silver')) {
         return ag * _silverEagleOz * count;
       }
-      if (combined.contains('90%') || combined.contains('morgan') || combined.contains('peace') || combined.contains('barber') || combined.contains('walking liberty') || combined.contains('standing liberty') || combined.contains('mercury')) {
-        final oz = _matchDenom(_ag90, denom) ?? 0.77344;
-        return ag * oz * count;
+      if (combined.contains('90%') || combined.contains('half dime') || combined.contains('half-dime') || combined.contains('morgan') || combined.contains('peace') || combined.contains('barber') || combined.contains('walking liberty') || combined.contains('standing liberty') || combined.contains('mercury')) {
+        final fv = parseFaceValue(denom);
+        final isDollar = fv == 1.00 || combined.contains('dollar') || combined.contains('morgan') || combined.contains('peace');
+        final oz = _matchDenom(_ag90, denom) ?? (isDollar ? 0.77344 : null);
+        if (oz != null) return ag * oz * count;
+        return null;
       }
       if (combined.contains('40%')) {
         final oz = _matchDenom(_ag40, denom) ?? 0.14792;
         return ag * oz * count;
       }
-      if (combined.contains('35%') || combined.contains('war nickel')) {
+      if (combined.contains('35%') || ((combined.contains('war nickel') || combined.contains('wartime')) && parseFaceValue(denom) == 0.05)) {
         final oz = _matchDenom(_ag35, denom) ?? 0.05626;
         return ag * oz * count;
       }
-      if (ag > 0) return ag * 0.77344 * count;
+      if (ag > 0) {
+        final fv = parseFaceValue(denom);
+        // N4: Route 5-cent wartime/war nickels without "35%" text to 35% war nickel weight
+        if (fv == 0.05 && (combined.contains('nickel') || combined.contains('wartime') || (combined.contains('war') && !combined.contains('award') && !combined.contains('howard') && !combined.contains('edward')) || combined.contains('manganese'))) {
+          return ag * 0.05626 * count;
+        }
+        final isDollar = fv == 1.00 || combined.contains('dollar') || combined.contains('morgan') || combined.contains('peace');
+        final oz = _matchDenom(_ag90, denom) ?? (isDollar ? 0.77344 : null);
+        if (oz != null) return ag * oz * count;
+        return null;
+      }
     }
 
     return null;
@@ -233,7 +247,10 @@ class MeltValueService {
     if (fv == 0.50 && table.containsKey('half')) return table['half'];
     if (fv == 0.25 && table.containsKey('quarter')) return table['quarter'];
     if (fv == 0.10 && table.containsKey('dime')) return table['dime'];
-    if (fv == 0.05 && table.containsKey('nickel')) return table['nickel'];
+    if (fv == 0.05) {
+      if (table.containsKey('half dime')) return table['half dime'];
+      if (table.containsKey('nickel')) return table['nickel'];
+    }
     return null;
   }
 }

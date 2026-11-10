@@ -244,6 +244,104 @@ void main() {
       );
       expect(silverQuarterMelt, closeTo(5.4252, 1e-3));
     });
+
+    test('NET-816 Fail-Fix A2 & D1-D3/N2/N4 regression: half dime, war nickel, sub-dollar silver, and Morgan dollars', () {
+      const spot = <String, double>{'Gold': 3000.0, 'Silver': 30.0};
+
+      // (a) Removed fallback: unlisted 90% sub-dollar returns null, NOT 0.77344
+      final unlistedTwentyCent = MeltValueService.compute(
+        metalContent: '90% Silver',
+        denomination: 'Twenty Cent',
+        spotPrices: spot,
+      );
+      expect(unlistedTwentyCent, isNull,
+          reason: 'Unlisted sub-dollar silver must return null, never 0.77344');
+
+      // (b) Dollar fallback preserved for Morgan/Peace without "dollar" in denomination
+      final morganCC = MeltValueService.compute(
+        metalContent: 'Silver',
+        denomination: 'CC',
+        programSeries: r'1$-Morgan dollar',
+        spotPrices: spot,
+      );
+      expect(morganCC, closeTo(0.77344 * 30.0, 1e-4),
+          reason: 'Morgan with denom CC must receive 0.77344 dollar melt');
+
+      final morganNoDenom = MeltValueService.compute(
+        metalContent: 'Silver',
+        denomination: '',
+        programSeries: 'Morgan',
+        spotPrices: spot,
+      );
+      expect(morganNoDenom, closeTo(0.77344 * 30.0, 1e-4),
+          reason: 'Morgan with empty denom must receive 0.77344 dollar melt');
+
+      // (c) Standard denominations preserved unchanged:
+      // 90% Dime (0.07234 oz -> $2.1702 at $30/oz)
+      expect(
+        MeltValueService.compute(metalContent: '90% Silver', denomination: 'Dime', spotPrices: spot),
+        closeTo(0.07234 * 30.0, 1e-4),
+      );
+      // 90% Quarter (0.18084 oz -> $5.4252 at $30/oz)
+      expect(
+        MeltValueService.compute(metalContent: '90% Silver', denomination: 'Quarter', spotPrices: spot),
+        closeTo(0.18084 * 30.0, 1e-4),
+      );
+      // 90% Half Dollar (0.36169 oz -> $10.8507 at $30/oz)
+      expect(
+        MeltValueService.compute(metalContent: '90% Silver', denomination: 'Half dollar', spotPrices: spot),
+        closeTo(0.36169 * 30.0, 1e-4),
+      );
+      // 90% Dollar (0.77344 oz -> $23.2032 at $30/oz)
+      expect(
+        MeltValueService.compute(metalContent: '90% Silver', denomination: 'Dollar', spotPrices: spot),
+        closeTo(0.77344 * 30.0, 1e-4),
+      );
+      // 40% Half Dollar (0.14792 oz -> $4.4376 at $30/oz)
+      expect(
+        MeltValueService.compute(metalContent: '40% Silver', denomination: 'Half dollar', spotPrices: spot),
+        closeTo(0.14792 * 30.0, 1e-4),
+      );
+      // 35% War Nickel (0.05626 oz -> $1.6878 at $30/oz)
+      expect(
+        MeltValueService.compute(metalContent: '35% Silver', denomination: 'Nickel', spotPrices: spot),
+        closeTo(0.05626 * 30.0, 1e-4),
+      );
+
+      // (d) N4: Wartime nickel with "Silver Alloy" and "Wartime Nickel" series (lacking "35%")
+      expect(
+        MeltValueService.compute(
+          metalContent: 'Silver Alloy',
+          denomination: '5 cents',
+          programSeries: 'Jefferson Wartime Nickel',
+          spotPrices: spot,
+        ),
+        closeTo(0.05626 * 30.0, 1e-4),
+        reason: 'Jefferson Wartime Nickel in Silver Alloy must receive 0.05626 oz melt',
+      );
+
+      // (e) Half dime variants compute to 0.03617 oz * spot (~$1.0851 at $30/oz)
+      expect(
+        MeltValueService.compute(metalContent: 'Silver (90%)', denomination: 'Half Dime', spotPrices: spot),
+        closeTo(0.03617 * 30.0, 1e-4),
+        reason: 'Silver (90%) Half Dime must equal 0.03617 oz',
+      );
+      expect(
+        MeltValueService.compute(metalContent: 'Silver', denomination: 'Half dime', spotPrices: spot),
+        closeTo(0.03617 * 30.0, 1e-4),
+        reason: 'Generic "Silver" Half dime must equal 0.03617 oz',
+      );
+      expect(
+        MeltValueService.compute(metalContent: '90% Silver', denomination: 'Half-dime', spotPrices: spot),
+        closeTo(0.03617 * 30.0, 1e-4),
+        reason: '"90% Silver" Half-dime must equal 0.03617 oz',
+      );
+      expect(
+        MeltValueService.format(metalContent: '90% Silver', denomination: 'Half Dime', spotPrices: spot),
+        equals(r'$1.09'),
+        reason: r'Formatted melt value string at $30/oz silver spot must round to $1.09',
+      );
+    });
   });
 
   group('NET-816 Chunk 1 — _CatalogCard Widget Tests (#2 & NET-837 #3/#6)', () {

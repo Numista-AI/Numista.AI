@@ -71,6 +71,14 @@
         "destination": "/terms.html"
       },
       {
+        "source": "/catalog",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/catalog/**",
+        "destination": "/index.html"
+      },
+      {
         "source": "/about",
         "destination": "/index.html"
       },
