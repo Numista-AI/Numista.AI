@@ -1,3 +1,15 @@
+# ACTIVE - RSI-CONTROLS PLAN v1.5 SCORED 98 REVISE / GB WRITER PREPARING v1.6 (2026-11-09 19:45 ET, AG CoS v5 cfe23a7a)
+
+| Track | Status | Next Turn / Owner |
+|---|---|---|
+| **RSI-CONTROLS Process Controls Plan v1.5 / v1.6** | **98/100 REVISE (CoS G1)** (`docs/PLAN_RSI-CONTROLS_PROCESS-CONTROLS_v1.5.md`) | **GB-RSI-Replacement-20261109-A** authoring bounded v1.6 (repairing evaluated verdict vs. numeric score definition in MF1). v1.4 scored 97 REVISE by SAG (owner-paste archive: `SAG_REVIEW_RSI-CONTROLS_v1.4_97_REVISE_OWNER-PASTE.md`) and CoS corrected to 99 REVISE (`COS_CORRECTION_RSI-CONTROLS_v1.4_99_REVISE_AFTER-SAG_20261109.md`). v1.5 closed pilot velocity cohort ambiguity but received CoS 98 REVISE (`COS_SCORE_RSI-CONTROLS_PROCESS-CONTROLS_v1.5_98_REVISE_20261109.md`). Replacement writer prospective Try 3/4; Documented Track Attempt 9/10 on formal return. AG CoS v5 remains retired from this track. Strict PLAN ONLY, main locked at `9f04550a`, Stripe OFF. |
+| **NET-827 Stripe Checkout Preview v1.2** | **96/100 PASS** (`docs/PLAN_NET-827_STRIPE_CHECKOUT_PREVIEW_v1.2.md`) | **SAG** independent review (>=95). Score: `COS_SCORE_NET-827_STRIPE-CHECKOUT_v1.2_20261108.md`. Radio Net: `RADIO_NET-873`. Baton: `BATON_NET-827_SAG_REVIEW_STRIPE-CHECKOUT-PREVIEW_v1.2_20261108-1916.md`. Three v1.1 must-fixes closed (Christmas `expires_at` year 2026 / `1798243199`, dropped `first_time_transaction`, annual-only session gating and webhook defense). Nonblocking polish only. Strict PLAN ONLY, p7-gate preview target, Stripe OFF, main locked at `9f04550a`. File pointer only; SAG and Eric were not contacted. |
+| **NET-816 Catalog Chunk 1 v2.2** | **COMPLETE & PUSHED** (p7-v8.9) | Delivered by AG CoS v5 (`cfe23a7a`). Commits: `76ffca1a` + `c547b7a0`. Tests: 10/10 PASS. Baton: `DONE_BATON_NET-816_EXECUTE_CATALOG-CHUNK1_v2.2_20261108-1118.md`. Radio Net: `RADIO_NET-867`. Desk intake logged. Awaiting Grok Bot CoS intake / Field Tester test sequence. |
+| **810 / 813 / 814 / 817** | SAG FAIL (64/54/64/86/76) | Unchanged - Parked for writer revisions; CoS verified-fix lists on disk. NOT approved. |
+
+Locks: main 9f04550a strictly locked; Stripe strictly OFF; strict PLAN ONLY (preview gate only); alerts only ($20/mo alert), never budget caps; no deploy/Firestore/fold/AJ without separate Eric YES.
+
+--- Prior text retained ---
 # ACTIVE - RSI-CONTROLS PROCESS CONTROLS PLAN v1.4 SCORED 100 PLAN PASS (CoS G1) / SAG PACKET READY (2026-11-09 19:15 ET, AG CoS v5 cfe23a7a)
 
 | Track | Status | Next Turn / Owner |
