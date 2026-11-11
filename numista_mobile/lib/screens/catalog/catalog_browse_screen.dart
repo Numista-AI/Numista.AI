@@ -117,7 +117,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
 
     final query = _searchQuery.trim().toLowerCase();
 
-    List<Map<String, dynamic>> result = _allEntries.where((item) {
+    List<Map<String, dynamic>> filtered = _allEntries.where((item) {
       // Type filter
       final type = (item['type'] as String? ?? '').toLowerCase();
       if (_selectedType == 'coin' && type != 'coin') return false;
@@ -151,24 +151,42 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
         if (!hasPrimary && !hasType) return false;
       }
 
-      // Search query
-      if (query.isNotEmpty) {
+      return true;
+    }).toList();
+
+    // 2. Two-pass list-level search resolution
+    List<Map<String, dynamic>> result = filtered;
+    if (query.isNotEmpty) {
+      // Pass 1: Direct substring matches across metadata fields
+      final directMatches = filtered.where((item) {
         final name = (item['name'] as String? ?? '').toLowerCase();
         final series = (item['series'] as String? ?? '').toLowerCase();
         final denom = (item['denomination'] as String? ?? '').toLowerCase();
         final nac = (item['nac_code'] as String? ?? '').toLowerCase();
         final yearStr = item['year']?.toString() ?? '';
-
-        final matches = name.contains(query) ||
+        return name.contains(query) ||
             series.contains(query) ||
             denom.contains(query) ||
             nac.contains(query) ||
             yearStr.contains(query);
-        if (!matches) return false;
-      }
+      }).toList();
 
-      return true;
-    }).toList();
+      if (directMatches.isNotEmpty) {
+        result = directMatches;
+      } else {
+        // Pass 2: Multi-token fallback across combined metadata haystack
+        final tokens = query.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+        result = filtered.where((item) {
+          final name = (item['name'] as String? ?? '').toLowerCase();
+          final series = (item['series'] as String? ?? '').toLowerCase();
+          final denom = (item['denomination'] as String? ?? '').toLowerCase();
+          final nac = (item['nac_code'] as String? ?? '').toLowerCase();
+          final yearStr = item['year']?.toString() ?? '';
+          final haystack = '$name $series $denom $nac $yearStr';
+          return tokens.every((token) => haystack.contains(token));
+        }).toList();
+      }
+    }
 
     // Sort order
     if (_chronological) {

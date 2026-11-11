@@ -136,7 +136,7 @@ void main() {
         'D': 0.00,
         'Dime': 0.10,
         'Dollar': 1.00,
-        'Dollar (two-coin set)': 1.00,
+        'Dollar (two-coin set)': 2.00,
         'G\$2\u00bd': 2.50,
         'Gold dollar': 1.00,
         'Half cent': 0.005,
@@ -198,6 +198,14 @@ void main() {
       expect(seenPairs.length, 71);
       expect(medalCount, 56);
       expect(misParses, 0);
+    });
+
+    test('F3: Multi-coin set face value multiplier and set guards', () {
+      expect(MeltValueService.parseFaceValue('Dollar (two-coin set)'), closeTo(2.00, 1e-4));
+      expect(MeltValueService.parseFaceValue('Dollar (two-coin set)', qty: 2), closeTo(4.00, 1e-4));
+      expect(MeltValueService.parseFaceValue('Half Dollar (two-coin set)'), closeTo(1.00, 1e-4));
+      expect(MeltValueService.parseFaceValue('Three-coin set'), 0.0); // 0.0 unit * 3 = 0.0 -> No face value chip
+      expect(MeltValueService.parseFaceValue('Collector Set'), 0.0);  // Indeterminate set -> No face value chip
     });
 
     test('caller blast-radius regression: header_stats_bar.dart:108 qty-weighted usdFaceSum & MeltValueService.compute', () {
@@ -336,6 +344,26 @@ void main() {
         closeTo(0.03617 * 30.0, 1e-4),
         reason: '"90% Silver" Half-dime must equal 0.03617 oz',
       );
+      // Verify current spot $51.51/oz calculation -> $1.86
+      expect(
+        MeltValueService.compute(
+          metalContent: '90% Silver',
+          denomination: 'Half Dime',
+          spotPrices: {'Silver': 51.51},
+        ),
+        closeTo(0.03617 * 51.51, 1e-3),
+        reason: r'Half Dime at $51.51 spot must equal 0.03617 * 51.51 = $1.86',
+      );
+      // Preserve $30 reference spot test case -> $1.09
+      expect(
+        MeltValueService.compute(
+          metalContent: '90% Silver',
+          denomination: 'Half Dime',
+          spotPrices: {'Silver': 30.0},
+        ),
+        closeTo(0.03617 * 30.0, 1e-3),
+        reason: r'Half Dime at $30 spot must equal 0.03617 * 30.0 = $1.09',
+      );
       expect(
         MeltValueService.format(metalContent: '90% Silver', denomination: 'Half Dime', spotPrices: spot),
         equals(r'$1.09'),
@@ -414,6 +442,60 @@ void main() {
       expect(find.text('Face Value N/A'), findsNothing);
       expect(find.text('Face value \u00b7 No retail estimate'), findsNothing);
       expect(find.text('Value pending AI estimate'), findsNothing);
+    });
+
+    testWidgets('search "Morgan dollar 1881" resolves via Pass 2 yielding 5 items', (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 2400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpLoadedCatalog(
+        tester,
+        const MaterialApp(
+          home: CatalogBrowseScreen(initialQuery: 'Morgan dollar 1881'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final gridFinder = find.byType(GridView);
+      expect(gridFinder, findsOneWidget);
+      expect(find.text('5 items'), findsOneWidget);
+
+      expect(
+        find.descendant(of: gridFinder, matching: find.text('1881-CC Morgan Silver Dollars')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: gridFinder, matching: find.text('1881-O Morgan Silver Dollars')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: gridFinder, matching: find.text('1881-P Morgan Silver Dollars')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: gridFinder, matching: find.text('1881-S Morgan Dollar (Liberty Head, Eagle)')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: gridFinder, matching: find.text('1881-S Morgan Silver Dollars')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('search "1816" resolves with 0 items and renders empty placeholder', (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 2400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpLoadedCatalog(
+        tester,
+        const MaterialApp(
+          home: CatalogBrowseScreen(initialQuery: '1816'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('0 items'), findsOneWidget);
+      expect(find.text('No matching catalog items found.'), findsOneWidget);
     });
   });
 }

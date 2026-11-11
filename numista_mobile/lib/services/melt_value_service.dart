@@ -57,6 +57,41 @@ class MeltValueService {
 
     // Normalization pipeline: lowercase, collapse whitespace, strip parenthetical & ellipses
     String s = rawDenom.toLowerCase().trim();
+
+    // Multi-coin set detection BEFORE stripping parenthetical notes
+    int setMultiplier = 1;
+    final setMatch = RegExp(
+      r'\(?(\d+|two|three|four|five)[- ]coin set\)?',
+      caseSensitive: false,
+    ).firstMatch(s);
+
+    if (setMatch != null) {
+      final token = setMatch.group(1)!.toLowerCase();
+      switch (token) {
+        case '2':
+        case 'two':
+          setMultiplier = 2;
+          break;
+        case '3':
+        case 'three':
+          setMultiplier = 3;
+          break;
+        case '4':
+        case 'four':
+          setMultiplier = 4;
+          break;
+        case '5':
+        case 'five':
+          setMultiplier = 5;
+          break;
+        default:
+          setMultiplier = int.tryParse(token) ?? 1;
+      }
+    } else if (RegExp(r'\bset\b', caseSensitive: false).hasMatch(s) && !s.contains('offset')) {
+      // Indeterminate multi-coin / collector set without specific count -> No face value chip (0.0)
+      return 0.0;
+    }
+
     s = s.replaceAll(RegExp(r'\(.*?\)'), '').trim();
     s = s.replaceAll(RegExp(r'\.{2,}'), '').trim();
     s = s.replaceAll('\u00bd', ' 1/2');
@@ -127,7 +162,7 @@ class MeltValueService {
       }
     }
 
-    return value * count;
+    return value * count * setMultiplier;
   }
 
   // ── Public Melt Value Calculation API ──────────────────────────────────────

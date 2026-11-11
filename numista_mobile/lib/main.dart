@@ -20,6 +20,53 @@ import 'package:google_fonts/google_fonts.dart';
 import 'utils/numista_error_helper.dart';
 
 
+class CatalogRouteInfo {
+  final bool isCatalog;
+  final String? initialNacCode;
+  const CatalogRouteInfo({required this.isCatalog, this.initialNacCode});
+}
+
+CatalogRouteInfo resolveCatalogRoute(Uri uri) {
+  String routePath = uri.path;
+  String? nacFromQuery;
+
+  // Inspect hash fragment for Flutter Web
+  if (uri.fragment.isNotEmpty) {
+    String frag = uri.fragment;
+    if (frag.startsWith('/')) {
+      final qIdx = frag.indexOf('?');
+      if (qIdx != -1) {
+        final queryStr = frag.substring(qIdx + 1);
+        final fragUri = Uri(query: queryStr);
+        nacFromQuery = fragUri.queryParameters['item'];
+        frag = frag.substring(0, qIdx);
+      }
+      if (frag == '/catalog' || frag.startsWith('/catalog/')) {
+        routePath = frag;
+      }
+    }
+  }
+
+  final normalized = (routePath.endsWith('/') && routePath.length > 1)
+      ? routePath.substring(0, routePath.length - 1)
+      : routePath;
+
+  if (normalized == '/catalog' || routePath.startsWith('/catalog/')) {
+    String? initialNac;
+    if (routePath.startsWith('/catalog/')) {
+      final sub = routePath.substring('/catalog/'.length).trim();
+      if (sub.isNotEmpty) {
+        initialNac = Uri.decodeComponent(sub);
+      }
+    }
+    initialNac ??= nacFromQuery;
+    initialNac ??= uri.queryParameters['item'];
+    return CatalogRouteInfo(isCatalog: true, initialNacCode: initialNac);
+  }
+
+  return const CatalogRouteInfo(isCatalog: false);
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -152,17 +199,8 @@ Future<void> main() async {
   }
 
   // Public Catalog direct entry (zero auth required)
-  if (normalizedPath == '/catalog' || path.startsWith('/catalog/')) {
-    String? initialNacCode;
-    if (path.startsWith('/catalog/')) {
-      final sub = path.substring('/catalog/'.length).trim();
-      if (sub.isNotEmpty) {
-        initialNacCode = Uri.decodeComponent(sub);
-      }
-    }
-    if (initialNacCode == null && uri.queryParameters.containsKey('item')) {
-      initialNacCode = uri.queryParameters['item'];
-    }
+  final catalogRoute = resolveCatalogRoute(uri);
+  if (catalogRoute.isCatalog) {
     runApp(MaterialApp(
       title: 'Numista.AI Public Catalog',
       debugShowCheckedModeBanner: false,
@@ -175,7 +213,7 @@ Future<void> main() async {
           primary: const Color(0xFF0B2545),
         ),
       ),
-      home: CatalogBrowseScreen(initialNacCode: initialNacCode),
+      home: CatalogBrowseScreen(initialNacCode: catalogRoute.initialNacCode),
     ));
     return;
   }
