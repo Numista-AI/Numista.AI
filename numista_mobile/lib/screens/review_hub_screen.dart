@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../services/http_auth_client.dart';
 import '../utils/numista_error_helper.dart';
+import '../utils/review_field_keys.dart';
 import '../widgets/grade_badge_widget.dart';
 
 
@@ -546,14 +547,18 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     if (_selectedIds.isEmpty) return;
     setState(() => _isProcessing = true);
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null || user.email == null) {
+      setState(() => _isProcessing = false);
+      return;
+    }
 
+    final count = _selectedIds.length;
     try {
       final response = await HttpAuthClient.post(
         Uri.parse("$_apiUrl/api/review/bulk_update"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "user_email": user.email,
+          "user_email": user.email!.trim().toLowerCase(),
           "review_ids": _selectedIds.toList(),
           "updates": updates,
         }),
@@ -563,19 +568,40 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
         if (!mounted) return;
         setState(() => _selectedIds.clear());
         Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Updated $count selected item${count == 1 ? '' : 's'}.'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
       } else {
-        throw Exception("Bulk update failed: ${response.body}");
+        String detail = 'HTTP ${response.statusCode}';
+        try {
+          final parsed = jsonDecode(response.body);
+          if (parsed is Map && parsed['detail'] != null) {
+            detail = parsed['detail'].toString();
+          }
+        } catch (_) {}
+        throw Exception('Bulk update failed: $detail');
       }
     } catch (e) {
       if (!mounted) return;
+      final msg = e.toString().startsWith('Exception: Bulk update failed:')
+          ? e.toString().replaceFirst('Exception: ', '')
+          : NumistaErrorHelper.toUserFriendly(
+              e,
+              fallback: 'Update failed — please check your connection and try again.',
+            );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Update failed — please check your connection and try again.'),
+          content: Text(msg),
           backgroundColor: Colors.red[700],
         ),
       );
     } finally {
-      setState(() => _isProcessing = false);
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
 
@@ -704,71 +730,32 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   }
 
   // ─── Per-card edit dialog ─────────────────────────────────────────────────
-  /// NET-565: Build a Firestore-safe update map from the Edit Coin controllers.
-  /// Firestore update(Map) treats '.' in a key as a field-path separator, so keys
-  /// like 'Retailer Item No.' threw invalid-argument (surfaced as the generic
-  /// "unexpected error" toast). Map those to the canonical snake_case fields the
-  /// Hub reads, and write Fee to allocated_fees + shipping_fee.
-  Map<String, dynamic> _buildReviewQueueUpdates(Map<String, TextEditingController> controllers) {
-    const snakeMap = <String, String>{
-      'Purchase Date': 'purchase_date',
-      'Retailer/Website': 'retailer_website',
-      'Retailer Invoice #': 'retailer_invoice_num',
-      'Retailer Item No.': 'retailer_item_num',
-      'Storage Location': 'storage_location',
-    };
-    final updates = <String, dynamic>{};
-    controllers.forEach((key, ctrl) {
-      final text = ctrl.text.trim();
-      if (key == 'Fee') {
-        final fee = double.tryParse(text.replaceAll('\$', '').replaceAll(',', ''));
-        if (fee != null && fee >= 0) {
-          updates['allocated_fees'] = fee;
-          updates['shipping_fee'] = fee;
-        }
-        return;
-      }
-      if (snakeMap.containsKey(key)) {
-        updates[snakeMap[key]!] = text;
-      } else {
-        updates[key] = text;
-      }
-    });
-    return updates;
-  }
-
-  void _showCoinEditDialog(String docId, Map<String, dynamic> data) {
+  void _showCoinEditDialog(
+    String docId,
+    Map<String, dynamic> data, {
+    DocumentReference<Map<String, dynamic>>? docRef,
+  }) {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null || user.email == null) return;
 
-    // Pre-populate all controllers
+    final initialValues = ReviewFieldKeys.extractInitialReviewValues(data);
     final controllers = <String, TextEditingController>{
-      'Year':                    TextEditingController(text: data['Year']?.toString() ?? ''),
-      'Denomination':            TextEditingController(text: data['Denomination']?.toString() ?? ''),
-      'Mint Mark':               TextEditingController(text: data['Mint Mark']?.toString() ?? ''),
-      'Country':                 TextEditingController(text: data['Country']?.toString() ?? 'USA'),
-      'Program/Series':          TextEditingController(text: data['Program/Series']?.toString() ?? ''),
-      'Theme/Subject':           TextEditingController(text: data['Theme/Subject']?.toString() ?? ''),
-      'Variety':                 TextEditingController(text: data['Variety']?.toString() ?? ''),
-      'Condition':               TextEditingController(text: data['Condition']?.toString() ?? ''),
-      'Strike Type':             TextEditingController(text: data['Strike Type']?.toString() ?? ''),
-      'Metal Content':           TextEditingController(text: data['Metal Content']?.toString() ?? ''),
-      'Purchase Cost':           TextEditingController(text: (data['Purchase Cost'] ?? data['Cost'] ?? '').toString()),
-      'Purchase Date':           TextEditingController(text: (data['purchase_date'] ?? data['Purchase Date'] ?? '').toString()),
-      'Retailer/Website':        TextEditingController(text: (data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website'] ?? '').toString()),
-      'Retailer Invoice #':      TextEditingController(text: (data['retailer_invoice_num'] ?? data['invoice_number'] ?? data['Retailer Invoice #'] ?? '').toString()),
-      'Retailer Item No.':       TextEditingController(text: (data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.'] ?? '').toString()),
-      'Storage Location':        TextEditingController(text: (data['storage_location'] ?? data['Storage Location'] ?? '').toString()),
-      'Quantity':                TextEditingController(text: (data['Quantity'] ?? data['quantity'] ?? data['qty'] ?? '1').toString()),
+      for (final entry in initialValues.entries)
+        entry.key: TextEditingController(text: entry.value),
     };
 
     final rawFeeVal = data['allocated_fees'] ?? data['Allocated Fees'] ?? data['shipping_fee'] ?? data['Fee'] ?? data['fee'] ?? 0.0;
     final feeNum = (rawFeeVal is num) ? rawFeeVal.toDouble() : (double.tryParse(rawFeeVal.toString().replaceAll('\$', '').trim()) ?? 0.0);
-    // NET-565: Fee is editable (Mint S&H e.g. $9.95). Saved to allocated_fees + shipping_fee.
-    controllers['Fee'] = TextEditingController(text: feeNum > 0 ? feeNum.toStringAsFixed(2) : '');
     final setCostLabel = (data['set_cost_label'] ?? '').toString().trim();
+    final targetRef = docRef ??
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.email!.trim().toLowerCase())
+            .collection('review_queue')
+            .doc(docId);
 
     bool isSaving = false;
+    bool programFieldInitialized = false;
 
     showDialog(
       context: context,
@@ -924,18 +911,16 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 controllers['Program/Series']!.text = selected.value;
                               },
                               fieldViewBuilder: (ctx, fieldCtrl, focusNode, onSubmitted) {
-                                // Sync initialValue → fieldCtrl once
-                                if (fieldCtrl.text.isEmpty &&
-                                    controllers['Program/Series']!.text.isNotEmpty) {
+                                if (!programFieldInitialized) {
                                   fieldCtrl.text = controllers['Program/Series']!.text;
+                                  programFieldInitialized = true;
                                 }
-                                // Keep the real controller in sync when user types free text
-                                fieldCtrl.addListener(() {
-                                  controllers['Program/Series']!.text = fieldCtrl.text;
-                                });
                                 return TextField(
                                   controller: fieldCtrl,
                                   focusNode: focusNode,
+                                  onChanged: (val) {
+                                    controllers['Program/Series']!.text = val;
+                                  },
                                   style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
                                   decoration: InputDecoration(
                                     prefixIcon: Icon(
@@ -1074,38 +1059,36 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             onPressed: isSaving ? null : () async {
-                              setDialogState(() => isSaving = true);
                               final messenger = ScaffoldMessenger.of(context);
                               final dialogMessenger = ScaffoldMessenger.of(dialogContext);
                               final nav = Navigator.of(dialogContext);
+                              final currentValues = <String, String>{
+                                for (final e in controllers.entries) e.key: e.value.text,
+                              };
+                              final validationError = ReviewFieldKeys.validateDirtyReviewInputs(
+                                initialValues: initialValues,
+                                currentValues: currentValues,
+                              );
+                              if (validationError != null) {
+                                dialogMessenger.showSnackBar(
+                                  SnackBar(content: Text(validationError), backgroundColor: Colors.red[700]),
+                                );
+                                return;
+                              }
+                              final updates = ReviewFieldKeys.buildDirtyReviewQueueUpdates(
+                                initialValues: initialValues,
+                                currentValues: currentValues,
+                              );
+                              if (updates.isEmpty) {
+                                nav.pop();
+                                messenger.showSnackBar(
+                                  const SnackBar(content: Text('No changes to save.')),
+                                );
+                                return;
+                              }
+                              setDialogState(() => isSaving = true);
                               try {
-                                final updates = _buildReviewQueueUpdates(controllers);
-                                // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
-                                final rawQty = controllers['Quantity']?.text.trim() ?? '';
-                                final parsedQty = int.tryParse(rawQty);
-                                final cleanQty = (parsedQty != null && parsedQty > 0) ? parsedQty : 1;
-                                updates['Quantity'] = cleanQty;
-                                controllers['Quantity']?.text = cleanQty.toString();
-
-                                // Auto-split combined Year+Mint (e.g. "2006D" → Year="2006" Mint="D")
-                                final ymRe = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
-                                final ry = (updates['Year'] as String? ?? '').trim();
-                                final rm = (updates['Mint Mark'] as String? ?? '').trim();
-                                if (ry.isNotEmpty && rm.isEmpty) {
-                                  final ym = ymRe.firstMatch(ry);
-                                  if (ym != null) {
-                                    updates['Year'] = ym.group(1)!;
-                                    updates['Mint Mark'] = ym.group(2)!.toUpperCase();
-                                    controllers['Year']?.text = ym.group(1)!;
-                                    controllers['Mint Mark']?.text = ym.group(2)!.toUpperCase();
-                                  }
-                                }
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(user.email!)
-                                    .collection('review_queue')
-                                    .doc(docId)
-                                    .update(updates);
+                                await targetRef.update(updates);
                                 if (!mounted) return;
                                 nav.pop();
                                 messenger.showSnackBar(
@@ -1133,46 +1116,39 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             onPressed: isSaving ? null : () async {
-                              setDialogState(() => isSaving = true);
                               final messenger = ScaffoldMessenger.of(context);
                               final dialogMessenger = ScaffoldMessenger.of(dialogContext);
                               final nav = Navigator.of(dialogContext);
+                              final currentValues = <String, String>{
+                                for (final e in controllers.entries) e.key: e.value.text,
+                              };
+                              final validationError = ReviewFieldKeys.validateDirtyReviewInputs(
+                                initialValues: initialValues,
+                                currentValues: currentValues,
+                              );
+                              if (validationError != null) {
+                                dialogMessenger.showSnackBar(
+                                  SnackBar(content: Text(validationError), backgroundColor: Colors.red[700]),
+                                );
+                                return;
+                              }
+                              final updates = ReviewFieldKeys.buildDirtyReviewQueueUpdates(
+                                initialValues: initialValues,
+                                currentValues: currentValues,
+                              );
+                              setDialogState(() => isSaving = true);
                               try {
-                                final updates = _buildReviewQueueUpdates(controllers);
-                                // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
-                                final rawQty2 = controllers['Quantity']?.text.trim() ?? '';
-                                final parsedQty2 = int.tryParse(rawQty2);
-                                final cleanQty2 = (parsedQty2 != null && parsedQty2 > 0) ? parsedQty2 : 1;
-                                updates['Quantity'] = cleanQty2;
-                                controllers['Quantity']?.text = cleanQty2.toString();
-
-                                // Auto-split combined Year+Mint (e.g. "2006D" → Year="2006" Mint="D")
-                                final ymRe2 = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
-                                final ry2 = (updates['Year'] as String? ?? '').trim();
-                                final rm2 = (updates['Mint Mark'] as String? ?? '').trim();
-                                if (ry2.isNotEmpty && rm2.isEmpty) {
-                                  final ym2 = ymRe2.firstMatch(ry2);
-                                  if (ym2 != null) {
-                                    updates['Year'] = ym2.group(1)!;
-                                    updates['Mint Mark'] = ym2.group(2)!.toUpperCase();
-                                    controllers['Year']?.text = ym2.group(1)!;
-                                    controllers['Mint Mark']?.text = ym2.group(2)!.toUpperCase();
-                                  }
+                                // Save dirty edits first (skip no-op update)
+                                if (updates.isNotEmpty) {
+                                  await targetRef.update(updates);
                                 }
-                                // Save edits first
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(user.email!)
-                                    .collection('review_queue')
-                                    .doc(docId)
-                                    .update(updates);
 
                                 // Then commit to main collection
                                 final response = await HttpAuthClient.post(
                                   Uri.parse("$_apiUrl/api/review/commit"),
                                   headers: {"Content-Type": "application/json"},
                                   body: jsonEncode({
-                                    "user_email": user.email,
+                                    "user_email": user.email!.trim().toLowerCase(),
                                     "review_ids": [docId],
                                   }),
                                 );
@@ -1223,70 +1199,14 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
   // ─── Bulk edit bottom sheet ───────────────────────────────────────────────
   void _showBulkEditDialog() {
-    final TextEditingController locationController = TextEditingController();
-    final TextEditingController costController = TextEditingController();
-    final TextEditingController dateController = TextEditingController();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: (Theme.of(context).brightness == Brightness.dark) ? const Color(0xFF1A1D27) : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Bulk Edit Metadata', style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A), fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('Applying to ${_selectedIds.length} selected items.', style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white54 : const Color(0xFF64748B))),
-            const SizedBox(height: 24),
-            _buildDialogField('Storage Location', locationController, Icons.inventory_2_outlined),
-            _buildDialogField('Cost per Item', costController, Icons.attach_money),
-            _buildDialogField('Purchase Date', dateController, Icons.calendar_today),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF63366),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () {
-                  final updates = <String, dynamic>{};
-                  if (locationController.text.isNotEmpty) updates['Storage Location'] = locationController.text;
-                  if (costController.text.isNotEmpty) updates['Cost'] = costController.text;
-                  if (dateController.text.isNotEmpty) updates['Purchase Date'] = dateController.text;
-                  if (updates.isNotEmpty) _bulkUpdateItems(updates);
-                },
-                child: const Text('Apply Changes', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDialogField(String label, TextEditingController controller, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextField(
-        controller: controller,
-        style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A)),
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white38 : const Color(0xFF94A3B8), size: 20),
-          labelText: label,
-          labelStyle: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white38 : const Color(0xFF94A3B8)),
-          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white10 : const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(12)),
-          focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Color(0xFFF63366)), borderRadius: BorderRadius.circular(12)),
-          filled: true,
-          fillColor: (Theme.of(context).brightness == Brightness.dark) ? Colors.white.withAlpha(10) : const Color(0xFFF8FAFC),
-        ),
+      builder: (_) => _BulkEditBottomSheet(
+        itemCount: _selectedIds.length,
+        onApply: _bulkUpdateItems,
       ),
     );
   }
@@ -1678,7 +1598,14 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       return _buildSetCard(id, data, isSelected);
                     }
 
-                    return _buildCoinCard(id, data, isSelected, confidence, itemType);
+                    return _buildCoinCard(
+                      id,
+                      data,
+                      isSelected,
+                      confidence,
+                      itemType,
+                      docRef: doc.reference,
+                    );
                   } catch (e) {
                     return Card(
                       color: Colors.red.shade50,
@@ -2031,7 +1958,14 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   }
 
   // ─── Coin Card (standard + paper_currency / medal / stamp / other) ────────
-  Widget _buildCoinCard(String id, Map<String, dynamic> data, bool isSelected, double confidence, String itemType) {
+  Widget _buildCoinCard(
+    String id,
+    Map<String, dynamic> data,
+    bool isSelected,
+    double confidence,
+    String itemType, {
+    DocumentReference<Map<String, dynamic>>? docRef,
+  }) {
     final isFromSet = data['from_set'] == true;
     final typeMeta  = _typeMetaMap[itemType];
     final condStr = (data['Condition'] ?? '').toString().trim();
@@ -2087,7 +2021,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         GradeBadgeWidget(gradeCode: condStr)
                       else
                         InkWell(
-                          onTap: () => _showCoinEditDialog(id, data),
+                          onTap: () => _showCoinEditDialog(id, data, docRef: docRef),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
@@ -2350,7 +2284,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   message: 'Edit this coin',
                   child: IconButton(
                     icon: const Icon(Icons.edit_note, color: Color(0xFF64748B)),
-                    onPressed: () => _showCoinEditDialog(id, data),
+                    onPressed: () => _showCoinEditDialog(id, data, docRef: docRef),
                   ),
                 ),
                 Tooltip(
@@ -2517,4 +2451,152 @@ class _ItemTypeMeta {
   final String label;
   final Color  color;
   const _ItemTypeMeta({required this.label, required this.color});
+}
+
+class _BulkEditBottomSheet extends StatefulWidget {
+  final int itemCount;
+  final Future<void> Function(Map<String, dynamic> updates) onApply;
+
+  const _BulkEditBottomSheet({
+    required this.itemCount,
+    required this.onApply,
+  });
+
+  @override
+  State<_BulkEditBottomSheet> createState() => _BulkEditBottomSheetState();
+}
+
+class _BulkEditBottomSheetState extends State<_BulkEditBottomSheet> {
+  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _costController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _locationController.dispose();
+    _costController.dispose();
+    _dateController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildField(String label, TextEditingController controller, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextField(
+        controller: controller,
+        style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: isDark ? Colors.white38 : const Color(0xFF94A3B8), size: 20),
+          labelText: label,
+          labelStyle: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8)),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Color(0xFFF63366)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          filled: true,
+          fillColor: isDark ? Colors.white.withAlpha(10) : const Color(0xFFF8FAFC),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final locText = _locationController.text.trim();
+    final costText = _costController.text.trim();
+    final dateText = _dateController.text.trim();
+
+    final updates = <String, dynamic>{};
+    if (locText.isNotEmpty) {
+      updates['storage_location'] = locText;
+    }
+    if (costText.isNotEmpty) {
+      final cleaned = costText.replaceAll(RegExp(r'[\$,\s]'), '');
+      final parsedCost = double.tryParse(cleaned);
+      if (parsedCost == null || parsedCost.isNaN || parsedCost.isInfinite || parsedCost < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Invalid Cost. Enter a non-negative number (e.g. 12.50).'),
+            backgroundColor: Colors.red[700],
+          ),
+        );
+        return;
+      }
+      updates['cost'] = parsedCost;
+    }
+    if (dateText.isNotEmpty) {
+      updates['purchase_date'] = dateText;
+    }
+    if (updates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter at least one field to update.')),
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await widget.onApply(updates);
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Bulk Edit Metadata',
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Applying to ${widget.itemCount} selected items.',
+            style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 24),
+          _buildField('Storage Location', _locationController, Icons.inventory_2_outlined),
+          _buildField('Cost per Item', _costController, Icons.attach_money),
+          _buildField('Purchase Date', _dateController, Icons.calendar_today),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF63366),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: _submitting ? null : _submit,
+              child: const Text('Apply Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
 }
