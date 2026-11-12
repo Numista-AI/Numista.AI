@@ -7,6 +7,7 @@ from pydantic import BaseModel, model_validator
 from typing import List, Optional, Dict, Any
 import os
 import io
+import math
 import uuid
 import json
 import base64
@@ -3926,17 +3927,80 @@ async def bulk_update_reviews(request: BulkUpdateRequest, _user: dict = Depends(
         if request.user_email.strip().lower() != caller_email:
             raise HTTPException(status_code=403, detail="Forbidden: email mismatch")
 
-    allowed_keys = {"storage_location", "condition", "notes", "status"}
-    for k in (request.updates or {}).keys():
+    allowed_keys = {
+        "storage_location",
+        "condition",
+        "notes",
+        "status",
+        "cost",
+        "purchase_date",
+    }
+    raw_updates = request.updates or {}
+    for k in raw_updates.keys():
         if k not in allowed_keys:
             raise HTTPException(status_code=400, detail=f"Invalid update field: {k}")
+
+    if not raw_updates:
+        raise HTTPException(status_code=400, detail="No updates provided")
+
+    normalized_updates: Dict[str, Any] = {}
+    for k, v in raw_updates.items():
+        if k == "cost":
+            if isinstance(v, bool) or v is None:
+                raise HTTPException(status_code=400, detail="Invalid cost value")
+            if isinstance(v, str):
+                cleaned = v.replace("$", "").replace(",", "").strip()
+                if not cleaned:
+                    raise HTTPException(status_code=400, detail="Invalid cost value")
+                try:
+                    parsed_cost = float(cleaned)
+                except ValueError:
+                    raise HTTPException(status_code=400, detail="Invalid cost value")
+            elif isinstance(v, (int, float)):
+                parsed_cost = float(v)
+            else:
+                raise HTTPException(status_code=400, detail="Invalid cost value")
+
+            if math.isnan(parsed_cost) or math.isinf(parsed_cost) or parsed_cost < 0:
+                raise HTTPException(status_code=400, detail="Invalid cost value")
+
+            normalized_updates["cost"] = parsed_cost
+            normalized_updates["Cost"] = parsed_cost
+            normalized_updates["Purchase Cost"] = parsed_cost
+            normalized_updates["cost_basis"] = parsed_cost
+
+        elif k == "purchase_date":
+            if not isinstance(v, str) or not v.strip():
+                raise HTTPException(status_code=400, detail="Invalid purchase_date value")
+            clean_date = v.strip()
+            normalized_updates["purchase_date"] = clean_date
+            normalized_updates["Purchase Date"] = clean_date
+
+        elif k == "storage_location":
+            if not isinstance(v, str) or not v.strip():
+                raise HTTPException(status_code=400, detail="Invalid storage_location value")
+            clean_loc = v.strip()
+            normalized_updates["storage_location"] = clean_loc
+            normalized_updates["Storage Location"] = clean_loc
+
+        elif k == "condition":
+            if not isinstance(v, str):
+                raise HTTPException(status_code=400, detail="Invalid condition value")
+            clean_cond = v.strip()
+            normalized_updates["condition"] = clean_cond
+            normalized_updates["Condition"] = clean_cond
+
+        else:
+            if not isinstance(v, str):
+                raise HTTPException(status_code=400, detail=f"Invalid {k} value")
+            normalized_updates[k] = v
 
     try:
         queue_ref = db.collection('users').document(caller_email).collection('review_queue')
         batch = db.batch()
         batch_op_count = 0
         for doc_id in request.review_ids:
-            batch.update(queue_ref.document(doc_id), request.updates)
+            batch.update(queue_ref.document(doc_id), normalized_updates)
             batch_op_count += 1
             if batch_op_count >= 490:
                 batch.commit()
