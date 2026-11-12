@@ -45,14 +45,20 @@ test.describe('Sprint 2: Microscope Desktop Agent & Diagnostics Stress Tests', (
     }
   });
 
-  test('Direct download link target validation', async () => {
-    const installerUrl =
-      'https://storage.googleapis.com/studio-9101802118-8c9a8-uploads/downloads/NumistaAgentSetup.exe';
-    const standaloneUrl =
-      'https://storage.googleapis.com/studio-9101802118-8c9a8-uploads/downloads/numista-agent.exe';
+  test('Installer download endpoint enforces authentication and no public GCS URL remains', async ({ request }) => {
+    const fs = require('fs');
+    const path = require('path');
+    const screenSource = fs.readFileSync(
+      path.resolve(__dirname, '../../numista_mobile/lib/screens/desktop_agent_download_screen.dart'),
+      'utf8'
+    );
+    expect(screenSource).not.toContain('studio-9101802118-8c9a8-uploads');
+    expect(screenSource).not.toContain(['downloads', 'NumistaAgentSetup.exe'].join('/'));
+    expect(screenSource).toContain('/api/v1/hardware/installer_url');
 
-    expect(installerUrl).toContain('NumistaAgentSetup.exe');
-    expect(standaloneUrl).toContain('numista-agent.exe');
+    const backendBase = process.env.API_BASE_URL || 'https://numista-backend-568985927038.us-central1.run.app';
+    const unauthResp = await request.get(`${backendBase}/api/v1/hardware/installer_url`);
+    expect(unauthResp.status()).toBe(401);
   });
 
 });

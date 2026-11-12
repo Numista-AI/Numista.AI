@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import '../constants.dart';
 import '../services/hardware_service.dart';
 import '../services/auth_service.dart';
 
@@ -14,11 +17,6 @@ const _warningAmber = Color(0xFFFFAB00);
 const _errorRed     = Color(0xFFFF5252);
 const _muted        = Color(0xFF94A3B8);
 Color _white(BuildContext c) => _isDarkCtx(c) ? Colors.white : const Color(0xFF0F172A);
-
-// ─── Public GCS download URLs ─────────────────────────────────────────────────
-const _kWindowsInstallerUrl =
-    'https://storage.googleapis.com/studio-9101802118-8c9a8-uploads/'
-    'downloads/NumistaAgentSetup.exe';
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 class DesktopAgentDownloadScreen extends StatefulWidget {
@@ -46,6 +44,47 @@ class _DesktopAgentDownloadScreenState
   int _cameraCount = 0;
   bool _accountPaired = false;
   String? _agentPairedEmail;
+  bool _isRequestingDownload = false;
+
+  Future<void> _downloadWindowsInstaller() async {
+    if (!AuthService.isSignedIn) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in with your Numista.AI account to download the Desktop Agent.'),
+        ),
+      );
+      return;
+    }
+    setState(() => _isRequestingDownload = true);
+    try {
+      final idToken = await AuthService.currentUser?.getIdToken();
+      final resp = await http.get(
+        Uri.parse('$kApiBaseUrl/api/v1/hardware/installer_url'),
+        headers: {'Authorization': 'Bearer $idToken'},
+      ).timeout(const Duration(seconds: 15));
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final signedUrl = data['signed_url'] as String?;
+        if (signedUrl != null && signedUrl.isNotEmpty) {
+          await _launchUrl(signedUrl);
+          return;
+        }
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to generate download link (HTTP ${resp.statusCode}).')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Network error requesting installer download link.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isRequestingDownload = false);
+    }
+  }
 
   @override
   void initState() {
@@ -657,10 +696,12 @@ class _DesktopAgentDownloadScreenState
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => _launchUrl(_kWindowsInstallerUrl),
+              onPressed: _isRequestingDownload ? null : _downloadWindowsInstaller,
               icon: const Icon(Icons.download_rounded, size: 24),
               label: Text(
-                '⊞  Download Setup Installer (NumistaAgentSetup.exe)',
+                _isRequestingDownload
+                    ? 'Preparing secure download link...'
+                    : '⊞  Download Setup Installer (NumistaAgentSetup.exe)',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
