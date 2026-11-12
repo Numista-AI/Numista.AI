@@ -505,6 +505,75 @@ def test_bulk_update_allowed_fields_happy_path():
         assert resp.json()["status"] == "success"
 
 
+def test_bulk_update_cost_and_purchase_date_happy_path():
+    app.dependency_overrides[get_current_user] = _user_auth(email="alice@example.com")
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+
+    with patch("main.db", mock_db):
+        client = TestClient(app)
+        resp = client.post("/api/review/bulk_update", json={
+            "user_email": "alice@example.com",
+            "review_ids": ["rev-1", "rev-2"],
+            "updates": {
+                "cost": "$1,250.50",
+                "purchase_date": "2026-11-01",
+                "storage_location": "Vault A",
+            }
+        })
+        assert resp.status_code == 200
+        assert mock_batch.update.call_count == 2
+        written = mock_batch.update.call_args_list[0][0][1]
+        assert written["cost"] == 1250.5
+        assert written["Cost"] == 1250.5
+        assert written["Purchase Cost"] == 1250.5
+        assert written["cost_basis"] == 1250.5
+        assert written["purchase_date"] == "2026-11-01"
+        assert written["Purchase Date"] == "2026-11-01"
+        assert written["storage_location"] == "Vault A"
+        assert written["Storage Location"] == "Vault A"
+
+
+def test_bulk_update_cost_numeric_float():
+    app.dependency_overrides[get_current_user] = _user_auth(email="alice@example.com")
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+
+    with patch("main.db", mock_db):
+        client = TestClient(app)
+        resp = client.post("/api/review/bulk_update", json={
+            "user_email": "alice@example.com",
+            "review_ids": ["rev-1"],
+            "updates": {"cost": 19.95}
+        })
+        assert resp.status_code == 200
+        written = mock_batch.update.call_args[0][1]
+        assert written["cost"] == 19.95
+        assert written["Cost"] == 19.95
+
+
+def test_bulk_update_rejects_invalid_cost_and_empty_date():
+    app.dependency_overrides[get_current_user] = _user_auth(email="alice@example.com")
+    client = TestClient(app)
+
+    for bad_cost in (True, -5, "abc", ""):
+        resp = client.post("/api/review/bulk_update", json={
+            "user_email": "alice@example.com",
+            "review_ids": ["rev-1"],
+            "updates": {"cost": bad_cost}
+        })
+        assert resp.status_code == 400, f"Expected 400 for cost={bad_cost!r}, got {resp.status_code}"
+
+    resp_empty_date = client.post("/api/review/bulk_update", json={
+        "user_email": "alice@example.com",
+        "review_ids": ["rev-1"],
+        "updates": {"purchase_date": "   "}
+    })
+    assert resp_empty_date.status_code == 400
+
+
 # ─── Fix 7: /api/review/delete_items ──────────────────────────────────────────
 
 def test_delete_items_no_token():
