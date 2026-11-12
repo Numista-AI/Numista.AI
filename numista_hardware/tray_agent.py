@@ -16,8 +16,8 @@ import threading
 import sys
 import os
 
-# If running on Windows, hide the console window immediately to act like a windowless background service
-if sys.platform == 'win32':
+# If running on Windows as a frozen executable, hide the console window immediately
+if sys.platform == 'win32' and getattr(sys, 'frozen', False):
     try:
         import ctypes
         kernel32 = ctypes.WinDLL('kernel32')
@@ -71,26 +71,22 @@ logging.basicConfig(
 import pystray
 from PIL import Image, ImageDraw
 
-# ─── Load .env BEFORE importing auto_capture / identify_coin ─────────────────
-# identify_coin.py raises EnvironmentError at module level if GOOGLE_API_KEY
-# is missing. Load the bundled .env now so all keys are in os.environ first.
-_env_path = _bundle_path(".env")
-if os.path.exists(_env_path):
-    try:
-        from dotenv import load_dotenv
-        load_dotenv(_env_path, override=False)
-        logging.info("[TRAY] Loaded .env from bundle: %s", _env_path)
-    except Exception as _e:
-        logging.warning("[TRAY] Could not load .env via dotenv: %s", _e)
-        # Fallback: parse manually
-        with open(_env_path, encoding="utf-8") as _f:
-            for _line in _f:
-                _line = _line.strip()
-                if _line and not _line.startswith("#") and "=" in _line:
-                    _k, _, _v = _line.partition("=")
-                    os.environ.setdefault(_k.strip(), _v.strip())
-else:
-    logging.warning("[TRAY] .env not found at %s — API keys may be missing", _env_path)
+# ─── Load runtime .env from %APPDATA%\NumistaAI\ (or local dev dir when unfrozen) ─
+# Never load or bundle .env inside sys._MEIPASS.
+from pathlib import Path as _Path
+_HERE = _Path(__file__).parent
+try:
+    from dotenv import load_dotenv
+    _env_candidates = [AgentConfig.get_config_dir() / ".env"]
+    if not getattr(sys, "frozen", False):
+        _env_candidates.append(_HERE / ".env")
+    for _ep in _env_candidates:
+        if _ep.exists():
+            load_dotenv(_ep, override=False)
+            logging.info("[TRAY] Loaded runtime config from %s", _ep)
+            break
+except Exception as _e:
+    logging.warning("[TRAY] Optional runtime config load skipped: %s", _e)
 
 # ─── Import the agent logic & certificate installer ───────────────────────────
 import auto_capture

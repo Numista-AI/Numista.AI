@@ -1,13 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
-# numista-agent.spec — PyInstaller build spec for numista-agent.exe
+# numista-agent.spec — PyInstaller build spec for numista-agent.exe (Secret-Free Build — Task 2 ARGON)
 # Run: python build_agent.py
 
 import os, sys
 from pathlib import Path
 
 _HERE = Path(SPECPATH)  # numista_hardware/
-_BACKEND = _HERE.parent / "numista_backend"
 
+# ── Data files bundled into the exe (STRICTLY CODE/SCHEMA — NO SECRETS OR KEYS) ─
 _datas = [
     (str(_HERE / "identify_coin.py"),   "."),
     (str(_HERE / "pcgs_service.py"),    "."),
@@ -16,12 +16,10 @@ _datas = [
     (str(_HERE / "auto_capture.py"),    "."),
     (str(_HERE / "install_cert.py"),    "."),
     (str(_HERE / "coin-schema.json"),   "."),
-    (str(_HERE / ".env"),               "."),
 ]
 
-_sa_key = _BACKEND / "serviceAccountKey.json.json"
-if _sa_key.exists():
-    _datas.append((str(_sa_key), "."))
+if (_HERE / "assets" / "icon.ico").exists():
+    _datas.append((str(_HERE / "assets" / "icon.ico"), "assets"))
 
 a = Analysis(
     [str(_HERE / "tray_agent.py")],
@@ -33,7 +31,6 @@ a = Analysis(
         "PIL._tkinter_finder",
         "google.cloud.firestore",
         "google.cloud.storage",
-        "google.oauth2.service_account",
         "google.auth.transport.requests",
         "cv2",
         "flask_cors",
@@ -42,6 +39,8 @@ a = Analysis(
         "tkinter.messagebox",
         "dotenv",
         "cryptography",
+        "cryptography.x509",
+        "cryptography.hazmat.primitives.asymmetric.rsa",
         "winreg",
     ],
     hookspath=[],

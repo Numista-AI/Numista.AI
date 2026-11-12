@@ -8,6 +8,7 @@ Gate 0 Morgan AI routes & helpers:
 """
 
 import os
+import json
 import uuid
 import logging
 from datetime import datetime, timezone, timedelta
@@ -16,7 +17,19 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from google.cloud import firestore
 
-from routes.deps import db, get_current_user, _check_and_increment_rate_cap
+from routes.deps import (
+    db,
+    get_current_user,
+    _check_and_increment_rate_cap,
+    genai_client,
+    genai_types,
+    MODEL_FLASH,
+    MORGAN_WEB_LOOKUP_GLOBAL_DAILY_LIMIT,
+    MORGAN_WEB_LOOKUP_USER_DAILY_LIMIT,
+    is_morgan_web_lookup_enabled,
+    check_and_increment_dual_rate_cap,
+    get_dual_rate_cap_quota,
+)
 
 logger = logging.getLogger("numista_backend.morgan_routes")
 
@@ -379,3 +392,85 @@ async def api_restore_coin(
         "coin_id": coin_id,
         "message": "Coin successfully restored from trash"
     }
+
+
+# ── M4 Morgan Web Lookup (50/day global, 3/day per user) ──────────────────────
+
+class MorganWebLookupRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500)
+    coin_context: Optional[Dict[str, Any]] = None
+
+
+def execute_morgan_web_lookup(
+    query: str,
+    coin_context: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Executes a Google-Search-grounded Gemini query for Morgan (google-genai 1.71.0)."""
+    clean_query = str(query or "").strip()
+    if not clean_query:
+        raise HTTPException(status_code=400, detail="Search query cannot be empty.")
+    if not is_morgan_web_lookup_enabled() or not genai_client:
+        raise HTTPException(status_code=503, detail="Morgan web lookup is temporarily unavailable.")
+
+    ctx_str = f"\nCoin Context: {json.dumps(coin_context, default=str)}" if coin_context else ""
+    prompt = (
+        f"Answer this numismatic research question concisely using web search results.{ctx_str}\n\n"
+        f"Query: {clean_query[:500]}"
+    )
+    resp = genai_client.models.generate_content(
+        model=MODEL_FLASH,
+        contents=[genai_types.Part.from_text(text=prompt)],
+        config=genai_types.GenerateContentConfig(
+            tools=[genai_types.Tool(google_search=genai_types.GoogleSearch())],
+            temperature=0.2,
+        ),
+    )
+    return {
+        "status": "success",
+        "query": clean_query[:500],
+        "answer": (getattr(resp, "text", None) or "").strip(),
+    }
+
+
+@morgan_router.post("/api/morgan/web_lookup")
+async def morgan_web_lookup_endpoint(
+    payload: MorganWebLookupRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    if not is_morgan_web_lookup_enabled() or not genai_client:
+        raise HTTPException(status_code=503, detail="Morgan web lookup is temporarily unavailable.")
+
+    clean_query = payload.query.strip()
+    if not clean_query:
+        raise HTTPException(status_code=400, detail="Search query cannot be empty.")
+
+    caller_uid = str(current_user.get("uid") or "").strip()
+    is_admin = bool(current_user.get("admin") is True or current_user.get("is_admin") is True)
+
+    # Enforce dual cap AFTER validating service readiness and non-empty query
+    quota = check_and_increment_dual_rate_cap(
+        caller_uid,
+        "morgan_web_lookup",
+        per_user_limit=MORGAN_WEB_LOOKUP_USER_DAILY_LIMIT,
+        global_limit=MORGAN_WEB_LOOKUP_GLOBAL_DAILY_LIMIT,
+        is_admin=is_admin,
+    )
+    result = execute_morgan_web_lookup(clean_query, coin_context=payload.coin_context)
+    result["quota"] = quota
+    return result
+
+
+@morgan_router.get("/api/morgan/web_lookup/quota")
+async def morgan_web_lookup_quota_endpoint(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    caller_uid = str(current_user.get("uid") or "").strip()
+    is_admin = bool(current_user.get("admin") is True or current_user.get("is_admin") is True)
+    return get_dual_rate_cap_quota(
+        caller_uid,
+        "morgan_web_lookup",
+        per_user_limit=MORGAN_WEB_LOOKUP_USER_DAILY_LIMIT,
+        global_limit=MORGAN_WEB_LOOKUP_GLOBAL_DAILY_LIMIT,
+        is_admin=is_admin,
+    )
+

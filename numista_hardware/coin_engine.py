@@ -4,9 +4,11 @@ import google.generativeai as genai
 import kagglehub
 
 # --- CONFIGURATION ---
-# Replace with your actual Google AI Studio API Key
-GEMINI_API_KEY = "AIzaSyDJu-oigNje1gjgulHQQDfe8Gv8CSYjCzM"
-genai.configure(api_key=GEMINI_API_KEY)
+from dotenv import load_dotenv
+load_dotenv()
+GEMINI_API_KEY = (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or "").strip()
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 # Use Gemini 3.8 Flash for identification
 model = genai.GenerativeModel('gemini-3.8-flash')

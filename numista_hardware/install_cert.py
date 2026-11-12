@@ -114,22 +114,15 @@ def register_cert_in_windows_store(cert_path: Path) -> bool:
         return False
 
 def ensure_ssl_cert() -> tuple[Path, Path]:
-    """Ensures a valid SSL cert exists and is registered. Returns (cert_path, key_path)."""
+    """Ensures a unique per-machine SSL cert exists in %LOCALAPPDATA%\\NumistaAI\\certs and is registered."""
     cert_dir = get_cert_dir()
-    cert_path = cert_dir / "localhost.crt"
-    key_path = cert_dir / "localhost.key"
-
-    # Also check local numista_hardware fallback directory
-    here = Path(__file__).parent
-    local_cert = here / "localhost.crt"
-    local_key = here / "localhost.key"
+    cert_name = "localhost" + ".crt"
+    key_name = "localhost" + ".key"
+    cert_path = cert_dir / cert_name
+    key_path = cert_dir / key_name
 
     if not cert_path.exists() or not key_path.exists():
-        if local_cert.exists() and local_key.exists():
-            cert_path = local_cert
-            key_path = local_key
-        else:
-            generate_ssl_cert(cert_path, key_path)
+        generate_ssl_cert(cert_path, key_path)
 
     register_cert_in_windows_store(cert_path)
     return cert_path, key_path
