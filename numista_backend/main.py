@@ -115,8 +115,22 @@ from routes.sandbox_routes import router as sandbox_router         # ITEM 8: dem
 from routes.attorney_routes import router as attorney_router        # ITEM B: attorney token issuance + snapshot
 from routes.cert_routes import router as cert_router, extract_cert_from_image   # P7: unified cert lookup
 from routes.hardware_routes import router as hardware_router
-from routes.morgan_routes import morgan_router, NOTES_DELIMITER, wrap_user_data, create_proposal
-from routes.deps import get_current_user, require_admin_user, _check_and_increment_rate_cap
+from routes.morgan_routes import (
+    morgan_router,
+    NOTES_DELIMITER,
+    wrap_user_data,
+    create_proposal,
+    execute_morgan_web_lookup,
+)
+from routes.deps import (
+    get_current_user,
+    require_admin_user,
+    _check_and_increment_rate_cap,
+    MORGAN_WEB_LOOKUP_GLOBAL_DAILY_LIMIT,
+    MORGAN_WEB_LOOKUP_USER_DAILY_LIMIT,
+    is_morgan_web_lookup_enabled,
+    check_and_increment_dual_rate_cap,
+)
 
 app.include_router(morgan_router)
 app.include_router(subaccount_router)
@@ -3468,8 +3482,26 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
             )
         )
 
+        tool_declarations = [fn_add, fn_update, fn_undo, fn_details]
+        if is_morgan_web_lookup_enabled():
+            fn_web_lookup = genai_types.FunctionDeclaration(
+                name="web_lookup",
+                description="Searches the live web for numismatic facts, auction results, or coin varieties not in the user's binder.",
+                parameters=genai_types.Schema(
+                    type=genai_types.Type.OBJECT,
+                    properties={
+                        "query": genai_types.Schema(
+                            type=genai_types.Type.STRING,
+                            description="Concise numismatic web search query (max 500 chars)",
+                        )
+                    },
+                    required=["query"],
+                ),
+            )
+            tool_declarations.append(fn_web_lookup)
+
         config = genai_types.GenerateContentConfig(
-            tools=[genai_types.Tool(function_declarations=[fn_add, fn_update, fn_undo, fn_details])]
+            tools=[genai_types.Tool(function_declarations=tool_declarations)]
         )
 
         response = genai_client.models.generate_content(
@@ -3481,6 +3513,7 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
         action_payload = None
 
         if response.function_calls:
+            web_lookup_executed = False
             for call in response.function_calls:
                 c_name = call.name
                 c_args = call.args or {}
@@ -3494,6 +3527,45 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                     action_payload = execute_undo_add_coin(owner_key, caller_uid=caller_uid, **c_args)
                 elif c_name == "get_coin_details":
                     action_payload = execute_get_coin_details(owner_key, include_financial=has_val_keyword, **c_args)
+                elif c_name == "web_lookup":
+                    if web_lookup_executed:
+                        # Prevent parallel tool calls in a single turn from burning >1 quota unit
+                        continue
+                    clean_query = str(c_args.get("query", "")).strip()
+                    if not clean_query or not is_morgan_web_lookup_enabled() or not genai_client:
+                        action_payload = {
+                            "action": "web_lookup",
+                            "status": "skipped",
+                            "detail": "Web lookup skipped (empty query or disabled).",
+                        }
+                        continue
+                    try:
+                        quota = check_and_increment_dual_rate_cap(
+                            caller_uid,
+                            "morgan_web_lookup",
+                            per_user_limit=MORGAN_WEB_LOOKUP_USER_DAILY_LIMIT,
+                            global_limit=MORGAN_WEB_LOOKUP_GLOBAL_DAILY_LIMIT,
+                            is_admin=is_admin,
+                        )
+                        web_lookup_executed = True
+                        action_payload = execute_morgan_web_lookup(
+                            query=clean_query,
+                            coin_context=None,
+                        )
+                        action_payload["quota"] = quota
+                    except HTTPException as rate_err:
+                        if rate_err.status_code == 429:
+                            # Zero-token short-circuit: zero extra Gemini tokens spent.
+                            return {
+                                "status": "rate_limited",
+                                "response": rate_err.detail,
+                                "action_payload": {
+                                    "action": "web_lookup",
+                                    "status": "rate_limited",
+                                    "detail": rate_err.detail,
+                                },
+                            }
+                        raise
 
             # Second turn to generate Morgan's final response after executing tool
             second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. If an add_coin proposal was returned, inform the user about the proposal and ask them to confirm before it is saved to their binder. Ask if they want to add more details NOW (cost, condition, storage) or LATER."

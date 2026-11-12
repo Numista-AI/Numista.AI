@@ -28,6 +28,25 @@ import '../constants.dart';
 //  • Large readable text (≥ 15px) with warm, patient tone
 // ══════════════════════════════════════════════════════════════════════════════
 
+/// Extracts a user-friendly message for HTTP 429 responses instead of generic error text.
+String formatChatErrorResponse(int statusCode, String body) {
+  if (statusCode == 429) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded['detail'] is String) {
+        final detail = (decoded['detail'] as String).trim();
+        if (detail.isNotEmpty) {
+          return detail;
+        }
+      }
+    } catch (_) {
+      // Fall through to default 429 message if body is not valid JSON
+    }
+    return 'Daily Morgan web lookup limit reached. Please try again tomorrow.';
+  }
+  return 'Error $statusCode: please try again.';
+}
+
 class AiChatScreen extends StatefulWidget {
   /// Optional pre-populated query (from "AI Deep Dive" button on a coin).
   final String? initialQuery;
@@ -422,17 +441,20 @@ class _AiChatScreenState extends State<AiChatScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         replyText = data['response'] ?? 'No response.';
-        if (data['action_payload'] != null) {
+        if (data['action_payload'] != null &&
+            !(data['action_payload'] is Map &&
+                data['action_payload']['status'] == 'rate_limited')) {
           actionPayloadJson = jsonEncode(data['action_payload']);
         }
         if (data is Map &&
             data['error'] == null &&
+            data['status'] != 'rate_limited' &&
             replyText.trim().isNotEmpty &&
             replyText != 'No response.') {
           BetaChecklistService.autoCompleteTask('task_18_ai_chat');
         }
       } else {
-        replyText = 'Error ${response.statusCode}: please try again.';
+        replyText = formatChatErrorResponse(response.statusCode, response.body);
       }
 
       final aiMsg = {

@@ -130,3 +130,203 @@ def check_and_increment_rate_cap(uid: str, endpoint: str, daily_limit: int, is_a
 
 _check_and_increment_rate_cap = check_and_increment_rate_cap
 
+
+MORGAN_WEB_LOOKUP_GLOBAL_DAILY_LIMIT = 50
+MORGAN_WEB_LOOKUP_USER_DAILY_LIMIT = 3
+
+
+def is_morgan_web_lookup_enabled() -> bool:
+    """Returns True when M4 Morgan web lookup is enabled (default: true)."""
+    return os.environ.get("M4_WEB_LOOKUP_ENABLED", "true").strip().lower() == "true"
+
+
+def _safe_doc_count(snap) -> int:
+    """Safely extracts a non-negative integer count from a Firestore DocumentSnapshot."""
+    if snap is None or not getattr(snap, "exists", False):
+        return 0
+    raw = (snap.to_dict() or {}).get("count")
+    try:
+        return max(0, int(raw or 0))
+    except (ValueError, TypeError):
+        return 0
+
+
+def _execute_dual_rate_cap_logic(
+    get_fn,
+    set_fn,
+    user_ref,
+    global_ref,
+    per_user_limit: int,
+    global_limit: int,
+    is_admin: bool,
+) -> Dict[str, int]:
+    """Shared read-check-increment logic for both real Firestore transactions and unit tests."""
+    global_count = _safe_doc_count(get_fn(global_ref))
+    user_count = 0 if is_admin else _safe_doc_count(get_fn(user_ref))
+
+    if global_count >= global_limit:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Global daily Morgan web lookup limit reached ({global_limit}/day). Please try again tomorrow.",
+        )
+
+    if not is_admin and user_count >= per_user_limit:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Your daily Morgan web lookup limit reached ({per_user_limit}/day). Please try again tomorrow.",
+        )
+
+    set_fn(
+        global_ref,
+        {"count": global_count + 1, "updated_at": firestore.SERVER_TIMESTAMP},
+    )
+    if not is_admin:
+        set_fn(
+            user_ref,
+            {"count": user_count + 1, "updated_at": firestore.SERVER_TIMESTAMP},
+        )
+
+    return {
+        "user_used": 0 if is_admin else user_count + 1,
+        "user_limit": per_user_limit,
+        "user_remaining": per_user_limit if is_admin else max(0, per_user_limit - (user_count + 1)),
+        "global_used": global_count + 1,
+        "global_limit": global_limit,
+        "global_remaining": max(0, global_limit - (global_count + 1)),
+    }
+
+
+def check_and_increment_dual_rate_cap(
+    uid: str,
+    endpoint: str,
+    per_user_limit: int = MORGAN_WEB_LOOKUP_USER_DAILY_LIMIT,
+    global_limit: int = MORGAN_WEB_LOOKUP_GLOBAL_DAILY_LIMIT,
+    is_admin: bool = False,
+) -> Dict[str, int]:
+    """Atomically enforces both a per-user daily cap and a global daily cap in one Firestore transaction."""
+    if os.environ.get("M4_WEB_LOOKUP_RATE_LIMIT_ENABLED", "true").strip().lower() != "true":
+        return {
+            "user_used": 0,
+            "user_limit": per_user_limit,
+            "user_remaining": per_user_limit,
+            "global_used": 0,
+            "global_limit": global_limit,
+            "global_remaining": global_limit,
+        }
+
+    clean_uid = str(uid or "").strip()
+    clean_endpoint = str(endpoint or "").strip().lstrip("/")
+    if not clean_uid or clean_uid == "_global" or not clean_endpoint:
+        raise HTTPException(
+            status_code=429,
+            detail="Web lookup rate limit check unavailable. Please try again shortly.",
+        )
+
+    today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    user_ref = (
+        db.collection("_rate_limits")
+        .document(clean_uid)
+        .collection(clean_endpoint)
+        .document(today_date)
+    )
+    global_ref = (
+        db.collection("_rate_limits")
+        .document("_global")
+        .collection(clean_endpoint)
+        .document(today_date)
+    )
+
+    try:
+        transaction = db.transaction()
+
+        @firestore.transactional
+        def _txn_step(txn):
+            return _execute_dual_rate_cap_logic(
+                get_fn=lambda ref: ref.get(transaction=txn),
+                set_fn=lambda ref, payload: txn.set(ref, payload, merge=True),
+                user_ref=user_ref,
+                global_ref=global_ref,
+                per_user_limit=per_user_limit,
+                global_limit=global_limit,
+                is_admin=is_admin,
+            )
+
+        return _txn_step(transaction)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Dual rate cap check failed for {clean_uid}/{clean_endpoint}: {e}")
+        raise HTTPException(
+            status_code=429,
+            detail="Web lookup rate limit check unavailable. Please try again shortly.",
+        )
+
+
+def get_dual_rate_cap_quota(
+    uid: str,
+    endpoint: str = "morgan_web_lookup",
+    per_user_limit: int = MORGAN_WEB_LOOKUP_USER_DAILY_LIMIT,
+    global_limit: int = MORGAN_WEB_LOOKUP_GLOBAL_DAILY_LIMIT,
+    is_admin: bool = False,
+) -> Dict[str, Any]:
+    """Read-only inspection of current per-user and global daily usage (0 writes)."""
+    enabled = is_morgan_web_lookup_enabled()
+    rate_limit_enabled = (
+        os.environ.get("M4_WEB_LOOKUP_RATE_LIMIT_ENABLED", "true").strip().lower() == "true"
+    )
+    if not rate_limit_enabled:
+        return {
+            "enabled": enabled,
+            "rate_limit_enabled": False,
+            "user_used": 0,
+            "user_limit": per_user_limit,
+            "user_remaining": per_user_limit,
+            "global_used": 0,
+            "global_limit": global_limit,
+            "global_remaining": global_limit,
+        }
+
+    clean_uid = str(uid or "").strip()
+    clean_endpoint = str(endpoint or "").strip().lstrip("/")
+    if not clean_uid or clean_uid == "_global" or not clean_endpoint:
+        raise HTTPException(
+            status_code=429,
+            detail="Web lookup rate limit check unavailable. Please try again shortly.",
+        )
+
+    today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    global_ref = (
+        db.collection("_rate_limits")
+        .document("_global")
+        .collection(clean_endpoint)
+        .document(today_date)
+    )
+    user_ref = (
+        db.collection("_rate_limits")
+        .document(clean_uid)
+        .collection(clean_endpoint)
+        .document(today_date)
+    )
+
+    try:
+        global_used = _safe_doc_count(global_ref.get())
+        user_used = 0 if is_admin else _safe_doc_count(user_ref.get())
+    except Exception as e:
+        logger.warning(f"Quota read failed for {clean_uid}/{clean_endpoint}: {e}")
+        raise HTTPException(
+            status_code=429,
+            detail="Web lookup rate limit check unavailable. Please try again shortly.",
+        )
+
+    return {
+        "enabled": enabled,
+        "rate_limit_enabled": True,
+        "user_used": user_used,
+        "user_limit": per_user_limit,
+        "user_remaining": per_user_limit if is_admin else max(0, per_user_limit - user_used),
+        "global_used": global_used,
+        "global_limit": global_limit,
+        "global_remaining": max(0, global_limit - global_used),
+    }
+
+
