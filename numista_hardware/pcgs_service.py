@@ -14,13 +14,15 @@ PCGS Number lookup strategy:
 """
 
 import os
+import sys
 import time
 import logging
 import requests
 import yfinance as yf
 from dotenv import load_dotenv
 
-load_dotenv()
+if not getattr(sys, "frozen", False):
+    load_dotenv()
 
 _TOKEN = os.getenv("PCGS_ACCESS_TOKEN")
 _BASE  = "https://api.pcgs.com/publicapi"
@@ -152,7 +154,7 @@ class PCGSService:
     _DEFAULT_SPOT = 32.50  # USD baseline fallback
 
     def __init__(self):
-        self.token = _TOKEN
+        self.token = os.getenv("PCGS_ACCESS_TOKEN") or _TOKEN
         self.headers = {
             "Authorization": f"Bearer {self.token}",
             "Accept": "application/json",
