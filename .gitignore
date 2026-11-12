@@ -23,7 +23,7 @@
 **/*.g.dart
 **/*.freezed.dart
 **/*.mocks.dart
-**/pubspec.lock
+# pubspec.lock is committed for numista_mobile to pin image@4.9.2 + archive@4.0.9 (Fix 4 V8.18.4)
 **/.fvm/
 
 # ============================================================
@@ -204,6 +204,7 @@ search_output_refined.txt
 # Build scripts, exported HTML docs, and payload files
 # ============================================================
 build_*.py
+!tools/catalog/build_*.py
 *_html.py
 ARCHITECTURE.html
 CHECKLIST_DESIGN_SPEC.html
@@ -234,3 +235,13 @@ numista_qc/node_modules/
 # Note: Numista_Brain_Inbox/ is already excluded above (line 159).
 numista_backend/serviceAccountKey.json
 Numista_Brain_Inbox/Brain Sorter/brain_status.md
+
+# npm lockfile accidentally generated in Flutter project (scoped to numista_mobile/)
+numista_mobile/package-lock.json
+
+# Hardware Agent Secrets & Keys (Task 2)
+numista_hardware/.env
+numista_hardware/*.key
+numista_hardware/*.crt
+numista_hardware/NumistaAgentSetup.exe
+**/serviceAccountKey*.json

@@ -38,35 +38,17 @@ from google.cloud import storage, firestore
 import shutil
 
 # --- FIRESTORE CLIENT ---
-# Uses the same service account key as the rest of the project.
+# Uses Application Default Credentials (ADC) — never bundles service account keys.
 _db = None
 def get_firestore_client():
     global _db
     if _db is None:
-        import sys
-        # 1. Try bundled path (if running inside PyInstaller bundle)
-        if hasattr(sys, "_MEIPASS"):
-            key_file = os.path.join(sys._MEIPASS, "serviceAccountKey.json.json")
-        else:
-            # 2. Try development path relative to this script
-            _here = os.path.dirname(os.path.abspath(__file__))
-            key_file = os.path.abspath(
-                os.path.join(_here, "..", "numista_backend", "serviceAccountKey.json.json")
-            )
-            if not os.path.exists(key_file):
-                # Fallback to CWD-based path
-                key_file = os.path.abspath(
-                    os.path.join(os.getcwd(), "..", "numista_backend", "serviceAccountKey.json.json")
-                )
-                
-        if os.path.exists(key_file):
-            import google.oauth2.service_account as sa
-            creds = sa.Credentials.from_service_account_file(key_file)
-            _db = firestore.Client(credentials=creds, project="studio-9101802118-8c9a8")
-            logging.info(f"Firestore client initialized with service account key: {key_file}")
-        else:
-            logging.warning(f"Service account key not found at {key_file}. Falling back to ADC.")
+        try:
             _db = firestore.Client(project="studio-9101802118-8c9a8")
+            logging.info("Firestore client initialized via ADC.")
+        except Exception as exc:
+            logging.warning(f"Firestore ADC initialization unavailable (non-fatal): {exc}")
+            _db = None
     return _db
 
 USER_EMAIL = None
@@ -139,25 +121,9 @@ def get_preview_camera_settings():
 
 # --- CLOUD SYNC HELPERS ---
 def upload_to_gcs_local(file_path, destination_blob_name):
-    """Uploads a local file to GCS using the project's service account key."""
+    """Uploads a local file to GCS using Application Default Credentials (ADC)."""
     try:
-        import sys
-        # 1. Try bundled path (if running inside PyInstaller bundle)
-        if hasattr(sys, "_MEIPASS"):
-            key_file = os.path.join(sys._MEIPASS, "serviceAccountKey.json.json")
-        else:
-            # 2. Try development path relative to this script
-            _here = os.path.dirname(os.path.abspath(__file__))
-            key_file = os.path.abspath(
-                os.path.join(_here, "..", "numista_backend", "serviceAccountKey.json.json")
-            )
-            
-        if os.path.exists(key_file):
-            client = storage.Client.from_service_account_json(key_file)
-        else:
-            logging.warning(f"[GCS] Key not found at {key_file} — falling back to ADC")
-            client = storage.Client()  # Fallback to Application Default Credentials
-            
+        client = storage.Client(project="studio-9101802118-8c9a8")
         bucket_name = "studio-9101802118-8c9a8-uploads"
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(destination_blob_name)
@@ -1032,21 +998,16 @@ if __name__ == "__main__":
     if USER_EMAIL and not IS_MOCK_HARDWARE:
         _watcher = start_command_watcher()
 
-    # Load SSL cert so Chrome (HTTPS page) can reach this local server.
-    # Flutter's hardware_service.dart calls https://localhost:5000 — the server
-    # MUST be HTTPS or Chrome sends TLS handshakes that crash a plain HTTP server.
+    # Load per-machine SSL cert via install_cert so Chrome (HTTPS page) can reach this local server.
     import ssl as _ssl
-    _here = os.path.dirname(os.path.abspath(__file__))
-    _cert = os.path.join(_here, 'localhost.crt')
-    _key  = os.path.join(_here, 'localhost.key')
+    import install_cert as _install_cert
+    _cert, _key = _install_cert.ensure_ssl_cert()
     if os.path.exists(_cert) and os.path.exists(_key):
         _ctx = _ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
-        _ctx.load_cert_chain(_cert, _key)
+        _ctx.load_cert_chain(str(_cert), str(_key))
         logging.info("SSL cert loaded — serving HTTPS on port 5000")
         app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, threaded=True, ssl_context=_ctx)
     else:
         logging.warning("No SSL cert found — falling back to plain HTTP.")
-        logging.warning("Run:  python gen_cert.py  to fix this.")
-        logging.warning("Then trust the cert: visit https://localhost:5000 in Chrome and click Proceed.")
         app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False, threaded=True)
 
