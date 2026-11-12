@@ -674,6 +674,14 @@ class _DesktopAgentDownloadScreenState
   }
 
   // ─── Download Card ──────────────────────────────────────────────────────────
+  /// Hidden until a clean NumistaAgentSetup.exe build (without .env/key files)
+  /// is published. Toggle via --dart-define=ENABLE_INSTALLER_DOWNLOAD=true or
+  /// flip defaultValue to true once the clean build is live.
+  static const bool _kInstallerBuildAvailable = bool.fromEnvironment(
+    'ENABLE_INSTALLER_DOWNLOAD',
+    defaultValue: false,
+  );
+
   Widget _buildDownloadCard(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
@@ -692,75 +700,106 @@ class _DesktopAgentDownloadScreenState
       ),
       child: Column(
         children: [
-          // Windows Installer Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isRequestingDownload ? null : _downloadWindowsInstaller,
-              icon: const Icon(Icons.download_rounded, size: 24),
-              label: Text(
-                _isRequestingDownload
-                    ? 'Preparing secure download link...'
-                    : '⊞  Download Setup Installer (NumistaAgentSetup.exe)',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: _white(context),
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _electricBlue,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 6,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // ─── Windows SmartScreen Helper Card ──────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black26,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _warningAmber.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.shield_outlined, color: _warningAmber, size: 20),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'If Windows shows "Windows protected your PC":\n'
-                    'Step 1: Click "More info"   ➔   Step 2: Click "Run anyway"',
-                    style: TextStyle(
-                      color: _white(context),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      height: 1.4,
-                    ),
+          if (_kInstallerBuildAvailable) ...[
+            // Windows Installer Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isRequestingDownload ? null : _downloadWindowsInstaller,
+                icon: const Icon(Icons.download_rounded, size: 24),
+                label: Text(
+                  _isRequestingDownload
+                      ? 'Preparing secure download link...'
+                      : '⊞  Download Setup Installer (NumistaAgentSetup.exe)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _white(context),
                   ),
                 ),
-              ],
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _electricBlue,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 6,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'NumistaAgentSetup.exe  •  Windows 10/11 (64-bit)',
-            style: TextStyle(color: _muted, fontSize: 12),
-          ),
+            const SizedBox(height: 16),
+            // ─── Windows SmartScreen Helper Card ──────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _warningAmber.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.shield_outlined, color: _warningAmber, size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'If Windows shows "Windows protected your PC":\n'
+                      'Step 1: Click "More info"   ➔   Step 2: Click "Run anyway"',
+                      style: TextStyle(
+                        color: _white(context),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'NumistaAgentSetup.exe  •  Windows 10/11 (64-bit)',
+              style: TextStyle(color: _muted, fontSize: 12),
+            ),
+          ] else ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _warningAmber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _warningAmber.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.build_circle_outlined, color: _warningAmber, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Setup Installer temporarily unavailable while a clean build is being prepared.',
+                      style: TextStyle(
+                        color: _white(context),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           const Divider(color: Colors.white12),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 4,
             children: [
               const Icon(Icons.info_outline, color: _muted, size: 16),
-              const SizedBox(width: 8),
               Text(
-                'Already installed? ',
+                'Already installed?',
                 style: TextStyle(color: _muted, fontSize: 13),
               ),
               if (widget.showBack)
