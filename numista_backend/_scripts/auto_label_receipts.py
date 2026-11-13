@@ -32,7 +32,7 @@ from google.genai import types as genai_types
 PROJECT_ID        = "568985927038"
 VERTEX_PROJECT    = "studio-9101802118-8c9a8"
 LOCATION          = "us"
-VERTEX_REGION     = "us-central1"
+VERTEX_REGION     = "global"
 RECEIPT_PROC_ID   = "c113e9bb62be1554"
 GCS_BUCKET        = "numista-training-docs"
 GCS_RECEIPT_DIR   = "receipt-training"
@@ -40,7 +40,7 @@ SCANS_DIR         = Path(r"C:\Users\ericd\Documents\MyVertexProject\Scans 28 JAN
 OUTPUT_DIR        = Path(r"C:\Users\ericd\Documents\MyVertexProject\numista_backend\receipt_labels")
 DATASET_NAME      = (f"projects/{PROJECT_ID}/locations/{LOCATION}"
                      f"/processors/{RECEIPT_PROC_ID}/dataset")
-MODEL_ID          = "gemini-3.5-flash"
+MODEL_ID          = "gemini-4-hydrogen"
 
 GEMINI_PROMPT = """
 You are analyzing a scanned coin purchase invoice. Extract the following data

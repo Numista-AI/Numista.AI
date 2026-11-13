@@ -1,0 +1,297 @@
+{
+  "ts": "2026-10-26T10:24:45",
+  "project": "numista-morgan-pilot",
+  "docs_before": 100,
+  "docs_ok": 14,
+  "failed": [],
+  "manifest": [
+    {
+      "key": "50sq_designs_201002",
+      "url": "https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq",
+      "title": "U.S. Mint 50 State Quarters Program \u2014 designs by year",
+      "kind": "html",
+      "ok": true,
+      "http": 200,
+      "bytes": 48380,
+      "chars": 2247,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\50sq_designs_201002.txt",
+      "markers": {
+        "Delaware": true,
+        "Virginia": true,
+        "Hawaii": true,
+        "Oklahoma": true,
+        "Philadelphia": false,
+        "Denver": false,
+        "Washington": true,
+        "10-year": true,
+        "10 weeks": true
+      }
+    },
+    {
+      "key": "50sq_learn_201807",
+      "url": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+      "title": "50 State Quarters Program (U.S. Mint learn page)",
+      "kind": "html",
+      "ok": true,
+      "http": 200,
+      "bytes": 76017,
+      "chars": 5521,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\50sq_learn_201807.txt",
+      "markers": {
+        "Delaware": true,
+        "Virginia": true,
+        "Hawaii": true,
+        "Oklahoma": true,
+        "Philadelphia": true,
+        "Denver": true,
+        "Washington": true,
+        "10-year": true,
+        "10 weeks": true
+      }
+    },
+    {
+      "key": "50sq_schedule_200901",
+      "url": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+      "title": "50 State Quarters Program release schedule",
+      "kind": "html",
+      "ok": true,
+      "http": 200,
+      "bytes": 81349,
+      "chars": 4584,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\50sq_schedule_200901.txt",
+      "markers": {
+        "Delaware": true,
+        "Virginia": true,
+        "Hawaii": true,
+        "Oklahoma": true,
+        "Philadelphia": false,
+        "Denver": false,
+        "Washington": true,
+        "10-year": true,
+        "10 weeks": true
+      }
+    },
+    {
+      "key": "coin_production_index_201210",
+      "url": "https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012",
+      "title": "U.S. Mint Coin Production Figures index (links 50 State Quarters 1999-2008)",
+      "kind": "html",
+      "ok": true,
+      "http": 200,
+      "bytes": 32046,
+      "chars": 2019,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\coin_production_index_201210.txt",
+      "markers": {
+        "Delaware": false,
+        "Virginia": false,
+        "Hawaii": false,
+        "Oklahoma": false,
+        "Philadelphia": true,
+        "Denver": true,
+        "Washington": false,
+        "10-year": false,
+        "10 weeks": false
+      }
+    },
+    {
+      "key": "prod_excel_1999",
+      "url": "https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls",
+      "title": "1999 50 State Quarters Program Production (U.S. Mint Excel)",
+      "kind": "excel",
+      "year": 1999,
+      "ok": true,
+      "http": 200,
+      "bytes": 18944,
+      "chars": 1018,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\prod_excel_1999.txt",
+      "designs": [
+        "Design",
+        "Delaware",
+        "Pennsylvania",
+        "New Jersey",
+        "Georgia",
+        "Connecticut"
+      ]
+    },
+    {
+      "key": "prod_excel_2000",
+      "url": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls",
+      "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)",
+      "kind": "excel",
+      "year": 2000,
+      "ok": true,
+      "http": 200,
+      "bytes": 19456,
+      "chars": 1034,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\prod_excel_2000.txt",
+      "designs": [
+        "Design",
+        "Massachusetts",
+        "Maryland",
+        "South Carolina",
+        "New Hampshire",
+        "Virginia"
+      ]
+    },
+    {
+      "key": "prod_excel_2001",
+      "url": "https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls",
+      "title": "2001 50 State Quarters Program Production (U.S. Mint Excel)",
+      "kind": "excel",
+      "year": 2001,
+      "ok": true,
+      "http": 200,
+      "bytes": 18944,
+      "chars": 1021,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\prod_excel_2001.txt",
+      "designs": [
+        "Design",
+        "New York",
+        "North Carolina",
+        "Rhode Island",
+        "Vermont",
+        "Kentucky"
+      ]
+    },
+    {
+      "key": "prod_excel_2002",
+      "url": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls",
+      "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+      "kind": "excel",
+      "year": 2002,
+      "ok": true,
+      "http": 200,
+      "bytes": 18944,
+      "chars": 1008,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\prod_excel_2002.txt",
+      "designs": [
+        "Design",
+        "Tennessee",
+        "Ohio",
+        "Louisiana",
+        "Indiana",
+        "Mississippi"
+      ]
+    },
+    {
+      "key": "prod_excel_2003",
+      "url": "https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls",
+      "title": "2003 50 State Quarters Program Production (U.S. Mint Excel)",
+      "kind": "excel",
+      "year": 2003,
+      "ok": true,
+      "http": 200,
+      "bytes": 18944,
+      "chars": 1004,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\prod_excel_2003.txt",
+      "designs": [
+        "Design",
+        "Illinois",
+        "Alabama",
+        "Maine",
+        "Missouri",
+        "Arkansas"
+      ]
+    },
+    {
+      "key": "prod_excel_2004",
+      "url": "https://web.archive.org/web/20121021063833id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2004_50_State_Quarters_Program_Production.xls",
+      "title": "2004 50 State Quarters Program Production (U.S. Mint Excel)",
+      "kind": "excel",
+      "year": 2004,
+      "ok": true,
+      "http": 200,
+      "bytes": 18944,
+      "chars": 1001,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\prod_excel_2004.txt",
+      "designs": [
+        "Design",
+        "Michigan",
+        "Florida",
+        "Texas",
+        "Iowa",
+        "Wisconsin"
+      ]
+    },
+    {
+      "key": "prod_excel_2005",
+      "url": "https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls",
+      "title": "2005 50 State Quarters Program Production (U.S. Mint Excel)",
+      "kind": "excel",
+      "year": 2005,
+      "ok": true,
+      "http": 200,
+      "bytes": 18944,
+      "chars": 1012,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\prod_excel_2005.txt",
+      "designs": [
+        "Design",
+        "California",
+        "Minnesota",
+        "Oregon",
+        "Kansas",
+        "West Virginia"
+      ]
+    },
+    {
+      "key": "prod_excel_2006",
+      "url": "https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls",
+      "title": "2006 50 State Quarters Program Production (U.S. Mint Excel)",
+      "kind": "excel",
+      "year": 2006,
+      "ok": true,
+      "http": 200,
+      "bytes": 18944,
+      "chars": 1014,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\prod_excel_2006.txt",
+      "designs": [
+        "Design",
+        "Nevada",
+        "Nebraska",
+        "Colorado",
+        "North Dakota",
+        "South Dakota"
+      ]
+    },
+    {
+      "key": "prod_excel_2007",
+      "url": "https://web.archive.org/web/20121021063643id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2007_50_State_Quarters_Program_Production.xls",
+      "title": "2007 50 State Quarters Program Production (U.S. Mint Excel)",
+      "kind": "excel",
+      "year": 2007,
+      "ok": true,
+      "http": 200,
+      "bytes": 18944,
+      "chars": 1001,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\prod_excel_2007.txt",
+      "designs": [
+        "Design",
+        "Montana",
+        "Washington",
+        "Idaho",
+        "Wyoming",
+        "Utah"
+      ]
+    },
+    {
+      "key": "prod_excel_2008",
+      "url": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls",
+      "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+      "kind": "excel",
+      "year": 2008,
+      "ok": true,
+      "http": 200,
+      "bytes": 18944,
+      "chars": 1005,
+      "txt": "C:\\Users\\ericd\\Documents\\MyVertexProject\\BETA TEST\\Grok Bot\\8 OCT 26\\MORGAN_PILOT\\mint_pages_state_quarters\\prod_excel_2008.txt",
+      "designs": [
+        "Design",
+        "Oklahoma",
+        "New Mexico",
+        "Arizona",
+        "Alaska",
+        "Hawaii"
+      ]
+    }
+  ]
+}

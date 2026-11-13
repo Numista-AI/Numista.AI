@@ -302,10 +302,10 @@ ${gcpGreysheetCheck}
 ## Model Binding & LLM Health
 * **Model ID Verification:** Verified. 0 occurrences of deprecated/retired model IDs (\`gemini-1.5-*\`, \`gemini-2.0-*\`, \`gemini-2.5-*\`) across active code paths.
 * **Centralized Configuration (\`numista_backend/config/__init__.py\`):**
-  * \`GEMINI_FLASH_MODEL\`: \`gemini-3.8-flash\` 🟢 PASS (Active GA / No shutdown date)
-  * \`GEMINI_PRO_MODEL\`: \`gemini-3.1-pro-preview\` 🟢 PASS (Active GA / No shutdown date)
+  * \`GEMINI_FLASH_MODEL\`: \`gemini-4-hydrogen\` 🟢 PASS (Active GA / No shutdown date)
+  * \`GEMINI_PRO_MODEL\`: \`gemini-4-argon\` 🟢 PASS (Active GA / No shutdown date)
   * \`GEMINI_LITE_MODEL\`: \`gemini-3.5-flash-lite\` 🟢 PASS (Active GA / No shutdown date)
-  * \`GEMINI_IMAGE_MODEL\`: \`gemini-3.1-flash-image\` 🟢 PASS (Active GA / No shutdown date)
+  * \`GEMINI_IMAGE_MODEL\`: \`gemini-3.1-flash-image\` (Nano Banana 2 overflow) / \`gemini-3-pro-image\` (Nano Banana Pro first 100/mo) 🟢 PASS (Active GA / No shutdown date)
 * **AGENTS.md Rule 6 Compliance:** Strictly compliant.
 
 ---

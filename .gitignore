@@ -204,6 +204,7 @@ search_output_refined.txt
 # Build scripts, exported HTML docs, and payload files
 # ============================================================
 build_*.py
+!tools/catalog/build_*.py
 *_html.py
 ARCHITECTURE.html
 CHECKLIST_DESIGN_SPEC.html
@@ -237,3 +238,10 @@ Numista_Brain_Inbox/Brain Sorter/brain_status.md
 
 # npm lockfile accidentally generated in Flutter project (scoped to numista_mobile/)
 numista_mobile/package-lock.json
+
+# Hardware Agent Secrets & Keys (Task 2)
+numista_hardware/.env
+numista_hardware/*.key
+numista_hardware/*.crt
+numista_hardware/NumistaAgentSetup.exe
+**/serviceAccountKey*.json

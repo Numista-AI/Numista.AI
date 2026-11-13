@@ -3046,7 +3046,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final displayTitle = crw.isVirtualChild
             ? '\u21b3 ${themeStartsYear ? label : '$yearMint $label'}'.trim()
             : (themeStartsYear ? label : '$yearMint $label').trim();
-
         // Valuation precedence and pending chip encapsulated in CollectionCardValuationRow (NET-780b v2.3)
 
         // For virtual children, selection targets parent doc
@@ -3368,7 +3367,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         if (gVal > 0) {
           return _currencyFmt.format(gVal);
         }
-        final av = m[_F.aiValue]?.toString().trim() ?? '';
+        final av = (m[_F.aiValue] ?? m['ai_estimated_value'] ?? m['estValue'] ?? m['ai_est_value'])?.toString().trim() ?? '';
         if (av == 'Pending' || av == 'null' || av.isEmpty) return '';
         final rangeMatch = RegExp(r'^(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)$').firstMatch(av);
         if (rangeMatch != null) {
@@ -3522,8 +3521,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       builder: (_) => StatefulBuilder(
         builder: (ctx, setDlg) {
           final canMutate = data['is_virtual'] != true && coinId.isNotEmpty;
-          final obvUrl   = data[_F.imageObverse]?.toString() ?? '';
-          final revUrl   = data[_F.imageReverse]?.toString() ?? '';
+          final obvUrl   = (data[_F.imageObverse] ?? data['primary_image_url'] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).isNotEmpty ? data['photo_urls'][0] : null))?.toString() ?? '';
+          final revUrl   = (data[_F.imageReverse] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).length > 1 ? data['photo_urls'][1] : null))?.toString() ?? '';
           final hasObv   = obvUrl.isNotEmpty && obvUrl.startsWith('http');
           final hasRev   = revUrl.isNotEmpty && revUrl.startsWith('http');
           final showObv  = _vaultShowObverse || (!hasRev && hasObv);
@@ -3554,24 +3553,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     Text('Coin Inspector -- $title',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text)),
                     Spacer(),
-                    // Google Images search — only shown when no photo is active
-                    if (!hasActive && refFuture != null) ...[
-                      Tooltip(
-                        message: 'Opens Google Images: searches for this coin',
-                        child: OutlinedButton.icon(
-                          onPressed: () => _onSearchGoogle(data),
-                          icon: Icon(Icons.image_search, size: 15),
-                          label: Text('Google Images'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _text, side: BorderSide(color: _border),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            textStyle: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                    ],
                     if (canMutate && data['is_set'] != true && data['isSet'] != true && (data['parent_set_id'] == null || data['parent_set_id'].toString().isEmpty)) ...[
                       OutlinedButton.icon(
                         onPressed: () {
@@ -3873,7 +3854,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ? data[_F.meltValue].toString()
             : 'N/A');
     return Row(children: [
-      Expanded(child: _metricCard('Est. Value', data[_F.aiValue]?.toString() ?? '--', Color(0xFF1A73E8), Icons.attach_money)),
+      Expanded(child: _metricCard('Est. Value', (data[_F.aiValue] ?? data['ai_estimated_value'] ?? data['estValue'] ?? (data['ai_est_value'] != null ? '\$${(data['ai_est_value'] is num ? (data['ai_est_value'] as num).toStringAsFixed(2) : data['ai_est_value'])}' : null))?.toString() ?? '--', Color(0xFF1A73E8), Icons.attach_money)),
       SizedBox(width: 10),
       Expanded(child: _metricCard('Melt Value', meltStr, Color(0xFF34A853), Icons.blur_circular_outlined)),
       SizedBox(width: 10),
@@ -4408,27 +4389,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ],
       ),
     );
-  }
-
-  void _onSearchGoogle(Map<String, dynamic> data) async {
-    final year  = data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-    final mint  = data[_F.mintMark]?.toString() ?? '';
-    final denom = data[_F.denomination]?.toString() ?? '';
-    final query = Uri.encodeComponent('$year${mint.isNotEmpty ? '-$mint' : ''} $denom coin value'.trim());
-    final uri = Uri.parse('https://www.google.com/search?tbm=isch&q=$query');
-    try {
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Could not open browser.'), backgroundColor: _red));
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Couldn\'t open the browser. Please try again.'), backgroundColor: _red));
-      }
-    }
   }
 
   /// Opens eBay SOLD listings in the browser using an EPN affiliate link
@@ -6123,7 +6083,7 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    const bgCard = Color(0xFF161B27);
+    final bgCard = isDark ? const Color(0xFF161B27) : Colors.white;
     const pink   = Color(0xFFF63366);
 
     return AlertDialog(

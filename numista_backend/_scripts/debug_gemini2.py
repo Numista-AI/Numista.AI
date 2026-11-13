@@ -11,7 +11,7 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-client = genai.Client(vertexai=True, project="studio-9101802118-8c9a8", location="us-central1", credentials=creds)
+client = genai.Client(vertexai=True, project="studio-9101802118-8c9a8", location="global", credentials=creds)
 
 doc_service = documentai.DocumentServiceClient(
     credentials=creds,
@@ -43,7 +43,7 @@ EXTRACTION_PROMPT = (
 prompt = EXTRACTION_PROMPT + doc_text[:12000]
 
 response = client.models.generate_content(
-    model="gemini-3.5-flash",
+    model="gemini-4-hydrogen",
     contents=prompt,
     config=genai_types.GenerateContentConfig(
         response_mime_type="application/json", temperature=0.0, max_output_tokens=8192),

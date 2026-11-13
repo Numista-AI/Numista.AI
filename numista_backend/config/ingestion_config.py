@@ -3,11 +3,11 @@ Ingestion Configuration & Calibrated Calibration Weights
 Numista.AI System of Record
 """
 
-# Mandatory Model Policy (2026 Production Active Models)
-CLASSIFIER_MODEL = "gemini-3.8-flash"
-EXTRACTION_MODEL = "gemini-3.1-pro-preview"
-FALLBACK_FLASH_MODEL = "gemini-3.8-flash"
-FALLBACK_PRO_MODEL = "gemini-3.5-pro"
+# Mandatory Model Policy (2026 Production Active Models - Gemini 4 Tiered)
+CLASSIFIER_MODEL = "gemini-4-hydrogen"
+EXTRACTION_MODEL = "gemini-4-argon"
+FALLBACK_FLASH_MODEL = "gemini-4-hydrogen"
+FALLBACK_PRO_MODEL = "gemini-3.1-pro-preview"
 
 # Prompt and Processing Versions
 CHECKLIST_PROMPT_VERSION = "checklist_v7_20260815"

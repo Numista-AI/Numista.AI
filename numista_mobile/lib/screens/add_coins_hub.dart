@@ -356,23 +356,17 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         case 'manual':
           initialIdx = 2;
           break;
-        case 'pcgs':
-        case 'cert':
-        case 'ngc':
-        case 'cac':
-          initialIdx = 3;  // P7: unified cert tab
-          break;
         case 'sku':
-          initialIdx = 4;
+          initialIdx = 3;
           break;
         case 'roll':
-          initialIdx = 5;
+          initialIdx = 4;
           break;
         case 'world':
-          initialIdx = 6;
+          initialIdx = 5;
           break;
         case 'set':
-          initialIdx = 7;
+          initialIdx = 6;
           break;
         default:
           initialIdx = 0;
@@ -380,7 +374,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
     }
     _tabController = TabController(
-      length: 8,
+      length: 7,
       vsync: this,
       initialIndex: initialIdx,
     );
@@ -838,7 +832,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       );
     }
 
-    if (widget.showCertFullScreen) {
+    if (widget.showCertFullScreen ||
+        (widget.initialTabName != null &&
+            ['cert', 'pcgs', 'ngc', 'cac']
+                .contains(widget.initialTabName!.toLowerCase()))) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Add by Cert #'),
@@ -944,6 +941,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               ),
             ),
           );
+        },
+      ),
+      _QuickAddCard(
+        icon: Icons.receipt_long_outlined,
+        label: 'Upload an invoice',
+        onTap: () {
+          setState(() => _showMoreWays = true);
+          _tabController.animateTo(0);
         },
       ),
       _QuickAddCard(
@@ -1072,7 +1077,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     ),
                   ),
                 ),
-                _buildCertLookupTab(),   // P7 FIX: unified PCGS/NGC/CAC tab (was _buildPcgsImportTab)
+                // NET-585: 'Cert Lookup' tab removed — Add by Cert # lives uniquely as top-level card (SS4 dedupe)
                 _buildSkuImportTab(),
                 _buildRollEntryTab(),
                 _buildWorldItemsTab(),
@@ -1129,7 +1134,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           Tab(text: 'Upload Files',           icon: Icon(Icons.upload_file_outlined,  size: 20)),
           Tab(text: 'AI Photo ID',            icon: Icon(Icons.photo_camera_outlined, size: 20)),
           Tab(text: 'Manual Entry',           icon: Icon(Icons.edit_note,             size: 20)),
-          Tab(text: 'Cert Lookup',            icon: Icon(Icons.verified_outlined,     size: 20)),  // P7: PCGS/NGC/CAC
+          // NET-585: 'Cert Lookup' deduplicated from tab bar to show Add by Cert only once (SS4 dedupe)
           Tab(text: 'Add by SKU',             icon: Icon(Icons.qr_code,               size: 20)),
           Tab(text: 'Roll/Jar/Batch',         icon: Icon(Icons.currency_exchange,     size: 20)),
           Tab(text: 'World & Specialty',      icon: Icon(Icons.language_rounded,      size: 20)),
@@ -3230,6 +3235,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                       child: TextField(
                         controller: _pcgsSingleCtrl,
                         focusNode: _pcgsSingleFocusNode,
+                        autofocus: true,
                         keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
                         style: const TextStyle(fontSize: 18, color: Color(0xFF1E293B)),
                         onChanged: (val) {
@@ -4295,6 +4301,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                 onPressed: () => widget.onNavigate!('My Collection'))
             : null,
       ));
+      // NET-585: Auto-pop fullscreen cert flow on successful add (cuts 1 tap on Back button)
+      if (widget.showCertFullScreen && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _certManualSaving = false);
@@ -5039,6 +5049,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             ? SnackBarAction(label: 'View', textColor: Colors.white, onPressed: () => widget.onNavigate!('My Collection'))
             : null,
       ));
+      // NET-585: Auto-pop fullscreen cert flow on successful add (cuts 1 tap on Back button)
+      if (widget.showCertFullScreen && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _pcgsSingleAdding = false);

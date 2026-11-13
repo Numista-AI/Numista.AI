@@ -1,0 +1,1 @@
+Eric pinged 2026-10-21 12:28 ET: type 'check radio' to AG (P7 V8.18.15 stall, AGCOS_OVER since 10:16 ET).

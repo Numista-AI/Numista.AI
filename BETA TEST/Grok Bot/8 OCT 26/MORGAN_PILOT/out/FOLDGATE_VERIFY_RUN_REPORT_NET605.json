@@ -1,0 +1,234 @@
+{
+  "run_id": "NET605-FOLDGATE-VERIFY-001",
+  "timestamp_utc": "2026-10-27T17:14:15.762793+00:00",
+  "project_id": "numista-morgan-pilot",
+  "authorized_by": "Eric typed YES (YES fold-gate verify) via Grok CoS NET-605",
+  "execution_thread": "086b98b4-2340-4241-9f6a-08b8aaa8992c",
+  "targets_verified_count": 20,
+  "all_passed": true,
+  "spend_breakdown": {
+    "enterprise_search_queries": {
+      "count": 480,
+      "rate_per_1k": 4.0,
+      "cost_usd": 1.92
+    },
+    "advanced_generative_answers": {
+      "count": 480,
+      "rate_per_1k": 4.0,
+      "cost_usd": 1.92
+    },
+    "semantic_ranking_api": {
+      "count": 20,
+      "rate_per_1k": 1.0,
+      "cost_usd": 0.02
+    },
+    "check_grounding_api": {
+      "count": 40,
+      "rate_per_1k": 0.00075,
+      "cost_usd": 3e-05
+    },
+    "total_list_price_usd": 3.86
+  },
+  "results": [
+    {
+      "target_id": "FG-586-01",
+      "topic": "Fugio AMERICAN CONGRESS Pattern",
+      "claim": "The AMERICAN CONGRESS reverse legend on the 1787 Fugio cent is Newman 1-CC pattern only; normal circulation issues use UNITED STATES or STATES UNITED.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0064,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-586-02",
+      "topic": "Fugio New Haven Restrike Attributed to Rust",
+      "claim": "The so-called New Haven Restrike of the Fugio cent was struck around 1860 by Horatio N. Rust from copy dies following C. Wyllys Betts die discovery and is not 1787 circulation.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0027,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-586-03",
+      "topic": "Fugio Die Engraver Abel Buell",
+      "claim": "Abel Buell engraved the dies for the 1787 Fugio coppers struck in New Haven Connecticut.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0092,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-586-04",
+      "topic": "Fugio Mintage Estimated Treasury Weight Count",
+      "claim": "Fugio cent mintage is estimated at ~398,577 pieces based on Treasury weight-count delivery records of 8,968 pounds of copper.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0913,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-586-05",
+      "topic": "Rank 0 Image Gap Parity Targets",
+      "claim": "Rank 0 image parity targets require obverse sundial and reverse 13 linked chain rings with WE ARE ONE for primary presentation.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0044,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-588-06",
+      "topic": "Grand Watermelon 1890 Treasury Note",
+      "claim": "The Grand Watermelon banknote is the Series 1890 $1000 Treasury Note (Coin Note) Fr. 379a/379b, not a Gold Certificate.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.3534,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-588-07",
+      "topic": "1923 Porthole $5 Silver Certificate",
+      "claim": "The 1923 $5 Porthole note depicting Abraham Lincoln is a Silver Certificate (Fr. 282), not a Legal Tender note.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0115,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-588-08",
+      "topic": "1899 $5 Chief Running Antelope",
+      "claim": "The vignette on the Series 1899 $5 Silver Certificate depicts Chief Running Antelope of the Oncpapa Sioux, not Chief Black Hawk.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0056,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-588-09",
+      "topic": "Hibernia Coppers and 1767 Sou",
+      "claim": "William Wood Hibernia coppers and 1767 French colonies sou coppers marked RF circulated as token copper currency in colonial America.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0052,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-588-10",
+      "topic": "Federal Reserve Bank Notes vs FRNs",
+      "claim": "Federal Reserve Bank Notes (FRBN) of 1915 and 1918 National Currency series are obligations of individual Federal Reserve Banks, distinct from Federal Reserve Notes.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0683,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-589-11",
+      "topic": "US Gold Denominations Standard",
+      "claim": "U.S. classic gold coin denominations are $2.50 Quarter Eagle, $5 Half Eagle, $10 Eagle, and $20 Double Eagle.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0628,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-589-12",
+      "topic": "US-Philippines Silver Fineness Transition",
+      "claim": "U.S.-Philippines 20 Centavos and 50 Centavos silver coins were struck in .900 fineness from 1903 to 1906, and reduced to .750 fineness in 1907.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0054,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-589-13",
+      "topic": "Manila Mint M Mintmark Timeline",
+      "claim": "The Manila Mint struck coins with the 'M' mint mark beginning in 1925; although opened in 1920, issues from 1920 to 1922 did not carry the M mintmark.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0066,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-589-14",
+      "topic": "Engraver Melecio Figueroa Spelling",
+      "claim": "Filipino artist and master engraver Melecio Figueroa (spelled Melecio, not Melicio) designed the US-Philippines coinage obverse and reverse devices.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0066,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-589-15",
+      "topic": "1793 Half Cent & 1794 Dollar Deliveries",
+      "claim": "1793 Half Cent dies were engraved by Henry Voigt and Joseph Wright; 1,758 Flowing Hair silver dollars were delivered in October 1794.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0055,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-590-16",
+      "topic": "1921-S Walking Liberty Mintage 548,000",
+      "claim": "The official U.S. Mint mintage for the 1921-S Walking Liberty Half Dollar is exactly 548,000 pieces.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.1572,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-590-17",
+      "topic": "1955 Franklin Half Dollar Mintage 2,498,181",
+      "claim": "The official U.S. Mint mintage for the 1955 Franklin Half Dollar struck at Philadelphia is 2,498,181 pieces.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.3752,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-590-18",
+      "topic": "1917 Walking Liberty Mintmark Relocation Order",
+      "claim": "The Walking Liberty half dollar mintmark was relocated from the obverse to the reverse by Mint administrative order on February 14, 1917; 1917-D and 1917-S coins exist with obverse and reverse mintmarks.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0057,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-590-19",
+      "topic": "A6 Proof and Mint Set Packaging Parity",
+      "claim": "Modern U.S. Mint uncirculated mint sets and proof sets packaging documentation maintains full parity across envelope and plastic lens specifications.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0081,
+      "verdict": "CONDITIONAL_SUPPORT"
+    },
+    {
+      "target_id": "FG-590-20",
+      "topic": "National Medals and Assay Commission Catalog",
+      "claim": "U.S. Mint national historical medals and annual Assay Commission medals are cataloged with distinct Julian and Keusch reference classifications.",
+      "queries_run": 24,
+      "grounding_checks": 2,
+      "ranking_calls": 1,
+      "support_score": 0.0042,
+      "verdict": "CONDITIONAL_SUPPORT"
+    }
+  ]
+}

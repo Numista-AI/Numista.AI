@@ -47,7 +47,7 @@ def classify_issues_with_gemini(raw_issues):
     """
     global LLM_AVAILABLE
     try:
-        import google.generativeai as genai
+        from google import genai
         api_key = os.environ.get('GEMINI_API_KEY')
         if not api_key:
             raise RuntimeError('GEMINI_API_KEY not set')
@@ -56,10 +56,9 @@ def classify_issues_with_gemini(raw_issues):
         manifest_path = Path(__file__).parent.parent / 'SUITE_MANIFEST.json'
         with open(manifest_path) as f:
             manifest = json.load(f)
-        model_id = manifest.get('synthesizer_model_id', 'gemini-3.8-flash')
+        model_id = manifest.get('synthesizer_model_id', 'gemini-4-hydrogen')
 
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(model_id)
+        client = genai.Client(api_key=api_key)
 
         prompt = (
             "Classify each of the following user feedback issues into one of these categories: "
@@ -68,7 +67,7 @@ def classify_issues_with_gemini(raw_issues):
             "Issues:\n" + "\n".join(f"- {strip_pii(i)}" for i in raw_issues)
         )
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model=model_id, contents=prompt)
         text = response.text.strip()
         if text.startswith('```'):
             text = re.sub(r'^```[a-z]*\n?', '', text)

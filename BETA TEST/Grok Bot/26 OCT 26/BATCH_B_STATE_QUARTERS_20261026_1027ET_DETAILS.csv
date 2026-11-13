@@ -1,0 +1,13 @@
+row,slot,verdict,supportScore,n_mint_facts,claim_citations,claim_scores,opp_supportScore,ours
+1,state_quarters#program_scope,Supported,0.6954576,14,"[[0, 1], [1]]","[0.7395091652870178, 0.651405930519104]",0.6437224,1999-2008 5/year admission order
+2,state_quarters#obverse_inscriptions,Supported,0.8157852,33,"[[0], [1, 2, 0, 3]]","[0.6414669752120972, 0.9901034832000732]",0.6295625,Washington obverse; legends moved
+3,state_quarters#production_window,Supported,0.99359554,14,"[[0, 1, 2, 3]]",[0.993595540523529],0.6463451,~10 weeks never again
+4,state_quarters_1999#Delaware,Supported,0.9731995,9,[[0]],[0.9731994867324829],0.557806,DE D/P mintages
+5,state_quarters_1999#Connecticut,Supported,0.9024192,9,"[[0], [0]]","[0.9664386510848999, 0.8383998274803162]",0.49193376,CT highest 1999
+6,state_quarters_2000#Virginia,Supported,0.9628438,9,[[0]],[0.9628437757492065],0.09859334,VA highest series
+7,state_quarters#facilities_PD,Supported,0.87117416,9,"[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], [0, 2, 4, 6, 8, 10, 12, 14, 16]]","[0.8985096216201782, 0.8438386917114258]",0.0023476032,P and D circulating
+8,state_quarters_2008#order,Supported,0.6461543,13,[[0]],[0.6461542844772339],0.735266,OK NM AZ AK HI 2008
+9,state_quarters_2008#Oklahoma,Supported,0.96265143,9,[[0]],[0.9626514315605164],0.5364756,OK mintages lowest-class
+10,state_quarters_1999#order,Supported,0.88440174,12,"[[0, 1, 2, 3, 4]]",[0.8844017386436462],0.6632267,DE PA NJ GA CT
+11,state_quarters_2002#Mississippi,Supported,0.9713552,9,[[0]],[0.9713551998138428],0.47209796,MS mintages
+12,state_quarters#2009_territories_followon,Supported,0.66667014,11,[[0]],[0.6666701436042786],0.6465839,2009 DC+territories separate

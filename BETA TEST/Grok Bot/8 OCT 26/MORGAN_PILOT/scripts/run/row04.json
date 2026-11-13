@@ -1,0 +1,983 @@
+{
+ "row": 4,
+ "slot": "state_quarters_1999#Delaware",
+ "claim": "The 1999 Delaware 50 State Quarter circulating production was 401,424,000 at Denver and 373,400,000 at Philadelphia, for a total of 774,824,000 coins.",
+ "opposite": "The 1999 Delaware State Quarter had a circulating mintage under 50 million coins combined.",
+ "queries": [
+  "1999 Delaware 50 State Quarters Program Production Denver 401,424,000 Philadelphia 373,400,000",
+  "1999 Delaware State Quarter circulating production Denver Philadelphia"
+ ],
+ "search_status": [
+  200,
+  200
+ ],
+ "checks": {
+  "claim_vs_mint": {
+   "status": 200,
+   "resp": {
+    "supportScore": 0.9731995,
+    "citedChunks": [
+     {
+      "chunkText": "Design | Denver | Philadelphia | Total\n1999 50 State Quarters Program® Production\nDelaware | Denver 401,424,000 | Philadelphia 373,400,000 | Total 774,824,000\nPennsylvania | Denver 358,332,000 | Philadelphia 349,000,000 | Total 707,332,000\nNew Jersey | Denver 299,028,000 | Philadelphia 363,200,000 | Total 662,228,000\nGeorgia | Denver 488,744,000 | Philadelphia 451,188,000 | Total 939,932,000\nConnecticut | Denver 657,880,000 | Philadelphia 688,744,000 | Total 1,346,624,000\nGrand Total: 4,430,940,000",
+      "source": "0"
+     }
+    ],
+    "claims": [
+     {
+      "startPos": 0,
+      "endPos": 150,
+      "claimText": "The 1999 Delaware 50 State Quarter circulating production was 401,424,000 at Denver and 373,400,000 at Philadelphia, for a total of 774,824,000 coins.",
+      "citationIndices": [
+       0
+      ],
+      "groundingCheckRequired": true,
+      "score": 0.9731994867324829
+     }
+    ]
+   },
+   "facts": [
+    {
+     "sc": 0.9948511457443238,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_1999",
+     "uri": "https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls",
+     "title": "1999 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 1999 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n1999 50 State Quarters Program® Production\nDelaware | Denver 401,424,000 | Philadelphia 373,400,000 | Total 774,824,000\nPennsylvania | Denver 358,332,000 | Philadelphia 349,000,000 | Total 707,332,000\nNew Jersey | Denver 299,028,000 | Philadelphia 363,200,000 | Total 662,228,000\nGeorgia | Denver 488,744,000 | Philadelphia 451,188,000 | Total 939,932,000\nConnecticut | Denver 657,880,000 | Philadelphia 688,744,000 | Total 1,346,624,000\nGrand Total: 4,430,940,000"
+    },
+    {
+     "sc": 0.9025972032546997,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2008",
+     "uri": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls",
+     "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2008 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2008 50 State Quarters Program® Production\nOklahoma | Denver 194,600,000 | Philadelphia 222,000,000 | Total 416,600,000\nNew Mexico | Denver 244,400,000 | Philadelphia 244,200,000 | Total 488,600,000\nArizona | Denver 265,000,000 | Philadelphia 244,600,000 | Total 509,600,000\nAlaska | Denver 254,000,000 | Philadelphia 251,800,000 | Total 505,800,000\nHawaii | Denver 263,600,000 | Philadelphia 254,000,000 | Total 517,600,000\nGrand Total: 2,438,200,000"
+    },
+    {
+     "sc": 0.899767472743988,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2000",
+     "uri": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls",
+     "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2000 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2000 50 State Quarters Program® Production\nMassachusetts | Denver 535,184,000 | Philadelphia 628,600,000 | Total 1,163,784,000\nMaryland | Denver 556,532,000 | Philadelphia 678,200,000 | Total 1,234,732,000\nSouth Carolina | Denver 566,208,000 | Philadelphia 742,576,000 | Total 1,308,784,000\nNew Hampshire | Denver 495,976,000 | Philadelphia 673,040,000 | Total 1,169,016,000\nVirginia | Denver 651,616,000 | Philadelphia 943,000,000 | Total 1,594,616,000\nGrand Total: 6,470,932,000"
+    },
+    {
+     "sc": 0.8854253840446472,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2006",
+     "uri": "https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls",
+     "title": "2006 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2006 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2006 50 State Quarters Program® Production\nNevada | Denver 312,800,000 | Philadelphia 277,000,000 | Total 589,800,000\nNebraska | Denver 276,400,000 | Philadelphia 318,000,000 | Total 594,400,000\nColorado | Denver 294,200,000 | Philadelphia 274,800,000 | Total 569,000,000\nNorth Dakota | Denver 359,000,000 | Philadelphia 305,800,000 | Total 664,800,000\nSouth Dakota | Denver 265,800,000 | Philadelphia 245,000,000 | Total 510,800,000\nGrand Total: 2,928,800,000"
+    },
+    {
+     "sc": 0.8713864040374756,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2003",
+     "uri": "https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls",
+     "title": "2003 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2003 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2003 50 State Quarters Program® Production\nIllinois | Denver 237,400,000 | Philadelphia 225,800,000 | Total 463,200,000\nAlabama | Denver 232,400,000 | Philadelphia 225,000,000 | Total 457,400,000\nMaine | Denver 231,400,000 | Philadelphia 217,400,000 | Total 448,800,000\nMissouri | Denver 228,200,000 | Philadelphia 225,000,000 | Total 453,200,000\nArkansas | Denver 229,800,000 | Philadelphia 228,000,000 | Total 457,800,000\nGrand Total: 2,280,400,000"
+    },
+    {
+     "sc": 0.8705438137054443,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2002",
+     "uri": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls",
+     "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2002 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2002 50 State Quarters Program® Production\nTennessee | Denver 286,468,000 | Philadelphia 361,600,000 | Total 648,068,000\nOhio | Denver 414,832,000 | Philadelphia 217,200,000 | Total 632,032,000\nLouisiana | Denver 402,204,000 | Philadelphia 362,000,000 | Total 764,204,000\nIndiana | Denver 327,200,000 | Philadelphia 362,600,000 | Total 689,800,000\nMississippi | Denver 289,600,000 | Philadelphia 290,000,000 | Total 579,600,000\nGrand Total: 3,313,704,000"
+    },
+    {
+     "sc": 0.8516500949859619,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2001",
+     "uri": "https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls",
+     "title": "2001 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2001 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2001 50 State Quarters Program® Production\nNew York | Denver 619,640,000 | Philadelphia 655,400,000 | Total 1,275,040,000\nNorth Carolina | Denver 427,876,000 | Philadelphia 627,600,000 | Total 1,055,476,000\nRhode Island | Denver 447,100,000 | Philadelphia 423,000,000 | Total 870,100,000\nVermont | Denver 459,404,000 | Philadelphia 423,400,000 | Total 882,804,000\nKentucky | Denver 370,564,000 | Philadelphia 353,000,000 | Total 723,564,000\nGrand Total: 4,806,984,000"
+    },
+    {
+     "sc": 0.7908771419525147,
+     "tier": "us_mint",
+     "doc": "page-stateq-coin_production_index_201210",
+     "uri": "https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012",
+     "title": "U.S. Mint Coin Production Figures index (links 50 State Quarters 1999-2008)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012\n\nThe United States Mint · About Us\nskip navigation\nConnecting America through Coins\nCustomer Service\n1-800-USA-MINT\n(872-6468)\nSearch\nHome\nCoins & Medals\nShop\nProduct Schedule\nCustomer Service\nEducation\nNews & Media\nAbout Us\nHome\nDirector's Office\nEEO\nAnnual Report\nFacilities & Tours\nCareers\nHistorian's Corner\nArtists\nHow Coins Are Made\nProduction & Sales Figures\nCoin Specifications\nHistorical Image Library\nUnited States Mint Police\nPolicies and Sites\nPrint Friendly\n2012 Circulating Coin Production (in millions)\nJanuary 2012 through September 2012\n1 ¢\n5 ¢\n10 ¢\n25 ¢\n50 ¢\nN.A. $1\nPres $1\nTotal:\nDenver\n2241.20 M\n443.52 M\n663.50 M\n205.01 M\n1.70 M\n3.08 M\n16.24 M\n3574.25 M\nPhiladelphia\n2532.00 M\n366.96 M\n641.00 M\n138.40 M\n1.80 M\n2.80 M\n27.80 M\n3710.76 M\nTotal:\n4773.20 M\n810.48 M\n1304.50 M\n343.41 M\n3.50 M\n5.88 M\n44.04 M\n7285.01 M\nPres. $1 - Presidential $1 Coin\nN.A. $1 - Native American $1 Coin\n*Preliminary production figures only.\nCoin Production Figures\nThe Coin Production figures represent all of the \"circulating\" coins produced by the\n\tUnited States Mint, including the coins sold through the numismatic bags & rolls program.\n\tThese numbers do not include the \"proof\" or \"uncirculated\" quality\n\t(i.e. UNC sets) coins produced by the Mint.\nAmerica the Beautiful Quarters™ Program Production Figures\n2012\n2011\n2010\nCirculating Coin Production Figures\n2012\n2011\n2010\nPresidential $1 Coin Production Figures\n2012\n2011\n2010\n2009\n2008\n2007\nDistrict of Columbia and U.S. Territories Quarters Program® Production Figures\n2009\n50 State Quarters Program® Production Figures\n2008\n2007\n2006\n2005\n2004\n2003\n2002\n2001\n2000\n1999\nWestward Journey Nickel Series™ Production Figures\n2005\n2004\nOnline Catalog\nSite Map\nWebsite Information\nFOIA\nFAQs\nTours\nContact Us\nTerms of Use\nPrivacy Policy\nNo FEAR Act Data\ntreasury.gov\nusa.gov\nccac.gov\nPlug-ins\nst-1"
+    },
+    {
+     "sc": 0.7846359205245972,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2005",
+     "uri": "https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls",
+     "title": "2005 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2005 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2005 50 State Quarters Program® Production\nCalifornia | Denver 263,200,000 | Philadelphia 257,200,000 | Total 520,400,000\nMinnesota | Denver 248,400,000 | Philadelphia 239,600,000 | Total 488,000,000\nOregon | Denver 404,000,000 | Philadelphia 316,200,000 | Total 720,200,000\nKansas | Denver 300,000,000 | Philadelphia 263,400,000 | Total 563,400,000\nWest Virginia | Denver 356,200,000 | Philadelphia 365,400,000 | Total 721,600,000\nGrand Total: 3,013,600,000"
+    }
+   ]
+  },
+  "opposite_vs_mint": {
+   "status": 200,
+   "resp": {
+    "supportScore": 0.557806,
+    "claims": [
+     {
+      "startPos": 0,
+      "endPos": 90,
+      "claimText": "The 1999 Delaware State Quarter had a circulating mintage under 50 million coins combined.",
+      "groundingCheckRequired": true,
+      "score": 0.5578060150146484
+     }
+    ]
+   },
+   "facts": [
+    {
+     "sc": 0.9948511457443238,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_1999",
+     "uri": "https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls",
+     "title": "1999 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 1999 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n1999 50 State Quarters Program® Production\nDelaware | Denver 401,424,000 | Philadelphia 373,400,000 | Total 774,824,000\nPennsylvania | Denver 358,332,000 | Philadelphia 349,000,000 | Total 707,332,000\nNew Jersey | Denver 299,028,000 | Philadelphia 363,200,000 | Total 662,228,000\nGeorgia | Denver 488,744,000 | Philadelphia 451,188,000 | Total 939,932,000\nConnecticut | Denver 657,880,000 | Philadelphia 688,744,000 | Total 1,346,624,000\nGrand Total: 4,430,940,000"
+    },
+    {
+     "sc": 0.9025972032546997,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2008",
+     "uri": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls",
+     "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2008 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2008 50 State Quarters Program® Production\nOklahoma | Denver 194,600,000 | Philadelphia 222,000,000 | Total 416,600,000\nNew Mexico | Denver 244,400,000 | Philadelphia 244,200,000 | Total 488,600,000\nArizona | Denver 265,000,000 | Philadelphia 244,600,000 | Total 509,600,000\nAlaska | Denver 254,000,000 | Philadelphia 251,800,000 | Total 505,800,000\nHawaii | Denver 263,600,000 | Philadelphia 254,000,000 | Total 517,600,000\nGrand Total: 2,438,200,000"
+    },
+    {
+     "sc": 0.899767472743988,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2000",
+     "uri": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls",
+     "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2000 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2000 50 State Quarters Program® Production\nMassachusetts | Denver 535,184,000 | Philadelphia 628,600,000 | Total 1,163,784,000\nMaryland | Denver 556,532,000 | Philadelphia 678,200,000 | Total 1,234,732,000\nSouth Carolina | Denver 566,208,000 | Philadelphia 742,576,000 | Total 1,308,784,000\nNew Hampshire | Denver 495,976,000 | Philadelphia 673,040,000 | Total 1,169,016,000\nVirginia | Denver 651,616,000 | Philadelphia 943,000,000 | Total 1,594,616,000\nGrand Total: 6,470,932,000"
+    },
+    {
+     "sc": 0.8854253840446472,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2006",
+     "uri": "https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls",
+     "title": "2006 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2006 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2006 50 State Quarters Program® Production\nNevada | Denver 312,800,000 | Philadelphia 277,000,000 | Total 589,800,000\nNebraska | Denver 276,400,000 | Philadelphia 318,000,000 | Total 594,400,000\nColorado | Denver 294,200,000 | Philadelphia 274,800,000 | Total 569,000,000\nNorth Dakota | Denver 359,000,000 | Philadelphia 305,800,000 | Total 664,800,000\nSouth Dakota | Denver 265,800,000 | Philadelphia 245,000,000 | Total 510,800,000\nGrand Total: 2,928,800,000"
+    },
+    {
+     "sc": 0.8713864040374756,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2003",
+     "uri": "https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls",
+     "title": "2003 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2003 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2003 50 State Quarters Program® Production\nIllinois | Denver 237,400,000 | Philadelphia 225,800,000 | Total 463,200,000\nAlabama | Denver 232,400,000 | Philadelphia 225,000,000 | Total 457,400,000\nMaine | Denver 231,400,000 | Philadelphia 217,400,000 | Total 448,800,000\nMissouri | Denver 228,200,000 | Philadelphia 225,000,000 | Total 453,200,000\nArkansas | Denver 229,800,000 | Philadelphia 228,000,000 | Total 457,800,000\nGrand Total: 2,280,400,000"
+    },
+    {
+     "sc": 0.8705438137054443,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2002",
+     "uri": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls",
+     "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2002 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2002 50 State Quarters Program® Production\nTennessee | Denver 286,468,000 | Philadelphia 361,600,000 | Total 648,068,000\nOhio | Denver 414,832,000 | Philadelphia 217,200,000 | Total 632,032,000\nLouisiana | Denver 402,204,000 | Philadelphia 362,000,000 | Total 764,204,000\nIndiana | Denver 327,200,000 | Philadelphia 362,600,000 | Total 689,800,000\nMississippi | Denver 289,600,000 | Philadelphia 290,000,000 | Total 579,600,000\nGrand Total: 3,313,704,000"
+    },
+    {
+     "sc": 0.8516500949859619,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2001",
+     "uri": "https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls",
+     "title": "2001 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2001 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2001 50 State Quarters Program® Production\nNew York | Denver 619,640,000 | Philadelphia 655,400,000 | Total 1,275,040,000\nNorth Carolina | Denver 427,876,000 | Philadelphia 627,600,000 | Total 1,055,476,000\nRhode Island | Denver 447,100,000 | Philadelphia 423,000,000 | Total 870,100,000\nVermont | Denver 459,404,000 | Philadelphia 423,400,000 | Total 882,804,000\nKentucky | Denver 370,564,000 | Philadelphia 353,000,000 | Total 723,564,000\nGrand Total: 4,806,984,000"
+    },
+    {
+     "sc": 0.7908771419525147,
+     "tier": "us_mint",
+     "doc": "page-stateq-coin_production_index_201210",
+     "uri": "https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012",
+     "title": "U.S. Mint Coin Production Figures index (links 50 State Quarters 1999-2008)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012\n\nThe United States Mint · About Us\nskip navigation\nConnecting America through Coins\nCustomer Service\n1-800-USA-MINT\n(872-6468)\nSearch\nHome\nCoins & Medals\nShop\nProduct Schedule\nCustomer Service\nEducation\nNews & Media\nAbout Us\nHome\nDirector's Office\nEEO\nAnnual Report\nFacilities & Tours\nCareers\nHistorian's Corner\nArtists\nHow Coins Are Made\nProduction & Sales Figures\nCoin Specifications\nHistorical Image Library\nUnited States Mint Police\nPolicies and Sites\nPrint Friendly\n2012 Circulating Coin Production (in millions)\nJanuary 2012 through September 2012\n1 ¢\n5 ¢\n10 ¢\n25 ¢\n50 ¢\nN.A. $1\nPres $1\nTotal:\nDenver\n2241.20 M\n443.52 M\n663.50 M\n205.01 M\n1.70 M\n3.08 M\n16.24 M\n3574.25 M\nPhiladelphia\n2532.00 M\n366.96 M\n641.00 M\n138.40 M\n1.80 M\n2.80 M\n27.80 M\n3710.76 M\nTotal:\n4773.20 M\n810.48 M\n1304.50 M\n343.41 M\n3.50 M\n5.88 M\n44.04 M\n7285.01 M\nPres. $1 - Presidential $1 Coin\nN.A. $1 - Native American $1 Coin\n*Preliminary production figures only.\nCoin Production Figures\nThe Coin Production figures represent all of the \"circulating\" coins produced by the\n\tUnited States Mint, including the coins sold through the numismatic bags & rolls program.\n\tThese numbers do not include the \"proof\" or \"uncirculated\" quality\n\t(i.e. UNC sets) coins produced by the Mint.\nAmerica the Beautiful Quarters™ Program Production Figures\n2012\n2011\n2010\nCirculating Coin Production Figures\n2012\n2011\n2010\nPresidential $1 Coin Production Figures\n2012\n2011\n2010\n2009\n2008\n2007\nDistrict of Columbia and U.S. Territories Quarters Program® Production Figures\n2009\n50 State Quarters Program® Production Figures\n2008\n2007\n2006\n2005\n2004\n2003\n2002\n2001\n2000\n1999\nWestward Journey Nickel Series™ Production Figures\n2005\n2004\nOnline Catalog\nSite Map\nWebsite Information\nFOIA\nFAQs\nTours\nContact Us\nTerms of Use\nPrivacy Policy\nNo FEAR Act Data\ntreasury.gov\nusa.gov\nccac.gov\nPlug-ins\nst-1"
+    },
+    {
+     "sc": 0.7846359205245972,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2005",
+     "uri": "https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls",
+     "title": "2005 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2005 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2005 50 State Quarters Program® Production\nCalifornia | Denver 263,200,000 | Philadelphia 257,200,000 | Total 520,400,000\nMinnesota | Denver 248,400,000 | Philadelphia 239,600,000 | Total 488,000,000\nOregon | Denver 404,000,000 | Philadelphia 316,200,000 | Total 720,200,000\nKansas | Denver 300,000,000 | Philadelphia 263,400,000 | Total 563,400,000\nWest Virginia | Denver 356,200,000 | Philadelphia 365,400,000 | Total 721,600,000\nGrand Total: 3,013,600,000"
+    }
+   ]
+  }
+ },
+ "search_raw": [
+  {
+   "results": [
+    {
+     "id": "page-stateq-prod_excel_1999",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_1999",
+      "id": "page-stateq-prod_excel_1999",
+      "structData": {
+       "orig_file": "mint_pages_state_quarters/prod_excel_1999.txt",
+       "program": "50_state_quarters",
+       "publisher": "U.S. Mint",
+       "source_type": "us_mint",
+       "uri": "https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls",
+       "title": "1999 50 State Quarters Program Production (U.S. Mint Excel)"
+      },
+      "derivedStructData": {
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "Design | <b>Denver</b> | <b>Philadelphia</b> | Total <b>1999 50 State Quarters Program</b>® <b>Production Delaware</b> | <b>Denver 401,424,000</b> | <b>Philadelphia 373,400,000</b> | Total&nbsp;..."
+        }
+       ],
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 1999 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n1999 50 State Quarters Program® Production\nDelaware | Denver 401,424,000 | Philadelphia 373,400,000 | Total 774,824,000\nPennsylvania | Denver 358,332,000 | Philadelphia 349,000,000 | Total 707,332,000\nNew Jersey | Denver 299,028,000 | Philadelphia 363,200,000 | Total 662,228,000\nGeorgia | Denver 488,744,000 | Philadelphia 451,188,000 | Total 939,932,000\nConnecticut | Denver 657,880,000 | Philadelphia 688,744,000 | Total 1,346,624,000\nGrand Total: 4,430,940,000",
+         "relevanceScore": 0.8348511457443237
+        }
+       ],
+       "can_fetch_raw_content": "true",
+       "url": "https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls",
+       "title": "1999 50 State Quarters Program Production (U.S. Mint Excel)"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 6.2564583,
+      "semanticSimilarityScore": 0.83485115,
+      "topicalityRank": 1,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 1
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "KEYWORD_SEARCH",
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.9361558
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2008",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2008",
+      "id": "page-stateq-prod_excel_2008",
+      "structData": {
+       "publisher": "U.S. Mint",
+       "source_type": "us_mint",
+       "uri": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls",
+       "program": "50_state_quarters",
+       "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2008.txt"
+      },
+      "derivedStructData": {
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7625972032546997,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2008 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2008 50 State Quarters Program® Production\nOklahoma | Denver 194,600,000 | Philadelphia 222,000,000 | Total 416,600,000\nNew Mexico | Denver 244,400,000 | Philadelphia 244,200,000 | Total 488,600,000\nArizona | Denver 265,000,000 | Philadelphia 244,600,000 | Total 509,600,000\nAlaska | Denver 254,000,000 | Philadelphia 251,800,000 | Total 505,800,000\nHawaii | Denver 263,600,000 | Philadelphia 254,000,000 | Total 517,600,000\nGrand Total: 2,438,200,000"
+        }
+       ],
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "Facilities: <b>Denver</b> and <b>Philadelphia</b> circulating departments. Totals ... Design | <b>Denver</b> | <b>Philadelphia</b> | Total 2008 <b>50 State Quarters Program</b>® <b>Production</b>&nbsp;..."
+        }
+       ],
+       "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+       "can_fetch_raw_content": "true",
+       "url": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 5.0995436,
+      "semanticSimilarityScore": 0.7625972,
+      "topicalityRank": 2,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 2
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.61619174
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2006",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2006",
+      "id": "page-stateq-prod_excel_2006",
+      "structData": {
+       "source_type": "us_mint",
+       "program": "50_state_quarters",
+       "publisher": "U.S. Mint",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2006.txt",
+       "title": "2006 50 State Quarters Program Production (U.S. Mint Excel)",
+       "uri": "https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls"
+      },
+      "derivedStructData": {
+       "url": "https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls",
+       "title": "2006 50 State Quarters Program Production (U.S. Mint Excel)",
+       "can_fetch_raw_content": "true",
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "Facilities: <b>Denver</b> and <b>Philadelphia</b> circulating departments. Totals ... Design | <b>Denver</b> | <b>Philadelphia</b> | Total 2006 <b>50 State Quarters Program</b>® <b>Production</b>&nbsp;..."
+        }
+       ],
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7654253840446472,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2006 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2006 50 State Quarters Program® Production\nNevada | Denver 312,800,000 | Philadelphia 277,000,000 | Total 589,800,000\nNebraska | Denver 276,400,000 | Philadelphia 318,000,000 | Total 594,400,000\nColorado | Denver 294,200,000 | Philadelphia 274,800,000 | Total 569,000,000\nNorth Dakota | Denver 359,000,000 | Philadelphia 305,800,000 | Total 664,800,000\nSouth Dakota | Denver 265,800,000 | Philadelphia 245,000,000 | Total 510,800,000\nGrand Total: 2,928,800,000"
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 5.0995436,
+      "semanticSimilarityScore": 0.7654254,
+      "topicalityRank": 4,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 3
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.6344098
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2002",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2002",
+      "id": "page-stateq-prod_excel_2002",
+      "structData": {
+       "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2002.txt",
+       "source_type": "us_mint",
+       "uri": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls",
+       "publisher": "U.S. Mint",
+       "program": "50_state_quarters"
+      },
+      "derivedStructData": {
+       "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2002 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2002 50 State Quarters Program® Production\nTennessee | Denver 286,468,000 | Philadelphia 361,600,000 | Total 648,068,000\nOhio | Denver 414,832,000 | Philadelphia 217,200,000 | Total 632,032,000\nLouisiana | Denver 402,204,000 | Philadelphia 362,000,000 | Total 764,204,000\nIndiana | Denver 327,200,000 | Philadelphia 362,600,000 | Total 689,800,000\nMississippi | Denver 289,600,000 | Philadelphia 290,000,000 | Total 579,600,000\nGrand Total: 3,313,704,000",
+         "relevanceScore": 0.7705438137054443
+        }
+       ],
+       "snippets": [
+        {
+         "snippet": "Facilities: <b>Denver</b> and <b>Philadelphia</b> circulating departments. Totals ... Design | <b>Denver</b> | <b>Philadelphia</b> | Total 2002 <b>50 State Quarters Program</b>® <b>Production</b>&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls",
+       "can_fetch_raw_content": "true"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 5.0995436,
+      "semanticSimilarityScore": 0.7705438,
+      "topicalityRank": 5,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 4
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.6651707
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2000",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2000",
+      "id": "page-stateq-prod_excel_2000",
+      "structData": {
+       "program": "50_state_quarters",
+       "source_type": "us_mint",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2000.txt",
+       "publisher": "U.S. Mint",
+       "uri": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls",
+       "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)"
+      },
+      "derivedStructData": {
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7833631634712219,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2000 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2000 50 State Quarters Program® Production\nMassachusetts | Denver 535,184,000 | Philadelphia 628,600,000 | Total 1,163,784,000\nMaryland | Denver 556,532,000 | Philadelphia 678,200,000 | Total 1,234,732,000\nSouth Carolina | Denver 566,208,000 | Philadelphia 742,576,000 | Total 1,308,784,000\nNew Hampshire | Denver 495,976,000 | Philadelphia 673,040,000 | Total 1,169,016,000\nVirginia | Denver 651,616,000 | Philadelphia 943,000,000 | Total 1,594,616,000\nGrand Total: 6,470,932,000"
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls",
+       "can_fetch_raw_content": "true",
+       "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)",
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "Facilities: <b>Denver</b> and <b>Philadelphia</b> circulating departments. Totals ... Design | <b>Denver</b> | <b>Philadelphia</b> | Total 2000 <b>50 State Quarters Program</b>® <b>Production</b>&nbsp;..."
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 5.0995436,
+      "semanticSimilarityScore": 0.78336316,
+      "topicalityRank": 6,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 5
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.71781987
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2003",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2003",
+      "id": "page-stateq-prod_excel_2003",
+      "structData": {
+       "program": "50_state_quarters",
+       "uri": "https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2003.txt",
+       "publisher": "U.S. Mint",
+       "title": "2003 50 State Quarters Program Production (U.S. Mint Excel)",
+       "source_type": "us_mint"
+      },
+      "derivedStructData": {
+       "can_fetch_raw_content": "true",
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "Facilities: <b>Denver</b> and <b>Philadelphia</b> circulating departments. Totals ... Design | <b>Denver</b> | <b>Philadelphia</b> | Total 2003 <b>50 State Quarters Program</b>® <b>Production</b>&nbsp;..."
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls",
+       "title": "2003 50 State Quarters Program Production (U.S. Mint Excel)",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7753267884254456,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2003 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2003 50 State Quarters Program® Production\nIllinois | Denver 237,400,000 | Philadelphia 225,800,000 | Total 463,200,000\nAlabama | Denver 232,400,000 | Philadelphia 225,000,000 | Total 457,400,000\nMaine | Denver 231,400,000 | Philadelphia 217,400,000 | Total 448,800,000\nMissouri | Denver 228,200,000 | Philadelphia 225,000,000 | Total 453,200,000\nArkansas | Denver 229,800,000 | Philadelphia 228,000,000 | Total 457,800,000\nGrand Total: 2,280,400,000"
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 5.0995436,
+      "semanticSimilarityScore": 0.7753268,
+      "topicalityRank": 9,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 6
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.6772264
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2001",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2001",
+      "id": "page-stateq-prod_excel_2001",
+      "structData": {
+       "title": "2001 50 State Quarters Program Production (U.S. Mint Excel)",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2001.txt",
+       "source_type": "us_mint",
+       "publisher": "U.S. Mint",
+       "uri": "https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls",
+       "program": "50_state_quarters"
+      },
+      "derivedStructData": {
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7808986306190491,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2001 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2001 50 State Quarters Program® Production\nNew York | Denver 619,640,000 | Philadelphia 655,400,000 | Total 1,275,040,000\nNorth Carolina | Denver 427,876,000 | Philadelphia 627,600,000 | Total 1,055,476,000\nRhode Island | Denver 447,100,000 | Philadelphia 423,000,000 | Total 870,100,000\nVermont | Denver 459,404,000 | Philadelphia 423,400,000 | Total 882,804,000\nKentucky | Denver 370,564,000 | Philadelphia 353,000,000 | Total 723,564,000\nGrand Total: 4,806,984,000"
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls",
+       "can_fetch_raw_content": "true",
+       "title": "2001 50 State Quarters Program Production (U.S. Mint Excel)",
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "Facilities: <b>Denver</b> and <b>Philadelphia</b> circulating departments. Totals ... Design | <b>Denver</b> | <b>Philadelphia</b> | Total 2001 <b>50 State Quarters Program</b>® <b>Production</b>&nbsp;..."
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 5.0995436,
+      "semanticSimilarityScore": 0.78089863,
+      "topicalityRank": 10,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 7
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.7131287
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2005",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2005",
+      "id": "page-stateq-prod_excel_2005",
+      "structData": {
+       "source_type": "us_mint",
+       "publisher": "U.S. Mint",
+       "uri": "https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls",
+       "title": "2005 50 State Quarters Program Production (U.S. Mint Excel)",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2005.txt",
+       "program": "50_state_quarters"
+      },
+      "derivedStructData": {
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7646359205245972,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2005 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2005 50 State Quarters Program® Production\nCalifornia | Denver 263,200,000 | Philadelphia 257,200,000 | Total 520,400,000\nMinnesota | Denver 248,400,000 | Philadelphia 239,600,000 | Total 488,000,000\nOregon | Denver 404,000,000 | Philadelphia 316,200,000 | Total 720,200,000\nKansas | Denver 300,000,000 | Philadelphia 263,400,000 | Total 563,400,000\nWest Virginia | Denver 356,200,000 | Philadelphia 365,400,000 | Total 721,600,000\nGrand Total: 3,013,600,000"
+        }
+       ],
+       "title": "2005 50 State Quarters Program Production (U.S. Mint Excel)",
+       "can_fetch_raw_content": "true",
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "Facilities: <b>Denver</b> and <b>Philadelphia</b> circulating departments. Totals ... Design | <b>Denver</b> | <b>Philadelphia</b> | Total 2005 <b>50 State Quarters Program</b>® <b>Production</b>&nbsp;..."
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 5.0995436,
+      "semanticSimilarityScore": 0.7646359,
+      "topicalityRank": 11,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 8
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.62933767
+     }
+    }
+   ],
+   "totalSize": 18,
+   "attributionToken": "3wP03gEKDAiKxv3WBhCEx6L-AhIkNmI3ZjBhZmEtMDAwMC0yZjhmLThmOGYtMTRjMTRlZjEzOWM0IgdHRU5FUklDKpwCqa_mOZ2gljnC8J4V25LyOdngpDn92vg44sqdOf7i9DnW_v04voOMOcDw-Djh_Kw5ur26OYKnzjmGttw5roCTN7vM7DjGsPM4jr6dFd3QwznDsPM4iN-pONWzgjmcwfQ4gsHvOauavjmf1rctlZLFMIfjgDmy05c5y9qpOa_Tlznnwu841LKdFfra-Dje_Kw5qoX5OOHKxTm4zOw4nNa3LdizgjmgoJY5_-TpOpnB9DjT2N84r8byN9bY3ziGqNo5gt2TMsuHpTmX5K45vb26OYOo2jmgzdQ5wYOMOZrkrjmFp8452tDDOc6HpTneysU5gdzjOfji9DmJttw55MLvOMPw-DiQ97IwpbnmOqeF-TjZ_v04hOOAOYfc4zkwAVJ_cHJvamVjdHMvOTczNDI1NTUxNDQzL2xvY2F0aW9ucy9nbG9iYWwvY29sbGVjdGlvbnMvZGVmYXVsdF9jb2xsZWN0aW9uL2VuZ2luZXMvbW9yZ2FuLXBpbG90LXNlYXJjaC9zZXJ2aW5nQ29uZmlncy9kZWZhdWx0X3NlYXJjaA",
+   "nextPageToken": "0MWOzEjZlRTMjRTMtYGOmhTLmhjZy0CMwADMtkjZhBjZ3ImNkoxDc_pqQYw1N-6iIsgE4EgC",
+   "summary": {},
+   "queryExpansionInfo": {},
+   "semanticState": "ENABLED"
+  },
+  {
+   "results": [
+    {
+     "id": "page-stateq-prod_excel_1999",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_1999",
+      "id": "page-stateq-prod_excel_1999",
+      "structData": {
+       "publisher": "U.S. Mint",
+       "source_type": "us_mint",
+       "program": "50_state_quarters",
+       "uri": "https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls",
+       "orig_file": "mint_pages_state_quarters/prod_excel_1999.txt",
+       "title": "1999 50 State Quarters Program Production (U.S. Mint Excel)"
+      },
+      "derivedStructData": {
+       "can_fetch_raw_content": "true",
+       "title": "1999 50 State Quarters Program Production (U.S. Mint Excel)",
+       "url": "https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls",
+       "snippets": [
+        {
+         "snippet": "Facilities: <b>Denver</b> and <b>Philadelphia circulating</b> departments. ... Design | <b>Denver</b> | <b>Philadelphia</b> | Total <b>1999</b> 50 <b>State Quarters</b> Program® <b>Production Delaware</b>&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 1999 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n1999 50 State Quarters Program® Production\nDelaware | Denver 401,424,000 | Philadelphia 373,400,000 | Total 774,824,000\nPennsylvania | Denver 358,332,000 | Philadelphia 349,000,000 | Total 707,332,000\nNew Jersey | Denver 299,028,000 | Philadelphia 363,200,000 | Total 662,228,000\nGeorgia | Denver 488,744,000 | Philadelphia 451,188,000 | Total 939,932,000\nConnecticut | Denver 657,880,000 | Philadelphia 688,744,000 | Total 1,346,624,000\nGrand Total: 4,430,940,000",
+         "relevanceScore": 0.8147640228271484
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 4.672885,
+      "semanticSimilarityScore": 0.814764,
+      "topicalityRank": 1,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 1
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "KEYWORD_SEARCH",
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.873177
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2000",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2000",
+      "id": "page-stateq-prod_excel_2000",
+      "structData": {
+       "program": "50_state_quarters",
+       "publisher": "U.S. Mint",
+       "uri": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls",
+       "source_type": "us_mint",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2000.txt",
+       "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)"
+      },
+      "derivedStructData": {
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "... <b>Production</b> (<b>circulating</b>) Source: U.S. Mint <b>Circulating</b> Coins <b>Production</b> Excel (archived). Facilities: <b>Denver</b> and <b>Philadelphia circulating</b> departments."
+        }
+       ],
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2000 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2000 50 State Quarters Program® Production\nMassachusetts | Denver 535,184,000 | Philadelphia 628,600,000 | Total 1,163,784,000\nMaryland | Denver 556,532,000 | Philadelphia 678,200,000 | Total 1,234,732,000\nSouth Carolina | Denver 566,208,000 | Philadelphia 742,576,000 | Total 1,308,784,000\nNew Hampshire | Denver 495,976,000 | Philadelphia 673,040,000 | Total 1,169,016,000\nVirginia | Denver 651,616,000 | Philadelphia 943,000,000 | Total 1,594,616,000\nGrand Total: 6,470,932,000",
+         "relevanceScore": 0.759767472743988
+        }
+       ],
+       "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)",
+       "can_fetch_raw_content": "true",
+       "url": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.7319975,
+      "semanticSimilarityScore": 0.7597675,
+      "topicalityRank": 3,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 2
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.59669805
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2003",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2003",
+      "id": "page-stateq-prod_excel_2003",
+      "structData": {
+       "publisher": "U.S. Mint",
+       "uri": "https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls",
+       "title": "2003 50 State Quarters Program Production (U.S. Mint Excel)",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2003.txt",
+       "program": "50_state_quarters",
+       "source_type": "us_mint"
+      },
+      "derivedStructData": {
+       "title": "2003 50 State Quarters Program Production (U.S. Mint Excel)",
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2003 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2003 50 State Quarters Program® Production\nIllinois | Denver 237,400,000 | Philadelphia 225,800,000 | Total 463,200,000\nAlabama | Denver 232,400,000 | Philadelphia 225,000,000 | Total 457,400,000\nMaine | Denver 231,400,000 | Philadelphia 217,400,000 | Total 448,800,000\nMissouri | Denver 228,200,000 | Philadelphia 225,000,000 | Total 453,200,000\nArkansas | Denver 229,800,000 | Philadelphia 228,000,000 | Total 457,800,000\nGrand Total: 2,280,400,000",
+         "relevanceScore": 0.7513864040374756
+        }
+       ],
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "... <b>Production</b> (<b>circulating</b>) Source: U.S. Mint <b>Circulating</b> Coins <b>Production</b> Excel (archived). Facilities: <b>Denver</b> and <b>Philadelphia circulating</b> departments."
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls",
+       "can_fetch_raw_content": "true"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.7319975,
+      "semanticSimilarityScore": 0.7513864,
+      "topicalityRank": 6,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 3
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.5404446
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2001",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2001",
+      "id": "page-stateq-prod_excel_2001",
+      "structData": {
+       "program": "50_state_quarters",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2001.txt",
+       "source_type": "us_mint",
+       "publisher": "U.S. Mint",
+       "title": "2001 50 State Quarters Program Production (U.S. Mint Excel)",
+       "uri": "https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls"
+      },
+      "derivedStructData": {
+       "snippets": [
+        {
+         "snippet": "... <b>Production</b> (<b>circulating</b>) Source: U.S. Mint <b>Circulating</b> Coins <b>Production</b> Excel (archived). Facilities: <b>Denver</b> and <b>Philadelphia circulating</b> departments.",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls",
+       "title": "2001 50 State Quarters Program Production (U.S. Mint Excel)",
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063809id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2001_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2001 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2001 50 State Quarters Program® Production\nNew York | Denver 619,640,000 | Philadelphia 655,400,000 | Total 1,275,040,000\nNorth Carolina | Denver 427,876,000 | Philadelphia 627,600,000 | Total 1,055,476,000\nRhode Island | Denver 447,100,000 | Philadelphia 423,000,000 | Total 870,100,000\nVermont | Denver 459,404,000 | Philadelphia 423,400,000 | Total 882,804,000\nKentucky | Denver 370,564,000 | Philadelphia 353,000,000 | Total 723,564,000\nGrand Total: 4,806,984,000",
+         "relevanceScore": 0.7516500949859619
+        }
+       ],
+       "can_fetch_raw_content": "true"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.7319975,
+      "semanticSimilarityScore": 0.7516501,
+      "topicalityRank": 8,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 4
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.54277503
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2002",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2002",
+      "id": "page-stateq-prod_excel_2002",
+      "structData": {
+       "source_type": "us_mint",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2002.txt",
+       "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+       "uri": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls",
+       "program": "50_state_quarters",
+       "publisher": "U.S. Mint"
+      },
+      "derivedStructData": {
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2002 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2002 50 State Quarters Program® Production\nTennessee | Denver 286,468,000 | Philadelphia 361,600,000 | Total 648,068,000\nOhio | Denver 414,832,000 | Philadelphia 217,200,000 | Total 632,032,000\nLouisiana | Denver 402,204,000 | Philadelphia 362,000,000 | Total 764,204,000\nIndiana | Denver 327,200,000 | Philadelphia 362,600,000 | Total 689,800,000\nMississippi | Denver 289,600,000 | Philadelphia 290,000,000 | Total 579,600,000\nGrand Total: 3,313,704,000",
+         "relevanceScore": 0.7504497766494751
+        }
+       ],
+       "snippets": [
+        {
+         "snippet": "... <b>Production</b> (<b>circulating</b>) Source: U.S. Mint <b>Circulating</b> Coins <b>Production</b> Excel (archived). Facilities: <b>Denver</b> and <b>Philadelphia circulating</b> departments.",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+       "can_fetch_raw_content": "true",
+       "url": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.7319975,
+      "semanticSimilarityScore": 0.7504498,
+      "topicalityRank": 2,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 5
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.5321669
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2006",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2006",
+      "id": "page-stateq-prod_excel_2006",
+      "structData": {
+       "orig_file": "mint_pages_state_quarters/prod_excel_2006.txt",
+       "program": "50_state_quarters",
+       "uri": "https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls",
+       "title": "2006 50 State Quarters Program Production (U.S. Mint Excel)",
+       "publisher": "U.S. Mint",
+       "source_type": "us_mint"
+      },
+      "derivedStructData": {
+       "can_fetch_raw_content": "true",
+       "title": "2006 50 State Quarters Program Production (U.S. Mint Excel)",
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2006 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2006 50 State Quarters Program® Production\nNevada | Denver 312,800,000 | Philadelphia 277,000,000 | Total 589,800,000\nNebraska | Denver 276,400,000 | Philadelphia 318,000,000 | Total 594,400,000\nColorado | Denver 294,200,000 | Philadelphia 274,800,000 | Total 569,000,000\nNorth Dakota | Denver 359,000,000 | Philadelphia 305,800,000 | Total 664,800,000\nSouth Dakota | Denver 265,800,000 | Philadelphia 245,000,000 | Total 510,800,000\nGrand Total: 2,928,800,000",
+         "relevanceScore": 0.7484212517738342
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063627id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2006_50_State_Quarters_Program_Production.xls",
+       "snippets": [
+        {
+         "snippet": "... <b>Production</b> (<b>circulating</b>) Source: U.S. Mint <b>Circulating</b> Coins <b>Production</b> Excel (archived). Facilities: <b>Denver</b> and <b>Philadelphia circulating</b> departments.",
+         "snippet_status": "SUCCESS"
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.7319975,
+      "semanticSimilarityScore": 0.74842125,
+      "topicalityRank": 5,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 6
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.51423943
+     }
+    },
+    {
+     "id": "page-stateq-coin_production_index_201210",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-coin_production_index_201210",
+      "id": "page-stateq-coin_production_index_201210",
+      "structData": {
+       "publisher": "U.S. Mint",
+       "source_type": "us_mint",
+       "program": "50_state_quarters",
+       "orig_file": "mint_pages_state_quarters/coin_production_index_201210.txt",
+       "title": "U.S. Mint Coin Production Figures index (links 50 State Quarters 1999-2008)",
+       "uri": "https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012"
+      },
+      "derivedStructData": {
+       "title": "U.S. Mint Coin Production Figures index (links 50 State Quarters 1999-2008)",
+       "url": "https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012",
+       "snippets": [
+        {
+         "snippet": "... <b>Denver</b> 2241.20 M 443.52 M 663.50 M 205.01 M 1.70 M 3.08 M 16.24 M 3574.25 M <b>Philadelphia</b> ... America the Beautiful <b>Quarters</b>™ Program <b>Production</b> Figures 2012 2011&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "can_fetch_raw_content": "true",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7508771419525146,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012\n\nThe United States Mint · About Us\nskip navigation\nConnecting America through Coins\nCustomer Service\n1-800-USA-MINT\n(872-6468)\nSearch\nHome\nCoins & Medals\nShop\nProduct Schedule\nCustomer Service\nEducation\nNews & Media\nAbout Us\nHome\nDirector's Office\nEEO\nAnnual Report\nFacilities & Tours\nCareers\nHistorian's Corner\nArtists\nHow Coins Are Made\nProduction & Sales Figures\nCoin Specifications\nHistorical Image Library\nUnited States Mint Police\nPolicies and Sites\nPrint Friendly\n2012 Circulating Coin Production (in millions)\nJanuary 2012 through September 2012\n1 ¢\n5 ¢\n10 ¢\n25 ¢\n50 ¢\nN.A. $1\nPres $1\nTotal:\nDenver\n2241.20 M\n443.52 M\n663.50 M\n205.01 M\n1.70 M\n3.08 M\n16.24 M\n3574.25 M\nPhiladelphia\n2532.00 M\n366.96 M\n641.00 M\n138.40 M\n1.80 M\n2.80 M\n27.80 M\n3710.76 M\nTotal:\n4773.20 M\n810.48 M\n1304.50 M\n343.41 M\n3.50 M\n5.88 M\n44.04 M\n7285.01 M\nPres. $1 - Presidential $1 Coin\nN.A. $1 - Native American $1 Coin\n*Preliminary production figures only.\nCoin Production Figures\nThe Coin Production figures represent all of the \"circulating\" coins produced by the\n\tUnited States Mint, including the coins sold through the numismatic bags & rolls program.\n\tThese numbers do not include the \"proof\" or \"uncirculated\" quality\n\t(i.e. UNC sets) coins produced by the Mint.\nAmerica the Beautiful Quarters™ Program Production Figures\n2012\n2011\n2010\nCirculating Coin Production Figures\n2012\n2011\n2010\nPresidential $1 Coin Production Figures\n2012\n2011\n2010\n2009\n2008\n2007\nDistrict of Columbia and U.S. Territories Quarters Program® Production Figures\n2009\n50 State Quarters Program® Production Figures\n2008\n2007\n2006\n2005\n2004\n2003\n2002\n2001\n2000\n1999\nWestward Journey Nickel Series™ Production Figures\n2005\n2004\nOnline Catalog\nSite Map\nWebsite Information\nFOIA\nFAQs\nTours\nContact Us\nTerms of Use\nPrivacy Policy\nNo FEAR Act Data\ntreasury.gov\nusa.gov\nccac.gov\nPlug-ins\nst-1"
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.754492,
+      "semanticSimilarityScore": 0.75087714,
+      "topicalityRank": 12,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 7
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.5359437
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2008",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2008",
+      "id": "page-stateq-prod_excel_2008",
+      "structData": {
+       "orig_file": "mint_pages_state_quarters/prod_excel_2008.txt",
+       "source_type": "us_mint",
+       "publisher": "U.S. Mint",
+       "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+       "uri": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls",
+       "program": "50_state_quarters"
+      },
+      "derivedStructData": {
+       "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+       "snippets": [
+        {
+         "snippet": "... <b>Production</b> (<b>circulating</b>) Source: U.S. Mint <b>Circulating</b> Coins <b>Production</b> Excel (archived). Facilities: <b>Denver</b> and <b>Philadelphia circulating</b> departments.",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2008 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2008 50 State Quarters Program® Production\nOklahoma | Denver 194,600,000 | Philadelphia 222,000,000 | Total 416,600,000\nNew Mexico | Denver 244,400,000 | Philadelphia 244,200,000 | Total 488,600,000\nArizona | Denver 265,000,000 | Philadelphia 244,600,000 | Total 509,600,000\nAlaska | Denver 254,000,000 | Philadelphia 251,800,000 | Total 505,800,000\nHawaii | Denver 263,600,000 | Philadelphia 254,000,000 | Total 517,600,000\nGrand Total: 2,438,200,000",
+         "relevanceScore": 0.7443031072616577
+        }
+       ],
+       "can_fetch_raw_content": "true",
+       "url": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.7319975,
+      "semanticSimilarityScore": 0.7443031,
+      "topicalityRank": 4,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 8
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.49812835
+     }
+    }
+   ],
+   "totalSize": 18,
+   "attributionToken": "3wP03gEKDAiLxv3WBhCY-f_2ARIkNmI0YzE0NmEtMDAwMC0yMWNhLWFiOGUtZDRmNTQ3ZjU3YmQ4IgdHRU5FUklDKpwCzoelOYm23Dnh_Kw5ur26OdrQwzmGttw5gqfOObvM7DjbkvI5jr6dFeLKnTmb1rctroCTN_7i9Dm-g4w51v79OMDw-DiCwe85nMH0ONWzgjn62vg4lZLFMIfjgDmy05c5r9OXOefC7zjL2qk5q5q-OdSynRXhysU5w7DzOMaw8zjd0MM5iN-pOJjWty2goJY5_-TpOoOo2jmvxvI309jfONbY3zi4zOw4y4elOZnB9DiC3ZMyl-SuOd78rDm9vbo5hqjaOaqF-TjYs4I55MLvOMPw-Dj44vQ5pbnmOpD3sjCnhfk42f79OJ2gljmH3OM5qa_mOdngpDn92vg4wvCeFaDN1Dma5K45gdzjOcGDjDmFp8453srFOYTjgDkwAVJ_cHJvamVjdHMvOTczNDI1NTUxNDQzL2xvY2F0aW9ucy9nbG9iYWwvY29sbGVjdGlvbnMvZGVmYXVsdF9jb2xsZWN0aW9uL2VuZ2luZXMvbW9yZ2FuLXBpbG90LXNlYXJjaC9zZXJ2aW5nQ29uZmlncy9kZWZhdWx0X3NlYXJjaA",
+   "nextPageToken": "AOkJ2N1Y2N0UjZ0QWLlhjYh1SYjFjMtADMwATL5YDNxMGNiZDJaIwrhHY8QYw1N-6iIwgE4EgC",
+   "summary": {},
+   "queryExpansionInfo": {},
+   "semanticState": "ENABLED"
+  }
+ ],
+ "n_mint_facts": 9,
+ "n_other_facts": 0
+}

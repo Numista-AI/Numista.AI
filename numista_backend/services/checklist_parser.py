@@ -359,7 +359,7 @@ def extract_checklist_document(
                 "document_name": filename,
                 "document_hash": doc_hash,
                 "snapshot_id": snapshot_id or f"SNAP-{datetime.now(timezone.utc).strftime('%Y%m%d')}-SCAN",
-                "classifier_model": "gemini-3.8-flash",
+                "classifier_model": "gemini-4-hydrogen",
                 "extraction_model": EXTRACTION_MODEL,
                 "prompt_version": CHECKLIST_PROMPT_VERSION,
                 "prompt_hash": prompt_hash,

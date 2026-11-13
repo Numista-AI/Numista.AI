@@ -1,0 +1,2 @@
+# ERIC PINGED - LIVE INVOICE IMPORTER AUTH (19 Oct 2026 ~2:05 PM ET)
+Found while scoring V8.18.3: live https://numista.ai/add_coins.html (and numista-vault.web.app) uses the Android Firebase key AIzaSyDSM3pQ..., not the web app key AIzaSyCPGC87... in lib/firebase_options.dart. On p7-gate the same mismatch made invoice PDF + bulk CSV import fail with "Authentication token missing or invalid". Raised to Eric via parent; any hotfix = minimal commit cherry-picked onto a branch from main, only on his typed YES. Do not re-ping for this.

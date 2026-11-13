@@ -1,0 +1,2 @@
+# SUPERSEDED — do not follow “EXECUTE NOW”
+Original wake `WAKE_AGCOS-V2_URGENT-NET621-EXECUTE-NET610-OPTION-B-CG-NOW_20261027-1526.md` is **SUPERSEDED** by AMEND-1 overnight queue (~3:28 PM ET). Zero daytime CG.

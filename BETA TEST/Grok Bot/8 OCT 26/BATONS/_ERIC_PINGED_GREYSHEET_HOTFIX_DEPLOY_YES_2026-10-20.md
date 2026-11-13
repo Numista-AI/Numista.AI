@@ -1,0 +1,1 @@
+﻿Eric pinged 2026-10-20 16:04 ET via parent: GreySheet hotfix rev 2 (hotfix/greysheet-bid-display, main 3c1bacf5 + 6370c65c, 1ddb1d1f, 44f8604d) PASS, awaiting typed deploy YES. Do not re-ping for this build.

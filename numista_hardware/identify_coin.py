@@ -1,7 +1,9 @@
 import os
+import sys
 import json
 import logging
 import tempfile
+from pathlib import Path
 import requests as _requests
 from google import genai
 from dotenv import load_dotenv
@@ -11,13 +13,36 @@ from typing import Optional, List
 logger = logging.getLogger(__name__)
 
 # --- CONFIGURATION ---
-# Safely loads your API key from the .env file. Never hardcode keys in code!
-load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    raise EnvironmentError("GOOGLE_API_KEY is not set. Check your .env file.")
+# Lazy Initialization: never crash at import time when .env is not bundled in .exe
+_HERE = Path(__file__).parent
+if not getattr(sys, "frozen", False):
+    load_dotenv(_HERE / ".env")
+load_dotenv(Path(os.environ.get("APPDATA", str(Path.home()))) / "NumistaAI" / ".env")
 
-client = genai.Client(api_key=api_key)
+_genai_client = None
+
+
+def _get_genai_client():
+    """Return a cached Gemini client using GOOGLE_API_KEY (if configured) or Vertex AI ADC."""
+    global _genai_client
+    if _genai_client is not None:
+        return _genai_client
+    api_key = (os.getenv("GOOGLE_API_KEY") or "").strip()
+    if api_key:
+        _genai_client = genai.Client(api_key=api_key)
+        return _genai_client
+    try:
+        _genai_client = genai.Client(
+            vertexai=True,
+            project=os.getenv("GOOGLE_CLOUD_PROJECT", "studio-9101802118-8c9a8"),
+            location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
+        )
+        return _genai_client
+    except Exception as exc:
+        raise RuntimeError(
+            "Gemini client unavailable: set GOOGLE_API_KEY in %APPDATA%\\NumistaAI\\.env "
+            f"or configure Google Cloud ADC ({exc})."
+        ) from exc
 
 # ─── Pydantic Models for Response Schemas ─────────────────────────────────────
 
@@ -140,37 +165,21 @@ MANIFEST_PATH = 'numista_database_ready (1).csv'
 # ── Reference Library (Firestore) ────────────────────────────────────────────
 # Lazy-loaded to avoid slowing startup if Firestore isn't available.
 _ref_db = None
+_ref_db_init_attempted = False
 
 def _get_ref_db():
-    """Return a Firestore client for querying reference_library."""
-    global _ref_db
-    if _ref_db is not None:
+    """Return a cached Firestore client for querying reference_library via ADC."""
+    global _ref_db, _ref_db_init_attempted
+    if _ref_db_init_attempted:
         return _ref_db
+    _ref_db_init_attempted = True
     try:
         from google.cloud import firestore as _fs
-        import sys
-        
-        # 1. Try bundled path (if running inside PyInstaller bundle)
-        if hasattr(sys, "_MEIPASS"):
-            key_file = os.path.join(sys._MEIPASS, "serviceAccountKey.json.json")
-        else:
-            # 2. Try development path relative to this script
-            _here = os.path.dirname(os.path.abspath(__file__))
-            key_file = os.path.abspath(
-                os.path.join(_here, "..", "numista_backend", "serviceAccountKey.json.json")
-            )
-            
-        if os.path.exists(key_file):
-            import google.oauth2.service_account as sa
-            creds = sa.Credentials.from_service_account_file(key_file)
-            _ref_db = _fs.Client(credentials=creds, project="studio-9101802118-8c9a8")
-            logger.info(f"[REF] Firestore client initialized with service account key: {key_file}")
-        else:
-            logger.warning(f"[REF] Service account key not found at {key_file}. Falling back to ADC.")
-            _ref_db = _fs.Client(project="studio-9101802118-8c9a8")
+        _ref_db = _fs.Client(project="studio-9101802118-8c9a8")
         return _ref_db
     except Exception as e:
         logger.warning(f"[REF] Could not init Firestore for reference library: {e}")
+        _ref_db = None
         return None
 
 
@@ -328,6 +337,7 @@ def _run_verification_pass(coin_data: dict, img_a, img_b):
         return coin_data
 
     # Download reference images and upload to Gemini
+    genai_client = _get_genai_client()
     ref_uploads = []
     ref_temp_paths = []
     ref_captions = []
@@ -335,7 +345,7 @@ def _run_verification_pass(coin_data: dict, img_a, img_b):
         tmp_path = _download_temp(ref["gcs_url"])
         if tmp_path:
             try:
-                uploaded = client.files.upload(file=tmp_path)
+                uploaded = genai_client.files.upload(file=tmp_path)
                 ref_uploads.append(uploaded)
                 ref_temp_paths.append(tmp_path)
                 ref_captions.append(
@@ -393,8 +403,8 @@ Return ONLY a valid JSON object:
 
         from google.genai import types
         contents = [verification_prompt, img_a, img_b] + ref_uploads
-        response = client.models.generate_content(
-            model="gemini-3.8-flash",
+        response = genai_client.models.generate_content(
+            model="gemini-4-hydrogen",
             contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type='application/json',
@@ -478,9 +488,10 @@ def run_numista_report(img_path_a, img_path_b):
     logger.info("[GEMINI] Analyzing Image A (%s) and Image B (%s)", img_path_a, img_path_b)
     
     try:
+        genai_client = _get_genai_client()
         # Upload images WITHOUT telling Gemini which is which
-        img_a = client.files.upload(file=img_path_a)
-        img_b = client.files.upload(file=img_path_b)
+        img_a = genai_client.files.upload(file=img_path_a)
+        img_b = genai_client.files.upload(file=img_path_b)
         
         # ── PASS 1: Initial Identification ───────────────────────────────────
         prompt = """
@@ -536,8 +547,8 @@ def run_numista_report(img_path_a, img_path_b):
         """
 
         from google.genai import types
-        response = client.models.generate_content(
-            model="gemini-3.8-flash",
+        response = genai_client.models.generate_content(
+            model="gemini-4-hydrogen",
             contents=[prompt, img_a, img_b],
             config=types.GenerateContentConfig(
                 response_mime_type='application/json',

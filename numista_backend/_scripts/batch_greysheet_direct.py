@@ -68,9 +68,9 @@ def main():
             genai_client = genai.Client(
                 vertexai=True,
                 project=PROJECT_ID,
-                location="us-central1"
+                location="global"
             )
-            primary_model = "gemini-3.8-flash"
+            primary_model = "gemini-4-hydrogen"
             print(f"  Gemini client ready (model: {primary_model})", flush=True)
         except Exception as e:
             print(f"  WARNING: Gemini init failed: {e}", flush=True)

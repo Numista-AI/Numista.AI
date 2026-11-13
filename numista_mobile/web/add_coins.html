@@ -459,7 +459,7 @@
 <!-- Session Summary -->
 <div class="card" id="summary-panel">
   <div class="card-header">
-    <h2 id="summary-title">&#9989; Import Complete</h2>
+    <h2 id="summary-title">&#9989; All Files Processed</h2>
     <span id="summary-date" style="font-size:0.82rem;color:var(--text-dim);"></span>
   </div>
   <div class="card-body">
@@ -488,6 +488,7 @@
     <div class="summary-actions">
       <button class="btn btn-primary"   onclick="goToReviewQueue()">&#128203; Go to Review Queue</button>
       <button class="btn btn-ghost"     onclick="resetImport()">&#11014;&#65039; Import More</button>
+      <button class="btn btn-ghost"     onclick="exitAddCoins()" style="margin-left:auto;">&#10006;&#65039; Exit</button>
     </div>
   </div>
 </div>
@@ -586,8 +587,12 @@ function resolveApiBase(origin, search, liveUrl) {
 }
 
 function getApiBaseUrl() {
+  var P7GATE_URL = 'https://p7gate---numista-backend-qntvrqvxma-uc.a.run.app';
   var LIVE_URL = 'https://numista-backend-568985927038.us-central1.run.app';
-  return resolveApiBase(window.location.origin, window.location.search, LIVE_URL);
+  var defaultUrl = (window.location && window.location.origin && window.location.origin.indexOf('--p7-gate-') !== -1)
+    ? P7GATE_URL
+    : LIVE_URL;
+  return resolveApiBase(window.location.origin, window.location.search, defaultUrl);
 }
 window.resolveApiBase = resolveApiBase;
 window.getApiBaseUrl = getApiBaseUrl;
@@ -1200,6 +1205,13 @@ function showPaperTrail() {
   document.getElementById('paper-trail-panel').scrollIntoView({ behavior:'smooth' });
 }
 function goToReviewQueue() { window.location.href = '/?route=Review%20Hub&email=' + encodeURIComponent(getUserEmail()); }
+function exitAddCoins() {
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ type: 'ADD_COINS_CLOSE' }, '*');
+  } else {
+    window.location.href = '/';
+  }
+}
 function resetImport() {
   selectedFiles = []; sessionId = null; clearInterval(pollInterval);
   renderStagedFiles([]);

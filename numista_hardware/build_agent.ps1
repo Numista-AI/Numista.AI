@@ -1,5 +1,5 @@
-# ==============================================================================
-#  Numista.AI Agent Builder v2
+﻿# ==============================================================================
+#  Numista.AI Agent Builder v2 (Secret-Free Hardened Build — Task 2 ARGON)
 #  Packages tray_agent.py into NumistaAgent.exe using PyInstaller
 #
 #  Usage:  .\build_agent.ps1
@@ -15,7 +15,7 @@ Write-Host "    Numista.AI Desktop Agent Builder v2           " -ForegroundColor
 Write-Host "  ================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ---- [PRE-CHECK] Required source files -------------------------------------
+# ---- [PRE-CHECK] Required source files (NO secrets or static keys bundled) --
 Write-Host "  [Pre-check] Verifying required source files..." -ForegroundColor Yellow
 $required = @(
     "tray_agent.py",
@@ -24,10 +24,8 @@ $required = @(
     "auto_capture.py",
     "identify_coin.py",
     "pcgs_service.py",
+    "install_cert.py",
     "coin-schema.json",
-    "localhost.crt",
-    "localhost.key",
-    ".env",
     "NumistaAgent.spec"
 )
 
@@ -41,29 +39,12 @@ foreach ($f in $required) {
     }
 }
 
-$saKey = "$ScriptDir\..\numista_backend\serviceAccountKey.json.json"
-if (Test-Path $saKey) {
-    Write-Host "    OK: serviceAccountKey.json.json" -ForegroundColor DarkGreen
-} else {
-    Write-Host "    WARNING: serviceAccountKey.json.json not found (ADC fallback)" -ForegroundColor DarkYellow
-}
-
 if ($missing.Count -gt 0) {
     Write-Host ""
     Write-Host "  [ERROR] $($missing.Count) required file(s) missing. Fix before building." -ForegroundColor Red
     exit 1
 }
 Write-Host "  All required files present." -ForegroundColor Green
-Write-Host ""
-
-# ---- [1/3] Install build dependencies --------------------------------------
-Write-Host "  [1/3] Installing build dependencies..." -ForegroundColor Yellow
-pip install pyinstaller pystray pillow --quiet
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "  [ERROR] pip install failed." -ForegroundColor Red
-    exit 1
-}
-Write-Host "  OK - Build dependencies ready" -ForegroundColor Green
 Write-Host ""
 
 # Clean previous build artefacts
@@ -77,13 +58,13 @@ if (Test-Path "$ScriptDir\build") {
 }
 Write-Host ""
 
-# ---- [2/3] Build using spec file -------------------------------------------
-Write-Host "  [2/3] Building NumistaAgent.exe (takes 2-4 minutes)..." -ForegroundColor Yellow
+# ---- [1/2] Build using spec file -------------------------------------------
+Write-Host "  [1/2] Building NumistaAgent.exe (takes 1-3 minutes)..." -ForegroundColor Yellow
 Write-Host "        Spec: $SpecFile" -ForegroundColor DarkGray
 Write-Host ""
 
 Set-Location $ScriptDir
-python -m PyInstaller $SpecFile --distpath "$ScriptDir\dist" --workpath "$ScriptDir\build" --noconfirm
+python -m PyInstaller $SpecFile --distpath "$ScriptDir\dist" --workpath "$ScriptDir\build" --noconfirm --clean
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
@@ -91,25 +72,44 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# ---- [3/3] Report ----------------------------------------------------------
+# ---- [2/2] Post-Build Secret-Free Verification Gate ------------------------
 $ExePath = "$ScriptDir\dist\NumistaAgent.exe"
-if (Test-Path $ExePath) {
-    $SizeMB = [math]::Round((Get-Item $ExePath).Length / 1MB, 1)
-    Write-Host ""
-    Write-Host "  ================================================" -ForegroundColor Green
-    Write-Host "    BUILD COMPLETE!" -ForegroundColor Green
-    Write-Host "  ================================================" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "  Output:  $ExePath" -ForegroundColor White
-    Write-Host "  Size:    $SizeMB MB" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  Next steps:" -ForegroundColor Cyan
-    Write-Host "    1. Test:    .\dist\NumistaAgent.exe" -ForegroundColor Cyan
-    Write-Host "    2. Install: .\install_agent.ps1" -ForegroundColor Cyan
-    Write-Host "    3. Package: makensis NumistaAgentSetup.nsi" -ForegroundColor Cyan
-} else {
-    Write-Host "  [ERROR] Build appeared to succeed but exe not found." -ForegroundColor Red
-    Write-Host "  Expected: $ExePath" -ForegroundColor Red
+if (-not (Test-Path $ExePath)) {
+    Write-Host "  [ERROR] Build appeared to succeed but exe not found at $ExePath" -ForegroundColor Red
     exit 1
 }
+
+Write-Host "  [2/2] Running Post-Build Secret-Free Verification Gate..." -ForegroundColor Yellow
+python -c "
+import pathlib, sys
+from PyInstaller.archive.readers import CArchiveReader
+
+exe_path = pathlib.Path(r'$ExePath')
+reader = CArchiveReader(str(exe_path))
+toc_keys = set(reader.toc.keys())
+forbidden_toc = ('.env', 'serviceaccountkey', '.key', '.crt')
+bad_toc = [k for k in toc_keys if any(f in k.lower() for f in forbidden_toc)]
+if bad_toc:
+    exe_path.unlink(missing_ok=True)
+    sys.exit(f'FATAL: Forbidden TOC entries found in {exe_path}: {bad_toc}')
+raw = exe_path.read_bytes()
+for pat in (b'AIzaSy', b'7af45f7e0a341f369ff1a6034175825f8b9e81af', b'f2eb11c27044ca5d178e5e5a31678f037e88940b', b'BEGIN PRIVATE KEY', b'BEGIN RSA PRIVATE KEY'):
+    if pat in raw:
+        exe_path.unlink(missing_ok=True)
+        sys.exit(f'FATAL: Forbidden secret byte pattern found in {exe_path}')
+print('  OK - Secret-free TOC & binary scan passed.')
+"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [ERROR] Post-build secret verification failed!" -ForegroundColor Red
+    exit 1
+}
+
+$SizeMB = [math]::Round((Get-Item $ExePath).Length / 1MB, 1)
+Write-Host ""
+Write-Host "  ================================================" -ForegroundColor Green
+Write-Host "    BUILD COMPLETE (SECRET-FREE VERIFIED)!        " -ForegroundColor Green
+Write-Host "  ================================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "  Output:  $ExePath" -ForegroundColor White
+Write-Host "  Size:    $SizeMB MB" -ForegroundColor White
 Write-Host ""

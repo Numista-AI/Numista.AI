@@ -8,6 +8,7 @@ import '../constants.dart';
 import '../services/http_auth_client.dart';
 import '../services/canonical_mint_asset_service.dart';
 import '../utils/numista_error_helper.dart';
+import '../utils/review_field_keys.dart';
 import '../widgets/grade_badge_widget.dart';
 
 /// Top-level convenience alias for ReviewHubScreen.formatCurrency
@@ -566,14 +567,18 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     if (_selectedIds.isEmpty) return;
     setState(() => _isProcessing = true);
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null || user.email == null) {
+      setState(() => _isProcessing = false);
+      return;
+    }
 
+    final count = _selectedIds.length;
     try {
       final response = await HttpAuthClient.post(
         Uri.parse("$_apiUrl/api/review/bulk_update"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "user_email": user.email,
+          "user_email": user.email!.trim().toLowerCase(),
           "review_ids": _selectedIds.toList(),
           "updates": updates,
         }),
@@ -583,19 +588,40 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
         if (!mounted) return;
         setState(() => _selectedIds.clear());
         Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Updated $count selected item${count == 1 ? '' : 's'}.'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
       } else {
-        throw Exception("Bulk update failed: ${response.body}");
+        String detail = 'HTTP ${response.statusCode}';
+        try {
+          final parsed = jsonDecode(response.body);
+          if (parsed is Map && parsed['detail'] != null) {
+            detail = parsed['detail'].toString();
+          }
+        } catch (_) {}
+        throw Exception('Bulk update failed: $detail');
       }
     } catch (e) {
       if (!mounted) return;
+      final msg = e.toString().startsWith('Exception: Bulk update failed:')
+          ? e.toString().replaceFirst('Exception: ', '')
+          : NumistaErrorHelper.toUserFriendly(
+              e,
+              fallback: 'Update failed — please check your connection and try again.',
+            );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Update failed — please check your connection and try again.'),
+          content: Text(msg),
           backgroundColor: Colors.red[700],
         ),
       );
     } finally {
-      setState(() => _isProcessing = false);
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
 
@@ -724,32 +750,32 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   }
 
   // ─── Per-card edit dialog ─────────────────────────────────────────────────
-  void _showCoinEditDialog(String docId, Map<String, dynamic> data) {
+  void _showCoinEditDialog(
+    String docId,
+    Map<String, dynamic> data, {
+    DocumentReference<Map<String, dynamic>>? docRef,
+  }) {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null || user.email == null) return;
 
-    // Pre-populate all controllers
+    final initialValues = ReviewFieldKeys.extractInitialReviewValues(data);
     final controllers = <String, TextEditingController>{
-      'Year':                    TextEditingController(text: data['Year']?.toString() ?? ''),
-      'Denomination':            TextEditingController(text: data['Denomination']?.toString() ?? ''),
-      'Mint Mark':               TextEditingController(text: data['Mint Mark']?.toString() ?? ''),
-      'Country':                 TextEditingController(text: data['Country']?.toString() ?? 'USA'),
-      'Program/Series':          TextEditingController(text: data['Program/Series']?.toString() ?? ''),
-      'Theme/Subject':           TextEditingController(text: data['Theme/Subject']?.toString() ?? ''),
-      'Variety':                 TextEditingController(text: data['Variety']?.toString() ?? ''),
-      'Condition':               TextEditingController(text: data['Condition']?.toString() ?? ''),
-      'Strike Type':             TextEditingController(text: data['Strike Type']?.toString() ?? ''),
-      'Metal Content':           TextEditingController(text: data['Metal Content']?.toString() ?? ''),
-      'Purchase Cost':           TextEditingController(text: (data['Purchase Cost'] ?? data['Cost'] ?? '').toString()),
-      'Purchase Date':           TextEditingController(text: data['Purchase Date']?.toString() ?? ''),
-      'Retailer/Website':        TextEditingController(text: data['Retailer/Website']?.toString() ?? ''),
-      'Retailer Invoice #':      TextEditingController(text: data['Retailer Invoice #']?.toString() ?? ''),
-      'Retailer Item No.':       TextEditingController(text: data['Retailer Item No.']?.toString() ?? ''),
-      'Storage Location':        TextEditingController(text: data['Storage Location']?.toString() ?? ''),
-      'Quantity':                TextEditingController(text: (data['Quantity'] ?? data['qty'] ?? '1').toString()),
+      for (final entry in initialValues.entries)
+        entry.key: TextEditingController(text: entry.value),
     };
 
+    final rawFeeVal = data['allocated_fees'] ?? data['Allocated Fees'] ?? data['shipping_fee'] ?? data['Fee'] ?? data['fee'] ?? 0.0;
+    final feeNum = (rawFeeVal is num) ? rawFeeVal.toDouble() : (double.tryParse(rawFeeVal.toString().replaceAll('\$', '').trim()) ?? 0.0);
+    final setCostLabel = (data['set_cost_label'] ?? '').toString().trim();
+    final targetRef = docRef ??
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.email!.trim().toLowerCase())
+            .collection('review_queue')
+            .doc(docId);
+
     bool isSaving = false;
+    bool programFieldInitialized = false;
 
     showDialog(
       context: context,
@@ -846,6 +872,17 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 '${data['Year'] ?? ''} ${data['Denomination'] ?? 'Review Item'}',
                                 style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white54 : const Color(0xFF64748B), fontSize: 13),
                               ),
+                              if (setCostLabel.isNotEmpty || feeNum >= 0.0)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(
+                                    [
+                                      if (setCostLabel.isNotEmpty) 'Package/Roll: $setCostLabel',
+                                      'Fee: \$${feeNum.toStringAsFixed(2)}',
+                                    ].join('  •  '),
+                                    style: const TextStyle(color: Color(0xFFD4AF37), fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -894,18 +931,16 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 controllers['Program/Series']!.text = selected.value;
                               },
                               fieldViewBuilder: (ctx, fieldCtrl, focusNode, onSubmitted) {
-                                // Sync initialValue → fieldCtrl once
-                                if (fieldCtrl.text.isEmpty &&
-                                    controllers['Program/Series']!.text.isNotEmpty) {
+                                if (!programFieldInitialized) {
                                   fieldCtrl.text = controllers['Program/Series']!.text;
+                                  programFieldInitialized = true;
                                 }
-                                // Keep the real controller in sync when user types free text
-                                fieldCtrl.addListener(() {
-                                  controllers['Program/Series']!.text = fieldCtrl.text;
-                                });
                                 return TextField(
                                   controller: fieldCtrl,
                                   focusNode: focusNode,
+                                  onChanged: (val) {
+                                    controllers['Program/Series']!.text = val;
+                                  },
                                   style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
                                   decoration: InputDecoration(
                                     prefixIcon: Icon(
@@ -1012,6 +1047,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                             const SizedBox(width: 12),
                             Expanded(child: field('Storage Location', 'Storage Location', Icons.inventory_2_outlined)),
                           ]),
+                          field('Fee', 'Fee / Shipping & Handling', Icons.local_shipping_outlined,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true)),
                           field('Retailer/Website', 'Retailer / Website', Icons.storefront_outlined),
                           Row(children: [
                             Expanded(child: field('Retailer Invoice #', 'Invoice #', Icons.receipt_outlined)),
@@ -1042,10 +1079,34 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             onPressed: isSaving ? null : () async {
-                              setDialogState(() => isSaving = true);
                               final messenger = ScaffoldMessenger.of(context);
                               final dialogMessenger = ScaffoldMessenger.of(dialogContext);
                               final nav = Navigator.of(dialogContext);
+                              final currentValues = <String, String>{
+                                for (final e in controllers.entries) e.key: e.value.text,
+                              };
+                              final validationError = ReviewFieldKeys.validateDirtyReviewInputs(
+                                initialValues: initialValues,
+                                currentValues: currentValues,
+                              );
+                              if (validationError != null) {
+                                dialogMessenger.showSnackBar(
+                                  SnackBar(content: Text(validationError), backgroundColor: Colors.red[700]),
+                                );
+                                return;
+                              }
+                              final updates = ReviewFieldKeys.buildDirtyReviewQueueUpdates(
+                                initialValues: initialValues,
+                                currentValues: currentValues,
+                              );
+                              if (updates.isEmpty) {
+                                nav.pop();
+                                messenger.showSnackBar(
+                                  const SnackBar(content: Text('No changes to save.')),
+                                );
+                                return;
+                              }
+                              setDialogState(() => isSaving = true);
                               try {
                                 final updates = <String, dynamic>{};
                                 controllers.forEach((key, ctrl) {
@@ -1071,6 +1132,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                     controllers['Mint Mark']?.text = ym.group(2)!.toUpperCase();
                                   }
                                 }
+                                await targetRef.update(updates);
                                 final bulkUpdates = <String, dynamic>{};
                                 final loc = (updates['Storage Location'] ?? updates['storage_location'])?.toString().trim();
                                 if (loc != null && loc.isNotEmpty) {
@@ -1110,7 +1172,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 );
                               }
                             },
-                            child: const Text('Save'),
+                            child: const Text('Save (Keep in Review)'),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1125,34 +1187,31 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             onPressed: isSaving ? null : () async {
-                              setDialogState(() => isSaving = true);
                               final messenger = ScaffoldMessenger.of(context);
                               final dialogMessenger = ScaffoldMessenger.of(dialogContext);
                               final nav = Navigator.of(dialogContext);
+                              final currentValues = <String, String>{
+                                for (final e in controllers.entries) e.key: e.value.text,
+                              };
+                              final validationError = ReviewFieldKeys.validateDirtyReviewInputs(
+                                initialValues: initialValues,
+                                currentValues: currentValues,
+                              );
+                              if (validationError != null) {
+                                dialogMessenger.showSnackBar(
+                                  SnackBar(content: Text(validationError), backgroundColor: Colors.red[700]),
+                                );
+                                return;
+                              }
+                              final updates = ReviewFieldKeys.buildDirtyReviewQueueUpdates(
+                                initialValues: initialValues,
+                                currentValues: currentValues,
+                              );
+                              setDialogState(() => isSaving = true);
                               try {
-                                final updates = <String, dynamic>{};
-                                controllers.forEach((key, ctrl) {
-                                  updates[key] = ctrl.text.trim();
-                                });
-                                // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
-                                final rawQty2 = controllers['Quantity']?.text.trim() ?? '';
-                                final parsedQty2 = int.tryParse(rawQty2);
-                                final cleanQty2 = (parsedQty2 != null && parsedQty2 > 0) ? parsedQty2 : 1;
-                                updates['Quantity'] = cleanQty2;
-                                controllers['Quantity']?.text = cleanQty2.toString();
-
-                                // Auto-split combined Year+Mint (e.g. "2006D" → Year="2006" Mint="D")
-                                final ymRe2 = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
-                                final ry2 = (updates['Year'] as String? ?? '').trim();
-                                final rm2 = (updates['Mint Mark'] as String? ?? '').trim();
-                                if (ry2.isNotEmpty && rm2.isEmpty) {
-                                  final ym2 = ymRe2.firstMatch(ry2);
-                                  if (ym2 != null) {
-                                    updates['Year'] = ym2.group(1)!;
-                                    updates['Mint Mark'] = ym2.group(2)!.toUpperCase();
-                                    controllers['Year']?.text = ym2.group(1)!;
-                                    controllers['Mint Mark']?.text = ym2.group(2)!.toUpperCase();
-                                  }
+                                // Save dirty edits first (skip no-op update)
+                                if (updates.isNotEmpty) {
+                                  await targetRef.update(updates);
                                 }
                                 // Save edits first via canonical bulk_update
                                 final bulkUpdates2 = <String, dynamic>{};
@@ -1188,7 +1247,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                   Uri.parse("$_apiUrl/api/review/commit"),
                                   headers: {"Content-Type": "application/json"},
                                   body: jsonEncode({
-                                    "user_email": user.email,
+                                    "user_email": user.email!.trim().toLowerCase(),
                                     "review_ids": [docId],
                                   }),
                                 );
@@ -1239,70 +1298,161 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
   // ─── Bulk edit bottom sheet ───────────────────────────────────────────────
   void _showBulkEditDialog() {
-    final TextEditingController locationController = TextEditingController();
-    final TextEditingController costController = TextEditingController();
-    final TextEditingController dateController = TextEditingController();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: (Theme.of(context).brightness == Brightness.dark) ? const Color(0xFF1A1D27) : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Bulk Edit Metadata', style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A), fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('Applying to ${_selectedIds.length} selected items.', style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white54 : const Color(0xFF64748B))),
-            const SizedBox(height: 24),
-            _buildDialogField('Storage Location', locationController, Icons.inventory_2_outlined),
-            _buildDialogField('Cost per Item', costController, Icons.attach_money),
-            _buildDialogField('Purchase Date', dateController, Icons.calendar_today),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF63366),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () {
-                  final updates = <String, dynamic>{};
-                  if (locationController.text.isNotEmpty) updates['storage_location'] = locationController.text;
-                  if (updates.isNotEmpty) _bulkUpdateItems(updates);
-                },
-                child: const Text('Apply Changes', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+      builder: (_) => _BulkEditBottomSheet(
+        itemCount: _selectedIds.length,
+        onApply: _bulkUpdateItems,
       ),
     );
   }
 
-  Widget _buildDialogField(String label, TextEditingController controller, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextField(
-        controller: controller,
-        style: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white : const Color(0xFF0F172A)),
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white38 : const Color(0xFF94A3B8), size: 20),
-          labelText: label,
-          labelStyle: TextStyle(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white38 : const Color(0xFF94A3B8)),
-          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: (Theme.of(context).brightness == Brightness.dark) ? Colors.white10 : const Color(0xFFE2E8F0)), borderRadius: BorderRadius.circular(12)),
-          focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Color(0xFFF63366)), borderRadius: BorderRadius.circular(12)),
-          filled: true,
-          fillColor: (Theme.of(context).brightness == Brightness.dark) ? Colors.white.withAlpha(10) : const Color(0xFFF8FAFC),
-        ),
+  // ─── Quick Storage Location Dialog (NET-585) ──────────────────────────────
+  void _showQuickStorageDialog(String docId, Map<String, dynamic> data, String currentLoc) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.email == null) return;
+
+    final controller = TextEditingController(text: currentLoc);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const presets = ['Safe', 'Box 1', 'Box 2', 'Slab Box', 'Binder', 'Desk'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) {
+          return AlertDialog(
+            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.inventory_2_outlined, color: Color(0xFF2563EB), size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Set Storage Location',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${data['Year'] ?? ''} ${data['Denomination'] ?? 'Item'}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFC9A227),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Safe Shelf 2, Box A',
+                      hintStyle: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8)),
+                      prefixIcon: const Icon(Icons.place_outlined, size: 20),
+                      filled: true,
+                      fillColor: isDark ? Colors.white.withAlpha(10) : const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onSubmitted: (val) async {
+                      final newLoc = val.trim();
+                      Navigator.of(ctx).pop();
+                      await _saveQuickStorage(user.email!, docId, newLoc);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Quick suggestions:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: presets.map((p) {
+                      return ActionChip(
+                        label: Text(p, style: const TextStyle(fontSize: 12)),
+                        onPressed: () {
+                          controller.text = p;
+                          controller.selection = TextSelection.fromPosition(TextPosition(offset: p.length));
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () async {
+                  final newLoc = controller.text.trim();
+                  Navigator.of(ctx).pop();
+                  await _saveQuickStorage(user.email!, docId, newLoc);
+                },
+                child: const Text('Save Location'),
+              ),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  Future<void> _saveQuickStorage(String userEmail, String docId, String newLoc) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userEmail)
+          .collection('review_queue')
+          .doc(docId)
+          .update({
+        'storage_location': newLoc,
+        'Storage Location': newLoc,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(newLoc.isEmpty ? 'Storage location cleared' : '📍 Storage location updated: $newLoc'),
+          backgroundColor: const Color(0xFF10B981),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Failed to update storage location.')),
+          backgroundColor: Colors.red[700],
+        ),
+      );
+    }
   }
 
   // ─── Build ────────────────────────────────────────────────────────────────
@@ -1329,8 +1479,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 builder: (context, snapshot) {
                   final rawDocs = snapshot.data?.docs ?? [];
                   final docs = rawDocs.where((d) {
-                    final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
-                    return status != 'aborted' && status != 'superseded' && status != 'committed';
+                    final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
+                    return status == 'pending';
                   }).toList();
                   if (docs.isEmpty) return const SizedBox.shrink();
 
@@ -1377,8 +1527,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
             builder: (context, snapshot) {
               final rawDocs = snapshot.data?.docs ?? [];
               final docs = rawDocs.where((d) {
-                final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
-                return status != 'aborted' && status != 'superseded' && status != 'committed';
+                final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
+                return status == 'pending';
               }).toList();
               final highConfCount = docs.where((d) => ReviewHubScreen.isHighConfidenceItem(d.data())).length;
 
@@ -1402,6 +1552,20 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
             },
           ),
           if (_selectedIds.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                icon: const Icon(Icons.check_circle_outline, size: 16),
+                label: Text('Add Selected (${_selectedIds.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                onPressed: _isProcessing ? null : _commitSelected,
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               child: ElevatedButton.icon(
@@ -1453,8 +1617,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
               final rawDocs = (snapshot.data?.docs.toList() ?? []);
               final docs = rawDocs.where((d) {
-                final status = (d.data()['status'] ?? 'staged').toString().toLowerCase();
-                return status != 'aborted' && status != 'superseded';
+                final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
+                return status == 'pending';
               }).toList();
               docs.sort((a, b) {
                 final aData = a.data();
@@ -1533,7 +1697,14 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       return _buildSetCard(id, data, isSelected);
                     }
 
-                    return _buildCoinCard(id, data, isSelected, confidence, itemType);
+                    return _buildCoinCard(
+                      id,
+                      data,
+                      isSelected,
+                      confidence,
+                      itemType,
+                      docRef: doc.reference,
+                    );
                   } catch (e) {
                     return Card(
                       color: Colors.red.shade50,
@@ -1578,14 +1749,15 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     const Spacer(),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF63366),
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
                       ),
                       onPressed: _isProcessing ? null : _commitSelected,
                       icon: _isProcessing
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.check_circle_outline),
-                      label: Text(_isProcessing ? 'Processing...' : 'Commit Selected'),
+                      label: Text(_isProcessing ? 'Processing...' : 'Add Selected (${_selectedIds.length})'),
                     ),
                   ],
                 ),
@@ -1604,7 +1776,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
         ?? 'Coin Set';
     final setSize    = (data['set_size'] as num?)?.toInt() ?? 0;
     final costLabel  = data['set_cost_label'] ?? data['Purchase Cost'] ?? 'N/A';
-    final retailer   = data['Retailer/Website'] ?? 'Unknown';
+    final retailer   = (data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website']) ?? 'Unknown';
     final srcFile    = data['source_file']?.toString() ?? '';
 
     // Expand set_contents for the preview list
@@ -1671,6 +1843,32 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                 style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
               ),
             ),
+
+            if (data['possible_duplicate'] == true) ...[
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.only(left: 48),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withAlpha(30),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.amber.withAlpha(140)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.amber),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Possible Duplicate: ${data['duplicate_reason'] ?? 'Matches existing collection item'}',
+                        style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
 
             // ── Contents preview ───────────────────────────────────────
             if (contents.isNotEmpty) ...[
@@ -1859,7 +2057,14 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
   }
 
   // ─── Coin Card (standard + paper_currency / medal / stamp / other) ────────
-  Widget _buildCoinCard(String id, Map<String, dynamic> data, bool isSelected, double confidence, String itemType) {
+  Widget _buildCoinCard(
+    String id,
+    Map<String, dynamic> data,
+    bool isSelected,
+    double confidence,
+    String itemType, {
+    DocumentReference<Map<String, dynamic>>? docRef,
+  }) {
     final isFromSet = data['from_set'] == true;
     final typeMeta  = _typeMetaMap[itemType];
     final condStr = (data['Condition'] ?? '').toString().trim();
@@ -1917,7 +2122,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         GradeBadgeWidget(gradeCode: condStr)
                       else
                         InkWell(
-                          onTap: () => _showCoinEditDialog(id, data),
+                          onTap: () => _showCoinEditDialog(id, data, docRef: docRef),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
@@ -1926,6 +2131,54 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               border: Border.all(color: Colors.orange.withAlpha(160)),
                             ),
                             child: const Text('Set Condition', style: TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      if (storageLoc.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: InkWell(
+                            onTap: () => _showQuickStorageDialog(id, data, storageLoc),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF3B82F6).withAlpha(20),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF3B82F6).withAlpha(120)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('📍 $storageLoc', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 11, fontWeight: FontWeight.w600)),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.edit_outlined, size: 11, color: Color(0xFF2563EB)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: InkWell(
+                            onTap: () => _showQuickStorageDialog(id, data, ''),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF64748B).withAlpha(15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF64748B).withAlpha(100)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.add_location_alt_outlined, size: 11, color: Color(0xFF64748B)),
+                                  SizedBox(width: 3),
+                                  Text('Storage', style: TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       _buildMemoryAssistedBadge(data),
@@ -1991,6 +2244,30 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   }(),
 
                   // "From Set" amber chip
+                  if (data['possible_duplicate'] == true) ...[
+                    const SizedBox(height: 6),
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withAlpha(30),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.amber.withAlpha(140)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, size: 13, color: Colors.amber),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Possible Duplicate: ${data['duplicate_reason'] ?? 'Matches existing coin'}',
+                              style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ]),
+                  ],
                   if (isFromSet) ...[
                     const SizedBox(height: 6),
                     Row(children: [
@@ -2073,25 +2350,30 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       }
                     }
 
+                    final rawFee = data['allocated_fees'] ?? data['Allocated Fees'] ?? data['shipping_fee'] ?? data['Fee'] ?? data['fee'];
+                    final feeStr = rawFee != null
+                        ? (rawFee is num ? '\$${rawFee.toStringAsFixed(2)}' : (rawFee.toString().startsWith('\$') ? rawFee.toString() : '\$$rawFee'))
+                        : '\$0.00';
+
                     final isChecklist = data['source_type'] == 'checklist_scan';
                     final sourceLabel = isChecklist ? 'Ingestion Source' : 'Retailer';
-                    final sourceVal = isChecklist ? 'Checklist Scan' : (data['Retailer/Website'] ?? 'N/A').toString();
+                    final sourceVal = isChecklist ? 'Checklist Scan' : ((data['retailer_website'] ?? data['retailer'] ?? data['Retailer/Website']) ?? 'N/A').toString();
 
                     return Wrap(
                       spacing: 24,
                       runSpacing: 12,
                       children: [
                         _buildMetaItem(sourceLabel, sourceVal, isChecklist ? Icons.checklist_rtl : Icons.storefront),
-                        _buildMetaItem('Invoice #', (data['Retailer Invoice #'] ?? 'N/A').toString(), Icons.receipt),
+                        _buildMetaItem('Invoice #', ((data['retailer_invoice_num'] ?? data['invoice_number'] ?? data['Retailer Invoice #']) ?? 'N/A').toString(), Icons.receipt),
                         _buildMetaItem('Cost', costStr, Icons.attach_money),
-                        _buildMetaItem('Item #', (data['Retailer Item No.'] ?? 'N/A').toString(), Icons.tag),
+                        _buildMetaItem('Fee', feeStr, Icons.local_shipping_outlined),
+                        _buildMetaItem('Item #', ((data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.']) ?? 'N/A').toString(), Icons.tag),
                         _buildMetaItem('QTY', cleanQty.toString(), Icons.numbers),
-                        _buildMetaItem('Date', (data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
-                        _buildMetaItem(
-                          'Location',
-                          storageLoc.isNotEmpty ? storageLoc : '+ Set Location',
-                          Icons.inventory_2_outlined,
-                          onTap: () => _showCoinEditDialog(id, data),
+                        _buildMetaItem('Date', (data['purchase_date'] ?? data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
+                        InkWell(
+                          onTap: () => _showQuickStorageDialog(id, data, storageLoc),
+                          borderRadius: BorderRadius.circular(4),
+                          child: _buildMetaItem('Storage', storageLoc.isNotEmpty ? '$storageLoc ✏️' : '+ Set Location', Icons.inventory_2_outlined),
                         ),
                       ],
                     );
@@ -2130,7 +2412,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   message: 'Edit this coin',
                   child: IconButton(
                     icon: const Icon(Icons.edit_note, color: Color(0xFF64748B)),
-                    onPressed: () => _showCoinEditDialog(id, data),
+                    onPressed: () => _showCoinEditDialog(id, data, docRef: docRef),
                   ),
                 ),
                 Tooltip(
@@ -2349,4 +2631,152 @@ class _ItemTypeMeta {
   final String label;
   final Color  color;
   const _ItemTypeMeta({required this.label, required this.color});
+}
+
+class _BulkEditBottomSheet extends StatefulWidget {
+  final int itemCount;
+  final Future<void> Function(Map<String, dynamic> updates) onApply;
+
+  const _BulkEditBottomSheet({
+    required this.itemCount,
+    required this.onApply,
+  });
+
+  @override
+  State<_BulkEditBottomSheet> createState() => _BulkEditBottomSheetState();
+}
+
+class _BulkEditBottomSheetState extends State<_BulkEditBottomSheet> {
+  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _costController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _locationController.dispose();
+    _costController.dispose();
+    _dateController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildField(String label, TextEditingController controller, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextField(
+        controller: controller,
+        style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A)),
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: isDark ? Colors.white38 : const Color(0xFF94A3B8), size: 20),
+          labelText: label,
+          labelStyle: TextStyle(color: isDark ? Colors.white38 : const Color(0xFF94A3B8)),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Color(0xFFF63366)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          filled: true,
+          fillColor: isDark ? Colors.white.withAlpha(10) : const Color(0xFFF8FAFC),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final locText = _locationController.text.trim();
+    final costText = _costController.text.trim();
+    final dateText = _dateController.text.trim();
+
+    final updates = <String, dynamic>{};
+    if (locText.isNotEmpty) {
+      updates['storage_location'] = locText;
+    }
+    if (costText.isNotEmpty) {
+      final cleaned = costText.replaceAll(RegExp(r'[\$,\s]'), '');
+      final parsedCost = double.tryParse(cleaned);
+      if (parsedCost == null || parsedCost.isNaN || parsedCost.isInfinite || parsedCost < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Invalid Cost. Enter a non-negative number (e.g. 12.50).'),
+            backgroundColor: Colors.red[700],
+          ),
+        );
+        return;
+      }
+      updates['cost'] = parsedCost;
+    }
+    if (dateText.isNotEmpty) {
+      updates['purchase_date'] = dateText;
+    }
+    if (updates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter at least one field to update.')),
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await widget.onApply(updates);
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Bulk Edit Metadata',
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Applying to ${widget.itemCount} selected items.',
+            style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 24),
+          _buildField('Storage Location', _locationController, Icons.inventory_2_outlined),
+          _buildField('Cost per Item', _costController, Icons.attach_money),
+          _buildField('Purchase Date', _dateController, Icons.calendar_today),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF63366),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: _submitting ? null : _submit,
+              child: const Text('Apply Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
 }

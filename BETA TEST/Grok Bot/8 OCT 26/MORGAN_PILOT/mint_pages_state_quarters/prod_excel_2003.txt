@@ -1,0 +1,14 @@
+The Wayback Machine - https://web.archive.org/web/20121021063820id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2003_50_State_Quarters_Program_Production.xls
+
+United States Mint — 2003 50 State Quarters Program Production (circulating)
+Source: U.S. Mint Circulating Coins Production Excel (archived).
+Facilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.
+
+Design | Denver | Philadelphia | Total
+2003 50 State Quarters Program® Production
+Illinois | Denver 237,400,000 | Philadelphia 225,800,000 | Total 463,200,000
+Alabama | Denver 232,400,000 | Philadelphia 225,000,000 | Total 457,400,000
+Maine | Denver 231,400,000 | Philadelphia 217,400,000 | Total 448,800,000
+Missouri | Denver 228,200,000 | Philadelphia 225,000,000 | Total 453,200,000
+Arkansas | Denver 229,800,000 | Philadelphia 228,000,000 | Total 457,800,000
+Grand Total: 2,280,400,000

@@ -1,0 +1,14 @@
+The Wayback Machine - https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls
+
+United States Mint — 2008 50 State Quarters Program Production (circulating)
+Source: U.S. Mint Circulating Coins Production Excel (archived).
+Facilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.
+
+Design | Denver | Philadelphia | Total
+2008 50 State Quarters Program® Production
+Oklahoma | Denver 194,600,000 | Philadelphia 222,000,000 | Total 416,600,000
+New Mexico | Denver 244,400,000 | Philadelphia 244,200,000 | Total 488,600,000
+Arizona | Denver 265,000,000 | Philadelphia 244,600,000 | Total 509,600,000
+Alaska | Denver 254,000,000 | Philadelphia 251,800,000 | Total 505,800,000
+Hawaii | Denver 263,600,000 | Philadelphia 254,000,000 | Total 517,600,000
+Grand Total: 2,438,200,000

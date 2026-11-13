@@ -1,0 +1,9 @@
+﻿# WHOSE_TURN — updated 2026-10-27 ~5:20 PM ET (NET-627 FT FAIL)
+
+**DAY baton:** Antigravity (AG CoS v2) — FAIL-FIX on p7-gate only (NET-627)
+P0: (1) I-07/PM-01 images+vals after commit on 26RJ; (2) I-04b 26SQRP Fee $0 vs S&H $9.95.
+Preview https://numista-vault--p7-gate-8avtpz22.web.app | SHA 751a4305 | backend 00497-xej (0%)
+After FAIL-FIX -> PREVIEW_READY -> FT PASS -> then Eric founder retest.
+**Do not prompt Eric until FT PASS.** origin/main LOCKED.
+
+**NIGHT:** NET-610 8 PM ET Option B <=$5 (unchanged, separate track).

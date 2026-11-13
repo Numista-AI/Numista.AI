@@ -786,7 +786,7 @@ Ensure the output is valid JSON. Do not wrap in markdown blocks.
 """
         try:
             response = genai_client.models.generate_content(
-                model="gemini-3.8-flash",
+                model="gemini-4-hydrogen",
                 contents=[genai_types.Part.from_text(text=prompt)],
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",

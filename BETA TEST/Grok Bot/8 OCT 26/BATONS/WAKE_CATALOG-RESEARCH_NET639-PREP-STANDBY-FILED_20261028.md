@@ -1,0 +1,3 @@
+# WAKE -- CATALOG RESEARCH -- NET-639 PREP/STANDBY FILED (28 Oct 2026)
+
+Desk filed NET-639 Phase I index-wall ingest as PREP/STANDBY (baton in BATONS, 01_INCOMING, INBOX, MY TESTING\28 OCT 26) pointing at PHASE1_INDEX_WALL_INGEST_PLAN_2026-10-28.md; HOLD - no execute, no spend until Eric types the exact YES quote (<= $30 ingest+wire, numista-morgan-pilot Discovery SKUs only, no CG, no fold). -- Desk ~7:35 AM ET
