@@ -95,7 +95,7 @@ class MintProductLookupService {
     final rawMint = coin.mintMark.trim().toUpperCase();
     final targetFacility = coin.mint.trim().isNotEmpty
         ? coin.mint.trim()
-        : (rawMint.isEmpty ? 'Philadelphia' : _mintMarkToFacility(rawMint));
+        : _mintMarkToFacility(rawMint);
     final targetDenom = _normalizeDenom(coin.denomination);
     final targetSeries = coin.programSeries.trim().toLowerCase();
     if (targetYear == null || targetFacility.isEmpty || targetDenom.isEmpty || targetSeries.isEmpty) {
@@ -108,7 +108,7 @@ class MintProductLookupService {
       final d = _normalizeDenom(entry['denomination']?.toString() ?? '');
       final sr = entry['series']?.toString().trim().toLowerCase() ?? '';
       if (y is! int || f.isEmpty || d.isEmpty || sr.isEmpty) return false; // incomplete row -> no match
-      // v1.7/v1.8 MF-5b (LOCKED): blank mint mark maps to Philadelphia ONLY if catalog row mint_mark_on_coin is null/blank/false
+      // Two-Field Mint Model (Phase 6): blank on-coin mint_mark only matches catalog rows where mint_mark_on_coin is null/blank/false
       if (rawMint.isEmpty) {
         final mmOnCoin = entry['mint_mark_on_coin'];
         final isNoMintMark = mmOnCoin == null || mmOnCoin == false || mmOnCoin.toString().trim().isEmpty;

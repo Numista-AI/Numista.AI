@@ -356,11 +356,12 @@ void main() {
       ]);
       expect(s.lookupForCoin(CoinModel(id: 'a', year: '2024', mintMark: 'W', denomination: 'Dollar', programSeries: 'Fixture Series')), isNull);
     });
-    test('composite: blank mint mark resolves to Philadelphia', () {
+    test('composite: explicit mint facility resolves NMM coins without blank->Philly heuristic (Phase 6)', () {
       final s = MintProductLookupService.forTesting(entries: overlay, rawEntries: [
         {'nac_code': 'NAC1.CN.US.TEST', 'type': 'coin', 'is_placeholder': false, 'year': 1921, 'denomination': 'Dollar', 'series': 'Fixture Series', 'mint_facility': 'Philadelphia'},
       ]);
-      expect(s.lookupForCoin(CoinModel(id: 'a', year: '1921', mintMark: '', denomination: 'Dollar', programSeries: 'Fixture Series')), isNotNull);
+      expect(s.lookupForCoin(CoinModel(id: 'a', year: '1921', mint: 'Philadelphia', mintMark: '', denomination: 'Dollar', programSeries: 'Fixture Series')), isNotNull);
+      expect(s.lookupForCoin(CoinModel(id: 'b', year: '1921', mint: '', mintMark: '', denomination: 'Dollar', programSeries: 'Fixture Series')), isNull);
     });
   });
 
