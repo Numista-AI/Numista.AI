@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/coin_image_service.dart';
+import 'signed_storage_image.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SetContentsPanel
@@ -298,10 +299,10 @@ class _SetContentsPanelState extends State<SetContentsPanel> {
           child: previewUrl != null
               ? ClipRRect(
                   borderRadius: BorderRadius.circular(4),
-                  child: Image.network(
-                    previewUrl,
+                  child: SignedStorageImage(
+                    url: previewUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const Center(
+                    errorBuilder: (_) => const Center(
                                 child: Icon(Icons.image_not_supported_outlined, color: _kBorder, size: 22)),
                   ),
                 )
@@ -380,10 +381,10 @@ class _SetContentsPanelState extends State<SetContentsPanel> {
                 child: InteractiveViewer(
                   minScale: 0.8,
                   maxScale: 5.0,
-                  child: Image.network(
-                    url,
+                  child: SignedStorageImage(
+                    url: url,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Padding(
+                    errorBuilder: (_) => const Padding(
                       padding: EdgeInsets.all(40),
                       child: Icon(Icons.broken_image_outlined,
                           color: Colors.white30, size: 60),
@@ -449,15 +450,16 @@ class _ImageThumbnail extends StatelessWidget {
                 child: Stack(fit: StackFit.expand, children: [
                   // Image / placeholder / spinner
                   if (url != null)
-                    Image.network(
-                      url!,
+                    SignedStorageImage(
+                      url: url!,
                       fit: BoxFit.cover,
-                      loadingBuilder: (ctx, child, prog) =>
-                          prog == null ? child
-                          : const Center(
-                              child: CircularProgressIndicator(
-                                  color: _kAccent, strokeWidth: 2)),
-                      errorBuilder: (_, _, _) => Center(
+                      placeholderBuilder: (_) => const Center(
+                        child: CircularProgressIndicator(
+                          color: _kAccent,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                      errorBuilder: (_) => Center(
                         child: Column(mainAxisSize: MainAxisSize.min, children: [
                           const Icon(Icons.image_not_supported_outlined,
                               color: _kBorder, size: 22),

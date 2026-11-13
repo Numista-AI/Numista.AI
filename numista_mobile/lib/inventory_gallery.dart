@@ -4,6 +4,7 @@ import 'storage_service.dart';
 import 'utils/numista_error_helper.dart';
 import 'utils/mint_helpers.dart';
 import 'services/canonical_mint_asset_service.dart';
+import 'widgets/signed_storage_image.dart';
 
 const _electricBlue = Color(0xFF4C8CDA);
 const _neuralBronze = Color(0xFF8B6B00);
@@ -354,11 +355,11 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                url,
+              child: SignedStorageImage(
+                url: url,
                 height: 120,
                 fit: BoxFit.cover,
-                errorBuilder: (ctx, err, stack) => Container(
+                errorBuilder: (_) => Container(
                   height: 120,
                   decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(8)),
                   child: const Center(child: Icon(Icons.error, color: Colors.redAccent)),

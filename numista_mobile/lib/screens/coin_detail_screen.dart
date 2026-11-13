@@ -17,6 +17,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../utils/mint_helpers.dart';
+import '../services/signed_photo_url_service.dart';
+import '../widgets/signed_storage_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import '../config/ai_config.dart';
@@ -1104,10 +1106,12 @@ class _CoinImagePairState extends State<_CoinImagePair> {
     }
   }
 
-  /// Returns the URL if it is a loadable HTTPS URL, otherwise empty string.
+  /// Returns the URL if it is a loadable HTTPS URL or a signable gs:// owner URI.
   static String _toHttpsUrl(String url) {
     if (url.isEmpty) return '';
-    if (url.startsWith('gs://')) return '';  // GCS internal path — not displayable
+    if (url.startsWith('gs://') && !SignedPhotoUrlService.needsSigning(url)) {
+      return '';
+    }
     return url;
   }
 
@@ -1427,12 +1431,11 @@ class _CoinImageTile extends StatelessWidget {
         return _placeholder();
       }
     }
-    return Image.network(
-      url,
+    return SignedStorageImage(
+      url: url,
       fit: fit,
-      errorBuilder: (ctx, err, st) => _placeholder(),
-      loadingBuilder: (ctx, child, progress) =>
-          progress == null ? child : _skeleton(),
+      placeholderBuilder: (_) => _skeleton(),
+      errorBuilder: (_) => _placeholder(),
     );
   }
 
@@ -4253,12 +4256,12 @@ class _OwnerPhotoHero extends StatelessWidget {
             child: hasPhotos
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(9),
-                    child: Image.network(
-                      primaryPhoto!['url'] as String,
+                    child: SignedStorageImage(
+                      url: primaryPhoto!['url'] as String?,
                       fit: BoxFit.cover,
                       width: 120,
                       height: 120,
-                      errorBuilder: (_, _, _) => const Icon(
+                      errorBuilder: (_) => const Icon(
                         Icons.broken_image,
                         color: Color(0xFFC9A227),
                         size: 48,
@@ -4385,10 +4388,10 @@ class _OwnerPhotoHero extends StatelessWidget {
                   children: [
                     Expanded(
                       child: InteractiveViewer(
-                        child: Image.network(
-                          photo['url'] as String,
+                        child: SignedStorageImage(
+                          url: photo['url'] as String?,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, _, _) => const Center(
+                          errorBuilder: (_) => const Center(
                             child: Icon(Icons.broken_image, color: Colors.white54, size: 64),
                           ),
                         ),

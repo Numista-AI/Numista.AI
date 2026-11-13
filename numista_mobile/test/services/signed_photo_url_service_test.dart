@@ -160,4 +160,123 @@ void main() {
     expect(result, publicUrl);
     expect(postCount, 0);
   });
+
+  test('6. retries once on 429 with jittered delay (250-750ms) and succeeds on 200', () async {
+    const rawUrl =
+        'gs://numista-uploads-studio-9101802118-8c9a8/users/a@b.com/coins/c6/obv.jpg';
+    var attempts = 0;
+    final recordedDelays = <Duration>[];
+    SignedPhotoUrlService.delayFn = (d) async => recordedDelays.add(d);
+    SignedPhotoUrlService.jitterNextInt = (max) => 100; // 250 + 100 = 350ms
+    addTearDown(() => SignedPhotoUrlService.resetForTest());
+
+    HttpAuthClient.httpClientOverride = MockClient((request) async {
+      attempts++;
+      if (attempts == 1) {
+        return http.Response(jsonEncode({'detail': 'Rate limited'}), 429);
+      }
+      return http.Response(
+        jsonEncode({'signed_urls': {rawUrl: 'https://signed.example/retry-ok.jpg'}}),
+        200,
+      );
+    });
+
+    final result = await SignedPhotoUrlService.resolve(rawUrl);
+    expect(attempts, 2);
+    expect(result, 'https://signed.example/retry-ok.jpg');
+    expect(recordedDelays, [const Duration(milliseconds: 350)]);
+  });
+
+  test('7. 403 fails fast without retry, fires onSigningError, and invalidate() clears cache', () async {
+    const rawUrl =
+        'gs://numista-uploads-studio-9101802118-8c9a8/users/a@b.com/coins/c7/obv.jpg';
+    var attempts = 0;
+    Object? capturedError;
+    String? capturedReason;
+    SignedPhotoUrlService.delayFn = (_) async {};
+    SignedPhotoUrlService.onSigningError = (err, stack, {reason}) {
+      capturedError = err;
+      capturedReason = reason;
+    };
+    addTearDown(() => SignedPhotoUrlService.resetForTest());
+
+    HttpAuthClient.httpClientOverride = MockClient((request) async {
+      attempts++;
+      return http.Response(jsonEncode({'detail': 'Forbidden'}), 403);
+    });
+
+    final failResult = await SignedPhotoUrlService.resolve(rawUrl);
+    expect(failResult, isNull);
+    expect(attempts, 1);
+    expect(capturedError.toString(), contains('403'));
+    expect(capturedReason, 'batch_signed_url_failed');
+
+    // Now return 200, verify cache + invalidate()
+    attempts = 0;
+    HttpAuthClient.httpClientOverride = MockClient((request) async {
+      attempts++;
+      return http.Response(
+        jsonEncode({'signed_urls': {rawUrl: 'https://signed.example/v$attempts.jpg'}}),
+        200,
+      );
+    });
+
+    expect(await SignedPhotoUrlService.resolve(rawUrl), 'https://signed.example/v1.jpg');
+    expect(await SignedPhotoUrlService.resolve(rawUrl), 'https://signed.example/v1.jpg');
+    expect(attempts, 1);
+
+    SignedPhotoUrlService.invalidate(rawUrl);
+    expect(await SignedPhotoUrlService.resolve(rawUrl), 'https://signed.example/v2.jpg');
+    expect(attempts, 2);
+  });
+
+  test('8. cache bounds at 500 entries and evicts oldest entry on 501st', () async {
+    SignedPhotoUrlService.delayFn = (_) async {};
+    addTearDown(() => SignedPhotoUrlService.resetForTest());
+
+    var networkCalls = 0;
+    HttpAuthClient.httpClientOverride = MockClient((request) async {
+      networkCalls++;
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      final urls = (body['urls'] as List).cast<String>();
+      return http.Response(
+        jsonEncode({
+          'signed_urls': {
+            for (final u in urls) u: 'https://signed.example/call_$networkCalls',
+          },
+        }),
+        200,
+      );
+    });
+
+    String urlFor(int i) =>
+        'gs://numista-uploads-studio-9101802118-8c9a8/users/a@b.com/coins/c_$i/obv.jpg';
+
+    for (var i = 0; i < 501; i++) {
+      await SignedPhotoUrlService.resolve(urlFor(i));
+    }
+    expect(networkCalls, 501);
+
+    // urlFor(1) should still be cached (no network call)
+    final cached1 = await SignedPhotoUrlService.resolve(urlFor(1));
+    expect(cached1, 'https://signed.example/call_2');
+    expect(networkCalls, 501);
+
+    // urlFor(0) was evicted and must re-fetch
+    final evicted0 = await SignedPhotoUrlService.resolve(urlFor(0));
+    expect(evicted0, 'https://signed.example/call_502');
+    expect(networkCalls, 502);
+  });
+
+  test('9. public URL bypass makes zero tokenProviderOverride calls', () async {
+    var tokenCalls = 0;
+    HttpAuthClient.tokenProviderOverride = () async {
+      tokenCalls++;
+      return 'test-token';
+    };
+    const publicUrl = 'https://storage.googleapis.com/us_mint_coin_images/2025/public.jpg';
+    final result = await SignedPhotoUrlService.resolve(publicUrl);
+    expect(result, publicUrl);
+    expect(tokenCalls, 0);
+  });
 }
