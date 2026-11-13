@@ -1,0 +1,1154 @@
+{
+ "row": 3,
+ "slot": "state_quarters#production_window",
+ "claim": "Under the 50 State Quarters Program, each quarter was produced for about 10 weeks and will never be produced again.",
+ "opposite": "Each 50 State Quarter design remained in continuous production for the entire calendar year and was reissued annually.",
+ "queries": [
+  "50 State Quarters each quarter produced about 10 weeks never produced again",
+  "United States Mint 50 State Quarters Program production period 10 weeks"
+ ],
+ "search_status": [
+  200,
+  200
+ ],
+ "checks": {
+  "claim_vs_mint": {
+   "status": 200,
+   "resp": {
+    "supportScore": 0.99359554,
+    "citedChunks": [
+     {
+      "chunkText": "Mint\n/\nLearn\n/\nCoin and Medal Programs\n/\n50 State Quarters Program\n50 State Quarters Program\nLaunched in 1999, the United States Mint’s 50 State Quarters Program was a 10-year initiative that honored each of the nation’s states in the order that they ratified the Constitution or were admitted into the Union. Each quarter was produced for about 10 weeks and will never be produced again. State designs are displayed on the reverse (tails) of the quarters, while the obverse design displays the familiar image of George Washington. But, to accommodate state designs on the reverse, the words “United States of America,” “Quarter Dollar,” “Liberty,” and “In God We Trust” all appear on the obverse. Download the individual informational pages of all the 50 State Quarters.",
+      "source": "0"
+     },
+     {
+      "chunkText": "The Wayback Machine - https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq\n\nThe United States Mint 50 State Quarters® Program\nSearch:\nCoins and Medals\nPrinter Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse.",
+      "source": "1"
+     },
+     {
+      "chunkText": "About The Mint\n1 capture\n03 Apr 2016\nMar\nAPR\nMay\n03\n2015\n2016\n2017\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20160403030437/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule\nskip navigation\nSkip to content\nEmail Signup\nCustomer Service\nTrack Order\nSign In\nRegister\nOpen/Collapse\nShop\nCoins\nProof Sets\nGold Coins\nSilver Coins\nPlatinum Coins\nCommemoratives\nOther Coins\nCoin Programs\nNative American $1 Coins\nPresidential $1 Coins\nAmerican Buffalo Coins\nAmerica The Beautiful Quarters®\nKennedy Half Dollars\nFirst Spouse Coins\nCommemorative Coins\nAmerican Eagle Coins\nMedals\nPresidential\nFirst Spouse\nBicentennial and Centennial\nHistorical Events\nHumanitarian and Cultural\nMilitary Medals\nProduct Enrollments\nAmerica The Beautiful Quarters®\nNative American $1 Coins\nPresidential $1 Coins\nFirst Spouse Bronze Medals\nUncirculated Coins\nKennedy Half Dollars\nAnnual Mint Sets\nAmerican Eagle Coins\nStorage and Display\nCoin Albums\nMedal Cases\nCollector’s Boxes\nOther\nFeatured\nWhat’s New\nBest Sellers\nGift Certificates\nUpcoming Products\nAfrican-American\nHistory\nWomen's History\nShop by:\nGIFT IDEAS\nBirthdays\nHolidays\nNewborns\nGraduations\nGift Certificates\nInterests\nAmerican History\nTeaching and Education\nGeography\nPaper Currency (Bureau of Engraving & Printing)\nAfrican-American\nHistory\nWomen's History\nProduct Schedule\nLearn\nNewsroom\nAbout\nSearch Catalog\nSearch\nusmint.gov\nproducts\nLearn\nCoin and Medal Programs\nCollecting Basics\nCoin Clubs\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nPrint Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they",
+      "source": "2"
+     },
+     {
+      "chunkText": "Each quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse. \n\tDownload the individual informational pages of all the\n50 State Quarters\n.",
+      "source": "2"
+     }
+    ],
+    "claims": [
+     {
+      "startPos": 0,
+      "endPos": 115,
+      "claimText": "Under the 50 State Quarters Program, each quarter was produced for about 10 weeks and will never be produced again.",
+      "citationIndices": [
+       0,
+       1,
+       2,
+       3
+      ],
+      "groundingCheckRequired": true,
+      "score": 0.993595540523529
+     }
+    ]
+   },
+   "facts": [
+    {
+     "sc": 0.9387481546401978,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_learn_201807",
+     "uri": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+     "title": "50 State Quarters Program (U.S. Mint learn page)",
+     "publisher": "U.S. Mint",
+     "text": "Mint\n/\nLearn\n/\nCoin and Medal Programs\n/\n50 State Quarters Program\n50 State Quarters Program\nLaunched in 1999, the United States Mint’s 50 State Quarters Program was a 10-year initiative that honored each of the nation’s states in the order that they ratified the Constitution or were admitted into the Union. Each quarter was produced for about 10 weeks and will never be produced again. State designs are displayed on the reverse (tails) of the quarters, while the obverse design displays the familiar image of George Washington. But, to accommodate state designs on the reverse, the words “United States of America,” “Quarter Dollar,” “Liberty,” and “In God We Trust” all appear on the obverse. Download the individual informational pages of all the 50 State Quarters.\nThe 50 State Quarters\n1999\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\n2000\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\n2001\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\n2002\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\n2003\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\n2004\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\n2005\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\n2006\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\n2007\nMontana\nWashington\nIdaho\nWyoming\nUtah\n2008\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nContent last updated on\nAugust 23, 2017\nA list of linkable tags for topics mentioned on this page.\nTags:\nQuarter\nState and Territory Quarters\nSIGN UP FOR EMAIL UPDATES AND TEXT MESSAGE ALERTS ABOUT PRODUCTS\nThank you for signing up with United States Mint!\nEmail Signup\nError messaging:\nField value incorrect format\n1-800-USA-MINT\nFacebook\nTwitter\nPinterest\nYouTube\nRSS\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nProduction & Sales Figures\nReports\nCareers\nEEO Program\nResources\nAccessibility\nMutilated Coins\nFOIA\nUSA.gov\nTreasury.gov\nInspector General (IG)\nCCAC.gov\nView All\nCustomer Service\nCoins\nCoin Programs\nMedals\nEnrollments\nStorage\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2018 United States Mint  All Rights Reserved."
+    },
+    {
+     "sc": 0.9299987292289734,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_designs_201002",
+     "uri": "https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq",
+     "title": "U.S. Mint 50 State Quarters Program — designs by year",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq\n\nThe United States Mint 50 State Quarters® Program\nSearch:\nCoins and Medals\nPrinter Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?\nConsult the\nUnited States Mint Circulating Coin Policy\n, which governs the use of United States circulating coins or the\nUnited States Mint Quarters Design Use Policy\n, which governs use of the new quarter designs that have been approved by the United States Secretary of the Treasury.\nTerms of Use\n||\nPrivacy Policy\n||\nFOIA\n||\nSite Map\n||\nWebsite Information\n||\nContact Us\nwww.treasury.gov\n||\nUSA.gov\n||\nwww.ccac.gov\n||\nNo FEAR Act Data\nPortions © 1998-2010. \n\t\t\t\t\t\t\t\tThe United States Mint.  All Rights Reserved\n.\nSep 3, 2009\n[stwb3]"
+    },
+    {
+     "sc": 0.923855140209198,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_schedule_200901",
+     "uri": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+     "title": "50 State Quarters Program release schedule",
+     "publisher": "U.S. Mint",
+     "text": "The United States Mint · About The Mint\n1 capture\n03 Apr 2016\nMar\nAPR\nMay\n03\n2015\n2016\n2017\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20160403030437/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule\nskip navigation\nSkip to content\nEmail Signup\nCustomer Service\nTrack Order\nSign In\nRegister\nOpen/Collapse\nShop\nCoins\nProof Sets\nGold Coins\nSilver Coins\nPlatinum Coins\nCommemoratives\nOther Coins\nCoin Programs\nNative American $1 Coins\nPresidential $1 Coins\nAmerican Buffalo Coins\nAmerica The Beautiful Quarters®\nKennedy Half Dollars\nFirst Spouse Coins\nCommemorative Coins\nAmerican Eagle Coins\nMedals\nPresidential\nFirst Spouse\nBicentennial and Centennial\nHistorical Events\nHumanitarian and Cultural\nMilitary Medals\nProduct Enrollments\nAmerica The Beautiful Quarters®\nNative American $1 Coins\nPresidential $1 Coins\nFirst Spouse Bronze Medals\nUncirculated Coins\nKennedy Half Dollars\nAnnual Mint Sets\nAmerican Eagle Coins\nStorage and Display\nCoin Albums\nMedal Cases\nCollector’s Boxes\nOther\nFeatured\nWhat’s New\nBest Sellers\nGift Certificates\nUpcoming Products\nAfrican-American\nHistory\nWomen's History\nShop by:\nGIFT IDEAS\nBirthdays\nHolidays\nNewborns\nGraduations\nGift Certificates\nInterests\nAmerican History\nTeaching and Education\nGeography\nPaper Currency (Bureau of Engraving & Printing)\nAfrican-American\nHistory\nWomen's History\nProduct Schedule\nLearn\nNewsroom\nAbout\nSearch Catalog\nSearch\nusmint.gov\nproducts\nLearn\nCoin and Medal Programs\nCollecting Basics\nCoin Clubs\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nPrint Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse. \n\tDownload the individual informational pages of all the\n50 State Quarters\n.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?"
+    },
+    {
+     "sc": 0.9121566152572632,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_learn_201807",
+     "uri": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+     "title": "50 State Quarters Program (U.S. Mint learn page)",
+     "publisher": "U.S. Mint",
+     "text": "50 State Quarters Program | U.S. Mint\n195 captures\n05 Jul 2018 - 25 Mar 2026\nJun\nJUL\nAug\n05\n2017\n2018\n2019\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters\nSkip navigation\nYour browser is out of date. For the best and most secure experience in our catalog, please update your browser.\nX\nlogo box\nSign In\nRegister\nMenu\nSearch\nSearch\nSearch\nShop\nCoins\nProof Sets\nCommemoratives\nGold Coins\nSilver Coins\nPlatinum Coins\nBundle Sets\nOther Coins\nBest Sellers\nShop All Coins\nCoin Programs\nAmerica The Beautiful Quarters® Program\nAmerican Buffalo Coins\nAmerican Eagle Coins\nBullion Coins\nCommemorative Coins\nKennedy Half Dollars\nNative American $1 Coins\nShop All Coin Programs\nMedals\nPresidential Medals\nBicentennial and Centennial Medals\nHistorical Events Medals\nHumanitarian and Cultural Medals\nMilitary Medals\nSilver Medals\nTreasury and Mint Medals\nCode Talkers Medals\nShop All Medals\nEnrollments\nAmerica The Beautiful Quarters® Program\nAmerican Eagle Coins\nAnnual Mint Sets\nKennedy Half Dollars\nNative American $1 Coins\nUncirculated Coins\nHow enrollments work\nStorage\nCoin Albums\nMedal Cases\nCollector's Boxes\nGift Sleeves\nShop All Storage and Display\nFor Kids\nGift Ideas\nBirthdays\nHolidays\nGraduation\nGifts for Newborns\nGifts for Kids\nGifts for Dads\nGifts for Grandparents\nGifts for History Buffs\nGift Certificates\nShop All Gift Ideas\nInterests\nMilitary Appreciation\nBreast Cancer Awareness\nWorld War I Centennial\nPaper Currency (Bureau of Engraving & Printing)\nShop All Interests\nProduct Schedule\n2017 Product Schedule\n2018 Product Schedule\nCustomer Service\nMy Account\nTrack Order\nFAQs\nShipping & Returns\nBulk Program\nLoyalty Program\nEmail & Text Alerts\nE-Gift Certificate Balance\nContact Us\nLearn\nFor Kids\nGames\nCoins & Medals\nCollectors Club\nAbout Us\nFor Educators\nLessons K-12\nLessons by Coin Program\nLessons That Make Cents\nHolidays\nCoin & Medal Programs\nAmerica the Beautiful Quarters\nAmerican Buffalo Coins\nAmerican Eagle Coins\nCirculating Coins\nCommemorative Coins\nNative American $1 Coins\nCongressional Gold Medals\nALL COIN & MEDAL PROGRAMS\nCollecting Basics\nGetting Started\nCoin Clubs\nCaring for Your Coin Collection\nAnatomy of a Coin\nMint Marks\nCoin Term Glossary\nANA Coin Grading Scale\nHistory\nHistorical Documents\nTimeline of the Mint\nHistoric Coin Production\nVideo Corner\nArtists\nMichael Gaudioso\nRenata Gordon\nPhebe Hemphill\nJoseph Menna\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nPhiladelphia\nDenver\nFort Knox\nSan Francisco\nWest Point\nWashington, DC\nProduction & Sales Figures\nCumulative Sales Figures\nPrecious Metal Products\nBullion Sales\nCirculating Coins Production\nHistorical Commemorative Sales\nReports\n2017 Annual Report\n2016 Annual Report\n2015 Annual Report\n2014 Annual Report\nAll Reports\nCareers\nCurrent Federal Vacancies\nInternship Opportunities\nWorking at the Mint\nVeterans’ Employment\nEqual Employment Opportunity\nAbout\nNews\nLearn\nCustomer Service\nProduct Schedule\nShop\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nU.S."
+    },
+    {
+     "sc": 0.8871750569343567,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_learn_201807",
+     "uri": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+     "title": "50 State Quarters Program (U.S. Mint learn page)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters"
+    },
+    {
+     "sc": 0.8807705187797547,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_schedule_200901",
+     "uri": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+     "title": "50 State Quarters Program release schedule",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule"
+    },
+    {
+     "sc": 0.8753523373603821,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_schedule_200901",
+     "uri": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+     "title": "50 State Quarters Program release schedule",
+     "publisher": "U.S. Mint",
+     "text": "Consult the\nUnited States Mint Circulating Coin Policy\n, which governs the use of United States circulating coins or the\nUnited States Mint Quarters Design Use Policy\n, which governs use of the new quarter designs that have been approved by the United States Secretary of the Treasury.\n1-800-USA-MINT\nRSS\nFacebook\nTwitter\nPinterest\nYouTube\nSign up for Email updates and news\nThank you for signing up with United States Mint!\nE-mail Signup\nError messaging:\nField value incorrect format\nShop\nFeatured\nCoins\nCoin Programs\nMedals\nProduct Enrollments\nStorage & Display\nProduct Schedule\nBureau of Engraving and Printing\nCustomer Service\nTrack My Order\nShipping & Returns Policy\nFAQs\nMy Account\nBulk Programs\nBullion Dealer Locator\nContact Us\nE-Gift Certificate Balance\nE-mail Updates\nLearn\nCoin & Medal Programs\nCollecting Basics\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nNewsroom\nNews Releases\nLegislation\nImage Library\nConsumer Alerts\nEvents\nAbout\nFacilities & Tours\nProduction & Sales\nDirector's Office\nAnnual Report\nCareers\nEEO\nMint Police\nResources\nOur Website\nFOIA\nNo Fear Act Data\nDepartment of the Treasury\nCitizens Coinage Advisory Committee\nUSA.gov\nBusinessUSA\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2015 United States Mint  All Rights Reserved.\nst-5"
+    },
+    {
+     "sc": 0.8641454339027405,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2002",
+     "uri": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls",
+     "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2002 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2002 50 State Quarters Program® Production\nTennessee | Denver 286,468,000 | Philadelphia 361,600,000 | Total 648,068,000\nOhio | Denver 414,832,000 | Philadelphia 217,200,000 | Total 632,032,000\nLouisiana | Denver 402,204,000 | Philadelphia 362,000,000 | Total 764,204,000\nIndiana | Denver 327,200,000 | Philadelphia 362,600,000 | Total 689,800,000\nMississippi | Denver 289,600,000 | Philadelphia 290,000,000 | Total 579,600,000\nGrand Total: 3,313,704,000"
+    },
+    {
+     "sc": 0.8641421556472778,
+     "tier": "us_mint",
+     "doc": "page-stateq-coin_production_index_201210",
+     "uri": "https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012",
+     "title": "U.S. Mint Coin Production Figures index (links 50 State Quarters 1999-2008)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012\n\nThe United States Mint · About Us\nskip navigation\nConnecting America through Coins\nCustomer Service\n1-800-USA-MINT\n(872-6468)\nSearch\nHome\nCoins & Medals\nShop\nProduct Schedule\nCustomer Service\nEducation\nNews & Media\nAbout Us\nHome\nDirector's Office\nEEO\nAnnual Report\nFacilities & Tours\nCareers\nHistorian's Corner\nArtists\nHow Coins Are Made\nProduction & Sales Figures\nCoin Specifications\nHistorical Image Library\nUnited States Mint Police\nPolicies and Sites\nPrint Friendly\n2012 Circulating Coin Production (in millions)\nJanuary 2012 through September 2012\n1 ¢\n5 ¢\n10 ¢\n25 ¢\n50 ¢\nN.A. $1\nPres $1\nTotal:\nDenver\n2241.20 M\n443.52 M\n663.50 M\n205.01 M\n1.70 M\n3.08 M\n16.24 M\n3574.25 M\nPhiladelphia\n2532.00 M\n366.96 M\n641.00 M\n138.40 M\n1.80 M\n2.80 M\n27.80 M\n3710.76 M\nTotal:\n4773.20 M\n810.48 M\n1304.50 M\n343.41 M\n3.50 M\n5.88 M\n44.04 M\n7285.01 M\nPres. $1 - Presidential $1 Coin\nN.A. $1 - Native American $1 Coin\n*Preliminary production figures only.\nCoin Production Figures\nThe Coin Production figures represent all of the \"circulating\" coins produced by the\n\tUnited States Mint, including the coins sold through the numismatic bags & rolls program.\n\tThese numbers do not include the \"proof\" or \"uncirculated\" quality\n\t(i.e. UNC sets) coins produced by the Mint.\nAmerica the Beautiful Quarters™ Program Production Figures\n2012\n2011\n2010\nCirculating Coin Production Figures\n2012\n2011\n2010\nPresidential $1 Coin Production Figures\n2012\n2011\n2010\n2009\n2008\n2007\nDistrict of Columbia and U.S. Territories Quarters Program® Production Figures\n2009\n50 State Quarters Program® Production Figures\n2008\n2007\n2006\n2005\n2004\n2003\n2002\n2001\n2000\n1999\nWestward Journey Nickel Series™ Production Figures\n2005\n2004\nOnline Catalog\nSite Map\nWebsite Information\nFOIA\nFAQs\nTours\nContact Us\nTerms of Use\nPrivacy Policy\nNo FEAR Act Data\ntreasury.gov\nusa.gov\nccac.gov\nPlug-ins\nst-1"
+    },
+    {
+     "sc": 0.8461468982696533,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2008",
+     "uri": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls",
+     "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2008 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2008 50 State Quarters Program® Production\nOklahoma | Denver 194,600,000 | Philadelphia 222,000,000 | Total 416,600,000\nNew Mexico | Denver 244,400,000 | Philadelphia 244,200,000 | Total 488,600,000\nArizona | Denver 265,000,000 | Philadelphia 244,600,000 | Total 509,600,000\nAlaska | Denver 254,000,000 | Philadelphia 251,800,000 | Total 505,800,000\nHawaii | Denver 263,600,000 | Philadelphia 254,000,000 | Total 517,600,000\nGrand Total: 2,438,200,000"
+    }
+   ]
+  },
+  "opposite_vs_mint": {
+   "status": 200,
+   "resp": {
+    "supportScore": 0.6463451,
+    "citedChunks": [
+     {
+      "chunkText": "About The Mint\n1 capture\n03 Apr 2016\nMar\nAPR\nMay\n03\n2015\n2016\n2017\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20160403030437/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule\nskip navigation\nSkip to content\nEmail Signup\nCustomer Service\nTrack Order\nSign In\nRegister\nOpen/Collapse\nShop\nCoins\nProof Sets\nGold Coins\nSilver Coins\nPlatinum Coins\nCommemoratives\nOther Coins\nCoin Programs\nNative American $1 Coins\nPresidential $1 Coins\nAmerican Buffalo Coins\nAmerica The Beautiful Quarters®\nKennedy Half Dollars\nFirst Spouse Coins\nCommemorative Coins\nAmerican Eagle Coins\nMedals\nPresidential\nFirst Spouse\nBicentennial and Centennial\nHistorical Events\nHumanitarian and Cultural\nMilitary Medals\nProduct Enrollments\nAmerica The Beautiful Quarters®\nNative American $1 Coins\nPresidential $1 Coins\nFirst Spouse Bronze Medals\nUncirculated Coins\nKennedy Half Dollars\nAnnual Mint Sets\nAmerican Eagle Coins\nStorage and Display\nCoin Albums\nMedal Cases\nCollector’s Boxes\nOther\nFeatured\nWhat’s New\nBest Sellers\nGift Certificates\nUpcoming Products\nAfrican-American\nHistory\nWomen's History\nShop by:\nGIFT IDEAS\nBirthdays\nHolidays\nNewborns\nGraduations\nGift Certificates\nInterests\nAmerican History\nTeaching and Education\nGeography\nPaper Currency (Bureau of Engraving & Printing)\nAfrican-American\nHistory\nWomen's History\nProduct Schedule\nLearn\nNewsroom\nAbout\nSearch Catalog\nSearch\nusmint.gov\nproducts\nLearn\nCoin and Medal Programs\nCollecting Basics\nCoin Clubs\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nPrint Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the",
+      "source": "2"
+     }
+    ],
+    "claims": [
+     {
+      "startPos": 0,
+      "endPos": 118,
+      "claimText": "Each 50 State Quarter design remained in continuous production for the entire calendar year and was reissued annually.",
+      "citationIndices": [
+       0
+      ],
+      "groundingCheckRequired": true,
+      "score": 0.6463450789451599
+     }
+    ]
+   },
+   "facts": [
+    {
+     "sc": 0.9387481546401978,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_learn_201807",
+     "uri": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+     "title": "50 State Quarters Program (U.S. Mint learn page)",
+     "publisher": "U.S. Mint",
+     "text": "Mint\n/\nLearn\n/\nCoin and Medal Programs\n/\n50 State Quarters Program\n50 State Quarters Program\nLaunched in 1999, the United States Mint’s 50 State Quarters Program was a 10-year initiative that honored each of the nation’s states in the order that they ratified the Constitution or were admitted into the Union. Each quarter was produced for about 10 weeks and will never be produced again. State designs are displayed on the reverse (tails) of the quarters, while the obverse design displays the familiar image of George Washington. But, to accommodate state designs on the reverse, the words “United States of America,” “Quarter Dollar,” “Liberty,” and “In God We Trust” all appear on the obverse. Download the individual informational pages of all the 50 State Quarters.\nThe 50 State Quarters\n1999\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\n2000\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\n2001\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\n2002\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\n2003\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\n2004\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\n2005\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\n2006\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\n2007\nMontana\nWashington\nIdaho\nWyoming\nUtah\n2008\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nContent last updated on\nAugust 23, 2017\nA list of linkable tags for topics mentioned on this page.\nTags:\nQuarter\nState and Territory Quarters\nSIGN UP FOR EMAIL UPDATES AND TEXT MESSAGE ALERTS ABOUT PRODUCTS\nThank you for signing up with United States Mint!\nEmail Signup\nError messaging:\nField value incorrect format\n1-800-USA-MINT\nFacebook\nTwitter\nPinterest\nYouTube\nRSS\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nProduction & Sales Figures\nReports\nCareers\nEEO Program\nResources\nAccessibility\nMutilated Coins\nFOIA\nUSA.gov\nTreasury.gov\nInspector General (IG)\nCCAC.gov\nView All\nCustomer Service\nCoins\nCoin Programs\nMedals\nEnrollments\nStorage\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2018 United States Mint  All Rights Reserved."
+    },
+    {
+     "sc": 0.9299987292289734,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_designs_201002",
+     "uri": "https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq",
+     "title": "U.S. Mint 50 State Quarters Program — designs by year",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq\n\nThe United States Mint 50 State Quarters® Program\nSearch:\nCoins and Medals\nPrinter Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?\nConsult the\nUnited States Mint Circulating Coin Policy\n, which governs the use of United States circulating coins or the\nUnited States Mint Quarters Design Use Policy\n, which governs use of the new quarter designs that have been approved by the United States Secretary of the Treasury.\nTerms of Use\n||\nPrivacy Policy\n||\nFOIA\n||\nSite Map\n||\nWebsite Information\n||\nContact Us\nwww.treasury.gov\n||\nUSA.gov\n||\nwww.ccac.gov\n||\nNo FEAR Act Data\nPortions © 1998-2010. \n\t\t\t\t\t\t\t\tThe United States Mint.  All Rights Reserved\n.\nSep 3, 2009\n[stwb3]"
+    },
+    {
+     "sc": 0.923855140209198,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_schedule_200901",
+     "uri": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+     "title": "50 State Quarters Program release schedule",
+     "publisher": "U.S. Mint",
+     "text": "The United States Mint · About The Mint\n1 capture\n03 Apr 2016\nMar\nAPR\nMay\n03\n2015\n2016\n2017\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20160403030437/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule\nskip navigation\nSkip to content\nEmail Signup\nCustomer Service\nTrack Order\nSign In\nRegister\nOpen/Collapse\nShop\nCoins\nProof Sets\nGold Coins\nSilver Coins\nPlatinum Coins\nCommemoratives\nOther Coins\nCoin Programs\nNative American $1 Coins\nPresidential $1 Coins\nAmerican Buffalo Coins\nAmerica The Beautiful Quarters®\nKennedy Half Dollars\nFirst Spouse Coins\nCommemorative Coins\nAmerican Eagle Coins\nMedals\nPresidential\nFirst Spouse\nBicentennial and Centennial\nHistorical Events\nHumanitarian and Cultural\nMilitary Medals\nProduct Enrollments\nAmerica The Beautiful Quarters®\nNative American $1 Coins\nPresidential $1 Coins\nFirst Spouse Bronze Medals\nUncirculated Coins\nKennedy Half Dollars\nAnnual Mint Sets\nAmerican Eagle Coins\nStorage and Display\nCoin Albums\nMedal Cases\nCollector’s Boxes\nOther\nFeatured\nWhat’s New\nBest Sellers\nGift Certificates\nUpcoming Products\nAfrican-American\nHistory\nWomen's History\nShop by:\nGIFT IDEAS\nBirthdays\nHolidays\nNewborns\nGraduations\nGift Certificates\nInterests\nAmerican History\nTeaching and Education\nGeography\nPaper Currency (Bureau of Engraving & Printing)\nAfrican-American\nHistory\nWomen's History\nProduct Schedule\nLearn\nNewsroom\nAbout\nSearch Catalog\nSearch\nusmint.gov\nproducts\nLearn\nCoin and Medal Programs\nCollecting Basics\nCoin Clubs\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nPrint Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse. \n\tDownload the individual informational pages of all the\n50 State Quarters\n.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?"
+    },
+    {
+     "sc": 0.9121566152572632,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_learn_201807",
+     "uri": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+     "title": "50 State Quarters Program (U.S. Mint learn page)",
+     "publisher": "U.S. Mint",
+     "text": "50 State Quarters Program | U.S. Mint\n195 captures\n05 Jul 2018 - 25 Mar 2026\nJun\nJUL\nAug\n05\n2017\n2018\n2019\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters\nSkip navigation\nYour browser is out of date. For the best and most secure experience in our catalog, please update your browser.\nX\nlogo box\nSign In\nRegister\nMenu\nSearch\nSearch\nSearch\nShop\nCoins\nProof Sets\nCommemoratives\nGold Coins\nSilver Coins\nPlatinum Coins\nBundle Sets\nOther Coins\nBest Sellers\nShop All Coins\nCoin Programs\nAmerica The Beautiful Quarters® Program\nAmerican Buffalo Coins\nAmerican Eagle Coins\nBullion Coins\nCommemorative Coins\nKennedy Half Dollars\nNative American $1 Coins\nShop All Coin Programs\nMedals\nPresidential Medals\nBicentennial and Centennial Medals\nHistorical Events Medals\nHumanitarian and Cultural Medals\nMilitary Medals\nSilver Medals\nTreasury and Mint Medals\nCode Talkers Medals\nShop All Medals\nEnrollments\nAmerica The Beautiful Quarters® Program\nAmerican Eagle Coins\nAnnual Mint Sets\nKennedy Half Dollars\nNative American $1 Coins\nUncirculated Coins\nHow enrollments work\nStorage\nCoin Albums\nMedal Cases\nCollector's Boxes\nGift Sleeves\nShop All Storage and Display\nFor Kids\nGift Ideas\nBirthdays\nHolidays\nGraduation\nGifts for Newborns\nGifts for Kids\nGifts for Dads\nGifts for Grandparents\nGifts for History Buffs\nGift Certificates\nShop All Gift Ideas\nInterests\nMilitary Appreciation\nBreast Cancer Awareness\nWorld War I Centennial\nPaper Currency (Bureau of Engraving & Printing)\nShop All Interests\nProduct Schedule\n2017 Product Schedule\n2018 Product Schedule\nCustomer Service\nMy Account\nTrack Order\nFAQs\nShipping & Returns\nBulk Program\nLoyalty Program\nEmail & Text Alerts\nE-Gift Certificate Balance\nContact Us\nLearn\nFor Kids\nGames\nCoins & Medals\nCollectors Club\nAbout Us\nFor Educators\nLessons K-12\nLessons by Coin Program\nLessons That Make Cents\nHolidays\nCoin & Medal Programs\nAmerica the Beautiful Quarters\nAmerican Buffalo Coins\nAmerican Eagle Coins\nCirculating Coins\nCommemorative Coins\nNative American $1 Coins\nCongressional Gold Medals\nALL COIN & MEDAL PROGRAMS\nCollecting Basics\nGetting Started\nCoin Clubs\nCaring for Your Coin Collection\nAnatomy of a Coin\nMint Marks\nCoin Term Glossary\nANA Coin Grading Scale\nHistory\nHistorical Documents\nTimeline of the Mint\nHistoric Coin Production\nVideo Corner\nArtists\nMichael Gaudioso\nRenata Gordon\nPhebe Hemphill\nJoseph Menna\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nPhiladelphia\nDenver\nFort Knox\nSan Francisco\nWest Point\nWashington, DC\nProduction & Sales Figures\nCumulative Sales Figures\nPrecious Metal Products\nBullion Sales\nCirculating Coins Production\nHistorical Commemorative Sales\nReports\n2017 Annual Report\n2016 Annual Report\n2015 Annual Report\n2014 Annual Report\nAll Reports\nCareers\nCurrent Federal Vacancies\nInternship Opportunities\nWorking at the Mint\nVeterans’ Employment\nEqual Employment Opportunity\nAbout\nNews\nLearn\nCustomer Service\nProduct Schedule\nShop\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nU.S."
+    },
+    {
+     "sc": 0.8871750569343567,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_learn_201807",
+     "uri": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+     "title": "50 State Quarters Program (U.S. Mint learn page)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters"
+    },
+    {
+     "sc": 0.8807705187797547,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_schedule_200901",
+     "uri": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+     "title": "50 State Quarters Program release schedule",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule"
+    },
+    {
+     "sc": 0.8753523373603821,
+     "tier": "us_mint",
+     "doc": "page-stateq-50sq_schedule_200901",
+     "uri": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+     "title": "50 State Quarters Program release schedule",
+     "publisher": "U.S. Mint",
+     "text": "Consult the\nUnited States Mint Circulating Coin Policy\n, which governs the use of United States circulating coins or the\nUnited States Mint Quarters Design Use Policy\n, which governs use of the new quarter designs that have been approved by the United States Secretary of the Treasury.\n1-800-USA-MINT\nRSS\nFacebook\nTwitter\nPinterest\nYouTube\nSign up for Email updates and news\nThank you for signing up with United States Mint!\nE-mail Signup\nError messaging:\nField value incorrect format\nShop\nFeatured\nCoins\nCoin Programs\nMedals\nProduct Enrollments\nStorage & Display\nProduct Schedule\nBureau of Engraving and Printing\nCustomer Service\nTrack My Order\nShipping & Returns Policy\nFAQs\nMy Account\nBulk Programs\nBullion Dealer Locator\nContact Us\nE-Gift Certificate Balance\nE-mail Updates\nLearn\nCoin & Medal Programs\nCollecting Basics\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nNewsroom\nNews Releases\nLegislation\nImage Library\nConsumer Alerts\nEvents\nAbout\nFacilities & Tours\nProduction & Sales\nDirector's Office\nAnnual Report\nCareers\nEEO\nMint Police\nResources\nOur Website\nFOIA\nNo Fear Act Data\nDepartment of the Treasury\nCitizens Coinage Advisory Committee\nUSA.gov\nBusinessUSA\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2015 United States Mint  All Rights Reserved.\nst-5"
+    },
+    {
+     "sc": 0.8641454339027405,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2002",
+     "uri": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls",
+     "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2002 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2002 50 State Quarters Program® Production\nTennessee | Denver 286,468,000 | Philadelphia 361,600,000 | Total 648,068,000\nOhio | Denver 414,832,000 | Philadelphia 217,200,000 | Total 632,032,000\nLouisiana | Denver 402,204,000 | Philadelphia 362,000,000 | Total 764,204,000\nIndiana | Denver 327,200,000 | Philadelphia 362,600,000 | Total 689,800,000\nMississippi | Denver 289,600,000 | Philadelphia 290,000,000 | Total 579,600,000\nGrand Total: 3,313,704,000"
+    },
+    {
+     "sc": 0.8641421556472778,
+     "tier": "us_mint",
+     "doc": "page-stateq-coin_production_index_201210",
+     "uri": "https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012",
+     "title": "U.S. Mint Coin Production Figures index (links 50 State Quarters 1999-2008)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012\n\nThe United States Mint · About Us\nskip navigation\nConnecting America through Coins\nCustomer Service\n1-800-USA-MINT\n(872-6468)\nSearch\nHome\nCoins & Medals\nShop\nProduct Schedule\nCustomer Service\nEducation\nNews & Media\nAbout Us\nHome\nDirector's Office\nEEO\nAnnual Report\nFacilities & Tours\nCareers\nHistorian's Corner\nArtists\nHow Coins Are Made\nProduction & Sales Figures\nCoin Specifications\nHistorical Image Library\nUnited States Mint Police\nPolicies and Sites\nPrint Friendly\n2012 Circulating Coin Production (in millions)\nJanuary 2012 through September 2012\n1 ¢\n5 ¢\n10 ¢\n25 ¢\n50 ¢\nN.A. $1\nPres $1\nTotal:\nDenver\n2241.20 M\n443.52 M\n663.50 M\n205.01 M\n1.70 M\n3.08 M\n16.24 M\n3574.25 M\nPhiladelphia\n2532.00 M\n366.96 M\n641.00 M\n138.40 M\n1.80 M\n2.80 M\n27.80 M\n3710.76 M\nTotal:\n4773.20 M\n810.48 M\n1304.50 M\n343.41 M\n3.50 M\n5.88 M\n44.04 M\n7285.01 M\nPres. $1 - Presidential $1 Coin\nN.A. $1 - Native American $1 Coin\n*Preliminary production figures only.\nCoin Production Figures\nThe Coin Production figures represent all of the \"circulating\" coins produced by the\n\tUnited States Mint, including the coins sold through the numismatic bags & rolls program.\n\tThese numbers do not include the \"proof\" or \"uncirculated\" quality\n\t(i.e. UNC sets) coins produced by the Mint.\nAmerica the Beautiful Quarters™ Program Production Figures\n2012\n2011\n2010\nCirculating Coin Production Figures\n2012\n2011\n2010\nPresidential $1 Coin Production Figures\n2012\n2011\n2010\n2009\n2008\n2007\nDistrict of Columbia and U.S. Territories Quarters Program® Production Figures\n2009\n50 State Quarters Program® Production Figures\n2008\n2007\n2006\n2005\n2004\n2003\n2002\n2001\n2000\n1999\nWestward Journey Nickel Series™ Production Figures\n2005\n2004\nOnline Catalog\nSite Map\nWebsite Information\nFOIA\nFAQs\nTours\nContact Us\nTerms of Use\nPrivacy Policy\nNo FEAR Act Data\ntreasury.gov\nusa.gov\nccac.gov\nPlug-ins\nst-1"
+    },
+    {
+     "sc": 0.8461468982696533,
+     "tier": "us_mint",
+     "doc": "page-stateq-prod_excel_2008",
+     "uri": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls",
+     "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+     "publisher": "U.S. Mint",
+     "text": "The Wayback Machine - https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2008 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2008 50 State Quarters Program® Production\nOklahoma | Denver 194,600,000 | Philadelphia 222,000,000 | Total 416,600,000\nNew Mexico | Denver 244,400,000 | Philadelphia 244,200,000 | Total 488,600,000\nArizona | Denver 265,000,000 | Philadelphia 244,600,000 | Total 509,600,000\nAlaska | Denver 254,000,000 | Philadelphia 251,800,000 | Total 505,800,000\nHawaii | Denver 263,600,000 | Philadelphia 254,000,000 | Total 517,600,000\nGrand Total: 2,438,200,000"
+    }
+   ]
+  }
+ },
+ "search_raw": [
+  {
+   "results": [
+    {
+     "id": "page-stateq-50sq_designs_201002",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-50sq_designs_201002",
+      "id": "page-stateq-50sq_designs_201002",
+      "structData": {
+       "uri": "https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq",
+       "source_type": "us_mint",
+       "program": "50_state_quarters",
+       "title": "U.S. Mint 50 State Quarters Program — designs by year",
+       "publisher": "U.S. Mint",
+       "orig_file": "mint_pages_state_quarters/50sq_designs_201002.txt"
+      },
+      "derivedStructData": {
+       "snippets": [
+        {
+         "snippet": "<b>Each quarter</b> was <b>produced</b> for about <b>10 weeks</b> and will <b>never</b> be <b>produced again</b>. <b>State</b> designs are displayed on the reverse (tails) of the <b>quarters</b>, while the&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "can_fetch_raw_content": "true",
+       "url": "https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq",
+       "title": "U.S. Mint 50 State Quarters Program — designs by year",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7699987292289734,
+         "content": "The Wayback Machine - https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq\n\nThe United States Mint 50 State Quarters® Program\nSearch:\nCoins and Medals\nPrinter Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?\nConsult the\nUnited States Mint Circulating Coin Policy\n, which governs the use of United States circulating coins or the\nUnited States Mint Quarters Design Use Policy\n, which governs use of the new quarter designs that have been approved by the United States Secretary of the Treasury.\nTerms of Use\n||\nPrivacy Policy\n||\nFOIA\n||\nSite Map\n||\nWebsite Information\n||\nContact Us\nwww.treasury.gov\n||\nUSA.gov\n||\nwww.ccac.gov\n||\nNo FEAR Act Data\nPortions © 1998-2010. \n\t\t\t\t\t\t\t\tThe United States Mint.  All Rights Reserved\n.\nSep 3, 2009\n[stwb3]"
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 4.4330845,
+      "semanticSimilarityScore": 0.7699987,
+      "topicalityRank": 1,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 1
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "KEYWORD_SEARCH",
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.6637917
+     }
+    },
+    {
+     "id": "page-stateq-50sq_schedule_200901",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-50sq_schedule_200901",
+      "id": "page-stateq-50sq_schedule_200901",
+      "structData": {
+       "program": "50_state_quarters",
+       "publisher": "U.S. Mint",
+       "uri": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+       "orig_file": "mint_pages_state_quarters/50sq_schedule_200901.txt",
+       "title": "50 State Quarters Program release schedule",
+       "source_type": "us_mint"
+      },
+      "derivedStructData": {
+       "can_fetch_raw_content": "true",
+       "extractive_segments": [
+        {
+         "next_segments": [
+          {
+           "relevanceScore": 0.7353523373603821,
+           "content": "Consult the\nUnited States Mint Circulating Coin Policy\n, which governs the use of United States circulating coins or the\nUnited States Mint Quarters Design Use Policy\n, which governs use of the new quarter designs that have been approved by the United States Secretary of the Treasury.\n1-800-USA-MINT\nRSS\nFacebook\nTwitter\nPinterest\nYouTube\nSign up for Email updates and news\nThank you for signing up with United States Mint!\nE-mail Signup\nError messaging:\nField value incorrect format\nShop\nFeatured\nCoins\nCoin Programs\nMedals\nProduct Enrollments\nStorage & Display\nProduct Schedule\nBureau of Engraving and Printing\nCustomer Service\nTrack My Order\nShipping & Returns Policy\nFAQs\nMy Account\nBulk Programs\nBullion Dealer Locator\nContact Us\nE-Gift Certificate Balance\nE-mail Updates\nLearn\nCoin & Medal Programs\nCollecting Basics\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nNewsroom\nNews Releases\nLegislation\nImage Library\nConsumer Alerts\nEvents\nAbout\nFacilities & Tours\nProduction & Sales\nDirector's Office\nAnnual Report\nCareers\nEEO\nMint Police\nResources\nOur Website\nFOIA\nNo Fear Act Data\nDepartment of the Treasury\nCitizens Coinage Advisory Committee\nUSA.gov\nBusinessUSA\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2015 United States Mint  All Rights Reserved.\nst-5"
+          }
+         ],
+         "content": "The United States Mint · About The Mint\n1 capture\n03 Apr 2016\nMar\nAPR\nMay\n03\n2015\n2016\n2017\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20160403030437/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule\nskip navigation\nSkip to content\nEmail Signup\nCustomer Service\nTrack Order\nSign In\nRegister\nOpen/Collapse\nShop\nCoins\nProof Sets\nGold Coins\nSilver Coins\nPlatinum Coins\nCommemoratives\nOther Coins\nCoin Programs\nNative American $1 Coins\nPresidential $1 Coins\nAmerican Buffalo Coins\nAmerica The Beautiful Quarters®\nKennedy Half Dollars\nFirst Spouse Coins\nCommemorative Coins\nAmerican Eagle Coins\nMedals\nPresidential\nFirst Spouse\nBicentennial and Centennial\nHistorical Events\nHumanitarian and Cultural\nMilitary Medals\nProduct Enrollments\nAmerica The Beautiful Quarters®\nNative American $1 Coins\nPresidential $1 Coins\nFirst Spouse Bronze Medals\nUncirculated Coins\nKennedy Half Dollars\nAnnual Mint Sets\nAmerican Eagle Coins\nStorage and Display\nCoin Albums\nMedal Cases\nCollector’s Boxes\nOther\nFeatured\nWhat’s New\nBest Sellers\nGift Certificates\nUpcoming Products\nAfrican-American\nHistory\nWomen's History\nShop by:\nGIFT IDEAS\nBirthdays\nHolidays\nNewborns\nGraduations\nGift Certificates\nInterests\nAmerican History\nTeaching and Education\nGeography\nPaper Currency (Bureau of Engraving & Printing)\nAfrican-American\nHistory\nWomen's History\nProduct Schedule\nLearn\nNewsroom\nAbout\nSearch Catalog\nSearch\nusmint.gov\nproducts\nLearn\nCoin and Medal Programs\nCollecting Basics\nCoin Clubs\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nPrint Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse. \n\tDownload the individual informational pages of all the\n50 State Quarters\n.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?",
+         "relevanceScore": 0.783855140209198,
+         "previous_segments": [
+          {
+           "relevanceScore": 0.7407705187797546,
+           "content": "The Wayback Machine - https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule"
+          }
+         ]
+        },
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+         "relevanceScore": 0.7407705187797546,
+         "next_segments": [
+          {
+           "content": "The United States Mint · About The Mint\n1 capture\n03 Apr 2016\nMar\nAPR\nMay\n03\n2015\n2016\n2017\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20160403030437/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule\nskip navigation\nSkip to content\nEmail Signup\nCustomer Service\nTrack Order\nSign In\nRegister\nOpen/Collapse\nShop\nCoins\nProof Sets\nGold Coins\nSilver Coins\nPlatinum Coins\nCommemoratives\nOther Coins\nCoin Programs\nNative American $1 Coins\nPresidential $1 Coins\nAmerican Buffalo Coins\nAmerica The Beautiful Quarters®\nKennedy Half Dollars\nFirst Spouse Coins\nCommemorative Coins\nAmerican Eagle Coins\nMedals\nPresidential\nFirst Spouse\nBicentennial and Centennial\nHistorical Events\nHumanitarian and Cultural\nMilitary Medals\nProduct Enrollments\nAmerica The Beautiful Quarters®\nNative American $1 Coins\nPresidential $1 Coins\nFirst Spouse Bronze Medals\nUncirculated Coins\nKennedy Half Dollars\nAnnual Mint Sets\nAmerican Eagle Coins\nStorage and Display\nCoin Albums\nMedal Cases\nCollector’s Boxes\nOther\nFeatured\nWhat’s New\nBest Sellers\nGift Certificates\nUpcoming Products\nAfrican-American\nHistory\nWomen's History\nShop by:\nGIFT IDEAS\nBirthdays\nHolidays\nNewborns\nGraduations\nGift Certificates\nInterests\nAmerican History\nTeaching and Education\nGeography\nPaper Currency (Bureau of Engraving & Printing)\nAfrican-American\nHistory\nWomen's History\nProduct Schedule\nLearn\nNewsroom\nAbout\nSearch Catalog\nSearch\nusmint.gov\nproducts\nLearn\nCoin and Medal Programs\nCollecting Basics\nCoin Clubs\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nPrint Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse. \n\tDownload the individual informational pages of all the\n50 State Quarters\n.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?",
+           "relevanceScore": 0.783855140209198
+          }
+         ]
+        },
+        {
+         "content": "Consult the\nUnited States Mint Circulating Coin Policy\n, which governs the use of United States circulating coins or the\nUnited States Mint Quarters Design Use Policy\n, which governs use of the new quarter designs that have been approved by the United States Secretary of the Treasury.\n1-800-USA-MINT\nRSS\nFacebook\nTwitter\nPinterest\nYouTube\nSign up for Email updates and news\nThank you for signing up with United States Mint!\nE-mail Signup\nError messaging:\nField value incorrect format\nShop\nFeatured\nCoins\nCoin Programs\nMedals\nProduct Enrollments\nStorage & Display\nProduct Schedule\nBureau of Engraving and Printing\nCustomer Service\nTrack My Order\nShipping & Returns Policy\nFAQs\nMy Account\nBulk Programs\nBullion Dealer Locator\nContact Us\nE-Gift Certificate Balance\nE-mail Updates\nLearn\nCoin & Medal Programs\nCollecting Basics\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nNewsroom\nNews Releases\nLegislation\nImage Library\nConsumer Alerts\nEvents\nAbout\nFacilities & Tours\nProduction & Sales\nDirector's Office\nAnnual Report\nCareers\nEEO\nMint Police\nResources\nOur Website\nFOIA\nNo Fear Act Data\nDepartment of the Treasury\nCitizens Coinage Advisory Committee\nUSA.gov\nBusinessUSA\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2015 United States Mint  All Rights Reserved.\nst-5",
+         "relevanceScore": 0.7353523373603821,
+         "previous_segments": [
+          {
+           "relevanceScore": 0.783855140209198,
+           "content": "The United States Mint · About The Mint\n1 capture\n03 Apr 2016\nMar\nAPR\nMay\n03\n2015\n2016\n2017\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20160403030437/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule\nskip navigation\nSkip to content\nEmail Signup\nCustomer Service\nTrack Order\nSign In\nRegister\nOpen/Collapse\nShop\nCoins\nProof Sets\nGold Coins\nSilver Coins\nPlatinum Coins\nCommemoratives\nOther Coins\nCoin Programs\nNative American $1 Coins\nPresidential $1 Coins\nAmerican Buffalo Coins\nAmerica The Beautiful Quarters®\nKennedy Half Dollars\nFirst Spouse Coins\nCommemorative Coins\nAmerican Eagle Coins\nMedals\nPresidential\nFirst Spouse\nBicentennial and Centennial\nHistorical Events\nHumanitarian and Cultural\nMilitary Medals\nProduct Enrollments\nAmerica The Beautiful Quarters®\nNative American $1 Coins\nPresidential $1 Coins\nFirst Spouse Bronze Medals\nUncirculated Coins\nKennedy Half Dollars\nAnnual Mint Sets\nAmerican Eagle Coins\nStorage and Display\nCoin Albums\nMedal Cases\nCollector’s Boxes\nOther\nFeatured\nWhat’s New\nBest Sellers\nGift Certificates\nUpcoming Products\nAfrican-American\nHistory\nWomen's History\nShop by:\nGIFT IDEAS\nBirthdays\nHolidays\nNewborns\nGraduations\nGift Certificates\nInterests\nAmerican History\nTeaching and Education\nGeography\nPaper Currency (Bureau of Engraving & Printing)\nAfrican-American\nHistory\nWomen's History\nProduct Schedule\nLearn\nNewsroom\nAbout\nSearch Catalog\nSearch\nusmint.gov\nproducts\nLearn\nCoin and Medal Programs\nCollecting Basics\nCoin Clubs\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nPrint Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse. \n\tDownload the individual informational pages of all the\n50 State Quarters\n.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?"
+          }
+         ]
+        }
+       ],
+       "snippets": [
+        {
+         "snippet": "<b>Each quarter</b> was <b>produced</b> for about <b>10 weeks</b> and will <b>never</b> be <b>produced again</b>. <b>State</b> designs are displayed on the reverse (tails) of the <b>quarters</b>, while the&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "url": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+       "title": "50 State Quarters Program release schedule"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 4.4727407,
+      "semanticSimilarityScore": 0.7538003,
+      "topicalityRank": 2,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 2
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "KEYWORD_SEARCH",
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.7186151
+     }
+    },
+    {
+     "id": "page-stateq-50sq_learn_201807",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-50sq_learn_201807",
+      "id": "page-stateq-50sq_learn_201807",
+      "structData": {
+       "source_type": "us_mint",
+       "uri": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+       "program": "50_state_quarters",
+       "publisher": "U.S. Mint",
+       "title": "50 State Quarters Program (U.S. Mint learn page)",
+       "orig_file": "mint_pages_state_quarters/50sq_learn_201807.txt"
+      },
+      "derivedStructData": {
+       "url": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+       "title": "50 State Quarters Program (U.S. Mint learn page)",
+       "can_fetch_raw_content": "true",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7825036644935608,
+         "previous_segments": [
+          {
+           "relevanceScore": 0.7562586665153503,
+           "content": "50 State Quarters Program | U.S. Mint\n195 captures\n05 Jul 2018 - 25 Mar 2026\nJun\nJUL\nAug\n05\n2017\n2018\n2019\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters\nSkip navigation\nYour browser is out of date. For the best and most secure experience in our catalog, please update your browser.\nX\nlogo box\nSign In\nRegister\nMenu\nSearch\nSearch\nSearch\nShop\nCoins\nProof Sets\nCommemoratives\nGold Coins\nSilver Coins\nPlatinum Coins\nBundle Sets\nOther Coins\nBest Sellers\nShop All Coins\nCoin Programs\nAmerica The Beautiful Quarters® Program\nAmerican Buffalo Coins\nAmerican Eagle Coins\nBullion Coins\nCommemorative Coins\nKennedy Half Dollars\nNative American $1 Coins\nShop All Coin Programs\nMedals\nPresidential Medals\nBicentennial and Centennial Medals\nHistorical Events Medals\nHumanitarian and Cultural Medals\nMilitary Medals\nSilver Medals\nTreasury and Mint Medals\nCode Talkers Medals\nShop All Medals\nEnrollments\nAmerica The Beautiful Quarters® Program\nAmerican Eagle Coins\nAnnual Mint Sets\nKennedy Half Dollars\nNative American $1 Coins\nUncirculated Coins\nHow enrollments work\nStorage\nCoin Albums\nMedal Cases\nCollector's Boxes\nGift Sleeves\nShop All Storage and Display\nFor Kids\nGift Ideas\nBirthdays\nHolidays\nGraduation\nGifts for Newborns\nGifts for Kids\nGifts for Dads\nGifts for Grandparents\nGifts for History Buffs\nGift Certificates\nShop All Gift Ideas\nInterests\nMilitary Appreciation\nBreast Cancer Awareness\nWorld War I Centennial\nPaper Currency (Bureau of Engraving & Printing)\nShop All Interests\nProduct Schedule\n2017 Product Schedule\n2018 Product Schedule\nCustomer Service\nMy Account\nTrack Order\nFAQs\nShipping & Returns\nBulk Program\nLoyalty Program\nEmail & Text Alerts\nE-Gift Certificate Balance\nContact Us\nLearn\nFor Kids\nGames\nCoins & Medals\nCollectors Club\nAbout Us\nFor Educators\nLessons K-12\nLessons by Coin Program\nLessons That Make Cents\nHolidays\nCoin & Medal Programs\nAmerica the Beautiful Quarters\nAmerican Buffalo Coins\nAmerican Eagle Coins\nCirculating Coins\nCommemorative Coins\nNative American $1 Coins\nCongressional Gold Medals\nALL COIN & MEDAL PROGRAMS\nCollecting Basics\nGetting Started\nCoin Clubs\nCaring for Your Coin Collection\nAnatomy of a Coin\nMint Marks\nCoin Term Glossary\nANA Coin Grading Scale\nHistory\nHistorical Documents\nTimeline of the Mint\nHistoric Coin Production\nVideo Corner\nArtists\nMichael Gaudioso\nRenata Gordon\nPhebe Hemphill\nJoseph Menna\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nPhiladelphia\nDenver\nFort Knox\nSan Francisco\nWest Point\nWashington, DC\nProduction & Sales Figures\nCumulative Sales Figures\nPrecious Metal Products\nBullion Sales\nCirculating Coins Production\nHistorical Commemorative Sales\nReports\n2017 Annual Report\n2016 Annual Report\n2015 Annual Report\n2014 Annual Report\nAll Reports\nCareers\nCurrent Federal Vacancies\nInternship Opportunities\nWorking at the Mint\nVeterans’ Employment\nEqual Employment Opportunity\nAbout\nNews\nLearn\nCustomer Service\nProduct Schedule\nShop\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nU.S."
+          }
+         ],
+         "content": "Mint\n/\nLearn\n/\nCoin and Medal Programs\n/\n50 State Quarters Program\n50 State Quarters Program\nLaunched in 1999, the United States Mint’s 50 State Quarters Program was a 10-year initiative that honored each of the nation’s states in the order that they ratified the Constitution or were admitted into the Union. Each quarter was produced for about 10 weeks and will never be produced again. State designs are displayed on the reverse (tails) of the quarters, while the obverse design displays the familiar image of George Washington. But, to accommodate state designs on the reverse, the words “United States of America,” “Quarter Dollar,” “Liberty,” and “In God We Trust” all appear on the obverse. Download the individual informational pages of all the 50 State Quarters.\nThe 50 State Quarters\n1999\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\n2000\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\n2001\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\n2002\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\n2003\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\n2004\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\n2005\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\n2006\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\n2007\nMontana\nWashington\nIdaho\nWyoming\nUtah\n2008\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nContent last updated on\nAugust 23, 2017\nA list of linkable tags for topics mentioned on this page.\nTags:\nQuarter\nState and Territory Quarters\nSIGN UP FOR EMAIL UPDATES AND TEXT MESSAGE ALERTS ABOUT PRODUCTS\nThank you for signing up with United States Mint!\nEmail Signup\nError messaging:\nField value incorrect format\n1-800-USA-MINT\nFacebook\nTwitter\nPinterest\nYouTube\nRSS\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nProduction & Sales Figures\nReports\nCareers\nEEO Program\nResources\nAccessibility\nMutilated Coins\nFOIA\nUSA.gov\nTreasury.gov\nInspector General (IG)\nCCAC.gov\nView All\nCustomer Service\nCoins\nCoin Programs\nMedals\nEnrollments\nStorage\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2018 United States Mint  All Rights Reserved."
+        },
+        {
+         "next_segments": [
+          {
+           "relevanceScore": 0.7825036644935608,
+           "content": "Mint\n/\nLearn\n/\nCoin and Medal Programs\n/\n50 State Quarters Program\n50 State Quarters Program\nLaunched in 1999, the United States Mint’s 50 State Quarters Program was a 10-year initiative that honored each of the nation’s states in the order that they ratified the Constitution or were admitted into the Union. Each quarter was produced for about 10 weeks and will never be produced again. State designs are displayed on the reverse (tails) of the quarters, while the obverse design displays the familiar image of George Washington. But, to accommodate state designs on the reverse, the words “United States of America,” “Quarter Dollar,” “Liberty,” and “In God We Trust” all appear on the obverse. Download the individual informational pages of all the 50 State Quarters.\nThe 50 State Quarters\n1999\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\n2000\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\n2001\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\n2002\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\n2003\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\n2004\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\n2005\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\n2006\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\n2007\nMontana\nWashington\nIdaho\nWyoming\nUtah\n2008\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nContent last updated on\nAugust 23, 2017\nA list of linkable tags for topics mentioned on this page.\nTags:\nQuarter\nState and Territory Quarters\nSIGN UP FOR EMAIL UPDATES AND TEXT MESSAGE ALERTS ABOUT PRODUCTS\nThank you for signing up with United States Mint!\nEmail Signup\nError messaging:\nField value incorrect format\n1-800-USA-MINT\nFacebook\nTwitter\nPinterest\nYouTube\nRSS\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nProduction & Sales Figures\nReports\nCareers\nEEO Program\nResources\nAccessibility\nMutilated Coins\nFOIA\nUSA.gov\nTreasury.gov\nInspector General (IG)\nCCAC.gov\nView All\nCustomer Service\nCoins\nCoin Programs\nMedals\nEnrollments\nStorage\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2018 United States Mint  All Rights Reserved."
+          }
+         ],
+         "previous_segments": [
+          {
+           "content": "The Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+           "relevanceScore": 0.735607922077179
+          }
+         ],
+         "content": "50 State Quarters Program | U.S. Mint\n195 captures\n05 Jul 2018 - 25 Mar 2026\nJun\nJUL\nAug\n05\n2017\n2018\n2019\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters\nSkip navigation\nYour browser is out of date. For the best and most secure experience in our catalog, please update your browser.\nX\nlogo box\nSign In\nRegister\nMenu\nSearch\nSearch\nSearch\nShop\nCoins\nProof Sets\nCommemoratives\nGold Coins\nSilver Coins\nPlatinum Coins\nBundle Sets\nOther Coins\nBest Sellers\nShop All Coins\nCoin Programs\nAmerica The Beautiful Quarters® Program\nAmerican Buffalo Coins\nAmerican Eagle Coins\nBullion Coins\nCommemorative Coins\nKennedy Half Dollars\nNative American $1 Coins\nShop All Coin Programs\nMedals\nPresidential Medals\nBicentennial and Centennial Medals\nHistorical Events Medals\nHumanitarian and Cultural Medals\nMilitary Medals\nSilver Medals\nTreasury and Mint Medals\nCode Talkers Medals\nShop All Medals\nEnrollments\nAmerica The Beautiful Quarters® Program\nAmerican Eagle Coins\nAnnual Mint Sets\nKennedy Half Dollars\nNative American $1 Coins\nUncirculated Coins\nHow enrollments work\nStorage\nCoin Albums\nMedal Cases\nCollector's Boxes\nGift Sleeves\nShop All Storage and Display\nFor Kids\nGift Ideas\nBirthdays\nHolidays\nGraduation\nGifts for Newborns\nGifts for Kids\nGifts for Dads\nGifts for Grandparents\nGifts for History Buffs\nGift Certificates\nShop All Gift Ideas\nInterests\nMilitary Appreciation\nBreast Cancer Awareness\nWorld War I Centennial\nPaper Currency (Bureau of Engraving & Printing)\nShop All Interests\nProduct Schedule\n2017 Product Schedule\n2018 Product Schedule\nCustomer Service\nMy Account\nTrack Order\nFAQs\nShipping & Returns\nBulk Program\nLoyalty Program\nEmail & Text Alerts\nE-Gift Certificate Balance\nContact Us\nLearn\nFor Kids\nGames\nCoins & Medals\nCollectors Club\nAbout Us\nFor Educators\nLessons K-12\nLessons by Coin Program\nLessons That Make Cents\nHolidays\nCoin & Medal Programs\nAmerica the Beautiful Quarters\nAmerican Buffalo Coins\nAmerican Eagle Coins\nCirculating Coins\nCommemorative Coins\nNative American $1 Coins\nCongressional Gold Medals\nALL COIN & MEDAL PROGRAMS\nCollecting Basics\nGetting Started\nCoin Clubs\nCaring for Your Coin Collection\nAnatomy of a Coin\nMint Marks\nCoin Term Glossary\nANA Coin Grading Scale\nHistory\nHistorical Documents\nTimeline of the Mint\nHistoric Coin Production\nVideo Corner\nArtists\nMichael Gaudioso\nRenata Gordon\nPhebe Hemphill\nJoseph Menna\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nPhiladelphia\nDenver\nFort Knox\nSan Francisco\nWest Point\nWashington, DC\nProduction & Sales Figures\nCumulative Sales Figures\nPrecious Metal Products\nBullion Sales\nCirculating Coins Production\nHistorical Commemorative Sales\nReports\n2017 Annual Report\n2016 Annual Report\n2015 Annual Report\n2014 Annual Report\nAll Reports\nCareers\nCurrent Federal Vacancies\nInternship Opportunities\nWorking at the Mint\nVeterans’ Employment\nEqual Employment Opportunity\nAbout\nNews\nLearn\nCustomer Service\nProduct Schedule\nShop\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nU.S.",
+         "relevanceScore": 0.7562586665153503
+        },
+        {
+         "next_segments": [
+          {
+           "content": "50 State Quarters Program | U.S. Mint\n195 captures\n05 Jul 2018 - 25 Mar 2026\nJun\nJUL\nAug\n05\n2017\n2018\n2019\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters\nSkip navigation\nYour browser is out of date. For the best and most secure experience in our catalog, please update your browser.\nX\nlogo box\nSign In\nRegister\nMenu\nSearch\nSearch\nSearch\nShop\nCoins\nProof Sets\nCommemoratives\nGold Coins\nSilver Coins\nPlatinum Coins\nBundle Sets\nOther Coins\nBest Sellers\nShop All Coins\nCoin Programs\nAmerica The Beautiful Quarters® Program\nAmerican Buffalo Coins\nAmerican Eagle Coins\nBullion Coins\nCommemorative Coins\nKennedy Half Dollars\nNative American $1 Coins\nShop All Coin Programs\nMedals\nPresidential Medals\nBicentennial and Centennial Medals\nHistorical Events Medals\nHumanitarian and Cultural Medals\nMilitary Medals\nSilver Medals\nTreasury and Mint Medals\nCode Talkers Medals\nShop All Medals\nEnrollments\nAmerica The Beautiful Quarters® Program\nAmerican Eagle Coins\nAnnual Mint Sets\nKennedy Half Dollars\nNative American $1 Coins\nUncirculated Coins\nHow enrollments work\nStorage\nCoin Albums\nMedal Cases\nCollector's Boxes\nGift Sleeves\nShop All Storage and Display\nFor Kids\nGift Ideas\nBirthdays\nHolidays\nGraduation\nGifts for Newborns\nGifts for Kids\nGifts for Dads\nGifts for Grandparents\nGifts for History Buffs\nGift Certificates\nShop All Gift Ideas\nInterests\nMilitary Appreciation\nBreast Cancer Awareness\nWorld War I Centennial\nPaper Currency (Bureau of Engraving & Printing)\nShop All Interests\nProduct Schedule\n2017 Product Schedule\n2018 Product Schedule\nCustomer Service\nMy Account\nTrack Order\nFAQs\nShipping & Returns\nBulk Program\nLoyalty Program\nEmail & Text Alerts\nE-Gift Certificate Balance\nContact Us\nLearn\nFor Kids\nGames\nCoins & Medals\nCollectors Club\nAbout Us\nFor Educators\nLessons K-12\nLessons by Coin Program\nLessons That Make Cents\nHolidays\nCoin & Medal Programs\nAmerica the Beautiful Quarters\nAmerican Buffalo Coins\nAmerican Eagle Coins\nCirculating Coins\nCommemorative Coins\nNative American $1 Coins\nCongressional Gold Medals\nALL COIN & MEDAL PROGRAMS\nCollecting Basics\nGetting Started\nCoin Clubs\nCaring for Your Coin Collection\nAnatomy of a Coin\nMint Marks\nCoin Term Glossary\nANA Coin Grading Scale\nHistory\nHistorical Documents\nTimeline of the Mint\nHistoric Coin Production\nVideo Corner\nArtists\nMichael Gaudioso\nRenata Gordon\nPhebe Hemphill\nJoseph Menna\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nPhiladelphia\nDenver\nFort Knox\nSan Francisco\nWest Point\nWashington, DC\nProduction & Sales Figures\nCumulative Sales Figures\nPrecious Metal Products\nBullion Sales\nCirculating Coins Production\nHistorical Commemorative Sales\nReports\n2017 Annual Report\n2016 Annual Report\n2015 Annual Report\n2014 Annual Report\nAll Reports\nCareers\nCurrent Federal Vacancies\nInternship Opportunities\nWorking at the Mint\nVeterans’ Employment\nEqual Employment Opportunity\nAbout\nNews\nLearn\nCustomer Service\nProduct Schedule\nShop\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nU.S.",
+           "relevanceScore": 0.7562586665153503
+          }
+         ],
+         "content": "The Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+         "relevanceScore": 0.735607922077179
+        }
+       ],
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "<b>Each quarter</b> was <b>produced</b> for about <b>10 weeks</b> and will <b>never</b> be <b>produced again</b>. <b>State</b> designs are displayed on the reverse (tails) of the <b>quarters</b>, while the&nbsp;..."
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 5.2670894,
+      "semanticSimilarityScore": 0.7584922,
+      "topicalityRank": 3,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 3
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "KEYWORD_SEARCH",
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.7164306
+     }
+    },
+    {
+     "id": "page-stateq-coin_production_index_201210",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-coin_production_index_201210",
+      "id": "page-stateq-coin_production_index_201210",
+      "structData": {
+       "uri": "https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012",
+       "orig_file": "mint_pages_state_quarters/coin_production_index_201210.txt",
+       "publisher": "U.S. Mint",
+       "title": "U.S. Mint Coin Production Figures index (links 50 State Quarters 1999-2008)",
+       "source_type": "us_mint",
+       "program": "50_state_quarters"
+      },
+      "derivedStructData": {
+       "snippets": [
+        {
+         "snippet": "... <b>10</b> ¢ 25 ¢ <b>50</b> ¢ N.A. $1 Pres $1 Total: Denver ... <b>produced by</b> the Mint. America the Beautiful <b>Quarters</b>™ Program <b>Production</b> Figures 2012 2011 2010 Circulating Coin&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "can_fetch_raw_content": "true",
+       "title": "U.S. Mint Coin Production Figures index (links 50 State Quarters 1999-2008)",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7641421556472778,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012\n\nThe United States Mint · About Us\nskip navigation\nConnecting America through Coins\nCustomer Service\n1-800-USA-MINT\n(872-6468)\nSearch\nHome\nCoins & Medals\nShop\nProduct Schedule\nCustomer Service\nEducation\nNews & Media\nAbout Us\nHome\nDirector's Office\nEEO\nAnnual Report\nFacilities & Tours\nCareers\nHistorian's Corner\nArtists\nHow Coins Are Made\nProduction & Sales Figures\nCoin Specifications\nHistorical Image Library\nUnited States Mint Police\nPolicies and Sites\nPrint Friendly\n2012 Circulating Coin Production (in millions)\nJanuary 2012 through September 2012\n1 ¢\n5 ¢\n10 ¢\n25 ¢\n50 ¢\nN.A. $1\nPres $1\nTotal:\nDenver\n2241.20 M\n443.52 M\n663.50 M\n205.01 M\n1.70 M\n3.08 M\n16.24 M\n3574.25 M\nPhiladelphia\n2532.00 M\n366.96 M\n641.00 M\n138.40 M\n1.80 M\n2.80 M\n27.80 M\n3710.76 M\nTotal:\n4773.20 M\n810.48 M\n1304.50 M\n343.41 M\n3.50 M\n5.88 M\n44.04 M\n7285.01 M\nPres. $1 - Presidential $1 Coin\nN.A. $1 - Native American $1 Coin\n*Preliminary production figures only.\nCoin Production Figures\nThe Coin Production figures represent all of the \"circulating\" coins produced by the\n\tUnited States Mint, including the coins sold through the numismatic bags & rolls program.\n\tThese numbers do not include the \"proof\" or \"uncirculated\" quality\n\t(i.e. UNC sets) coins produced by the Mint.\nAmerica the Beautiful Quarters™ Program Production Figures\n2012\n2011\n2010\nCirculating Coin Production Figures\n2012\n2011\n2010\nPresidential $1 Coin Production Figures\n2012\n2011\n2010\n2009\n2008\n2007\nDistrict of Columbia and U.S. Territories Quarters Program® Production Figures\n2009\n50 State Quarters Program® Production Figures\n2008\n2007\n2006\n2005\n2004\n2003\n2002\n2001\n2000\n1999\nWestward Journey Nickel Series™ Production Figures\n2005\n2004\nOnline Catalog\nSite Map\nWebsite Information\nFOIA\nFAQs\nTours\nContact Us\nTerms of Use\nPrivacy Policy\nNo FEAR Act Data\ntreasury.gov\nusa.gov\nccac.gov\nPlug-ins\nst-1"
+        }
+       ],
+       "url": "https://web.archive.org/web/20121011075339/http://www.usmint.gov/about_the_mint/coin_production/index.cfm?action=production_figures&allCoinsYear=2012"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 4.4013686,
+      "semanticSimilarityScore": 0.76414216,
+      "topicalityRank": 4,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 4
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.6261653
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2002",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2002",
+      "id": "page-stateq-prod_excel_2002",
+      "structData": {
+       "program": "50_state_quarters",
+       "uri": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls",
+       "publisher": "U.S. Mint",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2002.txt",
+       "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+       "source_type": "us_mint"
+      },
+      "derivedStructData": {
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "... <b>2002_50_State_Quarters_Program_Production</b>.xls United States Mint — 2002 <b>50 State Quarters</b> Program <b>Production</b> (circulating) Source: U.S. Mint Circulating&nbsp;..."
+        }
+       ],
+       "can_fetch_raw_content": "true",
+       "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7680881023406982,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2002 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2002 50 State Quarters Program® Production\nTennessee | Denver 286,468,000 | Philadelphia 361,600,000 | Total 648,068,000\nOhio | Denver 414,832,000 | Philadelphia 217,200,000 | Total 632,032,000\nLouisiana | Denver 402,204,000 | Philadelphia 362,000,000 | Total 764,204,000\nIndiana | Denver 327,200,000 | Philadelphia 362,600,000 | Total 689,800,000\nMississippi | Denver 289,600,000 | Philadelphia 290,000,000 | Total 579,600,000\nGrand Total: 3,313,704,000"
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.9549458,
+      "semanticSimilarityScore": 0.7680881,
+      "topicalityRank": 5,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 5
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.65151656
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_1999",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_1999",
+      "id": "page-stateq-prod_excel_1999",
+      "structData": {
+       "source_type": "us_mint",
+       "title": "1999 50 State Quarters Program Production (U.S. Mint Excel)",
+       "publisher": "U.S. Mint",
+       "program": "50_state_quarters",
+       "uri": "https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls",
+       "orig_file": "mint_pages_state_quarters/prod_excel_1999.txt"
+      },
+      "derivedStructData": {
+       "title": "1999 50 State Quarters Program Production (U.S. Mint Excel)",
+       "can_fetch_raw_content": "true",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7753706574440002,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 1999 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n1999 50 State Quarters Program® Production\nDelaware | Denver 401,424,000 | Philadelphia 373,400,000 | Total 774,824,000\nPennsylvania | Denver 358,332,000 | Philadelphia 349,000,000 | Total 707,332,000\nNew Jersey | Denver 299,028,000 | Philadelphia 363,200,000 | Total 662,228,000\nGeorgia | Denver 488,744,000 | Philadelphia 451,188,000 | Total 939,932,000\nConnecticut | Denver 657,880,000 | Philadelphia 688,744,000 | Total 1,346,624,000\nGrand Total: 4,430,940,000"
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063656id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/1999_50_State_Quarters_Program_Production.xls",
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "... <b>1999_50_State_Quarters_Program_Production</b>.xls United States Mint — 1999 <b>50 State Quarters</b> Program <b>Production</b> (circulating) Source: U.S. Mint Circulating&nbsp;..."
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.9549458,
+      "semanticSimilarityScore": 0.77537066,
+      "topicalityRank": 6,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 6
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.67733705
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2008",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2008",
+      "id": "page-stateq-prod_excel_2008",
+      "structData": {
+       "orig_file": "mint_pages_state_quarters/prod_excel_2008.txt",
+       "source_type": "us_mint",
+       "publisher": "U.S. Mint",
+       "program": "50_state_quarters",
+       "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+       "uri": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls"
+      },
+      "derivedStructData": {
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "... <b>2008_50_State_Quarters_Program_Production</b>.xls United States Mint — 2008 <b>50 State Quarters</b> Program <b>Production</b> (circulating) Source: U.S. Mint Circulating&nbsp;..."
+        }
+       ],
+       "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+       "url": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7704975008964539,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2008 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2008 50 State Quarters Program® Production\nOklahoma | Denver 194,600,000 | Philadelphia 222,000,000 | Total 416,600,000\nNew Mexico | Denver 244,400,000 | Philadelphia 244,200,000 | Total 488,600,000\nArizona | Denver 265,000,000 | Philadelphia 244,600,000 | Total 509,600,000\nAlaska | Denver 254,000,000 | Philadelphia 251,800,000 | Total 505,800,000\nHawaii | Denver 263,600,000 | Philadelphia 254,000,000 | Total 517,600,000\nGrand Total: 2,438,200,000"
+        }
+       ],
+       "can_fetch_raw_content": "true"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.9549458,
+      "semanticSimilarityScore": 0.7704975,
+      "topicalityRank": 8,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 7
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.665054
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2000",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2000",
+      "id": "page-stateq-prod_excel_2000",
+      "structData": {
+       "publisher": "U.S. Mint",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2000.txt",
+       "program": "50_state_quarters",
+       "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)",
+       "source_type": "us_mint",
+       "uri": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls"
+      },
+      "derivedStructData": {
+       "url": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls",
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2000 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2000 50 State Quarters Program® Production\nMassachusetts | Denver 535,184,000 | Philadelphia 628,600,000 | Total 1,163,784,000\nMaryland | Denver 556,532,000 | Philadelphia 678,200,000 | Total 1,234,732,000\nSouth Carolina | Denver 566,208,000 | Philadelphia 742,576,000 | Total 1,308,784,000\nNew Hampshire | Denver 495,976,000 | Philadelphia 673,040,000 | Total 1,169,016,000\nVirginia | Denver 651,616,000 | Philadelphia 943,000,000 | Total 1,594,616,000\nGrand Total: 6,470,932,000",
+         "relevanceScore": 0.7740716338157654
+        }
+       ],
+       "can_fetch_raw_content": "true",
+       "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)",
+       "snippets": [
+        {
+         "snippet": "... <b>2000_50_State_Quarters_Program_Production</b>.xls United States Mint — 2000 <b>50 State Quarters</b> Program <b>Production</b> (circulating) Source: U.S. Mint Circulating&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 3.9549458,
+      "semanticSimilarityScore": 0.77407163,
+      "topicalityRank": 7,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 8
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.6740627
+     }
+    }
+   ],
+   "totalSize": 34,
+   "attributionToken": "3gP03QEKCwiIxv3WBhClgMlZEiQ2YmUzMDE5Yy0wMDAwLTJkYmItYTY4OS0xNGMxNGVmMmU2MjgiB0dFTkVSSUMqnAKugJM3hafOObvM7DiCp8454fysObq9ujmb1rctwPD4OI6-nRW-g4w5_uL0OeLKnTmGttw51v79ONuS8jmv05c51LKdFeHKxTmy05c558LvOIfjgDnVs4I5-tr4OMvaqTmCwe85nMH0OKuavjmVksUwiN-pOMOw8zjGsPM43dDDOYao2jnLh6U5mcH0OJfkrjm9vbo5r8byN4Oo2jnT2N841tjfOLjM7DigoJY5gt2TMv_k6TrYs4I5mNa3LaqF-Tje_Kw5hOOAOYfc4zmpr-Y5naCWOf3a-DjZ_v04p4X5OKW55jrZ4KQ5-OL0OeTC7ziJttw5zoelOcLwnhXBg4w5kPeyMIHc4zma5K45w_D4ONrQwzmgzdQ53srFOTABUn9wcm9qZWN0cy85NzM0MjU1NTE0NDMvbG9jYXRpb25zL2dsb2JhbC9jb2xsZWN0aW9ucy9kZWZhdWx0X2NvbGxlY3Rpb24vZW5naW5lcy9tb3JnYW4tcGlsb3Qtc2VhcmNoL3NlcnZpbmdDb25maWdzL2RlZmF1bHRfc2VhcmNo",
+   "nextPageToken": "AOyYTZyYWZ0EzY0ETL5gjNh1iYiRmMtADMwATLilTMwMTZiZDJaEwhXjNvQYw1N-KiIwgE4EgC",
+   "summary": {},
+   "queryExpansionInfo": {},
+   "semanticState": "ENABLED"
+  },
+  {
+   "results": [
+    {
+     "id": "page-stateq-50sq_learn_201807",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-50sq_learn_201807",
+      "id": "page-stateq-50sq_learn_201807",
+      "structData": {
+       "program": "50_state_quarters",
+       "publisher": "U.S. Mint",
+       "source_type": "us_mint",
+       "orig_file": "mint_pages_state_quarters/50sq_learn_201807.txt",
+       "title": "50 State Quarters Program (U.S. Mint learn page)",
+       "uri": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters"
+      },
+      "derivedStructData": {
+       "url": "https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+       "can_fetch_raw_content": "true",
+       "title": "50 State Quarters Program (U.S. Mint learn page)",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7787481546401978,
+         "previous_segments": [
+          {
+           "relevanceScore": 0.7521566152572632,
+           "content": "50 State Quarters Program | U.S. Mint\n195 captures\n05 Jul 2018 - 25 Mar 2026\nJun\nJUL\nAug\n05\n2017\n2018\n2019\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters\nSkip navigation\nYour browser is out of date. For the best and most secure experience in our catalog, please update your browser.\nX\nlogo box\nSign In\nRegister\nMenu\nSearch\nSearch\nSearch\nShop\nCoins\nProof Sets\nCommemoratives\nGold Coins\nSilver Coins\nPlatinum Coins\nBundle Sets\nOther Coins\nBest Sellers\nShop All Coins\nCoin Programs\nAmerica The Beautiful Quarters® Program\nAmerican Buffalo Coins\nAmerican Eagle Coins\nBullion Coins\nCommemorative Coins\nKennedy Half Dollars\nNative American $1 Coins\nShop All Coin Programs\nMedals\nPresidential Medals\nBicentennial and Centennial Medals\nHistorical Events Medals\nHumanitarian and Cultural Medals\nMilitary Medals\nSilver Medals\nTreasury and Mint Medals\nCode Talkers Medals\nShop All Medals\nEnrollments\nAmerica The Beautiful Quarters® Program\nAmerican Eagle Coins\nAnnual Mint Sets\nKennedy Half Dollars\nNative American $1 Coins\nUncirculated Coins\nHow enrollments work\nStorage\nCoin Albums\nMedal Cases\nCollector's Boxes\nGift Sleeves\nShop All Storage and Display\nFor Kids\nGift Ideas\nBirthdays\nHolidays\nGraduation\nGifts for Newborns\nGifts for Kids\nGifts for Dads\nGifts for Grandparents\nGifts for History Buffs\nGift Certificates\nShop All Gift Ideas\nInterests\nMilitary Appreciation\nBreast Cancer Awareness\nWorld War I Centennial\nPaper Currency (Bureau of Engraving & Printing)\nShop All Interests\nProduct Schedule\n2017 Product Schedule\n2018 Product Schedule\nCustomer Service\nMy Account\nTrack Order\nFAQs\nShipping & Returns\nBulk Program\nLoyalty Program\nEmail & Text Alerts\nE-Gift Certificate Balance\nContact Us\nLearn\nFor Kids\nGames\nCoins & Medals\nCollectors Club\nAbout Us\nFor Educators\nLessons K-12\nLessons by Coin Program\nLessons That Make Cents\nHolidays\nCoin & Medal Programs\nAmerica the Beautiful Quarters\nAmerican Buffalo Coins\nAmerican Eagle Coins\nCirculating Coins\nCommemorative Coins\nNative American $1 Coins\nCongressional Gold Medals\nALL COIN & MEDAL PROGRAMS\nCollecting Basics\nGetting Started\nCoin Clubs\nCaring for Your Coin Collection\nAnatomy of a Coin\nMint Marks\nCoin Term Glossary\nANA Coin Grading Scale\nHistory\nHistorical Documents\nTimeline of the Mint\nHistoric Coin Production\nVideo Corner\nArtists\nMichael Gaudioso\nRenata Gordon\nPhebe Hemphill\nJoseph Menna\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nPhiladelphia\nDenver\nFort Knox\nSan Francisco\nWest Point\nWashington, DC\nProduction & Sales Figures\nCumulative Sales Figures\nPrecious Metal Products\nBullion Sales\nCirculating Coins Production\nHistorical Commemorative Sales\nReports\n2017 Annual Report\n2016 Annual Report\n2015 Annual Report\n2014 Annual Report\nAll Reports\nCareers\nCurrent Federal Vacancies\nInternship Opportunities\nWorking at the Mint\nVeterans’ Employment\nEqual Employment Opportunity\nAbout\nNews\nLearn\nCustomer Service\nProduct Schedule\nShop\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nU.S."
+          }
+         ],
+         "content": "Mint\n/\nLearn\n/\nCoin and Medal Programs\n/\n50 State Quarters Program\n50 State Quarters Program\nLaunched in 1999, the United States Mint’s 50 State Quarters Program was a 10-year initiative that honored each of the nation’s states in the order that they ratified the Constitution or were admitted into the Union. Each quarter was produced for about 10 weeks and will never be produced again. State designs are displayed on the reverse (tails) of the quarters, while the obverse design displays the familiar image of George Washington. But, to accommodate state designs on the reverse, the words “United States of America,” “Quarter Dollar,” “Liberty,” and “In God We Trust” all appear on the obverse. Download the individual informational pages of all the 50 State Quarters.\nThe 50 State Quarters\n1999\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\n2000\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\n2001\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\n2002\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\n2003\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\n2004\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\n2005\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\n2006\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\n2007\nMontana\nWashington\nIdaho\nWyoming\nUtah\n2008\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nContent last updated on\nAugust 23, 2017\nA list of linkable tags for topics mentioned on this page.\nTags:\nQuarter\nState and Territory Quarters\nSIGN UP FOR EMAIL UPDATES AND TEXT MESSAGE ALERTS ABOUT PRODUCTS\nThank you for signing up with United States Mint!\nEmail Signup\nError messaging:\nField value incorrect format\n1-800-USA-MINT\nFacebook\nTwitter\nPinterest\nYouTube\nRSS\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nProduction & Sales Figures\nReports\nCareers\nEEO Program\nResources\nAccessibility\nMutilated Coins\nFOIA\nUSA.gov\nTreasury.gov\nInspector General (IG)\nCCAC.gov\nView All\nCustomer Service\nCoins\nCoin Programs\nMedals\nEnrollments\nStorage\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2018 United States Mint  All Rights Reserved."
+        },
+        {
+         "content": "50 State Quarters Program | U.S. Mint\n195 captures\n05 Jul 2018 - 25 Mar 2026\nJun\nJUL\nAug\n05\n2017\n2018\n2019\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters\nSkip navigation\nYour browser is out of date. For the best and most secure experience in our catalog, please update your browser.\nX\nlogo box\nSign In\nRegister\nMenu\nSearch\nSearch\nSearch\nShop\nCoins\nProof Sets\nCommemoratives\nGold Coins\nSilver Coins\nPlatinum Coins\nBundle Sets\nOther Coins\nBest Sellers\nShop All Coins\nCoin Programs\nAmerica The Beautiful Quarters® Program\nAmerican Buffalo Coins\nAmerican Eagle Coins\nBullion Coins\nCommemorative Coins\nKennedy Half Dollars\nNative American $1 Coins\nShop All Coin Programs\nMedals\nPresidential Medals\nBicentennial and Centennial Medals\nHistorical Events Medals\nHumanitarian and Cultural Medals\nMilitary Medals\nSilver Medals\nTreasury and Mint Medals\nCode Talkers Medals\nShop All Medals\nEnrollments\nAmerica The Beautiful Quarters® Program\nAmerican Eagle Coins\nAnnual Mint Sets\nKennedy Half Dollars\nNative American $1 Coins\nUncirculated Coins\nHow enrollments work\nStorage\nCoin Albums\nMedal Cases\nCollector's Boxes\nGift Sleeves\nShop All Storage and Display\nFor Kids\nGift Ideas\nBirthdays\nHolidays\nGraduation\nGifts for Newborns\nGifts for Kids\nGifts for Dads\nGifts for Grandparents\nGifts for History Buffs\nGift Certificates\nShop All Gift Ideas\nInterests\nMilitary Appreciation\nBreast Cancer Awareness\nWorld War I Centennial\nPaper Currency (Bureau of Engraving & Printing)\nShop All Interests\nProduct Schedule\n2017 Product Schedule\n2018 Product Schedule\nCustomer Service\nMy Account\nTrack Order\nFAQs\nShipping & Returns\nBulk Program\nLoyalty Program\nEmail & Text Alerts\nE-Gift Certificate Balance\nContact Us\nLearn\nFor Kids\nGames\nCoins & Medals\nCollectors Club\nAbout Us\nFor Educators\nLessons K-12\nLessons by Coin Program\nLessons That Make Cents\nHolidays\nCoin & Medal Programs\nAmerica the Beautiful Quarters\nAmerican Buffalo Coins\nAmerican Eagle Coins\nCirculating Coins\nCommemorative Coins\nNative American $1 Coins\nCongressional Gold Medals\nALL COIN & MEDAL PROGRAMS\nCollecting Basics\nGetting Started\nCoin Clubs\nCaring for Your Coin Collection\nAnatomy of a Coin\nMint Marks\nCoin Term Glossary\nANA Coin Grading Scale\nHistory\nHistorical Documents\nTimeline of the Mint\nHistoric Coin Production\nVideo Corner\nArtists\nMichael Gaudioso\nRenata Gordon\nPhebe Hemphill\nJoseph Menna\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nPhiladelphia\nDenver\nFort Knox\nSan Francisco\nWest Point\nWashington, DC\nProduction & Sales Figures\nCumulative Sales Figures\nPrecious Metal Products\nBullion Sales\nCirculating Coins Production\nHistorical Commemorative Sales\nReports\n2017 Annual Report\n2016 Annual Report\n2015 Annual Report\n2014 Annual Report\nAll Reports\nCareers\nCurrent Federal Vacancies\nInternship Opportunities\nWorking at the Mint\nVeterans’ Employment\nEqual Employment Opportunity\nAbout\nNews\nLearn\nCustomer Service\nProduct Schedule\nShop\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nU.S.",
+         "previous_segments": [
+          {
+           "relevanceScore": 0.7271750569343567,
+           "content": "The Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters"
+          }
+         ],
+         "next_segments": [
+          {
+           "relevanceScore": 0.7787481546401978,
+           "content": "Mint\n/\nLearn\n/\nCoin and Medal Programs\n/\n50 State Quarters Program\n50 State Quarters Program\nLaunched in 1999, the United States Mint’s 50 State Quarters Program was a 10-year initiative that honored each of the nation’s states in the order that they ratified the Constitution or were admitted into the Union. Each quarter was produced for about 10 weeks and will never be produced again. State designs are displayed on the reverse (tails) of the quarters, while the obverse design displays the familiar image of George Washington. But, to accommodate state designs on the reverse, the words “United States of America,” “Quarter Dollar,” “Liberty,” and “In God We Trust” all appear on the obverse. Download the individual informational pages of all the 50 State Quarters.\nThe 50 State Quarters\n1999\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\n2000\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\n2001\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\n2002\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\n2003\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\n2004\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\n2005\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\n2006\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\n2007\nMontana\nWashington\nIdaho\nWyoming\nUtah\n2008\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nContent last updated on\nAugust 23, 2017\nA list of linkable tags for topics mentioned on this page.\nTags:\nQuarter\nState and Territory Quarters\nSIGN UP FOR EMAIL UPDATES AND TEXT MESSAGE ALERTS ABOUT PRODUCTS\nThank you for signing up with United States Mint!\nEmail Signup\nError messaging:\nField value incorrect format\n1-800-USA-MINT\nFacebook\nTwitter\nPinterest\nYouTube\nRSS\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nProduction & Sales Figures\nReports\nCareers\nEEO Program\nResources\nAccessibility\nMutilated Coins\nFOIA\nUSA.gov\nTreasury.gov\nInspector General (IG)\nCCAC.gov\nView All\nCustomer Service\nCoins\nCoin Programs\nMedals\nEnrollments\nStorage\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2018 United States Mint  All Rights Reserved."
+          }
+         ],
+         "relevanceScore": 0.7521566152572632
+        },
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters",
+         "next_segments": [
+          {
+           "relevanceScore": 0.7521566152572632,
+           "content": "50 State Quarters Program | U.S. Mint\n195 captures\n05 Jul 2018 - 25 Mar 2026\nJun\nJUL\nAug\n05\n2017\n2018\n2019\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20180705203015/https://www.usmint.gov/learn/coin-and-medal-programs/50-state-quarters\nSkip navigation\nYour browser is out of date. For the best and most secure experience in our catalog, please update your browser.\nX\nlogo box\nSign In\nRegister\nMenu\nSearch\nSearch\nSearch\nShop\nCoins\nProof Sets\nCommemoratives\nGold Coins\nSilver Coins\nPlatinum Coins\nBundle Sets\nOther Coins\nBest Sellers\nShop All Coins\nCoin Programs\nAmerica The Beautiful Quarters® Program\nAmerican Buffalo Coins\nAmerican Eagle Coins\nBullion Coins\nCommemorative Coins\nKennedy Half Dollars\nNative American $1 Coins\nShop All Coin Programs\nMedals\nPresidential Medals\nBicentennial and Centennial Medals\nHistorical Events Medals\nHumanitarian and Cultural Medals\nMilitary Medals\nSilver Medals\nTreasury and Mint Medals\nCode Talkers Medals\nShop All Medals\nEnrollments\nAmerica The Beautiful Quarters® Program\nAmerican Eagle Coins\nAnnual Mint Sets\nKennedy Half Dollars\nNative American $1 Coins\nUncirculated Coins\nHow enrollments work\nStorage\nCoin Albums\nMedal Cases\nCollector's Boxes\nGift Sleeves\nShop All Storage and Display\nFor Kids\nGift Ideas\nBirthdays\nHolidays\nGraduation\nGifts for Newborns\nGifts for Kids\nGifts for Dads\nGifts for Grandparents\nGifts for History Buffs\nGift Certificates\nShop All Gift Ideas\nInterests\nMilitary Appreciation\nBreast Cancer Awareness\nWorld War I Centennial\nPaper Currency (Bureau of Engraving & Printing)\nShop All Interests\nProduct Schedule\n2017 Product Schedule\n2018 Product Schedule\nCustomer Service\nMy Account\nTrack Order\nFAQs\nShipping & Returns\nBulk Program\nLoyalty Program\nEmail & Text Alerts\nE-Gift Certificate Balance\nContact Us\nLearn\nFor Kids\nGames\nCoins & Medals\nCollectors Club\nAbout Us\nFor Educators\nLessons K-12\nLessons by Coin Program\nLessons That Make Cents\nHolidays\nCoin & Medal Programs\nAmerica the Beautiful Quarters\nAmerican Buffalo Coins\nAmerican Eagle Coins\nCirculating Coins\nCommemorative Coins\nNative American $1 Coins\nCongressional Gold Medals\nALL COIN & MEDAL PROGRAMS\nCollecting Basics\nGetting Started\nCoin Clubs\nCaring for Your Coin Collection\nAnatomy of a Coin\nMint Marks\nCoin Term Glossary\nANA Coin Grading Scale\nHistory\nHistorical Documents\nTimeline of the Mint\nHistoric Coin Production\nVideo Corner\nArtists\nMichael Gaudioso\nRenata Gordon\nPhebe Hemphill\nJoseph Menna\nNews\nPress Releases\nInside the Mint\nCCAC Meetings\nImage Library\nUpcoming Events\nAbout\nTours & Facilities\nPhiladelphia\nDenver\nFort Knox\nSan Francisco\nWest Point\nWashington, DC\nProduction & Sales Figures\nCumulative Sales Figures\nPrecious Metal Products\nBullion Sales\nCirculating Coins Production\nHistorical Commemorative Sales\nReports\n2017 Annual Report\n2016 Annual Report\n2015 Annual Report\n2014 Annual Report\nAll Reports\nCareers\nCurrent Federal Vacancies\nInternship Opportunities\nWorking at the Mint\nVeterans’ Employment\nEqual Employment Opportunity\nAbout\nNews\nLearn\nCustomer Service\nProduct Schedule\nShop\nLearn\nFor Kids\nFor Educators\nCoin & Medal Programs\nCollecting Basics\nHistory\nArtists\nU.S."
+          }
+         ],
+         "relevanceScore": 0.7271750569343567
+        }
+       ],
+       "snippets": [
+        {
+         "snippet": "Each <b>quarter</b> was <b>produced</b> for about <b>10 weeks</b> and will never be <b>produced</b> again. <b>State</b> designs are displayed on the reverse (tails) <b>of the quarters</b>, while the&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 6.403347,
+      "semanticSimilarityScore": 0.75313675,
+      "topicalityRank": 1,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 1
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.6946463
+     }
+    },
+    {
+     "id": "page-stateq-50sq_designs_201002",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-50sq_designs_201002",
+      "id": "page-stateq-50sq_designs_201002",
+      "structData": {
+       "publisher": "U.S. Mint",
+       "program": "50_state_quarters",
+       "source_type": "us_mint",
+       "uri": "https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq",
+       "title": "U.S. Mint 50 State Quarters Program — designs by year",
+       "orig_file": "mint_pages_state_quarters/50sq_designs_201002.txt"
+      },
+      "derivedStructData": {
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq\n\nThe United States Mint 50 State Quarters® Program\nSearch:\nCoins and Medals\nPrinter Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?\nConsult the\nUnited States Mint Circulating Coin Policy\n, which governs the use of United States circulating coins or the\nUnited States Mint Quarters Design Use Policy\n, which governs use of the new quarter designs that have been approved by the United States Secretary of the Treasury.\nTerms of Use\n||\nPrivacy Policy\n||\nFOIA\n||\nSite Map\n||\nWebsite Information\n||\nContact Us\nwww.treasury.gov\n||\nUSA.gov\n||\nwww.ccac.gov\n||\nNo FEAR Act Data\nPortions © 1998-2010. \n\t\t\t\t\t\t\t\tThe United States Mint.  All Rights Reserved\n.\nSep 3, 2009\n[stwb3]",
+         "relevanceScore": 0.7630876302719116
+        }
+       ],
+       "snippets": [
+        {
+         "snippet": "Each <b>quarter</b> was <b>produced</b> for about <b>10 weeks</b> and will never be <b>produced</b> again. <b>State</b> designs are displayed on the reverse (tails) <b>of the quarters</b>, while the&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "title": "U.S. Mint 50 State Quarters Program — designs by year",
+       "url": "https://web.archive.org/web/20100204054242/http://www.usmint.gov/mint_programs/50sq_program/?action=designs_50sq",
+       "can_fetch_raw_content": "true"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 6.1231737,
+      "semanticSimilarityScore": 0.76308763,
+      "topicalityRank": 2,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 2
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.6193905
+     }
+    },
+    {
+     "id": "page-stateq-50sq_schedule_200901",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-50sq_schedule_200901",
+      "id": "page-stateq-50sq_schedule_200901",
+      "structData": {
+       "publisher": "U.S. Mint",
+       "program": "50_state_quarters",
+       "source_type": "us_mint",
+       "uri": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+       "title": "50 State Quarters Program release schedule",
+       "orig_file": "mint_pages_state_quarters/50sq_schedule_200901.txt"
+      },
+      "derivedStructData": {
+       "title": "50 State Quarters Program release schedule",
+       "extractive_segments": [
+        {
+         "content": "The United States Mint · About The Mint\n1 capture\n03 Apr 2016\nMar\nAPR\nMay\n03\n2015\n2016\n2017\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20160403030437/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule\nskip navigation\nSkip to content\nEmail Signup\nCustomer Service\nTrack Order\nSign In\nRegister\nOpen/Collapse\nShop\nCoins\nProof Sets\nGold Coins\nSilver Coins\nPlatinum Coins\nCommemoratives\nOther Coins\nCoin Programs\nNative American $1 Coins\nPresidential $1 Coins\nAmerican Buffalo Coins\nAmerica The Beautiful Quarters®\nKennedy Half Dollars\nFirst Spouse Coins\nCommemorative Coins\nAmerican Eagle Coins\nMedals\nPresidential\nFirst Spouse\nBicentennial and Centennial\nHistorical Events\nHumanitarian and Cultural\nMilitary Medals\nProduct Enrollments\nAmerica The Beautiful Quarters®\nNative American $1 Coins\nPresidential $1 Coins\nFirst Spouse Bronze Medals\nUncirculated Coins\nKennedy Half Dollars\nAnnual Mint Sets\nAmerican Eagle Coins\nStorage and Display\nCoin Albums\nMedal Cases\nCollector’s Boxes\nOther\nFeatured\nWhat’s New\nBest Sellers\nGift Certificates\nUpcoming Products\nAfrican-American\nHistory\nWomen's History\nShop by:\nGIFT IDEAS\nBirthdays\nHolidays\nNewborns\nGraduations\nGift Certificates\nInterests\nAmerican History\nTeaching and Education\nGeography\nPaper Currency (Bureau of Engraving & Printing)\nAfrican-American\nHistory\nWomen's History\nProduct Schedule\nLearn\nNewsroom\nAbout\nSearch Catalog\nSearch\nusmint.gov\nproducts\nLearn\nCoin and Medal Programs\nCollecting Basics\nCoin Clubs\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nPrint Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse. \n\tDownload the individual informational pages of all the\n50 State Quarters\n.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?",
+         "relevanceScore": 0.7841596007347107,
+         "next_segments": [
+          {
+           "relevanceScore": 0.7440982460975647,
+           "content": "Consult the\nUnited States Mint Circulating Coin Policy\n, which governs the use of United States circulating coins or the\nUnited States Mint Quarters Design Use Policy\n, which governs use of the new quarter designs that have been approved by the United States Secretary of the Treasury.\n1-800-USA-MINT\nRSS\nFacebook\nTwitter\nPinterest\nYouTube\nSign up for Email updates and news\nThank you for signing up with United States Mint!\nE-mail Signup\nError messaging:\nField value incorrect format\nShop\nFeatured\nCoins\nCoin Programs\nMedals\nProduct Enrollments\nStorage & Display\nProduct Schedule\nBureau of Engraving and Printing\nCustomer Service\nTrack My Order\nShipping & Returns Policy\nFAQs\nMy Account\nBulk Programs\nBullion Dealer Locator\nContact Us\nE-Gift Certificate Balance\nE-mail Updates\nLearn\nCoin & Medal Programs\nCollecting Basics\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nNewsroom\nNews Releases\nLegislation\nImage Library\nConsumer Alerts\nEvents\nAbout\nFacilities & Tours\nProduction & Sales\nDirector's Office\nAnnual Report\nCareers\nEEO\nMint Police\nResources\nOur Website\nFOIA\nNo Fear Act Data\nDepartment of the Treasury\nCitizens Coinage Advisory Committee\nUSA.gov\nBusinessUSA\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2015 United States Mint  All Rights Reserved.\nst-5"
+          }
+         ],
+         "previous_segments": [
+          {
+           "relevanceScore": 0.7380411624908447,
+           "content": "The Wayback Machine - https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule"
+          }
+         ]
+        },
+        {
+         "relevanceScore": 0.7440982460975647,
+         "content": "Consult the\nUnited States Mint Circulating Coin Policy\n, which governs the use of United States circulating coins or the\nUnited States Mint Quarters Design Use Policy\n, which governs use of the new quarter designs that have been approved by the United States Secretary of the Treasury.\n1-800-USA-MINT\nRSS\nFacebook\nTwitter\nPinterest\nYouTube\nSign up for Email updates and news\nThank you for signing up with United States Mint!\nE-mail Signup\nError messaging:\nField value incorrect format\nShop\nFeatured\nCoins\nCoin Programs\nMedals\nProduct Enrollments\nStorage & Display\nProduct Schedule\nBureau of Engraving and Printing\nCustomer Service\nTrack My Order\nShipping & Returns Policy\nFAQs\nMy Account\nBulk Programs\nBullion Dealer Locator\nContact Us\nE-Gift Certificate Balance\nE-mail Updates\nLearn\nCoin & Medal Programs\nCollecting Basics\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nNewsroom\nNews Releases\nLegislation\nImage Library\nConsumer Alerts\nEvents\nAbout\nFacilities & Tours\nProduction & Sales\nDirector's Office\nAnnual Report\nCareers\nEEO\nMint Police\nResources\nOur Website\nFOIA\nNo Fear Act Data\nDepartment of the Treasury\nCitizens Coinage Advisory Committee\nUSA.gov\nBusinessUSA\nPrivacy Policy\nTerms of Use\nAccessibility\nPlug-Ins\nSite Map\n© 2015 United States Mint  All Rights Reserved.\nst-5",
+         "previous_segments": [
+          {
+           "content": "The United States Mint · About The Mint\n1 capture\n03 Apr 2016\nMar\nAPR\nMay\n03\n2015\n2016\n2017\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20160403030437/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule\nskip navigation\nSkip to content\nEmail Signup\nCustomer Service\nTrack Order\nSign In\nRegister\nOpen/Collapse\nShop\nCoins\nProof Sets\nGold Coins\nSilver Coins\nPlatinum Coins\nCommemoratives\nOther Coins\nCoin Programs\nNative American $1 Coins\nPresidential $1 Coins\nAmerican Buffalo Coins\nAmerica The Beautiful Quarters®\nKennedy Half Dollars\nFirst Spouse Coins\nCommemorative Coins\nAmerican Eagle Coins\nMedals\nPresidential\nFirst Spouse\nBicentennial and Centennial\nHistorical Events\nHumanitarian and Cultural\nMilitary Medals\nProduct Enrollments\nAmerica The Beautiful Quarters®\nNative American $1 Coins\nPresidential $1 Coins\nFirst Spouse Bronze Medals\nUncirculated Coins\nKennedy Half Dollars\nAnnual Mint Sets\nAmerican Eagle Coins\nStorage and Display\nCoin Albums\nMedal Cases\nCollector’s Boxes\nOther\nFeatured\nWhat’s New\nBest Sellers\nGift Certificates\nUpcoming Products\nAfrican-American\nHistory\nWomen's History\nShop by:\nGIFT IDEAS\nBirthdays\nHolidays\nNewborns\nGraduations\nGift Certificates\nInterests\nAmerican History\nTeaching and Education\nGeography\nPaper Currency (Bureau of Engraving & Printing)\nAfrican-American\nHistory\nWomen's History\nProduct Schedule\nLearn\nNewsroom\nAbout\nSearch Catalog\nSearch\nusmint.gov\nproducts\nLearn\nCoin and Medal Programs\nCollecting Basics\nCoin Clubs\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nPrint Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse. \n\tDownload the individual informational pages of all the\n50 State Quarters\n.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?",
+           "relevanceScore": 0.7841596007347107
+          }
+         ]
+        },
+        {
+         "next_segments": [
+          {
+           "content": "The United States Mint · About The Mint\n1 capture\n03 Apr 2016\nMar\nAPR\nMay\n03\n2015\n2016\n2017\nsuccess\nfail\nAbout this capture\nTIMESTAMPS\nThe Wayback Machine - https://web.archive.org/web/20160403030437/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule\nskip navigation\nSkip to content\nEmail Signup\nCustomer Service\nTrack Order\nSign In\nRegister\nOpen/Collapse\nShop\nCoins\nProof Sets\nGold Coins\nSilver Coins\nPlatinum Coins\nCommemoratives\nOther Coins\nCoin Programs\nNative American $1 Coins\nPresidential $1 Coins\nAmerican Buffalo Coins\nAmerica The Beautiful Quarters®\nKennedy Half Dollars\nFirst Spouse Coins\nCommemorative Coins\nAmerican Eagle Coins\nMedals\nPresidential\nFirst Spouse\nBicentennial and Centennial\nHistorical Events\nHumanitarian and Cultural\nMilitary Medals\nProduct Enrollments\nAmerica The Beautiful Quarters®\nNative American $1 Coins\nPresidential $1 Coins\nFirst Spouse Bronze Medals\nUncirculated Coins\nKennedy Half Dollars\nAnnual Mint Sets\nAmerican Eagle Coins\nStorage and Display\nCoin Albums\nMedal Cases\nCollector’s Boxes\nOther\nFeatured\nWhat’s New\nBest Sellers\nGift Certificates\nUpcoming Products\nAfrican-American\nHistory\nWomen's History\nShop by:\nGIFT IDEAS\nBirthdays\nHolidays\nNewborns\nGraduations\nGift Certificates\nInterests\nAmerican History\nTeaching and Education\nGeography\nPaper Currency (Bureau of Engraving & Printing)\nAfrican-American\nHistory\nWomen's History\nProduct Schedule\nLearn\nNewsroom\nAbout\nSearch Catalog\nSearch\nusmint.gov\nproducts\nLearn\nCoin and Medal Programs\nCollecting Basics\nCoin Clubs\nHow Coins Are Made\nFor Educators\nFor Kids\nHistory\nArtists\nPrint Friendly\nThe 50 State Quarters® Program\nLaunched in 1999, the United States Mint's 50 State Quarters Program was a 10-year initiative that honored each of the nation's states in the order that they ratified the Constitution or were admitted into the Union. \n\tEach quarter was produced for about 10 weeks and will never be produced again. \n\tState designs are displayed on the reverse (tails) of the quarters, while the\nobverse design\ndisplays the familiar image of George Washington. \n\tBut, to accommodate state designs on the reverse, the words \"United States of America,\" \"Quarter Dollar,\" \"Liberty,\" and \"In God We Trust\" all appear on the obverse. \n\tDownload the individual informational pages of all the\n50 State Quarters\n.\nThe 2008 Coins - Reverse\nOklahoma\nNew Mexico\nArizona\nAlaska\nHawaii\nThe 2007 Coins - Reverse\nMontana\nWashington\nIdaho\nWyoming\nUtah\nThe 2006 Coins - Reverse\nNevada\nNebraska\nColorado\nNorth Dakota\nSouth Dakota\nThe 2005 Coins - Reverse\nCalifornia\nMinnesota\nOregon\nKansas\nWest Virginia\nThe 2004 Coins - Reverse\nMichigan\nFlorida\nTexas\nIowa\nWisconsin\nThe 2003 Coins - Reverse\nIllinois\nAlabama\nMaine\nMissouri\nArkansas\nThe 2002 Coins - Reverse\nTennessee\nOhio\nLouisiana\nIndiana\nMississippi\nThe 2001 Coins - Reverse\nNew York\nNorth Carolina\nRhode Island\nVermont\nKentucky\nThe 2000 Coins - Reverse\nMassachusetts\nMaryland\nSouth Carolina\nNew Hampshire\nVirginia\nThe 1999 Coins - Reverse\nDelaware\nPennsylvania\nNew Jersey\nGeorgia\nConnecticut\nInterested in using images or designs of circulating coins or the quarters issued under the 50 State Quarters® Program?",
+           "relevanceScore": 0.7841596007347107
+          }
+         ],
+         "content": "The Wayback Machine - https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+         "relevanceScore": 0.7380411624908447
+        }
+       ],
+       "snippets": [
+        {
+         "snippet": "Each <b>quarter</b> was <b>produced</b> for about <b>10 weeks</b> and will never be <b>produced</b> again. ... Consult the <b>United States Mint</b> Circulating Coin Policy , which governs the use&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "url": "https://web.archive.org/web/20090101120000/http://www.usmint.gov/mint_programs/50sq_program/?action=schedule",
+       "can_fetch_raw_content": "true"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 5.9370403,
+      "semanticSimilarityScore": 0.7558545,
+      "topicalityRank": 3,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 3
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.7191073
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2002",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2002",
+      "id": "page-stateq-prod_excel_2002",
+      "structData": {
+       "orig_file": "mint_pages_state_quarters/prod_excel_2002.txt",
+       "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+       "program": "50_state_quarters",
+       "uri": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls",
+       "publisher": "U.S. Mint",
+       "source_type": "us_mint"
+      },
+      "derivedStructData": {
+       "can_fetch_raw_content": "true",
+       "title": "2002 50 State Quarters Program Production (U.S. Mint Excel)",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7641454339027405,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2002 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2002 50 State Quarters Program® Production\nTennessee | Denver 286,468,000 | Philadelphia 361,600,000 | Total 648,068,000\nOhio | Denver 414,832,000 | Philadelphia 217,200,000 | Total 632,032,000\nLouisiana | Denver 402,204,000 | Philadelphia 362,000,000 | Total 764,204,000\nIndiana | Denver 327,200,000 | Philadelphia 362,600,000 | Total 689,800,000\nMississippi | Denver 289,600,000 | Philadelphia 290,000,000 | Total 579,600,000\nGrand Total: 3,313,704,000"
+        }
+       ],
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "... <b>United States Mint</b> — 2002 <b>50 State Quarters Program Production</b> (circulating) Source: <b>U.S. Mint</b> Circulating Coins <b>Production</b> Excel (archived). Facilities&nbsp;..."
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063904id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2002_50_State_Quarters_Program_Production.xls"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 6.4139447,
+      "semanticSimilarityScore": 0.76414543,
+      "topicalityRank": 4,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 4
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.62618643
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2008",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2008",
+      "id": "page-stateq-prod_excel_2008",
+      "structData": {
+       "orig_file": "mint_pages_state_quarters/prod_excel_2008.txt",
+       "uri": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls",
+       "source_type": "us_mint",
+       "program": "50_state_quarters",
+       "publisher": "U.S. Mint",
+       "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)"
+      },
+      "derivedStructData": {
+       "can_fetch_raw_content": "true",
+       "title": "2008 50 State Quarters Program Production (U.S. Mint Excel)",
+       "snippets": [
+        {
+         "snippet": "... <b>United States Mint</b> — 2008 <b>50 State Quarters Program Production</b> (circulating) Source: <b>U.S. Mint</b> Circulating Coins <b>Production</b> Excel (archived). Facilities&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ],
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7661468982696533,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2008 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2008 50 State Quarters Program® Production\nOklahoma | Denver 194,600,000 | Philadelphia 222,000,000 | Total 416,600,000\nNew Mexico | Denver 244,400,000 | Philadelphia 244,200,000 | Total 488,600,000\nArizona | Denver 265,000,000 | Philadelphia 244,600,000 | Total 509,600,000\nAlaska | Denver 254,000,000 | Philadelphia 251,800,000 | Total 505,800,000\nHawaii | Denver 263,600,000 | Philadelphia 254,000,000 | Total 517,600,000\nGrand Total: 2,438,200,000"
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063920id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2008_50_State_Quarters_Program_Production.xls"
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 6.4139447,
+      "semanticSimilarityScore": 0.7661469,
+      "topicalityRank": 7,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 5
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.63904524
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2005",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2005",
+      "id": "page-stateq-prod_excel_2005",
+      "structData": {
+       "program": "50_state_quarters",
+       "uri": "https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls",
+       "publisher": "U.S. Mint",
+       "title": "2005 50 State Quarters Program Production (U.S. Mint Excel)",
+       "source_type": "us_mint",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2005.txt"
+      },
+      "derivedStructData": {
+       "title": "2005 50 State Quarters Program Production (U.S. Mint Excel)",
+       "url": "https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls",
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "... <b>United States Mint</b> — 2005 <b>50 State Quarters Program Production</b> (circulating) Source: <b>U.S. Mint</b> Circulating Coins <b>Production</b> Excel (archived). Facilities&nbsp;..."
+        }
+       ],
+       "can_fetch_raw_content": "true",
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063815id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2005_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2005 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2005 50 State Quarters Program® Production\nCalifornia | Denver 263,200,000 | Philadelphia 257,200,000 | Total 520,400,000\nMinnesota | Denver 248,400,000 | Philadelphia 239,600,000 | Total 488,000,000\nOregon | Denver 404,000,000 | Philadelphia 316,200,000 | Total 720,200,000\nKansas | Denver 300,000,000 | Philadelphia 263,400,000 | Total 563,400,000\nWest Virginia | Denver 356,200,000 | Philadelphia 365,400,000 | Total 721,600,000\nGrand Total: 3,013,600,000",
+         "relevanceScore": 0.7610873579978943
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 6.4139447,
+      "semanticSimilarityScore": 0.76108736,
+      "topicalityRank": 12,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 6
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.6057907
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2007",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2007",
+      "id": "page-stateq-prod_excel_2007",
+      "structData": {
+       "title": "2007 50 State Quarters Program Production (U.S. Mint Excel)",
+       "program": "50_state_quarters",
+       "publisher": "U.S. Mint",
+       "orig_file": "mint_pages_state_quarters/prod_excel_2007.txt",
+       "uri": "https://web.archive.org/web/20121021063643id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2007_50_State_Quarters_Program_Production.xls",
+       "source_type": "us_mint"
+      },
+      "derivedStructData": {
+       "url": "https://web.archive.org/web/20121021063643id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2007_50_State_Quarters_Program_Production.xls",
+       "extractive_segments": [
+        {
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063643id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2007_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2007 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2007 50 State Quarters Program® Production\nMontana | Denver 256,240,000 | Philadelphia 257,000,000 | Total 513,240,000\nWashington | Denver 280,000,000 | Philadelphia 265,200,000 | Total 545,200,000\nIdaho | Denver 286,800,000 | Philadelphia 294,600,000 | Total 581,400,000\nWyoming | Denver 320,800,000 | Philadelphia 243,600,000 | Total 564,400,000\nUtah | Denver 253,200,000 | Philadelphia 255,000,000 | Total 508,200,000\nGrand Total: 2,712,440,000",
+         "relevanceScore": 0.7595433592796326
+        }
+       ],
+       "title": "2007 50 State Quarters Program Production (U.S. Mint Excel)",
+       "can_fetch_raw_content": "true",
+       "snippets": [
+        {
+         "snippet": "... <b>United States Mint</b> — 2007 <b>50 State Quarters Program Production</b> (circulating) Source: <b>U.S. Mint</b> Circulating Coins <b>Production</b> Excel (archived). Facilities&nbsp;...",
+         "snippet_status": "SUCCESS"
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 6.4139447,
+      "semanticSimilarityScore": 0.75954336,
+      "topicalityRank": 8,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 7
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.59515435
+     }
+    },
+    {
+     "id": "page-stateq-prod_excel_2000",
+     "document": {
+      "name": "projects/973425551443/locations/global/collections/default_collection/dataStores/morgan-docs/branches/0/documents/page-stateq-prod_excel_2000",
+      "id": "page-stateq-prod_excel_2000",
+      "structData": {
+       "orig_file": "mint_pages_state_quarters/prod_excel_2000.txt",
+       "program": "50_state_quarters",
+       "publisher": "U.S. Mint",
+       "uri": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls",
+       "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)",
+       "source_type": "us_mint"
+      },
+      "derivedStructData": {
+       "title": "2000 50 State Quarters Program Production (U.S. Mint Excel)",
+       "snippets": [
+        {
+         "snippet_status": "SUCCESS",
+         "snippet": "... <b>United States Mint</b> — 2000 <b>50 State Quarters Program Production</b> (circulating) Source: <b>U.S. Mint</b> Circulating Coins <b>Production</b> Excel (archived). Facilities&nbsp;..."
+        }
+       ],
+       "url": "https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls",
+       "can_fetch_raw_content": "true",
+       "extractive_segments": [
+        {
+         "relevanceScore": 0.7588472962379456,
+         "content": "The Wayback Machine - https://web.archive.org/web/20121021063635id_/http://www.usmint.gov/about_the_mint/coin_production/Excels/2000_50_State_Quarters_Program_Production.xls\n\nUnited States Mint — 2000 50 State Quarters Program Production (circulating)\nSource: U.S. Mint Circulating Coins Production Excel (archived).\nFacilities: Denver and Philadelphia circulating departments. Totals may include numismatic bags/rolls/boxes from circulating departments. Does not include proof or uncirculated-set quality coins.\n\nDesign | Denver | Philadelphia | Total\n2000 50 State Quarters Program® Production\nMassachusetts | Denver 535,184,000 | Philadelphia 628,600,000 | Total 1,163,784,000\nMaryland | Denver 556,532,000 | Philadelphia 678,200,000 | Total 1,234,732,000\nSouth Carolina | Denver 566,208,000 | Philadelphia 742,576,000 | Total 1,308,784,000\nNew Hampshire | Denver 495,976,000 | Philadelphia 673,040,000 | Total 1,169,016,000\nVirginia | Denver 651,616,000 | Philadelphia 943,000,000 | Total 1,594,616,000\nGrand Total: 6,470,932,000"
+        }
+       ]
+      }
+     },
+     "rankSignals": {
+      "keywordSimilarityScore": 6.4139447,
+      "semanticSimilarityScore": 0.7588473,
+      "topicalityRank": 6,
+      "documentAge": 498062.44,
+      "boostingFactor": 0,
+      "defaultRank": 8
+     },
+     "retrievalSignals": {
+      "retrievalSources": [
+       "SEMANTIC_SEARCH"
+      ],
+      "semanticRelevanceScore": 0.58915657
+     }
+    }
+   ],
+   "totalSize": 34,
+   "attributionToken": "3wP03gEKDAiIxv3WBhDb1fr_AhIkNmJjOGFkMjEtMDAwMC0yNDdjLTk5YzktMTRjMTRlZjM1YmJjIgdHRU5FUklDKpwChrbcOY6-nRXOh6U5ur26OZrkrjmJttw5wYOMOYWnzjna0MM5oM3UOYHc4zneysU5_dr4OJ2gljmH3OM5qa_mOYTjgDnZ4KQ5pbnmOqeF-TjZ_v045MLvOPji9DnYs4I5wvCeFZD3sjDD8Pg4qoX5ON78rDnLh6U5hqjaOYOo2jm9vbo5l-SuOa_G8jfT2N84mcH0ONbY3zigoJY5_-TpOoLdkzKY1rctw7DzON3QwzmI36k4uMzsOMaw8ziv05c51LKdFbLTlznnwu84y9qpOeHKxTmH44A5gsHvOZzB9DjVs4I5q5q-Ofra-DjA8Pg4_uL0OZWSxTC-g4w54sqdOduS8jnW_v04m9a3LbvM7DiugJM3gqfOOeH8rDkwAVJ_cHJvamVjdHMvOTczNDI1NTUxNDQzL2xvY2F0aW9ucy9nbG9iYWwvY29sbGVjdGlvbnMvZGVmYXVsdF9jb2xsZWN0aW9uL2VuZ2luZXMvbW9yZ2FuLXBpbG90LXNlYXJjaC9zZXJ2aW5nQ29uZmlncy9kZWZhdWx0X3NlYXJjaA",
+   "nextPageToken": "wYiJWNzYWZ0EzY0ETL5MWO50yY3QjMtADMwATLwIDZhhzYiZDJaMQvwLduQYw1N-KiIwgE4EgC",
+   "summary": {},
+   "queryExpansionInfo": {},
+   "semanticState": "ENABLED"
+  }
+ ],
+ "n_mint_facts": 14,
+ "n_other_facts": 0
+}

@@ -1,0 +1,21 @@
+{
+  "used": [
+    {
+      "key": "2025_morgan_peace_reverse_proof_press",
+      "url": "https://web.archive.org/web/20251218150313/https://www.usmint.gov/news/press-releases/morgan-and-peace-dollar-2025-reverse-proof-two-coin-set-available-on-december-11",
+      "chars": 6875,
+      "title": "Morgan and Peace Dollar 2025 Reverse Proof Two-Coin Set Available"
+    },
+    {
+      "key": "historic_coin_production_facilities",
+      "url": "https://web.archive.org/web/20221227191905/https://www.usmint.gov/learn/history/historic-coin-production",
+      "chars": 16222,
+      "title": "Historic Coin Production Facilities (mint marks)"
+    }
+  ],
+  "failed": [
+    "2023_morgan_peace_reverse_proof_press",
+    "2026_morgan_enhanced_unc_26XE"
+  ],
+  "docs_listed_total": 98
+}

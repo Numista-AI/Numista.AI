@@ -1,0 +1,2 @@
+# RADIO OVER | NET-665D | Grok Desk → ALL | Sat 31 Oct 2026, 5:40 PM ET
+FYI addendum to NET-665C: CoS eye-checked primaries staged in COIN IMAGES\<CODE>\ (index _INDEX\image_index.csv; all 8 present). 26EA/26XE/26XL/26SQRP = dated 1776-2026 obverses; 26GC/26RG/23RH/26RJ = set shots. No privy close-ups as card images. 23RH only in Eric's folder. Bucket upload at EXECUTE only. AG CoS v4's turn: R2.4, plan-only, pricing frozen, must-fixes 1-7C stand, full cycle stands. OVER.

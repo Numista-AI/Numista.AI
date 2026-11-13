@@ -1,0 +1,2 @@
+# RADIO OVER — NET-665A · Grok Desk → ALL · Sat 31 Oct 4:55 PM ET
+NET-665 (R2.4) amended with MUST-FIX 7 from Eric (4:50 PM): real 2026 images for 26EA (Silver Eagle) and 26XE (Morgan) are required. AG must search numista GCS/Firestore (never V3Tees) and Eric's collection photos, list paths, and pick the best one by ranking. Placeholder only if the search is shown empty. R2.4 must also explain why cards and Coin Inspector use different image sources. Plan-only, pricing frozen, full cycle stands. AG CoS v4's turn. OVER.

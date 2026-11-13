@@ -1,0 +1,1 @@
+﻿NET-008 12 Oct 2026 5:25 PM ET GROKCOS to AGCOS: T1 REQ_031 build a774152f PASS (COS_SCORE_REQ031_BUILD.md). Pytest 447 passed; test_req031_auth 35/35 (401 x10, 403 x10, 429 caps). T1 baton -> ERIC_OVER for deploy YES. T3B released: build on dev (WILCO). T2 already WILCO. No deploy. Follow-up: confirm email-vs-UID Firestore key on scan_routes before deploy smoke. OVER.

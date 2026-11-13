@@ -9,6 +9,7 @@ import 'screens/welcome_screen.dart';
 import 'screens/attorney_portal_screen.dart';
 import 'screens/not_found_screen.dart';
 import 'screens/public_wishlist_view_screen.dart';
+import 'screens/catalog/catalog_browse_screen.dart';
 import 'services/theme_provider.dart';
 import 'widgets/morgan_feedback_drawer.dart';
 import 'services/guest_seed_service.dart';
@@ -129,6 +130,8 @@ Future<void> main() async {
       normalizedPath == '/demo' ||
       normalizedPath == '/app' ||
       normalizedPath == '/blog' ||
+      normalizedPath == '/catalog' ||
+      path.startsWith('/catalog/') ||
       path.startsWith('/wishlist') ||
       path.startsWith('/attorney_portal') ||
       path.startsWith('/attorney') ||
@@ -144,6 +147,35 @@ Future<void> main() async {
       title: 'Numista.AI',
       debugShowCheckedModeBanner: false,
       home: NotFoundScreen(attemptedPath: path),
+    ));
+    return;
+  }
+
+  // Public Catalog direct entry (zero auth required)
+  if (normalizedPath == '/catalog' || path.startsWith('/catalog/')) {
+    String? initialNacCode;
+    if (path.startsWith('/catalog/')) {
+      final sub = path.substring('/catalog/'.length).trim();
+      if (sub.isNotEmpty) {
+        initialNacCode = Uri.decodeComponent(sub);
+      }
+    }
+    if (initialNacCode == null && uri.queryParameters.containsKey('item')) {
+      initialNacCode = uri.queryParameters['item'];
+    }
+    runApp(MaterialApp(
+      title: 'Numista.AI Public Catalog',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: Colors.white,
+        primaryColor: const Color(0xFF0B2545),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1F5FAD),
+          primary: const Color(0xFF0B2545),
+        ),
+      ),
+      home: CatalogBrowseScreen(initialNacCode: initialNacCode),
     ));
     return;
   }

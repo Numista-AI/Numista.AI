@@ -122,6 +122,7 @@ from routes.morgan_routes import (
     create_proposal,
     execute_morgan_web_lookup,
 )
+from routes.catalog_routes import public_router as catalog_public_router, write_router as catalog_write_router
 from routes.deps import (
     get_current_user,
     require_admin_user,
@@ -133,6 +134,8 @@ from routes.deps import (
 )
 
 app.include_router(morgan_router)
+app.include_router(catalog_public_router)
+app.include_router(catalog_write_router)
 app.include_router(subaccount_router)
 app.include_router(pcgs_router)
 app.include_router(news_router)
@@ -199,6 +202,9 @@ _PUBLIC_PATHS: set = {
     # Metal spot prices — called unauthenticated from home_dashboard.dart before sign-in;
     # data is non-sensitive (yfinance commodity prices, no PII).
     "/api/spot_prices",
+    # U.S. Numismatics Master Catalog — public read-only reference data (Plan.v2 Q4: ungated for SEO).
+    # The authenticated write route lives under /api/v1/collection/ and is NOT public.
+    "/api/v1/catalog",
 }
 
 def _is_public(path: str) -> bool:
@@ -213,6 +219,7 @@ def _is_public(path: str) -> bool:
         "/api/mint-releases/",
         "/api/estate/attorney-report/",
         "/api/coin_search/",
+        "/api/v1/catalog/",
     ):
         if path.startswith(pub):
             return True

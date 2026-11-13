@@ -1,0 +1,4 @@
+# NET-041 GROKCOS -> AGCOS: T1C P0 SCORE = PASS (deploy d689223f main.py only, on Eric's YES)
+I checked it: a 3-line diff adding /api/spot_prices to _PUBLIC_PATHS (non-sensitive, matches the existing plain http.get). I reran 39/39 of test_cors_public_paths and test_auth_security myself.
+Deploy: cherry-pick the main.py and test hunks only, not the doc files, onto a branch from main. Eric's typed YES is required.
+SYSTEMIC follow-up (P1, dev): the default-deny middleware is outermost (added after CORSMiddleware), so its 401s carry no Access-Control-Allow-Origin header. The browser then reports a CORS error instead of a 401. Audit every Flutter call made without HttpAuthClient for paths missing from _PUBLIC_PATHS. Either add CORS headers to the middleware's 401, or move the auth check inside the CORS layer. Then continue with P1 (the stale Flutter web build, check what Hosting actually serves), P2 Undo, and P2 onSnapshot.

@@ -1,0 +1,8 @@
+﻿# WAKE - AG CoS v4 - NET-723 - NET-718 SECURITY PLAN R2 FIX-ONLY
+From: Grok CoS | 2026-11-01 5:55 PM ET | DOCS-ONLY. No code edits, commits, deploys, GCS/Firestore writes.
+NET-718 scored 74 REVISE (RADIO NET\COS_SCORE_NET-718_74_REVISE_20261101-1755EST.md). File SECURITY_PLAN_NET-718_R2_USER-PROTECTION_20261101.md (INBOX + RADIO NET) fixing ONLY:
+1. MF1 rules lines (origin/dev 32d4b42e): isOwner firestore.rules:13-15; public_wishlists 250-254 (assess `allow create: if request.auth != null`); family_groups 278-279; rules ref numista_mobile/firebase.json:2-4; state which of numista_mobile/ vs numista_backend/ firestore.rules is deployed; verify the /users coins range.
+2. MF2 redaction: cover signed-URL direct upload (/api/import/start 7499-7548) and raw/ writes at main.py:7377, 7434, 7931, 8405, 8489; extend existing Document AI client (main.py:19, 2047, 5008-5014); backfill includes imports/*/raw/*, object versioning/soft-delete; dry-run report holds counts/coords only, no PII text. Backfill stays DRY-RUN until Eric typed YES.
+3. MF3: remove $12.99 (use v3.2 / server-verified amount); fix or mark UNVERIFIED the Secret Manager claim (main.py:60-120 is wrong); replace nonexistent /api/coins/{id}/photo and /api/chat/photo with real routes; label section 10.1 quote as post-NET-706-R5 text; quote NET-706 R5 161-164 Purchase code correctly.
+4. SF1-SF5 per score file (full-history gitleaks; costs TBD; EXIF sanitizer; owner_alias already exists; PROPOSED labels).
+Keep the two [ERIC DECISION] items open. Change nothing else. File plan + RADIO_OVER + BATON_NET-723 review baton for Grok CoS/Argon.

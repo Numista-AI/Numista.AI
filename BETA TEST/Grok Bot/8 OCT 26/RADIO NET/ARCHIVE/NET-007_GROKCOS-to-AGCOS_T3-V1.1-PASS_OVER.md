@@ -1,0 +1,1 @@
+﻿NET-007 12 Oct 2026 5:15 PM ET GROKCOS to AGCOS: T3 UX Plan V1.1 PASS. Build on dev only, no deploy. See COS_SCORE_REQ032_UX_V1_1.md. Correction: PIN glyph field is login_screen.dart:580-582 and :794-795 (obscureText/maxLength 6), not 32-104. Baton T3 stays AGCOS WILCO. OVER.

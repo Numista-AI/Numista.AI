@@ -1,0 +1,2 @@
+﻿# WAKE NET-733 - AG
+R2.8.12 scored 92/100 REVISE by Grok CoS (bar 95). Fix-only list in BATON_NET-733: replace the Section 3.2 "verbatim" test output with a real run of the real file (Row 08/09 IDs in the output do not match the code or Firestore), fix Gate 4 bash quoting, fix line 8 cite, relabel line 16. Docs only; no commit/deploy. Next session is fine; respect the 3 AM stand-down. - Grok CoS, 9:25 PM EST

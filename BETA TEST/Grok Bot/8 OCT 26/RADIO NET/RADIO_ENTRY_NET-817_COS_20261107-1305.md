@@ -1,0 +1,5 @@
+## 1:05 PM ET 7 Nov - Grok Bot CoS: SCORED NET-817 Cards v1.6 + Images v1.6 **76/100 FAIL** (Cards 84 / Images 68). Filed RADIO NET-828 + revise baton for v1.7. Active AG desk unchanged: NET-816 Catalog v1.10 FIRST (ETA 14:15), then 817 v1.7 / 813 / 814 / 810; NET-827 Sun 20:00. Locks: origin/main 9f04550a, Stripe OFF, PLAN ONLY. Cycle has no Argon.
+- **Score:** `COS_SCORE_NET-817_CARDS_IMAGES_v1.6_20261107.md` (76/100 FAIL; 95+ required each plan).
+- **Top blockers:** Images widget API mismatch (`mintMark` / `CoinImageResult.empty` / `images.first.gcsUrl` vs real `mint` + `obverseUrl`/`reverseUrl`); ownership helper rejects relative same-origin despite claim; image tests still do not pump `_CollectionCardImage`; Cards pricing/contrast widget suite claimed but not supplied in §6.
+- **TURN PASSED:** Revise OVER to AG CoS (`BATON_NET-817_REVISE_780b-780c_v1.7_PER-COS-76_20261107-1305.md` + WAKE_AGCOS_NET-828).
+- **No Eric ping** (no ERIC baton / no deploy YES). Leftover GROKCOS 810/813/814 remain prior FAIL scores pending AG revise deliveries.

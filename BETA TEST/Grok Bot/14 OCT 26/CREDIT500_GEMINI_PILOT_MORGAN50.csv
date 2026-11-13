@@ -1,0 +1,62 @@
+row_num,slot_id,program,current_value,proposed_value,source_tier_achieved,tier_a_url,gemini_verdict,gemini_note,mint_source_found,tokens_in,tokens_out
+1,morgan_dollars_2023_s_2023#S,morgan_dollars,S (app reads bare S as NON-proof),S-SILVER-PROOF (2023-S Morgan is a silver proof; S-PROOF would reject silver),A,https://web.archive.org/web/20230810134920/https://www.usmint.gov/news/press-rel,AGREE,"US Mint source confirms the 2023-S Morgan Dollar is a .999 silver proof coin, minted at San Francisco.",https://web.archive.org/web/20230810134920/https://www.usmint.gov/news/press-releases/united-states-mint-opens-sales-for-the-2023-morgan-and-peace-proof-silver-dollars-on-august-9,443,139
+2,morgan_dollars_2021_o_privy_2021#O-Privy,morgan_dollars,"O-Privy (app compares mint letter; these coins carry no mint mark, so never match)","P-O-PRIVY (Philadelphia, privy mark)",A,https://web.archive.org/web/20210709183332/https://www.usmint.gov/coins/coin-med,AGREE,US Mint source confirms Philadelphia Mint produced the 'O' privy mark version.,https://web.archive.org/web/20210709183332/https://www.usmint.gov/coins/coin-medal-programs/morgan-peace-dollar-anniversary-coins/2021-morgan-dollar,410,109
+3,morgan_dollars_2021_cc_privy_2021#CC-Privy,morgan_dollars,"CC-Privy (app compares mint letter; these coins carry no mint mark, so never match)","P-CC-PRIVY (Philadelphia, privy mark)",A,https://web.archive.org/web/20210709183332/https://www.usmint.gov/coins/coin-med,AGREE,US Mint source confirms the Philadelphia Mint produced the 2021 Morgan Dollar with a 'CC' privy mark.,https://web.archive.org/web/20210709183332/https://www.usmint.gov/coins/coin-medal-programs/morgan-peace-dollar-anniversary-coins/2021-morgan-dollar,410,118
+4,NEW:morgan_dollars_2024#P,morgan_dollars,MISSING,2024 Morgan Uncirculated,A,https://web.archive.org/web/20240713042030/https://www.usmint.gov/news/press-rel,AGREE,Proposed value matches US Mint press release confirming 2024 Morgan Uncirculated dollars minted at Philadelphia.,https://web.archive.org/web/20240713042030/https://www.usmint.gov/news/press-releases/united-states-mint-opens-sales-for-the-2024-morgan-and-peace-uncirculated-silver-dollars-on-july-11,411,135
+5,NEW:morgan_dollars_2024#S-SILVER-PROOF,morgan_dollars,MISSING,2024-S Morgan Proof,A,https://web.archive.org/web/20261004090710/https://www.usmint.gov/coins/coin-pro,AGREE,"The US Mint Tier A source explicitly lists ""Morgan Silver Dollar 2024 Proof Coin San Francisco (S)"".",https://web.archive.org/web/20261004090710/https://www.usmint.gov/coins/coin-programs/morgan-and-peace-silver-dollar-coins/,382,110
+6,NEW:morgan_dollars_2024#S-REVERSE-PROOF,morgan_dollars,MISSING,2024-S Morgan Reverse Proof,A,https://web.archive.org/web/20241206144121/https://www.usmint.gov/news/press-rel,AGREE,US Mint press release confirms the 2024-S Morgan Dollar with a reverse proof finish as part of a two-coin set.,https://web.archive.org/web/20241206144121/https://www.usmint.gov/news/press-releases/united-states-mint-2024-morgan-and-peace-dollar-reverse-proof-two-coin-set-now-available,398,134
+7,NEW:morgan_dollars_2025#P,morgan_dollars,MISSING,2025 Morgan Uncirculated,A,https://web.archive.org/web/20250907103931/https://www.usmint.gov/news/press-rel,AGREE,"US Mint press release confirms '2025 Morgan Uncirculated' struck at Philadelphia Mint with a 150,000 mintage limit.",https://web.archive.org/web/20250907103931/https://www.usmint.gov/news/press-releases/2025-morgan-and-peace-uncirculated-silver-dollars-available-on-july-10,368,134
+8,NEW:morgan_dollars_2025#S-SILVER-PROOF,morgan_dollars,MISSING,2025-S Morgan Proof,A,https://web.archive.org/web/20250906083100/https://www.usmint.gov/news/press-rel,AGREE,"Proposed value '2025-S Morgan Proof' is directly supported by the Tier A US Mint source, confirming year, mint, and type",https://web.archive.org/web/20250906083100/https://www.usmint.gov/news/press-releases/2025-morgan-and-peace-dollar-proof-coins-available-on-september-11,417,130
+9,NEW:morgan_dollars_2025#S-REVERSE-PROOF,morgan_dollars,MISSING,2025-S Morgan Reverse Proof,A,https://web.archive.org/web/20251218150313/https://www.usmint.gov/news/press-rel,AGREE,U.S. Mint source confirms 2025-S Morgan Dollar in reverse proof finish as part of a two-coin set.,https://web.archive.org/web/20251218150313/https://www.usmint.gov/news/press-releases/morgan-and-peace-dollar-2025-reverse-proof-two-coin-set-available-on-december-11,383,134
+10,program#years,morgan_dollars,"1878-1904, 1921 (+2021, 2023)","1878-1904, 1921, 2021, 2023-2025 (2026 lives in America250 program)",A,https://www.globenewswire.com/news-release/2026/08/18/3347128/0/en/morgan-and-pe,PARSE_ERROR,"```json
+{
+  ""verdict"": ""UNKNOWN"",
+  ""note"": ""The provided Tier A source is a future-dated press release (August 18, 202",,452,41
+11,NEW:morgan_dollars_1879_cc_capped_die_cc_over_cc,morgan_dollars,MISSING,1879-CC Capped Die (CC over CC) (Red Book/VAM major),B,,PARSE_ERROR,"```json
+{
+  ""verdict"": ""AGREE"",
+  ""note"": ""The 1879-CC Capped Die (CC over CC) is a well",,303,39
+12,NEW:morgan_dollars_1880_79_cc_rev_of_1878,morgan_dollars,MISSING,1880/79-CC (Rev of 1878) (Red Book/VAM major),B,,PARSE_ERROR,"```json
+{
+  ""verdict"": ""AGREE"",
+  ""note"": ""The 1880/79-CC (Rev of 1878) is",,309,41
+13,NEW:morgan_dollars_1882_o_s,morgan_dollars,MISSING,1882-O/S (Red Book/VAM major),B,,PARSE_ERROR,"```json
+{
+  ""verdict"": ""AGREE"",
+  ""note"": ""The 1882-O/S is a well-known Morgan Dollar overmintmark",,289,40
+14,NEW:morgan_dollars_1887_6,morgan_dollars,MISSING,1887/6 (Red Book/VAM major),B,,PARSE_ERROR,"```json
+{
+  ""verdict"": ""AGREE"",
+  ""note"": ""The 1887/6 Morgan Dollar is a well-recognized and major overdate",,285,39
+15,NEW:morgan_dollars_1887_6_o,morgan_dollars,MISSING,1887/6-O (Red Book/VAM major),B,,AGREE,"The 1887/6-O is a well-established and significant Morgan Dollar overdate variety, recognized by Red Book and VAM major ",,289,65
+16,NEW:morgan_dollars_1888_o_doubled_die_obverse_hot_lips,morgan_dollars,MISSING,"1888-O Doubled Die Obverse ""Hot Lips"" (Red Book/VAM major)",B,,PARSE_ERROR,"```json
+{
+  ""verdict"": ""AGREE"",
+  ""note"": ""The 1888-O \""Hot Lips\"" is a well-established and major",,306,39
+17,NEW:morgan_dollars_1900_o_cc,morgan_dollars,MISSING,1900-O/CC (Red Book/VAM major),B,,AGREE,"The 1900-O/CC Morgan Dollar is a well-established and recognized over-mintmark variety, listed in major numismatic refer",,289,72
+18,NEW:morgan_dollars_1901_doubled_die_reverse,morgan_dollars,MISSING,1901 Doubled Die Reverse (Red Book/VAM major),B,,PARSE_ERROR,"```json
+{
+  ""verdict"": ""AGREE"",
+  ""note"": ""The 1901-O Doubled Die Reverse (VAM-3)",,292,38
+19,NEW:morgan_dollars_1880_79_p,morgan_dollars,MISSING,1880/79 (P) (Red Book/VAM major),none,,PARSE_ERROR,"```json
+{
+  ""verdict"": ""AGREE"",
+  ""note"": ""The 1880/79 (P) is a well-established Morgan",,297,38
+20,NEW:morgan_dollars_1880_79_o,morgan_dollars,MISSING,1880/79-O (Red Book/VAM major),B,,AGREE,"The 1880/79-O Morgan Dollar is a well-documented overdate variety, recognized by Red Book and VAM (VAM-10). Tier A sourc",,291,77
+21,NEW:morgan_dollars_1880_s_80_79,morgan_dollars,MISSING,1880-S 80/79 (Red Book/VAM major),B,,AGREE,"The 1880-S 80/79 is a well-recognized major overdate variety for Morgan Dollars, listed in the Red Book and as a major V",,297,84
+22,ADDED:morgan_dollars_2026 (scope check),morgan_dollars,"not in program (Firestore years ""1878-1921 (+ 2021, 2023)"")",2026 Morgan lives in 2026_semiquincentennial_collectibles (do not duplicate here): Enhanced Uncirculated as W-EU (ERIC-ACCEPTED: match Mint product title West Point (W); coin itself has no mint mark per Mint spec); Reverse Proof (P); Diamond Field Two-Coin Set P-DIAMOND-FIELD (26XS Philadelphia).,A,https://web.archive.org/web/20261004090713/https://www.usmint.gov/morgan-silver-,PARSE_ERROR,"```json
+{
+  ""verdict"": ""DISAGREE"",
+  ""note"": ""The provided Tier A source only verifies the Enhanced Uncirculated W-EU co",,506,40
+23,ADDED:program#mint_mark_locations,morgan_dollars,Mint Mark Key: | Philadelphia - P | Denver - D | New Orleans - O | San Francisco - S | Carson City - CC | West Point - W |,"Mint Mark Key: | Philadelphia - no mint mark (1878-1921, 2021-2025); P only on some 2026 Philadelphia issues | Denver - D | New Orleans - O | San Francisco - S | Carson City - CC | 2021 O and CC are privy marks on Philadelphia coins | West Point - W used as program id W-EU for 2026 Enhanced Uncirculated (ERIC-ACCEPTED); coin itself carries no mint mark per Mint spec |",A,https://web.archive.org/web/20210424145952/https://www.usmint.gov/learn/history/,PARSE_ERROR,"```json
+{
+  ""verdict"": ""AGREE"",
+  ""note"": ""Proposed value is largely correct. Philadelphia Morgan Dollars historically l",,539,41
+24,ADDED:morgan_dollars_2023_s_reverse_proof_2023#S-Reverse-Proof,morgan_dollars,S-Reverse-Proof,"S-REVERSE-PROOF (one exact id, same as the proposed 2024/2025 rows)",A,https://web.archive.org/web/20231110005655/https://www.usmint.gov/news/press-rel,PARSE_ERROR,"```json
+{
+  ""verdict"": ""AGREE"",
+  ""note"": ""US Mint press release title uses 'Reverse Proof'. Proposed all-caps 'S-REVERS",,441,41
+25,ADDED:program#total_slots,morgan_dollars,106,"122 if rows 3-8 and the PCGS-listed varieties (rows 10-17, 19, 20) are accepted (106 + 6 + 10); +1 if 1880/79 (P) is kept; +3 if 2026 goes in this program",none,,PARSE_ERROR,"```json
+{
+  ""verdict"": ""UNKNOWN"",
+  ""note"": ""Cannot verify additions of +6 (rows 3-8) and +10 (PC",,346,38

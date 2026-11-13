@@ -1,0 +1,21 @@
+﻿# COS SCORE - P7 ADD-COINS-FLOW V8 PLAN.V1
+Scorer: Grok CoS | 2026-10-15 ~10:25 ET | Reviewed: PLAN_P7_V8_UX_SAFETY_CORS_MOBILE.md (authoritative Plan.v1) + both NET-168 files + code spot-check main.py:48-66, main.py:8353-8354, main.py:~5574-5579, numista_mobile/firebase.json
+Verdict: **PLAN GO with the conditions below.** Build on dev only. Tier 1/2 (write path + CORS + auth) so GEMINI38_REVIEW with code quoted is required before the baton comes back.
+
+| # | Item | Score | Notes / conditions |
+|---|------|-------|-------|
+| 1 | Safety: confirm card + demo guard + 401 test | **PASS w/ conditions** | Put the signed-out/demo guard INSIDE `_addSelectedCoins` (the function that POSTs), not only before the dialog, so every caller is covered. Disable Save after the first tap (no double POST). `/api/checklist/add_coins` exists (main.py:8353, Depends(get_current_user)), so the 401 test is meaningful. Widget test must prove zero HTTP calls on Cancel AND in demo mode (mock client call count == 0). |
+| 2 | CORS preview regex + spot_prices explanation | **PASS w/ conditions** | Use CORSMiddleware `allow_origin_regex` (the no-op `_OriginMiddleware` sketch in the first NET-168 is rejected). SYSTEMIC: main.py ~5575 (`identify_group_photo`) hand-rolls CORS headers from `ALLOWED_ORIGINS` and will still reject preview origins. Add one helper `_is_allowed_origin(origin)` (list OR regex fullmatch) and use it in both places; grep for any other `ALLOWED_ORIGINS` use. Add NEGATIVE tests: `https://numista-vault--x.web.app.evil.com`, `https://evil-numista-vault--x.web.app`, `http://numista-vault--x.web.app`, `https://other-site--x.web.app` must NOT get allow-origin. spot_prices explanation accepted. NOTE: preview calls the LIVE Cloud Run backend, so the CORS fix only helps the re-gate after a backend deploy, which needs Eric's typed YES (see NET-169). |
+| 3 | Phone layout | **PASS w/ condition** | 16px is the floor for every checklist label (the first NET-168 said "14 minimum": rejected). Widget tests at 360x800 AND 320x640. |
+| 4 | Manual entry | **PASS w/ condition** | Qty: use hintText '1' and default 1 on blank submit (moving the cursor to the end, as in the first NET-168, still gives '11': rejected). Year and Qty digits-only; Cost `numberWithOptions(decimal: true)`. Nav highlight to My Collection (index 2) accepted. Keep Notes/Purchase Date out of scope (NET-129 still WAIT). |
+| 5 | Plain-English errors | **PASS w/ condition** | SYSTEMIC: grep all of `numista_mobile/lib` for `$e`, `e.toString()` and `${e` in user-visible text (SnackBar, dialog, error Text), not only the two cited lines. Prefer a type check for `http.ClientException`; `SocketException` is dart:io and never fires on web. List every replaced site in EXECUTE_DONE. |
+| 6a | mint_mark_diagrams pubspec | **PASS** | Correct root cause (`/assets/assets/` is the normal Flutter web path; the asset just wasn't bundled). |
+| 6b | Firestore aggregation 403 | **CONDITIONAL** | Code fallback (silent default) is GO. The `firestore.rules` edit may be committed to dev but is a SEPARATE live change: no `firebase deploy --only firestore` without Eric's typed YES, and not bundled with hosting. Before proposing public read, confirm `coins_reference` holds catalog data only (no user emails/collections) and say so in EXECUTE_DONE. Deployed file is `numista_mobile/firestore.rules` (numista_mobile/firebase.json); note whether `numista_backend/firestore.rules` is stale. Prefer `allow get, list: if true; allow write: if false;`. |
+| 6c | Dashboard value wrap | **PASS** | Also use NumberFormat so the number is never shown raw. |
+| 6d | PIN box | **PASS** | Test at 320px width: all 6 boxes fully visible, no overflow. |
+| 7 | Tests / gate | **PASS** | Full flutter test + pytest green at or above baselines, flutter analyze 0 errors. GEMINI38_REVIEW with verbatim changed lines per fix. |
+
+## Housekeeping
+- Two NET-168 files exist (one committed at 1371864b, one uncommitted). The PLAN_P7_V8 file is scored as Plan.v1. Both committed now for the record. Grok CoS takes NET-169; AG uses NET-170+.
+- Rule 3: Grok CoS (holder) renames the baton now to AGCOS_OVER. AG renames it back to GROKCOS_OVER when the build + GEMINI38_REVIEW are filed.
+- Commit only explicit paths. Do not commit numista_mobile/.firebase/hosting.*.cache.

@@ -1,0 +1,44 @@
+{
+  "docs_imported": 8,
+  "docs_listed_total": 96,
+  "failed": [
+    {
+      "key": "2025_morgan_peace_reverse_proof_press",
+      "url": "https://web.archive.org/web/20251218150313/https://www.usmint.gov/news/press-releases/morgan-and-peace-dollar-2025-reverse-proof-two-coin-set-available-on-december-11",
+      "title": "Morgan and Peace Dollar 2025 Reverse Proof Two-Coin Set Available",
+      "ok": false,
+      "error": "HTTPSConnectionPool(host='web.archive.org', port=443): Max retries exceeded with url: /web/20251218150313/https://www.usmint.gov/news/press-releases/morgan-and-peace-dollar-2025-reverse-proof-two-coin-set-available-on-december-11 (Caused by NewConnectionError(\"HTTPSConnection(host='web.archive.org',"
+    },
+    {
+      "key": "2023_morgan_peace_reverse_proof_press",
+      "url": "https://web.archive.org/web/20231110005655/https://www.usmint.gov/news/press-releases/2023-morgan-peace-dollar-reverse-proof-two-coin-set-s-available-november-9-at-noon",
+      "title": "2023 Morgan & Peace Dollar Reverse Proof Two-Coin Set (S) Available",
+      "ok": false,
+      "error": "HTTPSConnectionPool(host='web.archive.org', port=443): Max retries exceeded with url: /web/20231110005655/https://www.usmint.gov/news/press-releases/2023-morgan-peace-dollar-reverse-proof-two-coin-set-s-available-november-9-at-noon (Caused by NewConnectionError(\"HTTPSConnection(host='web.archive.org"
+    },
+    {
+      "key": "2026_morgan_enhanced_unc_26XE",
+      "url": "https://web.archive.org/web/20261004090713/https://www.usmint.gov/morgan-silver-dollar-2026-enhanced-uncirculated-coin-26XE.html",
+      "title": "Morgan Silver Dollar 2026 Enhanced Uncirculated Coin (26XE)",
+      "ok": false,
+      "error": "HTTPSConnectionPool(host='web.archive.org', port=443): Max retries exceeded with url: /web/20261004090713/https://www.usmint.gov/morgan-silver-dollar-2026-enhanced-uncirculated-coin-26XE.html (Caused by NewConnectionError(\"HTTPSConnection(host='web.archive.org', port=443): Failed to establish a new "
+    },
+    {
+      "key": "historic_coin_production_facilities",
+      "url": "https://web.archive.org/web/20210424145952/https://www.usmint.gov/learn/history/historic-coin-production",
+      "title": "Historic Coin Production Facilities (mint marks)",
+      "ok": false,
+      "error": "HTTPSConnectionPool(host='web.archive.org', port=443): Max retries exceeded with url: /web/20210424145952/https://www.usmint.gov/learn/history/historic-coin-production (Caused by NewConnectionError(\"HTTPSConnection(host='web.archive.org', port=443): Failed to establish a new connection: [WinError 10"
+    }
+  ],
+  "ids": [
+    "page-morgan-2023_morgan_peace_proof_press",
+    "page-morgan-2021_morgan_dollar_program",
+    "page-morgan-2021_morgan_peace_preorder_press",
+    "page-morgan-2024_morgan_peace_unc_press",
+    "page-morgan-2024_morgan_peace_program_landing",
+    "page-morgan-2024_morgan_peace_reverse_proof_press",
+    "page-morgan-2025_morgan_peace_unc_press",
+    "page-morgan-2025_morgan_peace_proof_press"
+  ]
+}
