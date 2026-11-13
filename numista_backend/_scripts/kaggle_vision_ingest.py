@@ -59,11 +59,11 @@ RATE       = 1.2   # seconds between Gemini calls
 PUB_BASE   = "https://storage.googleapis.com"
 # Model candidates in priority order — script picks first one that responds
 MODEL_CANDIDATES = [
-    "gemini-3.5-flash",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-hydrogen",
+    "gemini-4-hydrogen",
+    "gemini-4-hydrogen",
+    "gemini-4-hydrogen",
 ]
 MODEL = None  # resolved at runtime
 

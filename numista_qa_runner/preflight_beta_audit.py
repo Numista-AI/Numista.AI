@@ -32,7 +32,7 @@ def run_preflight_audit():
     print(f"  - Pro Model:   {GEMINI_PRO_MODEL}")
     print(f"  - Lite Model:  {GEMINI_LITE_MODEL}")
     print(f"  - Image Model: {GEMINI_IMAGE_MODEL}")
-    assert "gemini-3" in GEMINI_FLASH_MODEL, "Invalid Flash model"
+    assert any(v in GEMINI_FLASH_MODEL for v in ("gemini-3", "gemini-4")), "Invalid Flash model"
     print("  --> PASS: 100% compliant active 2026 Gemini stack.")
 
     # Test 2: Sub-Account Tier Limit Logic

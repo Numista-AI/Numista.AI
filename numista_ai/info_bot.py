@@ -5,8 +5,8 @@ from google import genai
 from google.genai import types
 
 PROJECT_ID = os.getenv("GCP_PROJECT", "studio-9101802118-8c9a8")
-LOCATION = os.getenv("GCP_LOCATION", "us-central1")
-GEMINI_MODEL = "gemini-3.8-flash"
+LOCATION = os.getenv("GCP_LOCATION", "global")
+GEMINI_MODEL = "gemini-4-hydrogen"
 EMBEDDING_MODEL = "gemini-embedding-2"
 
 _client = None

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types as genai_types
 
-PRIMARY_MODEL = "gemini-3.8-flash"
+PRIMARY_MODEL = "gemini-4-argon"
 PROJECT_ID = "studio-9101802118-8c9a8"
 
 # Production Client Setup - Gemini 3.x models require location='global' on Vertex AI
@@ -164,16 +164,16 @@ Return ONLY valid structured JSON conforming to the schema.
                 response_mime_type="application/json",
                 response_schema=CoinGradingResponse,
                 temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                thinking_config=genai_types.ThinkingConfig(thinking_level="medium"),
             )
         )
     except Exception as e:
         err_msg = str(e)
-        if "404" in err_msg or "not found" in err_msg.lower() or "gemini-3.8-flash" in err_msg:
-            print("    [Grading Advisor] gemini-3.8-flash not found or accessible. Falling back to gemini-3.1-pro-preview...")
+        if "404" in err_msg or "not found" in err_msg.lower() or "gemini-4-argon" in err_msg:
+            print("    [Grading Advisor] gemini-4-argon not found or accessible. Falling back to gemini-4-hydrogen...")
             try:
                 response = client.models.generate_content(
-                    model="gemini-3.1-pro-preview",
+                    model="gemini-4-hydrogen",
                     contents=[
                         label_obv, part_obv,
                         label_rev, part_rev,

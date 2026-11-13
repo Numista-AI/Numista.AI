@@ -18,6 +18,7 @@ import 'widgets/auth_gate.dart';
 import 'constants.dart';  // ITEM 10: kApiBaseUrl startup guard
 import 'package:google_fonts/google_fonts.dart';
 import 'utils/numista_error_helper.dart';
+import 'config/ai_config.dart';
 
 
 Future<void> main() async {
@@ -227,6 +228,7 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     ).timeout(const Duration(seconds: 12));
+    unawaited(AiConfig.init());
   } on TimeoutException {
     // Timed out — proceed anyway. The auth StreamBuilder may still resolve
     // once Firebase connects in the background.

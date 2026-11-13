@@ -52,8 +52,8 @@ def get_model_id(manifest):
     if not model_id:
         print('[test_synthesizer] WARNING: synthesizer_model_id not set in SUITE_MANIFEST.json.')
         print('  Set it after reading C:\\Users\\ericd\\Documents\\MyVertexProject\\Gemini Deprecation Schedules\\')
-        print('  Defaulting to gemini-3.8-flash.')
-        model_id = 'gemini-3.8-flash'
+        print('  Defaulting to gemini-4-hydrogen.')
+        model_id = 'gemini-4-hydrogen'
     return model_id
 
 
@@ -70,13 +70,12 @@ def generate_stubs_with_llm(items, model_id):
     Returns spec JS string or None on failure.
     """
     try:
-        import google.generativeai as genai
+        from google import genai
         api_key = os.environ.get('GEMINI_API_KEY')
         if not api_key:
             raise RuntimeError('GEMINI_API_KEY not set')
 
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(model_id)
+        client = genai.Client(api_key=api_key)
 
         batch_text = json.dumps(items[:MAX_ITEMS_PER_CALL], indent=2)
         prompt = (
@@ -87,7 +86,7 @@ def generate_stubs_with_llm(items, model_id):
             f"Usages:\n{batch_text}"
         )
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model=model_id, contents=prompt)
         text = response.text.strip()
         # Strip markdown fences if present
         if text.startswith('```'):

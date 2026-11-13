@@ -11,7 +11,7 @@ from google.genai import types
 PROJECT_ID = "studio-9101802118-8c9a8"
 LOCATION = "global"
 USER_EMAIL = "eric@numista.ai"
-MODEL_ID = "gemini-3.5-flash"
+MODEL_ID = "gemini-4-hydrogen"
 
 # Initialize clients
 db = firestore.Client(project=PROJECT_ID)

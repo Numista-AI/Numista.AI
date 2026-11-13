@@ -101,7 +101,7 @@ def run_gemini_ai_screening(file_path: Path) -> tuple[bool, str]:
         )
 
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-4-hydrogen",
             contents=[
                 genai_types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
                 prompt,

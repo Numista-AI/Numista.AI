@@ -8,7 +8,7 @@ from google import genai
 from google.genai import types as genai_types
 
 GCP_PROJECT_ID = "studio-9101802118-8c9a8"
-VERTEX_LOCATION = "us-central1"
+VERTEX_LOCATION = "global"
 
 PDF_DIR = r"C:\Users\ericd\Documents\MyVertexProject\US Mint Coin Programs"
 OUTPUT_FILE = r"C:\Users\ericd\Documents\MyVertexProject\numista_backend\master_coin_programs.json"
@@ -90,7 +90,7 @@ def main():
 
             pdf_part = genai_types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
             response = client.models.generate_content(
-                model="gemini-3.5-flash",
+                model="gemini-4-hydrogen",
                 contents=[pdf_part, prompt],
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",

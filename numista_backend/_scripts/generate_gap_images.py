@@ -21,10 +21,10 @@ from google.genai import types as genai_types
 
 # ── CONFIG ─────────────────────────────────────────────────────────────────────
 PROJECT    = 'studio-9101802118-8c9a8'
-LOCATION   = 'us-central1'
+LOCATION   = 'global'
 BUCKET     = 'numista-uploads-studio-9101802118-8c9a8'
 USER_EMAIL = 'jseaman1204@gmail.com'
-MODEL_ID   = 'imagen-3.0-generate-002'
+MODEL_ID   = 'gemini-3-pro-image'  # Primary via image_model_router (100/mo cap -> gemini-3.1-flash-image)
 
 # Year -> likely series for blank-series coins (1860s-1900s are Barber/Liberty Seated era)
 def guess_series(year_str: str, denom: str) -> str:
@@ -125,23 +125,35 @@ def main():
         max_retries = 4
         for attempt in range(max_retries):
             try:
-                response = client.models.generate_images(
-                    model=MODEL_ID,
-                    prompt=prompt,
-                    config=genai_types.GenerateImagesConfig(
-                        number_of_images=1,
-                        aspect_ratio="1:1",
-                        safety_filter_level="block_few",
-                        person_generation="dont_allow",
-                    )
-                )
+                import sys
+                from pathlib import Path
+                sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+                from services.image_model_router import execute_with_image_routing
 
-                if not response.generated_images:
+                def _call(selected_model: str):
+                    return client.models.generate_content(
+                        model=selected_model,
+                        contents=prompt,
+                        config=genai_types.GenerateContentConfig(
+                            response_modalities=["IMAGE"],
+                        ),
+                    )
+
+                response, _used_model = execute_with_image_routing(fs_client, _call)
+                img_bytes = None
+                for cand in (getattr(response, "candidates", None) or []):
+                    for part in (getattr(getattr(cand, "content", None), "parts", None) or []):
+                        inline = getattr(part, "inline_data", None)
+                        if inline and getattr(inline, "data", None):
+                            img_bytes = inline.data
+                            break
+                    if img_bytes:
+                        break
+
+                if not img_bytes:
                     print(f"         SKIP — no image returned")
                     errors += 1
                     break
-
-                img_bytes = response.generated_images[0].image.image_bytes
 
                 # Save to GCS
                 safe_label = re.sub(r'[^\w\-]', '_', label.lower())[:50]

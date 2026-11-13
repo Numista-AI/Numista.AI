@@ -6,7 +6,7 @@ from google import genai
 from google.genai import types
 
 client = genai.Client(vertexai=True, project='studio-9101802118-8c9a8', location='global')
-model_id = 'gemini-3.5-flash'
+model_id = 'gemini-4-hydrogen'
 
 pdf_files = [
     r'c:\Users\ericd\Documents\MyVertexProject\1 NUMISTA.AI\BETA TEST\MY TESTING\14 AUG 2026\CheckList Test\50 US States 14 AUG 26.pdf',

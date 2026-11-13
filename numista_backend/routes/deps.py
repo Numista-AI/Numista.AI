@@ -26,15 +26,17 @@ storage_client = gcs.Client(project=PROJECT_ID)
 
 # ── 2. Google GenAI Client (google-genai==1.71.0 Vertex AI standard) ───────────
 try:
-    genai_client = genai.Client(vertexai=True, project=PROJECT_ID, location="us-central1")
+    genai_client = genai.Client(vertexai=True, project=PROJECT_ID, location="global")
     logger.info("Successfully initialized Vertex AI Google GenAI Client.")
 except Exception as ge:
     logger.warning(f"Failed to initialize Vertex AI GenAI Client: {ge}")
     genai_client = None
 
-# Model Constants (Rule 6 compliant)
-MODEL_FLASH = "gemini-3.8-flash"
-MODEL_PRO = "gemini-3.1-pro-preview"
+from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL
+
+# Model Constants (Rule 6 compliant — centralized in config/__init__.py)
+MODEL_FLASH = GEMINI_FLASH_MODEL
+MODEL_PRO = GEMINI_PRO_MODEL
 
 # ── 3. Firebase Admin SDK Initialization ──────────────────────────────────────
 if not firebase_admin._apps:
