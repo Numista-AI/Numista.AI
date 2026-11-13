@@ -3639,7 +3639,7 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
 @app.post("/api/review/commit")
 async def commit_reviews(
     request: CommitReviewsRequest,
-    background_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     _user: dict = Depends(get_current_user)
 ):
     """
@@ -3805,7 +3805,7 @@ async def commit_reviews(
         if batch_op_count > 0:
             batch.commit()
 
-        if committed_count > 0:
+        if committed_count > 0 and background_tasks is not None:
             background_tasks.add_task(_async_post_commit_enrichment, caller_email, list(request.review_ids))
         return {
             "status": "success", 
@@ -9431,10 +9431,7 @@ def checklist_add_coins(req: ChecklistAddRequest, _user: dict = Depends(get_curr
         # normalise to "" — slot_resolver EU gate requires mintMark=='W'||mintMark.isEmpty.
         strike_fields = _derive_strike_fields(slot.variety_id)
         normalized_mint = "" if slot.mint_mark == "EU" else slot.mint_mark
-        try:
-            from services.mint_helpers import resolve_two_field_mint
-        except ImportError:
-            from numista_backend.services.mint_helpers import resolve_two_field_mint
+        from services.mint_helpers import resolve_two_field_mint
         mint_facility, resolved_mm, _ = resolve_two_field_mint(
             raw_mint_mark=normalized_mint,
             year=str(slot.year or ""),

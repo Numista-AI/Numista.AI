@@ -10,7 +10,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import GEMINI_FLASH_MODEL
 
 # --- CONFIGURATION ---
-load_dotenv()
+try:
+    load_dotenv(encoding="utf-8-sig")
+except UnicodeDecodeError:
+    load_dotenv(encoding="cp1252")
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
     raise EnvironmentError("GOOGLE_API_KEY is not set. Check your .env file.")

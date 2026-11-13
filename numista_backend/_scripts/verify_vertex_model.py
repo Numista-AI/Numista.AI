@@ -15,7 +15,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import GEMINI_FLASH_MODEL
 
-load_dotenv()
+try:
+    load_dotenv(encoding="utf-8-sig")
+except UnicodeDecodeError:
+    load_dotenv(encoding="cp1252")
 PROJECT_ID = "studio-9101802118-8c9a8"
 
 def test_model(model_name, location):

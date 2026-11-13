@@ -13,7 +13,7 @@ from services.greysheet_quota_service import GreysheetQuotaService
 try:
     from services.mint_helpers import read_mint_mark
 except ImportError:
-    from numista_backend.services.mint_helpers import read_mint_mark
+    from .mint_helpers import read_mint_mark
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

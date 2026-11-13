@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 try:
     from services.mint_helpers import read_mint_mark, query_docs_by_mint_mark
 except ImportError:
-    from numista_backend.services.mint_helpers import read_mint_mark, query_docs_by_mint_mark
+    from .mint_helpers import read_mint_mark, query_docs_by_mint_mark
 
 logger = logging.getLogger("numista_backend.duplicate_check")
 
