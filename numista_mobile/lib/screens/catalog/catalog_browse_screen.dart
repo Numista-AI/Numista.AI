@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/melt_value_service.dart';
 import '../../utils/catalog_image_guard.dart';
+import '../unified_coin_detail_screen.dart';
 
 class CatalogBrowseScreen extends StatefulWidget {
   final String? initialQuery;
@@ -850,6 +851,14 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
   }
 
   void _showItemDetailModal(Map<String, dynamic> item) {
+    UnifiedCoinDetailScreen.showPublic(
+      context,
+      projection: PublicCoinProjection.fromCatalogMap(item),
+      legacyOpen: () => _showLegacyItemDetailModal(item),
+    );
+  }
+
+  void _showLegacyItemDetailModal(Map<String, dynamic> item) {
     showDialog(
       context: context,
       builder: (context) {

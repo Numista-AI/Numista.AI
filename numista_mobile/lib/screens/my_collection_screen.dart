@@ -13,6 +13,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/valuation_mode_service.dart';
 import 'currency_collection_screen.dart';
+import 'unified_coin_detail_screen.dart';
 import '../services/world_item_service.dart';
 import '../services/auth_service.dart';
 import '../models/coin_model.dart';
@@ -2735,7 +2736,21 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             // For virtual children, inspector/detail navigate to parent
             final effectiveId = crw.isVirtualChild ? (crw.parentDocId ?? crw.id) : crw.id;
 
-            void onTap() => _showCoinInspectorDialog(effectiveId, m);
+            void onTap() {
+              final parentDoc = crw.isVirtualChild
+                  ? _cachedCoinsDocs.where((d) => d.id == crw.parentDocId).firstOrNull
+                  : crw.snapshot;
+              final coinData = (parentDoc?.data() as Map<String, dynamic>?) ?? m;
+              UnifiedCoinDetailScreen.show(
+                context,
+                coin: CoinModel.fromMap(coinData, effectiveId),
+                snapshot: parentDoc,
+                initialParentIndex: resolveParentIndex(docs, effectiveId),
+                collectionRows: docs,
+                cachedCoinsDocs: _cachedCoinsDocs,
+                legacyOpen: () => _showCoinInspectorDialog(effectiveId, m),
+              );
+            }
 
             // Actions cell (col 0)
             if (col == 0) {
@@ -2760,27 +2775,43 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             if (parentDoc == null) return; // parent missing — skip
                             final parentData = (parentDoc.data() as Map<String, dynamic>?) ?? {};
                             final coin = CoinModel.fromMap(parentData, parentDoc.id);
-                            CoinDetailScreen.show(
+                            UnifiedCoinDetailScreen.show(
                               context,
                               coin: coin,
-                              spotPrices: _spotPrices,
-                              onNavigateToAiChat: widget.onNavigateWithQuery != null
-                                  ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
-                                  : null,
-                              onDeleted: () => setState(() {}),
-                              onEdited: () => setState(() {}),
+                              snapshot: parentDoc,
+                              initialParentIndex: resolveParentIndex(docs, parentDoc.id),
+                              collectionRows: docs,
+                              cachedCoinsDocs: _cachedCoinsDocs,
+                              legacyOpen: () => CoinDetailScreen.show(
+                                context,
+                                coin: coin,
+                                spotPrices: _spotPrices,
+                                onNavigateToAiChat: widget.onNavigateWithQuery != null
+                                    ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
+                                    : null,
+                                onDeleted: () => setState(() {}),
+                                onEdited: () => setState(() {}),
+                              ),
                             );
                           } else {
                             final coin = CoinModel.fromMap(m, crw.id);
-                            CoinDetailScreen.show(
+                            UnifiedCoinDetailScreen.show(
                               context,
                               coin: coin,
-                              spotPrices: _spotPrices,
-                              onNavigateToAiChat: widget.onNavigateWithQuery != null
-                                  ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
-                                  : null,
-                              onDeleted: () => setState(() {}),
-                              onEdited: () => setState(() {}),
+                              snapshot: crw.snapshot,
+                              initialParentIndex: resolveParentIndex(docs, crw.id),
+                              collectionRows: docs,
+                              cachedCoinsDocs: _cachedCoinsDocs,
+                              legacyOpen: () => CoinDetailScreen.show(
+                                context,
+                                coin: coin,
+                                spotPrices: _spotPrices,
+                                onNavigateToAiChat: widget.onNavigateWithQuery != null
+                                    ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
+                                    : null,
+                                onDeleted: () => setState(() {}),
+                                onEdited: () => setState(() {}),
+                              ),
                             );
                           }
                         }),
@@ -3037,7 +3068,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           child: InkWell(
             onTap: () {
               setState(() => _selectedCoinId = effectiveId);
-              _showCoinInspectorDialog(effectiveId, m);
+              final parentDoc = crw.isVirtualChild
+                  ? _cachedCoinsDocs.where((d) => d.id == crw.parentDocId).firstOrNull
+                  : crw.snapshot;
+              final coinData = (parentDoc?.data() as Map<String, dynamic>?) ?? m;
+              UnifiedCoinDetailScreen.show(
+                context,
+                coin: CoinModel.fromMap(coinData, effectiveId),
+                snapshot: parentDoc,
+                initialParentIndex: resolveParentIndex(docs, effectiveId),
+                collectionRows: docs,
+                cachedCoinsDocs: _cachedCoinsDocs,
+                legacyOpen: () => _showCoinInspectorDialog(effectiveId, m),
+              );
             },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
@@ -3115,7 +3158,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           final parentId = m['parent_set_id'].toString();
                           final parentDoc = _cachedCoinsDocs.where((d) => d.id == parentId).firstOrNull;
                           if (parentDoc != null) {
-                            _showCoinInspectorDialog(parentDoc.id, parentDoc.data());
+                            final parentData = parentDoc.data();
+                            UnifiedCoinDetailScreen.show(
+                              context,
+                              coin: CoinModel.fromMap(parentData, parentDoc.id),
+                              snapshot: parentDoc,
+                              initialParentIndex: resolveParentIndex(docs, parentDoc.id),
+                              collectionRows: docs,
+                              cachedCoinsDocs: _cachedCoinsDocs,
+                              legacyOpen: () => _showCoinInspectorDialog(parentDoc.id, parentData),
+                            );
                           }
                         },
                         child: Container(
