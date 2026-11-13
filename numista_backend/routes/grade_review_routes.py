@@ -22,6 +22,7 @@ from routes.deps import (
     require_admin_user,
     check_and_increment_rate_cap,
 )
+from services.mint_helpers import read_mint_mark
 from services.coin_image_service import (
     load_sanitized_coin_image,
     parse_and_validate_storage_url,
@@ -118,7 +119,7 @@ def grade_review_queue(
             'review_id': review_id,
             'has_reverse': bool(rev_url),
             'year': d.get('Year', ''),
-            'mint_mark': d.get('Mint Mark', ''),
+            'mint_mark': read_mint_mark(d),
             'denomination': d.get('Denomination', ''),
             'program_series': d.get('Program/Series', ''),
             'theme_subject': d.get('Theme/Subject', ''),

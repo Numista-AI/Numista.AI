@@ -106,7 +106,8 @@ def resolve_coin_catalog_metadata(
     mint_mark: str = "",
     program_series: str = "",
     theme_subject: str = "",
-    variety: str = ""
+    variety: str = "",
+    country: str = "United States",
 ) -> Dict[str, Any]:
     """
     Catalog-driven coin metadata resolution.
@@ -125,6 +126,8 @@ def resolve_coin_catalog_metadata(
     raw_series = (program_series or "").strip()
     raw_theme = (theme_subject or "").strip()
     raw_variety = (variety or "").strip()
+    country_clean = (country or "").strip() or "United States"
+    is_us_country = country_clean.lower() in {"united states", "usa", "us"}
 
     # Default result (unmapped / fail-closed baseline)
     try:
@@ -138,6 +141,7 @@ def resolve_coin_catalog_metadata(
         series=raw_series,
         denomination=norm_denom or "Quarter Dollar",
         variety=raw_variety,
+        country=country_clean,  # F8: never default a non-US coin to US rules
     )
     result = {
         "year": str(year).strip(),
@@ -149,8 +153,8 @@ def resolve_coin_catalog_metadata(
         "theme_subject": raw_theme or "Unmapped",
         "subject_slug": slugify(raw_theme or "unmapped"),
         "variety": raw_variety,
-        "country": "United States",
-        "is_foreign": False,
+        "country": country_clean,
+        "is_foreign": not is_us_country,
         "estimated_value": None,
         "valuation_source": "Unmapped – Manual Review Required",
         "catalog_matched": False,

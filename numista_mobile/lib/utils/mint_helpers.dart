@@ -17,6 +17,15 @@ class MintHelpers {
     'philadelphia',
   };
 
+  static const Map<String, String> _facilityNames = {
+    'denver': 'Denver',
+    'san francisco': 'San Francisco',
+    'west point': 'West Point',
+    'new orleans': 'New Orleans',
+    'carson city': 'Carson City',
+    'charlotte': 'Charlotte',
+    'dahlonega': 'Dahlonega',
+  };
   static const Set<String> _usCountries = {
     'usa',
     'us',
@@ -129,6 +138,10 @@ class MintHelpers {
     String mm;
     if (_dirtyPlaceholders.contains(rawMmLower)) {
       mm = '';
+    } else if (_facilityNames.containsKey(rawMmLower)) {
+      // Facility name typed into the mark field (e.g. 'Denver'): facility, not a mark.
+      mm = '';
+      if (rawMintClean.isEmpty) rawMintClean = _facilityNames[rawMmLower]!;
     } else if (_phillyTextAliases.contains(rawMmLower)) {
       mm = '';
       if (isUs && rawMintClean.isEmpty) {
@@ -216,7 +229,8 @@ class MintHelpers {
       }
     }
 
-    return (mint: '', mintMark: mm, ruleId: 11);
+    // Rule 11: preserve any facility already on the document (F1 parity with Python).
+    return (mint: rawMintClean, mintMark: mm, ruleId: 11);
   }
 
   /// Display formatter:

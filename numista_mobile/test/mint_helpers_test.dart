@@ -144,4 +144,14 @@ void main() {
       expect(SlotResolver.matchesVariety(phillyRpDoc, euVariety), isFalse);
     });
   });
-}
+
+  group('F1 parity: Rule 11 preserves existing facility', () {
+    test('probe cases', () {
+      final a = MintHelpers.resolveTwoFieldMint(rawMint: 'Royal Canadian Mint', country: 'Canada', year: '2020');
+      expect((a.mint, a.mintMark, a.ruleId), ('Royal Canadian Mint', '', 11));
+      final b = MintHelpers.resolveTwoFieldMint(rawMintMark: 'D', rawMint: 'Denver', year: '1900');
+      expect((b.mint, b.mintMark, b.ruleId), ('Denver', 'D', 11));
+      final c = MintHelpers.resolveTwoFieldMint(rawMintMark: 'DENVER', year: '1990');
+      expect((c.mint, c.mintMark, c.ruleId), ('Denver', '', 11));
+    });
+  });}

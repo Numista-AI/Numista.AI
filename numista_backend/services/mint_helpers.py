@@ -12,6 +12,15 @@ from typing import Any
 
 _DIRTY_PLACEHOLDERS = frozenset({"none", "(none)", "null", "n/a", "nan"})
 _PHILLY_TEXT_ALIASES = frozenset({"nmm", "no mint mark", "philadelphia"})
+_FACILITY_NAMES = {
+    "denver": "Denver",
+    "san francisco": "San Francisco",
+    "west point": "West Point",
+    "new orleans": "New Orleans",
+    "carson city": "Carson City",
+    "charlotte": "Charlotte",
+    "dahlonega": "Dahlonega",
+}
 _US_COUNTRIES = frozenset({"usa", "us", "united states", ""})
 _YEAR_RE = re.compile(r"^(\d{4})")
 
@@ -142,6 +151,12 @@ def resolve_two_field_mint(
 
     if raw_mm_lower in _DIRTY_PLACEHOLDERS:
         mm = ""
+    elif raw_mm_lower in _FACILITY_NAMES:
+        # Facility name typed into the mark field (e.g. "Denver"): it is a facility,
+        # not an on-coin mark.
+        mm = ""
+        if not raw_mint_clean:
+            raw_mint_clean = _FACILITY_NAMES[raw_mm_lower]
     elif raw_mm_lower in _PHILLY_TEXT_ALIASES:
         mm = ""
         if is_us and not raw_mint_clean:
@@ -214,9 +229,59 @@ def resolve_two_field_mint(
             ):
                 return ("Philadelphia", "", 10)
 
-    # Rule 11: Non-US coin or US coin with insufficient/ambiguous metadata
-    return ("", mm, 11)
+    # Rule 11: Non-US coin or US coin with insufficient/ambiguous metadata.
+    # F1 fix: preserve any facility already on the document (never blank it).
+    return (raw_mint_clean, mm, 11)
 
+
+def build_mint_write_fields(
+    raw_mint_mark: str = "",
+    raw_mint: str = "",
+    **ctx: Any,
+) -> dict[str, str]:
+    """Transitional dual-write payload for new coin documents (F2).
+
+    Returns ``{"mint", "mint_mark", "Mint Mark"}``. The legacy ``"Mint Mark"`` key
+    is kept until Phase 7 prune; remove it from this helper at that point.
+    """
+    facility, mark, _ = resolve_two_field_mint(
+        raw_mint_mark=raw_mint_mark, raw_mint=raw_mint, **ctx
+    )
+    return {"mint": facility, "mint_mark": mark, "Mint Mark": mark}
+
+
+def apply_imported_mint_fields(doc: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a spreadsheet/CSV import row in place (F2 import mapping).
+
+    A raw ``"Mint"`` column may hold a facility name ("Denver", "Royal Canadian
+    Mint") or a mark letter ("D"); route by value so a facility never lands in
+    ``Mint Mark``. Writes ``mint`` + ``mint_mark`` and the transitional legacy
+    ``Mint Mark`` (remove at Phase 7). Idempotent.
+    """
+    raw_mint = _clean_str(doc.pop("Mint", ""))
+    mark = read_mint_mark(doc)
+    facility = read_mint_facility(doc)
+    if raw_mint:
+        if len(raw_mint) <= 2 and not mark:
+            mark = raw_mint.upper()
+        elif not facility:
+            facility = raw_mint
+    new_mint, new_mark, _ = resolve_two_field_mint(
+        raw_mint_mark=mark,
+        raw_mint=facility,
+        year=_clean_str(doc.get("Year") or doc.get("year")),
+        series=_clean_str(doc.get("Program/Series") or doc.get("program_series")),
+        denomination=_clean_str(doc.get("Denomination") or doc.get("denomination")),
+        country=_clean_str(doc.get("Country") or doc.get("country")) or "United States",
+        variety=_clean_str(doc.get("Variety") or doc.get("variety")),
+        strike_type=_clean_str(doc.get("Strike Type") or doc.get("strike_type")),
+        metal_content=_clean_str(doc.get("Metal Content") or doc.get("metal_content")),
+        retailer_item_no=_clean_str(doc.get("Retailer Item No.")),
+    )
+    doc["mint"] = new_mint
+    doc["mint_mark"] = new_mark
+    doc["Mint Mark"] = new_mark
+    return doc
 
 def format_mint_mark_for_display(mint: str, mint_mark: str, compact: bool = False) -> str:
     """
