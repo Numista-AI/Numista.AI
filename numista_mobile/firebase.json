@@ -76,7 +76,7 @@
       },
       {
         "source": "/catalog/**",
-        "destination": "/index.html"
+        "destination": "/catalog_unknown.html"
       },
       {
         "source": "/about",

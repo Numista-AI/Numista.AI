@@ -10,6 +10,7 @@ import 'screens/attorney_portal_screen.dart';
 import 'screens/not_found_screen.dart';
 import 'screens/public_wishlist_view_screen.dart';
 import 'screens/catalog/catalog_browse_screen.dart';
+import 'routing/public_catalog_route.dart';
 import 'services/theme_provider.dart';
 import 'widgets/morgan_feedback_drawer.dart';
 import 'services/guest_seed_service.dart';
@@ -27,44 +28,13 @@ class CatalogRouteInfo {
 }
 
 CatalogRouteInfo resolveCatalogRoute(Uri uri) {
-  String routePath = uri.path;
-  String? nacFromQuery;
-
-  // Inspect hash fragment for Flutter Web
-  if (uri.fragment.isNotEmpty) {
-    String frag = uri.fragment;
-    if (frag.startsWith('/')) {
-      final qIdx = frag.indexOf('?');
-      if (qIdx != -1) {
-        final queryStr = frag.substring(qIdx + 1);
-        final fragUri = Uri(query: queryStr);
-        nacFromQuery = fragUri.queryParameters['item'];
-        frag = frag.substring(0, qIdx);
-      }
-      if (frag == '/catalog' || frag.startsWith('/catalog/')) {
-        routePath = frag;
-      }
-    }
+  if (!isCatalogUri(uri)) {
+    return const CatalogRouteInfo(isCatalog: false);
   }
-
-  final normalized = (routePath.endsWith('/') && routePath.length > 1)
-      ? routePath.substring(0, routePath.length - 1)
-      : routePath;
-
-  if (normalized == '/catalog' || routePath.startsWith('/catalog/')) {
-    String? initialNac;
-    if (routePath.startsWith('/catalog/')) {
-      final sub = routePath.substring('/catalog/'.length).trim();
-      if (sub.isNotEmpty) {
-        initialNac = Uri.decodeComponent(sub);
-      }
-    }
-    initialNac ??= nacFromQuery;
-    initialNac ??= uri.queryParameters['item'];
-    return CatalogRouteInfo(isCatalog: true, initialNacCode: initialNac);
-  }
-
-  return const CatalogRouteInfo(isCatalog: false);
+  return CatalogRouteInfo(
+    isCatalog: true,
+    initialNacCode: extractInitialNac(uri),
+  );
 }
 
 Future<void> main() async {

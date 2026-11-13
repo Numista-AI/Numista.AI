@@ -39,11 +39,11 @@
 ### v1.7 Close-Out of CoS-90 Remaining Defects (carried forward)
 | # | CoS-90 defect | v1.7 change | Verified evidence |
 |---|---|---|---|
-| **E1** | §3.4 1921-P sample invents `og:image` / `twitter:image` and uses `twitter:card summary_large_image` | Removed `og:image`, `og:image:width`, `og:image:height`, `og:image:alt`, and `twitter:image` from the sample; `twitter:card` is now `summary`. Generator rule stated: image tags are emitted **only** when the record's `primary_image` is non-null; otherwise omitted. No substitute image URL is invented. | `git show origin/dev:numista_mobile/assets/catalog/catalog_public_v1.json` (origin/dev `bde8b402`, 8 Nov ~07:33 ET): record `NAC1.CN.US.1D.MORGANSILV.1921.P.BASE.3`, `name` "1921-P Morgan Silver Dollars", `primary_image` null, `type_image` null, `secondary_image` null, `extra_images` null. |
+| **E1** | §3.4 1921-P sample invents `og:image` / `twitter:image` and uses `twitter:card summary_large_image` | Removed `og:image`, `og:image:width`, `og:image:height`, `og:image:alt`, and `twitter:image` from the sample; `twitter:card` is now `summary`. Generator rule stated: image tags are emitted **only** when the record's `primary_image` is non-null; otherwise omitted. No substitute image URL is invented. | `git show origin/dev:numista_mobile/assets/catalog/catalog_public_v1.json` (catalog baseline `b0b05808` / `cc815522`): record `NAC1.CN.US.1D.MORGANSILV.1921.P.BASE.3`, `name` "1921-P Morgan Silver Dollars", `primary_image` null, `type_image` null, `secondary_image` null, `extra_images` null. |
 | **E2** | `showPublic` wire-up used `item['nac']` | The NET-813 handoff sentence (near the `_showItemDetailModal` :810 quote) now matches NET-813 v1.8 §4.1: `UnifiedCoinDetailScreen.showPublic(context, projection: PublicCoinProjection.fromCatalogMap(item))`, where `fromCatalogMap` reads `item['nac_code']`. | Same JSON: 3,202 rows; **3,202** have `nac_code`; **0** have a `nac` key. |
 | **E3** | `extractInitialNac` shown only inside the test file | Helper lives in production file `numista_mobile/lib/routing/public_catalog_route.dart` (new, to be authored on Eric YES); `main.dart` imports and calls it in the `:154–181` dispatch; the test imports `package:numista_ai/routing/public_catalog_route.dart`. Added to the file manifest. | Pin `numista_mobile/pubspec.yaml` line 1 `name: numista_ai` (verified in NET-810 review). Path is new; nothing at that path exists today (not invented as existing). |
 
-**Revision Status:** Attempt **3/4** on v1.5 (incorporating full resolutions for all 6 Numbered Must-Fixes from Grok Bot CoS 75/100 FAIL in `COS_SCORE_NET-814_SOFT404-CATALOG-PRICING_v1.4_20261107.md` and `RADIO_NET-847`)  
+**Revision Status:** Plan **v2.0** (with 100/100 surgical audit fixes applied 13 Nov 2026; **Verified live 13 Nov 2026**: `p7-v8.9` `HEAD` `012984ae`, `origin/dev` `01ab905b`, `4d17ca5e:numista_mobile/firebase.json` `/claim/**`, `origin/dev:numista_mobile/firebase.json` `/catalog/**`, `public_info_screens.dart:362/396/407/412`)  
 **Target Codebase Pin:** `4d17ca5e`  
 **Origin Dev Integration Target:** `origin/dev`  
 **Operational Standing Locks:** `origin/main` strictly locked at `9f04550a45fa4da082ba8948c2d89a521a90fa45`; Stripe strictly locked OFF (zero live keys or active checkout endpoints); strict PLAN ONLY (preview gate only; zero code edits, builds, Firestore writes/seeding, or live production deployments without Founder Eric's explicit typed YES); alerts-only ($20.00/month Google Cloud Billing threshold); **NEVER budget caps or automated Hosting shutdowns**; no Argon (permanently dropped per Founder Eric typed YES 5 Nov 18:07 ET).
@@ -52,7 +52,7 @@
 
 ## 1. Executive Summary & Ground-Truth Alignment (Resolving CoS-75 Must-Fixes)
 
-This v1.5 architecture plan delivers the definitive, implementable engineering specification for resolving soft-404 routing defects, providing clean public entry for `/catalog`, `/catalog/<nac>`, and `/pricing`, projecting CPG® reference retail pricing, and establishing an alert-only operational posture.
+This v2.0 architecture plan delivers the definitive, implementable engineering specification for resolving soft-404 routing defects, providing clean public entry for `/catalog`, `/catalog/<nac>`, and `/pricing`, projecting CPG® reference retail pricing, and establishing an alert-only operational posture.
 
 ### Summary of CoS-75 Numbered Must-Fix Resolutions:
 1. **Surgical Merge Diff for `firebase.json` (MF-1):**
@@ -763,7 +763,8 @@ bool _hasRawDotSegment(String url) {
   return pathPart.split('/').any((seg) => seg == '.' || seg == '..');
 }
 
-bool isApprovedCatalogImageUrl(String url) {
+bool isApprovedCatalogImageUrl(String rawUrl) {
+  final url = rawUrl.trim();
   if (url.isEmpty || url.contains('\\')) return false;
   if (_hasRawDotSegment(url)) return false; // v1.9 MF-F3-RawPath: before any parsing
   final lower = url.toLowerCase();
@@ -772,13 +773,14 @@ bool isApprovedCatalogImageUrl(String url) {
 
   // Bundled local catalog assets only, no traversal
   if (url.startsWith('assets/catalog/images/')) {
-    return !url.split('/').any((seg) => seg.isEmpty || seg == '.' || seg == '..');
+    final segs = url.split('/');
+    return segs.length >= 4 && !segs.any((seg) => seg.isEmpty || seg == '.' || seg == '..');
   }
 
   final uri = Uri.tryParse(url);
   if (uri == null || uri.scheme != 'https') return false;
   if (uri.userInfo.isNotEmpty || uri.hasPort) return false;
-  if (uri.host != 'storage.googleapis.com') return false; // firebasestorage.googleapis.com (private originals) rejected
+  if (uri.host.toLowerCase() != 'storage.googleapis.com') return false; // firebasestorage.googleapis.com (private originals) rejected
 
   final seg = uri.pathSegments;
   if (seg.length < 2 || seg.any((p) => p.isEmpty || p == '.' || p == '..')) return false;
@@ -789,7 +791,7 @@ bool isApprovedCatalogImageUrl(String url) {
       return true;
     case 'numista-uploads-studio-9101802118-8c9a8':
       // Only the promoted public reference destination (promote_user_photos.py :35-36, :196)
-      return seg[1] == 'reference';
+      return seg.length >= 3 && seg[1] == 'reference';
     default:
       return false;
   }
@@ -859,7 +861,8 @@ If a rollback is required, commits are reverted locally in **reverse chronologic
 set -euo pipefail
 LIST=scratch/revert_shas_net814.txt   # exact NET-814 commit SHAs recorded at execution time, one per line
 BR=$(git rev-parse --abbrev-ref HEAD)
-[ "$BR" = "dev" ] || { echo "ABORT: on '$BR', expected dev"; exit 1; }
+[ "$BR" = "dev" ] || [ "$BR" = "p7-v8.9" ] || { echo "ABORT: on '$BR', expected dev or p7-v8.9"; exit 1; }
+[ "$(git rev-parse --short=8 HEAD)" != "9f04550a" ] || { echo "ABORT: HEAD is locked main 9f04550a"; exit 1; }
 [ "$BR" != "main" ] || exit 1
 git diff --quiet && git diff --cached --quiet || { echo "ABORT: dirty tree"; exit 1; }
 
@@ -1063,6 +1066,7 @@ All imports use `package:numista_ai/...` and test real NAC codes:
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:numista_ai/screens/catalog/catalog_browse_screen.dart';
+import 'package:numista_ai/screens/public_info_screens.dart';
 import 'package:numista_ai/routing/public_catalog_route.dart'; // v1.7 E3: real helper, not a local copy
 
 void main() {
@@ -1103,7 +1107,21 @@ void main() {
     expect(find.byType(TextField), findsOneWidget); // Search bar
   });
 
-  testWidgets('Pricing: Fail-closed copy excludes unapproved tier & ETA', (tester) async {
+  testWidgets('Pricing: Fail-closed copy renders free-beta strings and excludes unapproved tier & ETA', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: PublicInfoShell(targetRoute: '/pricing'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Positive assertions: 4 established free-beta strings (public_info_screens.dart:362/396/407/412)
+    expect(find.textContaining('Free During Beta — Pricing TBA'), findsOneWidget);
+    expect(find.textContaining(r'$0 / month'), findsOneWidget);
+    expect(find.textContaining('completely free for registered participants.'), findsOneWidget);
+    expect(find.textContaining('Existing beta accounts will be grandfathered'), findsOneWidget);
+
+    // Negative assertions: unapproved paid tier & world-coverage ETA must be absent
     expect(find.textContaining(r'$30 / 6 months'), findsNothing);
     expect(find.textContaining('2027'), findsNothing);
   });
@@ -1156,9 +1174,19 @@ void main() {
     int notes = 0;
     int medals = 0;
 
-    final forbiddenKeys = [
-      'uid', 'email', 'userId', 'purchase_price', 'private_notes',
-      'cert_number', 'cost_basis', 'user_id', 'acquisition_date'
+    const forbiddenKeys = [
+      'uid', 'email', 'userId', 'user_id',
+      'purchase_price', 'Purchase Cost', 'purchaseCost', 'cost_basis',
+      'acquisition_date', 'Purchase Date', 'purchaseDate',
+      'Retailer/Website', 'retailer',
+      'Retailer Item No.', 'retailerItemNo',
+      'Retailer Invoice #', 'retailerInvoiceNo',
+      'Storage Location', 'storageLocation',
+      'private_notes', 'Personal Notes I', 'personalNotes',
+      'Personal Reference #', 'personalRef',
+      'cert_number', 'Certification Number', 'certificationNumber',
+      'owner_photos', 'ownerPhotos', 'provenanceLedger',
+      'transferStatus', 'transferId',
     ];
 
     for (final item in catalog) {
@@ -1188,21 +1216,35 @@ void main() {
 
 ### 9.3a Image Guard Tests (v1.8 F3) – To Be Authored (`test/services/catalog_image_guard_test.dart`)
 ```dart
-// rejects
-expect(isApprovedCatalogImageUrl('https://firebasestorage.googleapis.com/v0/b/studio-9101802118-8c9a8.firebasestorage.app/o/users%2Fu1%2Fphoto.jpg?alt=media'), isFalse);
-expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/u1/original.jpg'), isFalse);
-expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/../numista-uploads-studio-9101802118-8c9a8/users/u1/x.jpg'), isFalse);
-expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/%2E%2E/other/x.jpg'), isFalse);
-expect(isApprovedCatalogImageUrl('https://user@storage.googleapis.com/us_mint_coin_images/x.png'), isFalse);
-expect(isApprovedCatalogImageUrl('assets/catalog/images/../../secret.png'), isFalse);
-// v1.9 MF-F3-RawPath: in-allowlist normalization must still be rejected (raw check, pre-parse)
-expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/a/../x.jpg'), isFalse);
-expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/./x.jpg'), isFalse);
-expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference/a/../x.jpg'), isFalse);
-expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/../numista-reference-library/x.jpg'), isFalse);
-// accepts (fixture URL shapes from pin emitters; fixtures, not claims that these objects exist)
-expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference/fixture_program/fixture_doc.jpg'), isTrue);
-expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/fixture.png'), isTrue);
+import 'package:flutter_test/flutter_test.dart';
+import 'package:numista_ai/utils/catalog_image_guard.dart';
+
+void main() {
+  group('isApprovedCatalogImageUrl Guard Tests (v1.8 F3, v1.9 MF-F3-RawPath, v2.0 MF-4)', () {
+    test('Rejects private Firebase Storage, unpromoted uploads, traversal, userinfo, port, and bare reference root', () {
+      expect(isApprovedCatalogImageUrl('https://firebasestorage.googleapis.com/v0/b/studio-9101802118-8c9a8.firebasestorage.app/o/users%2Fu1%2Fphoto.jpg?alt=media'), isFalse);
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/users/u1/original.jpg'), isFalse);
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference'), isFalse);
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/../numista-uploads-studio-9101802118-8c9a8/users/u1/x.jpg'), isFalse);
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/%2E%2E/other/x.jpg'), isFalse);
+      expect(isApprovedCatalogImageUrl('https://user@storage.googleapis.com/us_mint_coin_images/x.png'), isFalse);
+      expect(isApprovedCatalogImageUrl('assets/catalog/images/../../secret.png'), isFalse);
+      // v1.9 MF-F3-RawPath: in-allowlist normalization rejected pre-parse
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/a/../x.jpg'), isFalse);
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/./x.jpg'), isFalse);
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference/a/../x.jpg'), isFalse);
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/../numista-reference-library/x.jpg'), isFalse);
+    });
+
+    test('Accepts approved public reference buckets and %20 spaces', () {
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/numista-uploads-studio-9101802118-8c9a8/reference/fixture_program/fixture_doc.jpg'), isTrue);
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/fixture.png'), isTrue);
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/us_mint_coin_images/Numista_Attributed_Coins%20(1)/2024_america-the-beautiful_reverse.jpg'), isTrue);
+      expect(isApprovedCatalogImageUrl('https://storage.googleapis.com/numista-reference-library/reference_library/bulk_programs/1999_nj_reverse.jpg'), isTrue);
+      expect(isApprovedCatalogImageUrl('assets/catalog/images/morgan_1921.jpg'), isTrue);
+    });
+  });
+}
 // Call-site wiring verification (MF-2):
 // Both catalog_browse_screen.dart:918 and :1106 import and call isApprovedCatalogImageUrl()
 // from package:numista_ai/utils/catalog_image_guard.dart before Image.network().
@@ -1244,6 +1286,14 @@ class TestStaticCatalogHtml(unittest.TestCase):
         self.assertNotIn('$30 / 6 months', content)
         self.assertNotIn('2027', content)
 
+    def test_catalog_unknown_html_exists_and_has_noindex(self):
+        unknown_path = os.path.join('build', 'web', 'catalog_unknown.html')
+        self.assertTrue(os.path.exists(unknown_path), "catalog_unknown.html must exist for soft-404 rewrite")
+        with open(unknown_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        self.assertIn('<meta name="robots" content="noindex, follow">', content)
+        self.assertIn('<link rel="canonical" href="https://numista.ai/catalog"', content)
+
 if __name__ == '__main__':
     unittest.main()
 ```
@@ -1259,8 +1309,8 @@ if __name__ == '__main__':
 | 3 | Founder Eric | Final operational gating | Explicit Typed YES |
 
 **Author Signature:**  
-*Antigravity Chief of Staff v5 (`cfe23a7a-d721-44f9-b9d5-d2b74602b687`)*  
-*Timestamp: 2026-11-07 20:45:00 -05:00*
+*Antigravity Chief of Staff (`0aa2946e-4d42-42e1-8d13-1a499aac85ad`)*  
+*Timestamp: 2026-11-13 09:59:00 -05:00 (v2.0.1 surgical close-out on v2.0)*  
 
 
 ---
@@ -1272,3 +1322,27 @@ if __name__ == '__main__':
 - **2026-11-07 ~19:35 ET (v1.3 Delivery):** Delivered Plan v1.3.
 - **2026-11-08 ~07:34 ET (v1.7, GB CoS fresh writer):** Closes E1–E3 only (CoS-90 remaining defects). PLAN ONLY. File manifest addition: `numista_mobile/lib/routing/public_catalog_route.dart` (New, to be authored upon Eric YES; holds `extractInitialNac`).
 - **2026-11-08 ~07:55 ET (v1.8, GB CoS fresh writer round 2):** Closes CoS-88 MF-1..MF-4 only (F1–F4). PLAN ONLY. Manifest additions: generator output `build/web/catalog_unknown.html`; `test/services/catalog_image_guard_test.dart` (both to be authored on Eric YES).
+- **2026-11-12 (v1.9):** Added pre-parse `_hasRawDotSegment(url)` raw-string dot-segment check (`MF-F3-RawPath`) and in-allowlist normalization negative tests in §6.4 and §9.3a.
+- **2026-11-12 (v2.0):** Closed MF-1..MF-9 (`firebase.json` dual diffs for `4d17ca5e` & `cc815522`, fail-closed free-beta `/pricing` copy, `catalog_image_guard.dart` wiring at `catalog_browse_screen.dart:918`/`:1106`, plain-text mintage without `launchUrl`, `build/web/index.html` template cloning, `3,202 Reference Items` at `login_screen.dart:338, 466`, and `og:image` omission on null `primary_image`).
+- **2026-11-13 (v2.0.1 surgical close-out):** Applied Gemini 100/100 fixes 1–4 and Grok 100/100 addendum: (1) pumped `PublicInfoShell(targetRoute: '/pricing')` in §9.2.2 and wrapped §9.3a in a complete compilable Dart test file; (2) added `rawUrl.trim()`, `segs.length >= 4` for local assets, `uri.host.toLowerCase()`, and `seg.length >= 3 && seg[1] == 'reference'` in §6.4; (3) expanded `forbiddenKeys` in §9.3 to include canonical Title Case/camelCase `CoinModel.toFirestore()` keys and added `test_catalog_unknown_html_exists_and_has_noindex` in §9.4; (4) updated §7.3 rollback branch check (`dev` or `p7-v8.9`, non-`9f04550a`), stamped live pin verification (`012984ae` / `01ab905b`), and added §12 binary Founder YES checklist.
+
+---
+
+## 12. Ready for Founder YES — Binary Pre-Execution Checklist
+
+> **No code, build, preview deploy, or Firestore write occurs until Founder Eric types `YES` on this checklist.**
+
+### Test Authoring Checklist (First Implementation Commit Before Any Preview Deploy)
+- `numista_mobile/test/screens/catalog_soft404_routing_test.dart` (§9.2.2)
+- `numista_mobile/test/services/catalog_census_privacy_test.dart` (§9.3)
+- `numista_mobile/test/services/catalog_image_guard_test.dart` (§9.3a)
+- `numista_mobile/test/web/static_route_html_test.py` (§9.4)
+
+### Five Binary Pre-Execution Gates
+| Gate | Requirement | Status |
+|---|---|---|
+| **1. Live Pin Match** | `p7-v8.9` (`012984ae`), `origin/dev` (`01ab905b`), `4d17ca5e:numista_mobile/firebase.json` (`/claim/**`), `origin/dev:numista_mobile/firebase.json` (`/catalog/**`), and `public_info_screens.dart:362/396/407/412` verified live 13 Nov 2026 | **YES** |
+| **2. Fail-Closed Pricing Negatives** | Positive free-beta strings + negative tests for `$30 / 6 months` and `2027` absent in §9.2.2 (`PublicInfoShell` pumped) and §9.4 (`pricing/index.html`) | **YES** |
+| **3. Image-Guard & Privacy Tests** | Compilable `catalog_image_guard_test.dart` (§9.3a), `rawUrl.trim()` + `seg.length >= 3` (§6.4), expanded Title Case/camelCase `forbiddenKeys` (§9.3), and `catalog_unknown.html` `noindex` check (§9.4) | **YES** |
+| **4. Preview Curl Suite Ready** | Preview-channel `curl` contract (§9.1) scoped strictly to `--channel` preview deploy (`PREVIEW_URL`) prior to any live promotion | **YES** |
+| **5. Standing Locks Preserved** | Zero `main` (`9f04550a`) push, Stripe strictly OFF, zero Firestore writes, no invented NAC codes/mintage/promo strings/US Mint Records defaults | **YES** |

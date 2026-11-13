@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/melt_value_service.dart';
+import '../../utils/catalog_image_guard.dart';
 
 class CatalogBrowseScreen extends StatefulWidget {
   final String? initialQuery;
@@ -27,6 +28,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
   String _selectedEra = 'all';
   bool _photosOnly = false;
   bool _chronological = false;
+  String? _notFoundNacCode;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -82,19 +84,8 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
               }
             });
           } else {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'We don\'t have item "${widget.initialNacCode}" in our reference catalog yet.',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    backgroundColor: const Color(0xFF0B2545),
-                    duration: const Duration(seconds: 4),
-                  ),
-                );
-              }
+            setState(() {
+              _notFoundNacCode = widget.initialNacCode!.trim();
             });
           }
         }
@@ -334,6 +325,38 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            if (_notFoundNacCode != null) ...[
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 20),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF8E1),
+                                  border: Border.all(color: const Color(0xFFF59E0B)),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.info_outline, color: Color(0xFFB45309)),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Reference code "$_notFoundNacCode" was not found in the public catalog.',
+                                        style: const TextStyle(
+                                          color: Color(0xFF0B2545),
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close, size: 18),
+                                      onPressed: () => setState(() => _notFoundNacCode = null),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                             // Top Block: Morgan Owl
                             Image.asset(
                               'assets/morgan_avatar.png',
@@ -926,7 +949,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
     final imgMap = primaryImg ?? typeImg;
     final isTypeImage = primaryImg == null && typeImg != null;
 
-    if (imgMap != null && imgMap['url'] != null) {
+    if (imgMap != null && imgMap['url'] is String && isApprovedCatalogImageUrl(imgMap['url'] as String)) {
       final url = imgMap['url'] as String;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -1128,7 +1151,9 @@ class _CatalogCard extends StatelessWidget {
             // Image
             Expanded(
               child: Center(
-                child: imgMap != null && imgMap['url'] != null
+                child: imgMap != null &&
+                        imgMap['url'] is String &&
+                        isApprovedCatalogImageUrl(imgMap['url'] as String)
                     ? Image.network(
                         imgMap['url'] as String,
                         fit: BoxFit.contain,
