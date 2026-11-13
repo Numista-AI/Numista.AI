@@ -29,6 +29,7 @@ from google.cloud import firestore, storage as gcs
 from pydantic import BaseModel
 
 from .deps import db, genai_client, get_current_user, require_admin_user, storage_client, MODEL_FLASH
+from services.gcs_signing_service import generate_v4_signed_url
 
 logger = logging.getLogger("numista_backend.feedback_callable")
 router = APIRouter(prefix="/api/feedback", tags=["MORGAN Feedback Callable"])
@@ -491,13 +492,11 @@ async def _handle_upload_url(uid: str, req: CallableRequest) -> Dict[str, Any]:
 
     # GCS signed PUT URL
     object_name = f"{GCS_STANDARD_PREFIX}/{uid}/{draft_doc_id}/screenshot.jpg"
-    bucket = storage_client.bucket(GCS_BUCKET)
-    blob = bucket.blob(object_name)
-    expiry = timedelta(minutes=UPLOAD_URL_EXPIRY_MINUTES)
-
-    signed_url = blob.generate_signed_url(
-        version="v4",
-        expiration=expiry,
+    signed_url = generate_v4_signed_url(
+        storage_client,
+        GCS_BUCKET,
+        object_name,
+        expiry_minutes=UPLOAD_URL_EXPIRY_MINUTES,
         method="PUT",
         content_type="image/jpeg",
     )

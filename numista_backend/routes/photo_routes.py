@@ -48,13 +48,17 @@ def create_signed_photo_urls(
             detail=f"urls must contain between 1 and {MAX_BATCH_URLS} items.",
         )
 
-    rate_key = caller_uid or caller_email
+    rate_key = (caller_uid or caller_email).lower()
     if not rate_key:
         raise HTTPException(status_code=401, detail="Invalid user identity in token")
 
     is_admin = user.get("admin") is True
     check_and_increment_rate_cap(
-        rate_key, "photo_signed_url", daily_limit=600, is_admin=is_admin
+        rate_key,
+        "photo_signed_url",
+        daily_limit=600,
+        is_admin=is_admin,
+        amount=len(req.urls),
     )
 
     allowed_owners = {x for x in (caller_email, caller_uid) if x}

@@ -231,3 +231,33 @@ def test_9_iam_signblob_fallback_on_missing_private_key():
     kwargs = mock_blob.generate_signed_url.call_args.kwargs
     assert kwargs["service_account_email"] == "sa@proj.iam.gserviceaccount.com"
     assert kwargs["access_token"] == "tok_123"
+
+
+def test_10_f5_batch_rate_cap_and_f6_lowercased_rate_key():
+    app.dependency_overrides[get_current_user] = lambda: {
+        "uid": "MixedCase_UID_42",
+        "email": "User_A@Example.com",
+        "admin": False,
+        "firebase": {"sign_in_provider": "google.com"},
+    }
+    mock_storage, _ = _mock_storage_signing("https://storage.googleapis.com/signed-f5")
+    urls = [
+        "gs://numista-uploads-studio-9101802118-8c9a8/users/user_a@example.com/coins/c1/obv.jpg",
+        "gs://numista-uploads-studio-9101802118-8c9a8/users/user_a@example.com/coins/c2/obv.jpg",
+        "gs://numista-uploads-studio-9101802118-8c9a8/users/user_a@example.com/coins/c3/obv.jpg",
+    ]
+
+    with patch("routes.photo_routes.storage_client", mock_storage), patch(
+        "routes.photo_routes.check_and_increment_rate_cap", return_value=None
+    ) as mock_cap:
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.post("/api/v1/photos/signed_url", json={"urls": urls})
+
+    assert resp.status_code == 200
+    mock_cap.assert_called_once_with(
+        "mixedcase_uid_42",
+        "photo_signed_url",
+        daily_limit=600,
+        is_admin=False,
+        amount=3,
+    )

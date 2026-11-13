@@ -241,6 +241,9 @@ async def default_deny_auth_middleware(request: Request, call_next):
     path = request.url.path
     if _is_public(path):
         return await call_next(request)
+    if path == "/support/expire-grants" and (request.headers.get("X-Cron-Secret") or "").strip():
+        # Cron secret is verified fail-closed via hmac.compare_digest inside support_routes.expire_grants
+        return await call_next(request)
     # TEST BYPASS: if any dependency is overridden (only happens in pytest via
     # app.dependency_overrides), skip the Bearer check entirely.  In production
     # dependency_overrides is always empty so this branch is never taken.
@@ -252,8 +255,6 @@ async def default_deny_auth_middleware(request: Request, call_next):
     token = ""
     if auth_header.startswith("Bearer "):
         token = auth_header.split("Bearer ", 1)[1].strip()
-    elif request.query_params.get("token"):
-        token = request.query_params.get("token", "").strip()
     if token:
         # Full verify — reuse the already-imported verifier
         decoded = verify_firebase_bearer_token(request)
@@ -1342,6 +1343,7 @@ async def identify_world_item(
     year_hint:         str = Form(''),
     item_type_hint:    str = Form('unknown'),
     notes_hint:        str = Form(''),
+    user:              Dict[str, Any] = Depends(get_current_user),
 ):
     """
     Identify a foreign coin, world currency, bullion, ancient coin, or specialty
@@ -1372,6 +1374,7 @@ async def identify_world_item(
     }
     """
     # -- Stage 1: Gemini identification ----------------------------------------
+    _enforce_vision_rate_cap(user, "identify_world_item", daily_limit=100)
     gemini_result: dict = {}
     try:
         if image is not None:
@@ -3167,11 +3170,44 @@ def _authenticate_request(
         is_admin = decoded_token.get("admin") is True
         if not is_admin:
             if clean_body != owner_key and clean_body != token_email and clean_body != token_uid.lower():
+                logger.warning(
+                    "[_authenticate_request] IDOR rejected: caller=%s requested=%s",
+                    owner_key,
+                    clean_body,
+                )
                 raise HTTPException(
                     status_code=403,
                     detail="Forbidden: Mismatched authenticated identity and requested user_email"
                 )
     return owner_key
+
+
+def _resolve_target_owner(
+    user: Dict[str, Any],
+    body_email: Optional[str],
+    owner_key: str,
+) -> str:
+    """Resolve target Firestore user document key, allowing impersonation only for admins."""
+    if user.get("admin") is True and body_email and body_email.strip():
+        return body_email.strip().lower()
+    return owner_key
+
+
+def _enforce_vision_rate_cap(
+    user: Dict[str, Any],
+    endpoint_key: str,
+    daily_limit: int,
+) -> None:
+    """Enforce per-user daily cap using consistent lowercased uid-or-email keying."""
+    rate_key = (
+        user.get("uid") or user.get("user_id") or user.get("email") or ""
+    ).strip().lower()
+    if not rate_key:
+        raise HTTPException(status_code=401, detail="Invalid user identity in token")
+    is_admin = user.get("admin") is True
+    check_and_increment_rate_cap(
+        rate_key, endpoint_key, daily_limit=daily_limit, is_admin=is_admin
+    )
 
 
 @app.post("/api/deep_dive")
@@ -3846,7 +3882,11 @@ def _async_post_commit_enrichment(caller_email: str, committed_ids: list):
 
 
 @app.post("/api/review/break_up_set")
-async def break_up_set(request: Request):
+async def break_up_set(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Expands a set record in review_queue into individual coin records.
     Each coin gets set_id, set_name, set_cost_label, from_set=True.
@@ -3860,7 +3900,11 @@ async def break_up_set(request: Request):
         if not user_email or not set_doc_id:
             raise HTTPException(status_code=400, detail="user_email and set_doc_id are required")
 
-        user_ref  = db.collection('users').document(user_email)
+        owner_key = _authenticate_request(
+            authorization, body_email=user_email, current_user=user
+        )
+        target_owner = _resolve_target_owner(user, user_email, owner_key)
+        user_ref  = db.collection('users').document(target_owner)
         queue_ref = user_ref.collection('review_queue')
 
         set_snap = queue_ref.document(set_doc_id).get()
@@ -3916,7 +3960,11 @@ async def break_up_set(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/review/keep_set_as_is")
-async def keep_set_as_is(request: Request):
+async def keep_set_as_is(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Commits a set record from review_queue to the main 'coins' collection
     as a single set item (no expansion).
@@ -3930,7 +3978,11 @@ async def keep_set_as_is(request: Request):
         if not user_email or not set_doc_id:
             raise HTTPException(status_code=400, detail="user_email and set_doc_id are required")
 
-        user_ref  = db.collection('users').document(user_email)
+        owner_key = _authenticate_request(
+            authorization, body_email=user_email, current_user=user
+        )
+        target_owner = _resolve_target_owner(user, user_email, owner_key)
+        user_ref  = db.collection('users').document(target_owner)
         queue_ref = user_ref.collection('review_queue')
         coins_ref = user_ref.collection('coins')
 
@@ -6872,7 +6924,8 @@ async def identify_coin_photo(
 async def analyze_grade_coin(
     obverse: UploadFile = File(...),
     reverse: UploadFile = File(...),
-    coin_id: Optional[str] = Form(None)
+    coin_id: Optional[str] = Form(None),
+    user: Dict[str, Any] = Depends(get_current_user),
 ):
     """
     FastAPI endpoint for multi-modal Sheldon coin grading advisor.
@@ -6880,6 +6933,7 @@ async def analyze_grade_coin(
     Safely queries local cache reference pricing and Sheldon scale guidelines,
     and runs Gemini 3.5 vision analysis.
     """
+    _enforce_vision_rate_cap(user, "analyze_grade_coin", daily_limit=100)
     from numista_scraper.grading_advisor import analyze_coin_grade, lookup_coin_price_guide
     
     try:
@@ -7670,16 +7724,19 @@ def import_start(req: ImportStartRequest, _user: dict = Depends(get_current_user
         },
     })
 
-    bucket = gcs_client.bucket(IMPORT_BUCKET)
+    from services.gcs_signing_service import generate_v4_signed_url
     signed_urls = []
     for f in req.file_manifest:
-        safe_name = f["name"].replace(" ", "_")
+        safe_name = os.path.basename((f.get("name") or "").strip()).replace(" ", "_")
+        if not safe_name or safe_name in (".", ".."):
+            raise HTTPException(status_code=400, detail="Invalid filename in manifest")
         blob_path = f"{req.user_email}/imports/{req.session_id}/raw/{safe_name}"
-        blob = bucket.blob(blob_path)
         try:
-            url = blob.generate_signed_url(
-                version="v4",
-                expiration=900,
+            url = generate_v4_signed_url(
+                gcs_client,
+                IMPORT_BUCKET,
+                blob_path,
+                expiry_minutes=15,
                 method="PUT",
                 content_type=f.get("mime", "application/octet-stream"),
             )
@@ -11123,11 +11180,25 @@ class GreysheetResolveRequest(BaseModel):
     item_type: Optional[str] = None
 
 @app.post("/api/greysheet/resolve")
-async def resolve_greysheet_coin(req: GreysheetResolveRequest):
+async def resolve_greysheet_coin(
+    req: GreysheetResolveRequest,
+    authorization: Optional[str] = Header(None),
+    user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Resolves the Greysheet GSID for a specific coin (either by Firestore ID or raw fields).
     """
     try:
+        if req.coin_id and not req.user_id:
+            raise HTTPException(
+                status_code=400,
+                detail="user_id is required when coin_id is provided",
+            )
+        owner_key = _authenticate_request(
+            authorization, body_email=req.user_id, current_user=user
+        )
+        target_owner = _resolve_target_owner(user, req.user_id, owner_key)
+
         from services.greysheet_service import GreysheetService
         
         service = GreysheetService(db=db)
@@ -11135,7 +11206,7 @@ async def resolve_greysheet_coin(req: GreysheetResolveRequest):
         
         if req.user_id and req.coin_id:
             # 1. Fetch coin from Firestore
-            coin_ref = db.collection("users").document(req.user_id).collection("coins").document(req.coin_id)
+            coin_ref = db.collection("users").document(target_owner).collection("coins").document(req.coin_id)
             coin_doc = coin_ref.get()
             if not coin_doc.exists:
                 raise HTTPException(status_code=404, detail="Coin document not found")
@@ -11182,20 +11253,35 @@ async def resolve_greysheet_coin(req: GreysheetResolveRequest):
             "greysheetName": greysheet_name,
             "message": f"Mapped to '{greysheet_name}' (GSID {gsid})"
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Greysheet: error resolving GSID")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/greysheet/refresh")
-async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
+async def refresh_greysheet_coin_price(
+    req: GreysheetResolveRequest,
+    authorization: Optional[str] = Header(None),
+    user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Fetches the latest pricing for a coin's GSID and updates its values based on grade.
     """
     try:
+        if not req.user_id or not req.coin_id:
+            raise HTTPException(
+                status_code=400, detail="user_id and coin_id are required"
+            )
+        owner_key = _authenticate_request(
+            authorization, body_email=req.user_id, current_user=user
+        )
+        target_owner = _resolve_target_owner(user, req.user_id, owner_key)
+
         from services.greysheet_service import GreysheetService
         
         # 1. Fetch coin from Firestore
-        coin_ref = db.collection("users").document(req.user_id).collection("coins").document(req.coin_id)
+        coin_ref = db.collection("users").document(target_owner).collection("coins").document(req.coin_id)
         coin_doc = coin_ref.get()
         if not coin_doc.exists:
             raise HTTPException(status_code=404, detail="Coin document not found")
@@ -11608,6 +11694,8 @@ async def refresh_greysheet_coin_price(req: GreysheetResolveRequest):
             "greysheetName": cached_gs_name,
             "gradeMatched": grade_label,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Greysheet: error refreshing coin price")
         raise HTTPException(status_code=500, detail=str(e))
@@ -12443,15 +12531,24 @@ async def get_user_wishlist_deals(
         return {"user_email": user_email, "deals": [], "count": 0, "error": str(e)}
 
 @app.post("/api/wishlist/deals/check")
-async def check_wishlist_deals(req: WishlistCheckRequest):
+async def check_wishlist_deals(
+    req: WishlistCheckRequest,
+    authorization: Optional[str] = Header(None),
+    user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Triggers an instant scan of user's wishlist items against live market listings.
     """
+    owner_key = _authenticate_request(
+        authorization, body_email=req.user_email, current_user=user
+    )
+    target_owner = _resolve_target_owner(user, req.user_email, owner_key)
+    _enforce_vision_rate_cap(user, "wishlist_deals_check", daily_limit=60)
     try:
         from services.deal_spotter_service import DealSpotterService
         service = DealSpotterService(db=db)
         deals = service.match_wishlist_items(req.wishlist_items)
-        return {"status": "success", "user_email": req.user_email, "deals": deals, "count": len(deals)}
+        return {"status": "success", "user_email": target_owner, "deals": deals, "count": len(deals)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -12800,11 +12897,15 @@ class VarietyDetectRequest(BaseModel):
     series: str = ""
 
 @app.post("/api/variety/detect")
-async def api_detect_variety(req: VarietyDetectRequest):
+async def api_detect_variety(
+    req: VarietyDetectRequest,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     2nd-stage Gemini Vision variety and die-error detection for macro crops.
     Enforces 85% confidence threshold rule.
     """
+    _enforce_vision_rate_cap(user, "variety_detect", daily_limit=100)
     try:
         from services.variety_detector import analyze_variety_crop
         result = analyze_variety_crop(
@@ -12894,18 +12995,26 @@ class WishlistShareRequest(BaseModel):
     items: List[dict]
 
 @app.post("/api/wishlist/create-share")
-async def api_create_wishlist_share(req: WishlistShareRequest):
+async def api_create_wishlist_share(
+    req: WishlistShareRequest,
+    authorization: Optional[str] = Header(None),
+    user: Dict[str, Any] = Depends(get_current_user),
+):
     """
     Generates an opaque, rotatable token (wishlist_xxx) and writes a denormalized
     wishlist snapshot to /public_wishlists/{token} via backend Admin SDK.
     Enforces privacy and prevents client write privileges to public Firestore rules.
     """
+    owner_key = _authenticate_request(
+        authorization, body_email=req.user_email, current_user=user
+    )
+    target_owner = _resolve_target_owner(user, req.user_email, owner_key)
     try:
         token = f"wishlist_{uuid.uuid4().hex[:12]}"
         now = datetime.now(timezone.utc)
         snapshot = {
             "token": token,
-            "owner_email": req.user_email,
+            "owner_email": target_owner,
             "owner_alias": req.owner_alias or "Numista Collector",
             "items": req.items,
             "created_at": now.isoformat(),
@@ -12915,7 +13024,7 @@ async def api_create_wishlist_share(req: WishlistShareRequest):
         
         # Write to public_wishlists collection using Admin SDK
         db.collection("public_wishlists").document(token).set(snapshot)
-        logger.info(f"[Wishlist Share] Generated token {token} for {req.user_email}")
+        logger.info(f"[Wishlist Share] Generated token {token} for {target_owner}")
         
         return {
             "token": token,

@@ -6,6 +6,7 @@ import uuid
 import json
 import io
 import logging
+import os
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, HTTPException, Form, File, UploadFile, Depends, Request
@@ -15,6 +16,7 @@ from google.cloud import storage as gcs
 from schemas.import_schemas import SignedUrlRequest, ImportProcessRequest, ImportStartRequest, CommitBatchRequest
 from services.common import GOLDEN_SCHEMA_MAPPING, normalize_colloquial_header, safe_get_str, normalize_slang_term
 from routes.deps import db, storage_client, logger, get_current_user, PROJECT_ID, _check_and_increment_rate_cap
+from services.gcs_signing_service import generate_v4_signed_url
 
 router = APIRouter(prefix="/api", tags=["Spreadsheet & Document Bulk Ingestion"])
 
@@ -47,14 +49,17 @@ def _normalize_us_denomination(denom: str) -> str:
 async def get_upload_url(req: SignedUrlRequest, user: Dict[str, Any] = Depends(get_current_user)):
     """Generate 15-minute V4 pre-signed GCS upload URL for large files (>5MB)."""
     user_id = user.get("uid") or user.get("user_id") or "dev_guest_uid"
-    blob_name = f"imports/{user_id}/{uuid.uuid4().hex}_{req.filename}"
-    
+    safe_filename = os.path.basename((req.filename or "").strip()).replace(" ", "_")
+    if not safe_filename or safe_filename in (".", ".."):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    blob_name = f"imports/{user_id}/{uuid.uuid4().hex}_{safe_filename}"
+
     try:
-        bucket = storage_client.bucket(BUCKET_NAME)
-        blob = bucket.blob(blob_name)
-        signed_url = blob.generate_signed_url(
-            version="v4",
-            expiration=timedelta(minutes=15),
+        signed_url = generate_v4_signed_url(
+            storage_client,
+            BUCKET_NAME,
+            blob_name,
+            expiry_minutes=15,
             method="PUT",
             content_type=req.content_type,
         )
