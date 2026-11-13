@@ -362,3 +362,9 @@ def test_10_queue_deterministic_upsert_and_cross_user_redaction():
         assert forbidden_key not in item1
     assert "secret_owner@example.com" not in r1.text
     assert "secret_coin_99" not in r1.text
+
+
+def test_f7_max_image_pixels_bounded():
+    from services import coin_image_service
+
+    assert coin_image_service.MAX_IMAGE_PIXELS == 25_000_000

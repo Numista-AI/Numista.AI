@@ -12,13 +12,15 @@
 #  - ALWAYS_REDACTED fields are stripped on every support view regardless of what
 #    the client submitted.
 
+import hmac
+import os
 import secrets
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import firebase_admin.auth
-from fastapi import APIRouter, Header, HTTPException, Depends
+from fastapi import APIRouter, Header, HTTPException, Depends, Request
 from google.cloud import firestore
 from google.api_core.exceptions import FailedPrecondition
 
@@ -676,9 +678,24 @@ async def support_update_status(
 # ── Scheduled expiry endpoint ────────────────────────────────────────────────
 
 @router.get("/support/expire-grants")
-async def expire_grants():
+async def expire_grants(request: Request):
     """Called by Cloud Scheduler every 30 minutes.
     Uses the same _grant_is_valid() helper as all support endpoints — cannot drift."""
+    expected_secret = os.environ.get("CRON_SECRET", "").strip()
+    provided_secret = (request.headers.get("X-Cron-Secret") or "").strip()
+    cron_authorized = bool(
+        expected_secret
+        and provided_secret
+        and hmac.compare_digest(provided_secret, expected_secret)
+    )
+    if not cron_authorized:
+        auth_header = (
+            request.headers.get("Authorization")
+            or request.headers.get("authorization")
+            or ""
+        )
+        await require_admin(authorization=auth_header)
+
     db = _get_db()
     now = datetime.now(timezone.utc)
 

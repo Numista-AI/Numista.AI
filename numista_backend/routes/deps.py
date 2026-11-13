@@ -52,13 +52,11 @@ if not firebase_admin._apps:
 # ── 4. Authentication Middleware Dependencies ─────────────────────────────────
 
 def verify_firebase_bearer_token(request: Request) -> Optional[Dict[str, Any]]:
-    """Extracts Authorization Bearer token (or query token) and verifies via Firebase Admin SDK."""
+    """Extracts Authorization Bearer token and verifies via Firebase Admin SDK."""
     auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
     token = None
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split("Bearer ")[1].strip()
-    elif request.query_params.get("token"):
-        token = request.query_params.get("token", "").strip()
     if not token:
         return None
     try:
@@ -99,17 +97,24 @@ async def require_admin_user(request: Request, user: Dict[str, Any] = Depends(ge
     return user
 
 
-def check_and_increment_rate_cap(uid: str, endpoint: str, daily_limit: int, is_admin: bool = False) -> None:
+def check_and_increment_rate_cap(
+    uid: str,
+    endpoint: str,
+    daily_limit: int,
+    is_admin: bool = False,
+    amount: int = 1,
+) -> None:
     """Per-user daily cap helper storing counts in _rate_limits/{uid}/{endpoint}/{YYYY-MM-DD}.
 
     1. Reads Firestore _rate_limits/{uid}/{endpoint}/{today_date} doc
-    2. If count >= daily_limit: raise HTTPException(429, "Daily limit reached")
-    3. Else: increment count atomically (use Firestore Increment)
+    2. If count + step > daily_limit: raise HTTPException(429, "Daily limit reached")
+    3. Else: increment count atomically by step (use Firestore Increment)
     4. If Firestore read fails: raise HTTPException(429) - fail closed
     Admin users are exempt.
     """
     if is_admin:
         return
+    step = max(1, int(amount))
     today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     clean_uid = str(uid).strip()
     clean_endpoint = str(endpoint).strip().lstrip("/")
@@ -120,9 +125,9 @@ def check_and_increment_rate_cap(uid: str, endpoint: str, daily_limit: int, is_a
         if snap.exists:
             data = snap.to_dict() or {}
             current_count = data.get("count", 0)
-        if current_count >= daily_limit:
+        if current_count + step > daily_limit:
             raise HTTPException(status_code=429, detail="Daily limit reached")
-        doc_ref.set({"count": firestore.Increment(1)}, merge=True)
+        doc_ref.set({"count": firestore.Increment(step)}, merge=True)
     except HTTPException:
         raise
     except Exception as e:
