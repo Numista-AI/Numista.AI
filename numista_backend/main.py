@@ -133,6 +133,7 @@ from routes.catalog_routes import public_router as catalog_public_router, write_
 from routes.deps import (
     get_current_user,
     require_admin_user,
+    require_registered_user,
     _check_and_increment_rate_cap,
     MORGAN_WEB_LOOKUP_GLOBAL_DAILY_LIMIT,
     MORGAN_WEB_LOOKUP_USER_DAILY_LIMIT,
@@ -12624,7 +12625,7 @@ class UndoSaleRequest(BaseModel):
 @app.post("/api/transfer/initiate")
 async def api_initiate_transfer(
     req: InitiateTransferRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(require_registered_user),
 ):
     """
     Initiates a lateral property transfer with server-side privacy sanitization.
@@ -12652,7 +12653,7 @@ async def api_initiate_transfer(
 @app.post("/api/transfer/claim")
 async def api_claim_transfer(
     req: ClaimTransferRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(require_registered_user),
 ):
     """
     Claims a pending lateral transfer, creating item(s) in recipient's vault.
@@ -12678,7 +12679,7 @@ async def api_claim_transfer(
 @app.post("/api/transfer/recall")
 async def api_recall_transfer(
     req: RecallTransferRequest,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: Dict[str, Any] = Depends(require_registered_user),
 ):
     """
     Recalls an unclaimed pending transfer.

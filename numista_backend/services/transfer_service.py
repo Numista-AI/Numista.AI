@@ -6,6 +6,7 @@ recipient email authorization locking, email notification dispatching with audit
 atomic claim/recall logic, and sender coin deletion on successful claim.
 """
 
+import hmac
 import uuid
 import random
 import secrets
@@ -574,7 +575,7 @@ def claim_transfer(
             pass  # fromisoformat parse error — ignore and proceed
 
     stored_pin = str(transfer_data.get("claim_pin") or "").strip()
-    if stored_pin != clean_pin:
+    if not hmac.compare_digest(stored_pin, clean_pin):
         # Atomic increment so concurrent wrong guesses can't race past the threshold
         new_count = pin_fail_count + 1
         update_data: Dict[str, Any] = {"pin_fail_count": firestore.Increment(1)}
