@@ -15,7 +15,16 @@ from datetime import datetime, timezone
 import logging
 from typing import Any, Callable, Optional, Tuple
 
+from google.api_core.exceptions import GoogleAPIError
 from google.cloud import firestore
+from google.cloud.exceptions import GoogleCloudError
+
+_FIRESTORE_TRANSIENT_ERRORS = (
+    GoogleAPIError,
+    GoogleCloudError,
+    ConnectionError,
+    TimeoutError,
+)
 
 from config import (
     GEMINI_IMAGE_MODEL,
@@ -114,9 +123,26 @@ def reserve_image_model(
         )
         return GEMINI_IMAGE_MODEL, 0, False, mkey
 
-    doc_ref = _quota_doc_ref(db, mkey)
-    transaction = db.transaction()
-    reserved_pro, count = _reserve_pro_slot_tx(transaction, doc_ref, effective_cap)
+    try:
+        doc_ref = _quota_doc_ref(db, mkey)
+        transaction = db.transaction()
+        reserved_pro, count = _reserve_pro_slot_tx(transaction, doc_ref, effective_cap)
+    except _FIRESTORE_TRANSIENT_ERRORS as exc:
+        logger.warning(
+            "image_model_router: Firestore reservation failed (%s: %s); falling back to %s",
+            type(exc).__name__,
+            exc,
+            GEMINI_IMAGE_MODEL,
+            extra={
+                "month_key": mkey,
+                "selected_model": GEMINI_IMAGE_MODEL,
+                "monthly_pro_count": -1,
+                "cap": effective_cap,
+                "fallback_triggered": True,
+            },
+        )
+        return GEMINI_IMAGE_MODEL, 0, False, mkey
+
     selected_model = GEMINI_IMAGE_PRO_MODEL if reserved_pro else GEMINI_IMAGE_MODEL
 
     logger.info(
@@ -137,15 +163,24 @@ def release_pro_image_reservation(
     """Run compensating decrement if a reserved Pro generation failed."""
     if db is None:
         return 0
-    doc_ref = _quota_doc_ref(db, month_key)
-    transaction = db.transaction()
-    new_count = _release_pro_slot_tx(transaction, doc_ref)
-    logger.warning(
-        "image_model_router: released pro reservation month=%s new_pro_count=%d",
-        month_key,
-        new_count,
-    )
-    return new_count
+    try:
+        doc_ref = _quota_doc_ref(db, month_key)
+        transaction = db.transaction()
+        new_count = _release_pro_slot_tx(transaction, doc_ref)
+        logger.warning(
+            "image_model_router: released pro reservation month=%s new_pro_count=%d",
+            month_key,
+            new_count,
+        )
+        return new_count
+    except _FIRESTORE_TRANSIENT_ERRORS as exc:
+        logger.warning(
+            "image_model_router: failed to release pro reservation month=%s (%s: %s)",
+            month_key,
+            type(exc).__name__,
+            exc,
+        )
+        return 0
 
 
 def execute_with_image_routing(

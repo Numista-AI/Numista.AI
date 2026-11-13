@@ -4,7 +4,14 @@ from google import genai
 from google.oauth2 import service_account
 import os
 import sys
+from pathlib import Path
 from dotenv import load_dotenv
+
+_BACKEND_ROOT = str(Path(__file__).resolve().parent.parent)
+if _BACKEND_ROOT not in sys.path:
+    sys.path.insert(0, _BACKEND_ROOT)
+
+from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL
 
 # Force UTF-8 output so emoji don't crash on Windows cp1252
 if hasattr(sys.stdout, 'reconfigure'):
@@ -33,8 +40,8 @@ def test_model_with_sa(model_name):
         print(f"ERROR: {e}")
         return False
 
-# Test 1: 2.5 Flash
-test_model_with_sa("gemini-3.5-flash")
+# Test 1: Primary Flash workhorse (Gemini 4 Hydrogen)
+test_model_with_sa(GEMINI_FLASH_MODEL)
 
-# Test 2: 3.0 Flash (Check if name is correct)
-test_model_with_sa("gemini-3.5-flash")
+# Test 2: High-reasoning Pro model (Gemini 4 Argon)
+test_model_with_sa(GEMINI_PRO_MODEL)

@@ -41,6 +41,6 @@ if __name__ == "__main__":
     # Test specific model/location
     test_model(args.model, args.location)
     
-    # Also test 3.5-flash as a baseline for the same location
-    if args.model != "gemini-3.5-flash":
-        test_model("gemini-3.5-flash", args.location)
+    # Also test GEMINI_FLASH_MODEL as a baseline if a custom --model was supplied
+    if args.model != GEMINI_FLASH_MODEL:
+        test_model(GEMINI_FLASH_MODEL, args.location)
