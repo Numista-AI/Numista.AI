@@ -360,6 +360,15 @@
     "dependencies": []
   },
   {
+    "path": "/api/grade_review/image/{review_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_grade_review_image",
+    "tags": [],
+    "dependencies": []
+  },
+  {
     "path": "/api/grade_review/queue",
     "methods": [
       "GET"
@@ -947,6 +956,17 @@
     "name": "delete_subaccount",
     "tags": [
       "family_subaccounts"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/photos/signed_url",
+    "methods": [
+      "POST"
+    ],
+    "name": "create_signed_photo_urls",
+    "tags": [
+      "photos"
     ],
     "dependencies": []
   },

@@ -4,18 +4,44 @@ Human AI Trainer Grade Review & Community Nickname Routes
 
 import os
 import json
+import hmac
+import hashlib
+import secrets
 import time as _time
-from datetime import datetime as _dt
+from datetime import datetime as _dt, timedelta as _timedelta, timezone as _timezone
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, HTTPException, Form, Depends
+from fastapi import APIRouter, HTTPException, Form, Depends, Response
 from google.cloud import firestore
 from schemas.grade_review_schemas import GradeReviewSubmission, NicknameSubmitRequest, GradeReviewSubmitRequest, AdminResolveFlagRequest
-from routes.deps import db, logger, get_current_user_email, get_current_user, require_admin_user
+from routes.deps import (
+    db,
+    storage_client,
+    logger,
+    get_current_user_email,
+    get_current_user,
+    require_admin_user,
+    check_and_increment_rate_cap,
+)
+from services.coin_image_service import (
+    load_sanitized_coin_image,
+    parse_and_validate_storage_url,
+)
 
 router = APIRouter(prefix="/api", tags=["Human AI Trainer & Community Grade Reviews"])
 
 # Shared constants
 LOW_CONFIDENCE_THRESHOLD = 0.85
+_PROCESS_ASSIGNMENT_SALT = secrets.token_bytes(32)
+
+
+def _get_assignment_salt() -> bytes:
+    env_salt = os.environ.get("GRADE_REVIEW_ASSIGNMENT_SALT", "")
+    return env_salt.encode("utf-8") if env_salt else _PROCESS_ASSIGNMENT_SALT
+
+
+def _compute_review_id(reviewer_uid: str, owner_key: str, coin_id: str) -> str:
+    msg = f"{reviewer_uid}:{owner_key}:{coin_id}".encode("utf-8")
+    return hmac.new(_get_assignment_salt(), msg, hashlib.sha256).hexdigest()[:32]
 
 # In-memory stats cache for eventual consistency
 GRADE_STATS_CACHE: Dict[str, Any] = {}
@@ -27,63 +53,166 @@ def grade_review_queue(
     current_user: dict = Depends(get_current_user),
 ):
     """
-    Returns the authenticated user's own AI-graded coins that haven't been reviewed yet,
-    sorted by confidence_score ascending (lowest = most urgently needs review).
-    uid/email is sourced exclusively from the Firebase token — query param ignored.
+    Returns AI-graded coins awaiting review, sorted by confidence_score ascending.
+    Creates/upserts deterministic opaque review assignments so reviewer image
+    access never requires exposing owner_email, coin_id, or raw storage URLs.
     """
-    user_email = current_user.get("email") or current_user.get("uid") or ""
+    caller_uid = (current_user.get("uid") or current_user.get("user_id") or "").strip()
+    user_email = (current_user.get("email") or caller_uid or "").strip()
+    reviewer_uid = caller_uid or user_email
     coins_ref = db.collection('users').document(user_email).collection('coins')
 
     seen_ids: set = set()
     raw_docs: list = []
-    
+
     try:
         q = coins_ref.where('grade_review_status', '==', 'pending').limit(200).stream()
         for doc in q:
             if doc.id not in seen_ids:
                 seen_ids.add(doc.id)
                 raw_docs.append(doc)
-    except Exception as e:
+    except Exception:
         logger.exception("Grade review queue query failed")
+
+    now = _dt.now(_timezone.utc)
+    expires_at = now + _timedelta(hours=24)
 
     results = []
     for doc in raw_docs:
-        d      = doc.to_dict()
+        d = doc.to_dict() or {}
         source = d.get('source', '')
         conf_val = d.get('confidence_score')
-        conf   = float(conf_val) if conf_val is not None else 1.0
+        conf = float(conf_val) if conf_val is not None else 1.0
 
         reviews = d.get('grade_reviews', [])
         if any((isinstance(r, dict) and r.get('reviewer') == user_email) or (isinstance(r, str) and r == user_email) for r in reviews):
             continue
 
-        results.append({
-            'coin_id':             doc.id,
-            'year':                d.get('Year', ''),
-            'mint_mark':           d.get('Mint Mark', ''),
-            'denomination':        d.get('Denomination', ''),
-            'program_series':      d.get('Program/Series', ''),
-            'theme_subject':       d.get('Theme/Subject', ''),
-            'condition':           d.get('Condition', 'Ungraded'),
-            'ai_assigned_condition': d.get('ai_assigned_condition',
-                                          d.get('Condition', 'Ungraded')),
-            'confidence_score':    round(conf, 2),
-            'low_confidence':      conf < LOW_CONFIDENCE_THRESHOLD,
-            'source':              source,
-            'scan_source':         d.get('scan_source', source),
-            'image_url_obverse':   d.get('image_url_obverse', ''),
-            'image_url_reverse':   d.get('image_url_reverse', ''),
-            'slot_bbox':           d.get('slot_bbox', {}),
+        owner_key = (d.get('user_email') or user_email).strip()
+        owner_uid = (d.get('uid') or d.get('user_uid') or (caller_uid if owner_key.lower() == user_email.lower() else '')).strip()
+        obv_url = d.get('image_url_obverse', '')
+        rev_url = d.get('image_url_reverse', '')
+        slot_bbox = d.get('slot_bbox', {})
+
+        review_id = _compute_review_id(reviewer_uid, owner_key, doc.id)
+        try:
+            db.collection('grade_review_assignments').document(review_id).set(
+                {
+                    'reviewer_uid': reviewer_uid,
+                    'owner_key': owner_key,
+                    'owner_uid': owner_uid,
+                    'coin_id': doc.id,
+                    'obverse_blob': obv_url,
+                    'reverse_blob': rev_url,
+                    'slot_bbox': slot_bbox,
+                    'expires_at': expires_at,
+                    'created_at': now,
+                },
+                merge=True,
+            )
+        except Exception:
+            logger.exception("Failed to upsert grade_review_assignment")
+
+        is_own = owner_key.lower() == user_email.lower()
+        item: Dict[str, Any] = {
+            'review_id': review_id,
+            'has_reverse': bool(rev_url),
+            'year': d.get('Year', ''),
+            'mint_mark': d.get('Mint Mark', ''),
+            'denomination': d.get('Denomination', ''),
+            'program_series': d.get('Program/Series', ''),
+            'theme_subject': d.get('Theme/Subject', ''),
+            'condition': d.get('Condition', 'Ungraded'),
+            'ai_assigned_condition': d.get('ai_assigned_condition', d.get('Condition', 'Ungraded')),
+            'confidence_score': round(conf, 2),
+            'low_confidence': conf < LOW_CONFIDENCE_THRESHOLD,
+            'source': source,
+            'scan_source': d.get('scan_source', source),
+            'slot_bbox': slot_bbox,
             'grade_review_status': d.get('grade_review_status', 'pending'),
-            'grade_review_count':  d.get('grade_review_count', 0),
-        })
+            'grade_review_count': d.get('grade_review_count', 0),
+        }
+        if is_own:
+            item['coin_id'] = doc.id
+            item['image_url_obverse'] = obv_url
+            item['image_url_reverse'] = rev_url
+
+        results.append(item)
 
     results.sort(key=lambda x: x['confidence_score'])
     return {
-        'status':  'ok',
+        'status': 'ok',
         'results': results[:limit],
-        'total':   len(results),
+        'total': len(results),
     }
+
+
+@router.get("/grade_review/image/{review_id}")
+def get_grade_review_image(
+    review_id: str,
+    side: str = "obverse",
+    current_user: dict = Depends(get_current_user),
+):
+    """Serves sanitized, EXIF-stripped JPEG bytes for an assigned grade review."""
+    caller_uid = (current_user.get("uid") or current_user.get("user_id") or current_user.get("email") or "").strip()
+    is_admin = current_user.get("admin") is True
+    check_and_increment_rate_cap(caller_uid, "grade_review_image", daily_limit=300, is_admin=is_admin)
+
+    if side not in ("obverse", "reverse"):
+        raise HTTPException(status_code=400, detail="Invalid side")
+
+    try:
+        snap = db.collection("grade_review_assignments").document(review_id).get()
+        if not getattr(snap, "exists", False):
+            raise HTTPException(status_code=404, detail="Not found")
+
+        assignment = snap.to_dict() or {}
+        if assignment.get("reviewer_uid") != caller_uid:
+            raise HTTPException(status_code=404, detail="Not found")
+
+        expires_at = assignment.get("expires_at")
+        now = _dt.now(_timezone.utc)
+        if expires_at is None:
+            raise HTTPException(status_code=404, detail="Not found")
+        if hasattr(expires_at, "tzinfo") and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=_timezone.utc)
+        if expires_at <= now:
+            raise HTTPException(status_code=404, detail="Not found")
+
+        blob_url = (
+            assignment.get("reverse_blob", "")
+            if side == "reverse"
+            else assignment.get("obverse_blob", "")
+        )
+        if not blob_url:
+            raise HTTPException(status_code=404, detail="Not found")
+
+        allowed_owners = {
+            x.strip()
+            for x in (assignment.get("owner_key", ""), assignment.get("owner_uid", ""))
+            if isinstance(x, str) and x.strip()
+        }
+        bucket_name, blob_name = parse_and_validate_storage_url(blob_url, allowed_owners)
+        slot_bbox = assignment.get("slot_bbox") if side == "obverse" else None
+        jpeg_bytes, _ = load_sanitized_coin_image(
+            storage_client,
+            bucket_name,
+            blob_name,
+            slot_bbox=slot_bbox,
+        )
+        return Response(
+            content=jpeg_bytes,
+            media_type="image/jpeg",
+            headers={
+                "Cache-Control": "private, no-store",
+                "Content-Disposition": "inline; filename=coin.jpg",
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Grade review image fetch error")
+        raise HTTPException(status_code=500, detail="Could not load image.")
 
 @router.post("/grade_review/submit")
 async def submit_grade_review(
@@ -309,7 +438,7 @@ def admin_grade_flags(
             'review_count':    d.get('review_count', 0),
             'grade_tally':     grade_tally,
             'confidence_score': round(float(conf), 2),
-            'image_url':       img,
+            'image_url':       '',
             'flagged_at':      str(d.get('flagged_at', '')),
             'resolved':        d.get('resolved', False),
             'resolved_grade':  d.get('resolved_grade', ''),

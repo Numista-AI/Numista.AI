@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/mint_helpers.dart';
 import '../utils/text_sanitizer.dart';
 
 class CoinModel {
   final String id;
   final String year;
+  final String mint;
   final String mintMark;
   final String denomination;
   final String programSeries;
@@ -81,6 +83,7 @@ class CoinModel {
   CoinModel({
     required this.id,
     this.year = '',
+    this.mint = '',
     this.mintMark = '',
     this.denomination = '',
     this.programSeries = '',
@@ -167,14 +170,16 @@ class CoinModel {
   }
 
   factory CoinModel.fromMap(Map<String, dynamic> data, String id) {
-    // Split combined Year+Mint before assigning (e.g. "2006D" → year='2006' mint='D')
+    // Split combined Year+Mint before assigning (e.g. "2006D" → year='2006' mintMark='D')
     final (year, mintMark) = _splitYearMint(
       data['Year']?.toString().trim() ?? data['year']?.toString().trim() ?? '',
-      data['Mint Mark']?.toString().trim() ?? data['mintMark']?.toString().trim() ?? data['MintMark']?.toString().trim() ?? '',
+      MintHelpers.readMintMark(data),
     );
+    final mint = MintHelpers.readMintFacility(data);
     return CoinModel(
       id: id,
       year: year,
+      mint: mint,
       mintMark: mintMark,
       denomination: TextSanitizer.fixMojibake(data['Denomination']?.toString() ?? data['denomination']?.toString() ?? ''),
       programSeries: TextSanitizer.fixMojibake(data['Program/Series']?.toString() ?? data['programSeries']?.toString() ?? data['ProgramSeries']?.toString() ?? ''),
@@ -248,7 +253,9 @@ class CoinModel {
   Map<String, dynamic> toFirestore() {
     return {
       'Year': year,
-      'Mint Mark': mintMark,
+      'mint': mint,
+      'mint_mark': mintMark,
+      'Mint Mark': mintMark, // transitional dual-write; removed in Phase 7
       'Denomination': denomination,
       'Program/Series': programSeries,
       'Theme/Subject': themeSubject,

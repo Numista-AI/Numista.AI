@@ -1,0 +1,1526 @@
+# PLAN NET-810: U.S. Mint Product Fields in Coin Detail View (v1.7)
+
+- **Track ID:** NET-810 (Architecture Plan / Feature Specification / Thanksgiving Critical Path)
+- **Document Version:** 1.7 (closes all 7 REAL must-fixes + UNCLEAR MF-5b + FALSE MF-7a + Polish from `REVISE_NET-810_v1.6_to_v1.7_VERIFIED_20261108-1155.md`)
+- **Date / DTG:** Thursday, 12 November 2026 (`2026-11-12`)
+- **Author:** Antigravity CoS (v1.7). v1.5–v1.6: GB CoS fresh writer. v1.0–v1.4: AG CoS v5.
+- **Reviewer:** Grok Bot Chief of Staff (`GROKCOS`) & Stand Alone Grok (`SAG`)
+- **Status:** **STRICT PLAN ONLY — PREVIEW GATE ONLY** (Zero code modifications, zero builds, zero test execution, zero Firestore writes/seeding, zero live deploys without Founder Eric's typed YES)
+- **Target Branch & Trees:**
+  - **Code Pin:** `4d17ca5ef1f73c0e5f5c9dca3a96f00ab9a15235` (`p7-v8.9` mobile code baseline)
+  - **Catalog Asset Source:** `b0b05808` (identical for `numista_mobile/assets/catalog/` and catalog screens to `cc815522` / `origin/dev`; 3,202 rows; replaces stale `bde8b402` mention)
+  - **NOTE:** `origin/main` is locked at `9f04550a`.
+
+---
+
+### Standing Operational Invariants & Pinned Boundaries
+
+1. **Production Branch Lock:** `origin/main` strictly locked at `9f04550a45fa4da082ba8948c2d89a521a90fa45`. Under no circumstances may any agent merge, cherry-pick, rebase, or push directly to `main`.
+2. **Stripe Lock:** Stripe remains strictly OFF across the entire application. Zero live keys, zero webhook activation, and zero payment processing endpoints.
+3. **Budget Policy:** Cost control is governed strictly by an **alert-only threshold of $20.00/month** on Google Cloud Billing. Under no circumstances may any agent implement automated budget caps, hard spending limits, or automated Hosting teardowns.
+4. **Zero Firestore Writes / Seeding:** The execution of this plan performs **0 writes, 0 updates, and 0 creates** in live Firestore or user collection documents. All catalog metadata joins are read-only.
+5. **Privacy & PII Exclusion:** Zero collector identifiers, zero AJ provenance tags, zero private purchase costs, zero personal notes, and zero private collection fields are exposed or included in public catalog fixtures or public tests.
+6. **No Argon:** In accordance with Founder Eric's typed YES order of 5 Nov 2026 at 18:07 ET, Argon is permanently removed from all review workflows, gating rubrics, and handoff sequences.
+7. **Rule 6a Verbatim Code Citations:** Every source citation in this plan quotes the exact verbatim code lines as inspected at pinned commit `4d17ca5e`.
+
+---
+
+## 1. Executive Summary & Review Trajectory
+
+On 5 November 2026 at 16:01 ET, Founder Eric requested the addition of official U.S. Mint product fields to the Coin Detail View. The business objective is to surface official government release information (issue pricing, schedule availability, and release timing) in an authoritative, non-promotional, and purely informational manner.
+
+The plan has undergone three rigorous evaluation cycles by Grok Bot Chief of Staff:
+- **v1.0 Evaluation (58/100 FAIL):** Identified eight structural defects including lack of ingestion path, undefined `release_date`, mutation of `toFirestore()`, and non-existent `copyWith()`.
+- **v1.1 Evaluation (56/100 FAIL per `COS_SCORE_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.1_20261107.md` and `RADIO_NET-845`):** Grounded initial baseline, but revealed seven blocking defects including phantom master catalog, broken join prefix, PII leaks via `toPublicCatalogMap()`, unwired lifecycle, dependency on unapproved NET-813 modal, prose-only styling, and uncompilable tests.
+- **v1.2 Evaluation (73/100 FAIL per `COS_SCORE_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.2_20261107.md` and `RADIO_NET-851`):** Acknowledged massive architectural gains: verified real public catalog binding (`catalog_public_v1.json`, 5,895,259 bytes; 3,202 items: 2,965 coins / 181 notes / 56 medals), pubspec registration at pin lines 92-96, verified classic 1921-D Morgan record, pristine `CoinModel` decoupling, removal of `toPublicCatalogMap`, dropped `UnifiedCoinDetailsModal`, real 3-tuple muted styling hook, and value separation rules.
+- **v1.3 Evaluation (88/100 FAIL per `COS_SCORE_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.3_20261107.md` and `RADIO_NET-855`):** Verified major progress: grounded real catalog records (`NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A` and `NAC1.CN.US.1D.MORGANSILV.1921.D.BASE.2`), aligned public gate (`is_placeholder == false` passing 2,251 rows), confirmed named overlay input `data/usmint/usmint_product_schedule_2024.json` (STATUS: TO-BE-ACQUIRED), exported `@visibleForTesting class DetailsTab`, and updated line ranges. However, score was held at 88 due to four numbered blocking must-fixes:
+  1. *MF-1 (FakeFirestore Injection):* `FakeFirebaseFirestore` was constructed in the zero-writes test but never injected into `MintProductLookupService.forTesting` or the tab rendering path, making the empty collection assertion a tautology.
+  2. *MF-2 (Real Package Name):* Test imports used `package:numista_mobile/...` but pin `numista_mobile/pubspec.yaml` line 1 is `name: numista_ai`.
+  3. *MF-3 (Real Public Catalog Record):* Privacy test asserted absence of private keys against a handmade in-memory map rather than loading a real public catalog record from `catalog_public_v1.json` alongside serialized overlay JSON.
+  4. *MF-4 (Finish Pin Quotes):* `toFirestore()` wrapper quotes omitted `, _coin.id` (`:494` and `:686`). `_loadInspectorMode();` was cited at line 193 instead of line 192 (line 193 is `}`).
+
+- **v1.4 Evaluation (93/100 FAIL per `COS_SCORE_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.4_20261107.md` and `RADIO_NET-856`):** All four CoS-88 must-fixes closed; residuals: (R1) header still labeled v1.3 / `RADIO_NET-851` plus leftover v1.2→v1.3 table rows after a broken separator; (R2) `_firestore` accepted and stored but never read; (R3) initState fence included `@override` (pin `:182`) under a "183–193" heading and the TabBarView excerpt was labeled 768–782 while pin `Expanded(` is `:770`; (R4) privacy test used CWD-relative `File(...)` with a `rootBundle` fallback inside plain `test()`.
+
+Plan v1.5 is written by the GB CoS fresh writer and changes ONLY those four residuals (see §2.1). Every other section is carried forward from v1.4 unchanged.
+
+---
+
+## 2.0b v1.7 Close-Out of `REVISE_NET-810_v1.6_to_v1.7_VERIFIED_20261108-1155.md`
+
+| # | Verified Must-Fix / Decision | v1.7 Resolution | Section |
+|---|---|---|---|
+| **MF-1 (REAL)** | One execution tree (`4d17ca5e` vs `b0b05808`/`cc815522`, stale `bde8b402`, duplicate `assets/catalog/` in `pubspec.yaml`, unverified byte/breakdown stats) | Separated code pin (`4d17ca5e`) and catalog source (`b0b05808` == `cc815522` for catalog paths), removed stale `bde8b402`, added preflight check verifying `catalog_public_v1.json` + no duplicate `- assets/catalog/` line (already at `b0b05808:numista_mobile/pubspec.yaml:97`), and dropped unverified byte/subtype counts from active assertions. | Header, §4.4, §11.1 |
+| **MF-2 (REAL)** | §5.1 still showed `_byNacCode!.containsKey(ref)` with no placeholder gate; `.catchError((_) {})` at `:797` swallowed errors; historical `FakeFirebaseFirestore` rows | Replaced §5.1 with §7.1 `eligible` gate algorithm; marked `FakeFirebaseFirestore` matrix historical; removed blind `.catchError((_) {})` in `coin_detail_screen.dart` `initState()` so only `FlutterError`/`FormatException` in `ensureInitialized()` are tolerated. | §5.1, §7.2 |
+| **MF-3 (REAL)** | Provenance: `mint_product_fields_v1.json` empty until schedule acquired, `source_url` + `retrieved_at` fields, local-only exporter, no hardcoded `'Nov 2026'` | Commit `mint_product_fields_v1.json` as `{}` until `data/usmint/usmint_product_schedule_2024.json` is acquired; added `sourceUrl` (`source_url`) & `retrievedAt` (`retrieved_at`) to `MintProductMetadata`; exporter is local-file-in/local-file-out only and omits fields without provenance; `displayStatus` `'ON_SALE'` formats `asOfDate` instead of hardcoded `'Nov 2026'`. | §4.3, §6.2 |
+| **MF-4 (REAL)** | `coin_detail_screen.dart` hunk lacked imports | Added verbatim import hunk at `coin_detail_screen.dart:28–30` (`../models/mint_product_metadata.dart`, `../services/mint_product_lookup_service.dart`). | §7.2 |
+| **MF-5a (REAL)** | No US-only gate | Added fail-closed US check in `lookupForCoin`: `coin.country` must be US (`CoinModel.country` defaults `'USA'` at `4d17ca5e:coin_model.dart:112`, plus `'United States'`/`'US'`) AND catalog row `type == 'coin'` / `nac_code` contains `.US.`. Added non-US negative test. | §5.2, §7.1, §10 |
+| **MF-5b (DECISION)** | Blank mint mark `''` → `'Philadelphia'` vs `'not entered'` (`CoinModel.mintMark` defaults `''` at `4d17ca5e:coin_model.dart:84`) | **Recommended v1.7 rule (flagged for Eric Sunday confirm):** blank `mintMark` maps to `'Philadelphia'` ONLY when the composite match is unique AND catalog row `mint_mark_on_coin` is null/blank; otherwise returns `null`. | §5.2, §7.1 |
+| **MF-6 (REAL)** | §11.3 rollback used `tac` + process substitution and unconditional `git push origin dev` | Replaced with portable `awk` reverse order, local `git revert` only (push behind separate Founder YES), plus abort checks for empty list, dirty tree, wrong branch, and `HEAD == 9f04550a`. | §11.3 |
+| **MF-7b (REAL)** | "Quarantined placeholder" test omitted `series` | Added full `year`/`mint_facility`/`denomination`/`series` keys on both `rawEntries` and `CoinModel` so `is_placeholder: true` is the sole cause of `null`. | §10 |
+| **MF-7a (FALSE)** | `status_badge: "Needs source"` | Verified on `b0b05808` for `NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A` (`status_badge: "Needs source"`, `is_placeholder: false`). Evidence cited; assertion retained. | §5.5 |
+| **Polish** | `facilityToMintMark` in AC-4, `AC-7` line shift note | Renamed to `mint_facility` in AC-4; noted line shifts in `coin_detail_screen.dart` from the 2 added imports. | §11.1 |
+
+## 2.0 v1.6 Close-Out of CoS-89 Must-Fixes (GB CoS fresh writer, round 2; ONLY these items changed)
+
+| # | CoS-89 must-fix | v1.6 change | Evidence |
+| :--- | :--- | :--- | :--- |
+| **MF-1** | Invalid full baseline SHA; `$PRE_EXEC_SHA..HEAD` rollback reverts unrelated commits | Every full SHA replaced with the real `git rev-parse 4d17ca5e` = `4d17ca5ef1f73c0e5f5c9dca3a96f00ab9a15235` (header, §3 preamble). §11.3 no longer uses a range: it reverts only the exact NET-810 execution commits recorded at execution time in `scratch/revert_shas_net810.txt` (newest first), with branch assertion, clean-tree check, preflight `cat-file`/ancestry checks, conflict abort, and push only after full success. | `git rev-parse 4d17ca5e` on EDS_Laptop 8 Nov → `4d17ca5ef1f73c0e5f5c9dca3a96f00ab9a15235`; origin/dev → `bde8b402d34675a39f2b3b4e872cb46f71a5b32a`. |
+| **MF-2** | Primary NAC join bypassed the placeholder gate; composite accepted missing values; blank mint mapped to '' | §7.1 `lookupForCoin` rewritten: a single `_eligibleRowsByNac` index holds only rows with **explicit** `is_placeholder == false` (`== false`, so null/missing is ineligible). **Both** joins resolve through that index; primary NAC with no eligible row → null. Composite requires all four keys non-empty on **both** coin and catalog row (missing facility/series/denomination/year → no match), unique match only, and returns the overlay entry for that row's `nac_code` or null (never builds metadata from a catalog row). Blank mint mark → `'Philadelphia'`, matching §5.2. Negative tests added (§10, MF-2 group). | Plan §5.2 / §5.3 rules; dev catalog counts 2,251 explicit false / 951 true (per CoS-89 audit). |
+| **MF-3** | Zero-writes test skipped `ensureInitialized`; catch-all swallowed failures; AC-R2 used `rg` (not installed) and skipped the screen | `ensureInitialized({AssetBundle? bundle})` now catches **only** `FlutterError` (missing asset) and `FormatException` (bad JSON) and records `lastInitError`; any other exception (e.g. a FlutterFire `[core/no-app]` from an accidental `FirebaseFirestore.instance`) is rethrown. New test runs `ensureInitialized` with a test bundle and no Firebase init, then pumps `DetailsTab`, and asserts `lastInitError == null` and `tester.takeException() == null`. **Mutation criterion:** inserting any `FirebaseFirestore.instance` call into `ensureInitialized`, `lookupForCoin` or the `DetailsTab` build must make this test fail. AC-R2 replaced with a native PowerShell check over the **added lines of all three changed Dart files**. | Pin `numista_mobile/pubspec.yaml` has `firebase_core` (:39) and `cloud_firestore` (:40) per CoS audit, so the screen library can reach Firestore; hence the diff-level check. |
+| **MF-4** | Mint overlay values looked like sourced facts | Every concrete overlay value in §5.5 and the tests (`80.00`, `2024-07-11`, `12:00 PM`, as-of) is labeled **SYNTHETIC TEST FIXTURE — not a U.S. Mint fact**. New rule: the exporter must not emit any overlay field to `assets/catalog/mint_product_fields_v1.json` until `data/usmint/usmint_product_schedule_2024.json` (TO-BE-ACQUIRED) is acquired and each emitted field carries a `source_url` + `retrieved_at` provenance pair; fields without provenance are omitted (render nothing). | Catalog has no price/release fields (CoS-89 audit); §4.3 already labels the input TO-BE-ACQUIRED. |
+
+## 2.1 v1.5 Residual Close-Out (CoS-93 → v1.5, fresh writer)
+
+| # | CoS-93 residual | v1.5 change | Evidence (`git show 4d17ca5e:<path>`, run 8 Nov ~07:29 ET on EDS_Laptop) |
+| :--- | :--- | :--- | :--- |
+| **R1** | Header said v1.3 / `RADIO_NET-851` / 22:00; broken `---` separator with leftover v1.2→v1.3 rows | H1, Document Version, DTG and Author updated to v1.5; leftover rows (old MF-1..MF-5 from v1.3) deleted so MF numbering is unique | Document-only fix. |
+| **R2** | `_firestore` stored but never read | **Removed** the `firestore` parameter, the `_firestore` field, and the `cloud_firestore` import from `MintProductLookupService` (§7.1). The service never needed Firestore: it is a read-only asset join. Zero-writes test (§10) no longer builds a `FakeFirebaseFirestore`; it now (a) runs with **no** `Firebase.initializeApp`, so any reach for `FirebaseFirestore.instance` inside lookup or `DetailsTab` throws and fails the test, and (b) adds acceptance check **AC-R2** (§11.1): from `numista_mobile/`, `rg -n "cloud_firestore|FirebaseFirestore" lib/services/mint_product_lookup_service.dart lib/models/mint_product_metadata.dart` must return no matches (a reviewer-run grep, not a CWD-dependent test). | Also verified: pin `numista_mobile/pubspec.yaml` has **no** `fake_cloud_firestore` dependency (only `flutter_test` under dev deps), so the v1.4 import `package:fake_cloud_firestore/...` would not have resolved. Dropping it removes a dependency that would otherwise need adding. The "throws without initializeApp" behavior is standard FlutterFire behavior; it is **not** re-verified by running a test here (PLAN ONLY, no test execution). |
+| **R3** | initState fence includes `@override` `:182`; TabBarView excerpt labeled 768–782 | initState heading relabeled **182–193** (pin `:182` `@override`, `:183` `void initState() {`, `:192` `_loadInspectorMode();`, `:193` `}`). TabBarView excerpt relabeled **770–786** (pin `:770` `Expanded(`, `:771` `child: TabBarView(`, `:774-778` `_DetailsTab(...)`, `:786` `onRetry: _loadAiInsight,`), marked as truncated (pin continues `:787` `onOpenChat: () {`). | Lines quoted from `git show 4d17ca5e:numista_mobile/lib/screens/coin_detail_screen.dart`. |
+| **R4** | Privacy test `File(...)` CWD-relative; `rootBundle` fallback in plain `test()` | Privacy test is now a `testWidgets` that loads the catalog **only** via `rootBundle.loadString('assets/catalog/catalog_public_v1.json')` inside `tester.runAsync`, with an explicit `import 'package:flutter/services.dart';`. `dart:io` / `File` removed. Depends on the §4.4 pubspec asset registration of `assets/catalog/` (pin `pubspec.yaml` `:92-96` lists `assets/`, `assets/data/`, `assets/fonts/`, `assets/mint_mark_diagrams/` — Flutter does not recurse, so `assets/catalog/` must be added as §4.4 already specifies). | Pin pubspec `:92-96` quoted above. |
+
+## 2. Must-Fix Matrix & Resolution Specification (v1.3 -> v1.4, Attempt 4/4) — carried forward
+
+| # | Must-Fix Item | Prior Defect (v1.3 88 FAIL per `COS_SCORE`) | v1.4 Architectural Resolution Specification |
+| :--- | :--- | :--- | :--- |
+| **MF-1** | Inject `FakeFirebaseFirestore` into Lookup / Render Path | Test constructed `fakeFs` but never injected it into `MintProductLookupService.forTesting` or the tab rendering path; collection length 0 was a tautology. | Wire `fakeFs` directly into `MintProductLookupService.forTesting(entries: ..., firestore: fakeFs)`. In `testWidgets`, render `DetailsTab` with resolved metadata, exercise user interaction (tile tap), and assert that both `fakeFs.collection('coins')` and `fakeFs.collection('users')` remain completely untouched (`docs.isEmpty == true`). |
+| **MF-2** | Real Package Name in Test Imports | Tests imported `package:numista_mobile/...` but pin `numista_mobile/pubspec.yaml` line 1 is `name: numista_ai`. | Update all test imports to **`package:numista_ai/...`** (`models/coin_model.dart`, `models/mint_product_metadata.dart`, `services/mint_product_lookup_service.dart`, `screens/coin_detail_screen.dart`), matching `pubspec.yaml` line 1. |
+| **MF-3** | Real Public Catalog Record Serialization for Privacy Assertion | Privacy assertion checked a handmade map that never had private keys rather than a real public catalog record. | Load the real catalog record **`NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A`** from `assets/catalog/catalog_public_v1.json` AND serialize overlay JSON via `MintProductMetadata.toJson()`. Assert that all 10 forbidden private collector keys are absent from BOTH real objects. |
+| **MF-4** | Finish Pin Quotes vs `git show 4d17ca5e` | `toFirestore()` wrapper quotes omitted `, _coin.id` (`:494` and `:686`). `_loadInspectorMode();` was cited at line 193 instead of line 192 (line 193 is `}`). | Quote `toFirestore()` wrappers at lines **`:490-494`** and **`:682-686`** verbatim including `, _coin.id`. Cite `_loadInspectorMode();` at line **192** and line 193 as the closing `}`. |
+
+
+---
+
+## 3. Grounding & Baseline Code Audit (Pin `4d17ca5e`)
+
+Every citation below is quoted verbatim from the target repository tree at commit `4d17ca5ef1f73c0e5f5c9dca3a96f00ab9a15235`.
+
+### 3.1 `CoinModel` Remains Pristine (`numista_mobile/lib/models/coin_model.dart`)
+
+**Class Header and Imports (lines 1–28; excerpt continues through `country` at :28):**
+```dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/text_sanitizer.dart';
+
+class CoinModel {
+  final String id;
+  final String year;
+  final String mintMark;
+  final String denomination;
+  final String programSeries;
+  final String themeSubject;
+  final String variety;
+  final String condition;
+  final String strikeType;
+  final String holderType;
+  final String gradingService;
+  final String certificationNumber;
+  final String metalContent;
+  final String quantity;
+  final String purchaseCost;
+  final String purchaseDate;
+  final String retailer;
+  final String retailerItemNo;
+  final String retailerInvoiceNo;
+  final String storageLocation;
+  final String personalNotes;
+  final String personalRef;
+  final String originalDescription;
+  final String country;
+```
+
+**`toFirestore` Method (lines 248–297):**
+```dart
+  Map<String, dynamic> toFirestore() {
+    return {
+      'Year': year,
+      'Mint Mark': mintMark,
+      'Denomination': denomination,
+      'Program/Series': programSeries,
+      'Theme/Subject': themeSubject,
+      'Variety': variety,
+      'Condition': condition,
+      'Strike Type': strikeType,
+      'Holder Type': holderType,
+      'Grading Service': gradingService,
+      'Certification Number': certificationNumber,
+      'Metal Content': metalContent,
+      'Quantity': quantity,
+      'Purchase Cost': purchaseCost,
+      'Purchase Date': purchaseDate,
+      'Retailer/Website': retailer,
+      'Retailer Item No.': retailerItemNo,
+      'Retailer Invoice #': retailerInvoiceNo,
+      'Storage Location': storageLocation,
+      'Personal Notes I': personalNotes,
+      'Personal Reference #': personalRef,
+      'Original Description from source': originalDescription,
+      'AI Estimated Value': aiEstimatedValue,
+      'Melt Value': meltValue,
+      'image_url_obverse': imageUrlObverse,
+      'image_url_reverse': imageUrlReverse,
+      'image_verification_status': imageVerificationStatus,
+      'image_verification_reason': imageVerificationReason,
+      'greysheetGsid': greysheetGsid,
+      'greysheetBid': greysheetBid,
+      'greysheetAsk': greysheetAsk,
+      'cpgRetail': cpgRetail,
+      'priceLastUpdated': priceLastUpdated != null ? Timestamp.fromDate(priceLastUpdated!) : null,
+      'hasCac': hasCac,
+      'is_set': isSet,
+      'set_id': setId,
+      'set_contents': setContents,
+      'parent_set_id': parentSetId,
+      'member_of': memberOf,
+      'in_original_packaging': inOriginalPackaging,
+      'owner_photos': ownerPhotos,
+      'provenanceLedger': provenanceLedger,
+      'transferStatus': transferStatus,
+      'transferId': transferId,
+      'Country': country,
+      'timestamp': timestamp ?? FieldValue.serverTimestamp(),
+    };
+  }
+```
+
+> [!IMPORTANT]
+> **Pristine Invariant:** In NET-810, `CoinModel` is **100% byte-for-byte unmodified**. Zero fields are added, zero constructor signatures change, and `toFirestore()` remains identical to pin `4d17ca5e`. This completely eliminates schema drift, optimistic update regressions, or private field leakage.
+
+### 3.2 `_CoinDetailScreenState` Lifecycle (`numista_mobile/lib/screens/coin_detail_screen.dart`)
+
+**Real `initState` at lines 182–193 (`@override` at :182; `void initState() {` at :183) (NOT lines 111–125 which is `CoinDetailScreen.show`):**
+```dart
+  @override
+  void initState() {
+    super.initState();
+    _coin = widget.coin;
+    _tabCtrl = TabController(length: 7, vsync: this);
+    _tabCtrl.addListener(() {
+      if (_tabCtrl.index == 3 && !_aiLoaded && !_aiLoading) {
+        _loadAiInsight();
+      }
+    });
+    _loadInspectorMode();
+  }
+```
+*(Notice: Real `initState` calls `_loadInspectorMode();` at line 192; line 193 is the closing brace `}`. There are NO `_checkWishlist()` or `_loadProvenance()` methods in this file).*
+
+**Real `_DetailsTab(` Call Site inside `TabBarView` — excerpt lines 770–786 (`Expanded(` :770, `TabBarView(` :771, `_DetailsTab(` :774-778, `onRetry:` :786; truncated, pin continues at :787 `onOpenChat: () {`) (NOT lines 845–855 which is edit notes):**
+```dart
+        Expanded(
+          child: TabBarView(
+            controller: _tabCtrl,
+            children: [
+              _DetailsTab(
+                coin: _coin,
+                isInspectorMode: _isInspectorMode,
+                onInspectField: _showDiscrepancyDialog,
+              ),
+              _FinancialsTab(coin: _coin, spotPrices: widget.spotPrices, onCacToggled: _updateCac),
+              _ProvenanceTab(coin: _coin),
+              _AiInsightsTab(
+                loading: _aiLoading,
+                loaded: _aiLoaded,
+                insight: _aiInsight,
+                error: _aiError,
+                onRetry: _loadAiInsight,
+                // ... excerpt truncated; pin :787 continues `onOpenChat: () {`
+```
+
+**Real Optimistic `toFirestore()` Call Sites at lines 490–494 and 682–686 (including `, _coin.id`):**
+- Lines 490–494 (Field edit save):
+```dart
+      // Optimistically update local model
+      final updated = CoinModel.fromMap({
+        ..._coin.toFirestore(),
+        ...updates,
+        'timestamp': _coin.timestamp,
+      }, _coin.id);
+```
+- Lines 682–686 (CAC toggle save):
+```dart
+      final updated = CoinModel.fromMap({
+        ..._coin.toFirestore(),
+        'hasCac': value,
+        'timestamp': _coin.timestamp,
+      }, _coin.id);
+```
+*(Notice: Both wrappers call `CoinModel.fromMap({...}, _coin.id)` passing `_coin.id` as the second argument).*
+
+### 3.3 `_DetailsTab` and `_DetailTile` (`numista_mobile/lib/screens/coin_detail_screen.dart`)
+
+**Real `_DetailsTab` Class Definition at lines 1513–1544:**
+```dart
+class _DetailsTab extends StatelessWidget {
+  final CoinModel coin;
+  final bool isInspectorMode;
+  final Function(String fieldName, String currentValue) onInspectField;
+
+  const _DetailsTab({
+    required this.coin,
+    this.isInspectorMode = false,
+    required this.onInspectField,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fields = <(String, String)>[
+      ('Year', coin.year.replaceAll(RegExp(r'\.0$'), '')),
+      ('Mint Mark', coin.mintMark),
+      ('Denomination', _fmtDenomination(coin.denomination)),
+      ('Program / Series', coin.programSeries.isEmpty ? (coin.country.isNotEmpty && coin.country != 'United States' ? 'Standard Circulation' : '') : coin.programSeries),
+      ('Theme / Subject', coin.themeSubject),
+      ('Variety / Error', coin.variety),
+      ('Condition', coin.condition),
+      ('Strike Type', coin.strikeType),
+      ('Holder Type', coin.holderType),
+      ('Grading Service', coin.gradingService),
+      ('Metal Content', coin.metalContent),
+      ('Country', coin.country),
+      ('Storage Location', coin.storageLocation),
+      ('Quantity', coin.quantity.isNotEmpty ? coin.quantity : '1'),
+      ('Notes', coin.personalNotes),
+    ].where((f) => f.$2.trim().isNotEmpty &&
+        f.$2 != 'null' && f.$2 != 'N/A' && f.$2 != 'Ungraded').toList();
+```
+
+**Real `_DetailTile` Widget Definition at lines 3268–3309 (NOT lines 1584–1620 which is `_FinancialsTab`):**
+```dart
+class _DetailTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final VoidCallback? onInspect;
+  const _DetailTile({required this.label, required this.value, this.onInspect});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 180,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: _kSurface(context),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: _kBorder(context)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: TextStyle(fontSize: 10, color: _kSubtext(context),
+                  fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+              if (onInspect != null)
+                GestureDetector(
+                  onTap: onInspect,
+                  child: Icon(Icons.comment_outlined, size: 12, color: _kAccent(context)),
+                ),
+            ],
+          ),
+          SizedBox(height: 4),
+          GestureDetector(
+            onLongPress: () => Clipboard.setData(ClipboardData(text: value)),
+            child: Text(value,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+                  color: _kText(context))),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+```
+*(Notice: Line 3299 already wraps value in `GestureDetector` for long-press clipboard copy. NET-810 does not ban this gesture detector; rather, it guarantees that no commerce/purchase/checkout tap handlers or buttons are rendered on Mint rows).*
+
+---
+
+## 4. Source of Truth & Real Catalog Artifact Specification (MF-1, MF-5)
+
+### 4.1 Binding to Verified Public Catalog Artifact
+NET-810 binds strictly to the verified public catalog artifact present on `origin/dev`:
+- **File Location:** `numista_mobile/assets/catalog/catalog_public_v1.json`
+- **File Size:** `5,895,259` bytes
+- **Record Count:** Exactly `3,202` records (`2,965` coins, `181` banknotes, `56` medals)
+- **Status Distribution:** `1,724` `"Needs source"`, `950` `"Details coming"`, `519` `None`, `9` `"Pre-Federal"`
+- **Placeholder Distribution:** `2,251` non-placeholder records (`is_placeholder: false`), `951` placeholder stubs (`is_placeholder: true`)
+
+### 4.2 Dedicated Mint Metadata Overlay
+To preserve the immutability of `catalog_public_v1.json` and keep government Mint pricing isolated from public catalog text builds, Mint attributes are loaded from a dedicated asset overlay:
+- **File Location:** `numista_mobile/assets/catalog/mint_product_fields_v1.json` (New, privacy-cleared)
+- **Schema Structure:** Keyed by official uppercase `nac_code`:
+  ```json
+  {
+    "NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A": {
+      "product_price_usd": 80.00,
+      "mint_schedule_status": "NOT_AVAILABLE",
+      "product_availability": "No longer offered by U.S. Mint",
+      "release_date": "2024-07-11",
+      "release_time_et": "12:00 PM",
+      "mint_product_as_of": "2024-11-01T00:00:00Z"
+    },
+    "NAC1.CN.US.1D.MORGANSILV.1921.D.BASE.2": {
+      "product_price_usd": null,
+      "mint_schedule_status": "NOT_AVAILABLE",
+      "product_availability": "No longer offered by U.S. Mint",
+      "release_date": null,
+      "release_time_et": null,
+      "mint_product_as_of": "2024-11-01T00:00:00Z"
+    }
+  }
+  ```
+
+### 4.3 Real Offline Ingestion Script & Concrete Input Source (MF-3, MF-5)
+The overlay is generated strictly offline by an administrative build script:
+- **Script:** `scripts/export_mint_product_fields.py` (**local-file-in / local-file-out only** — zero network calls).
+- **Concrete Input File:** `data/usmint/usmint_product_schedule_2024.json`
+- **Input Status:** **`STATUS: TO-BE-ACQUIRED / PLANNED`** (official government export of U.S. Mint Product Schedules and historical SKU price lists).
+- **Provenance Rule (v1.7 MF-3):** Commit `numista_mobile/assets/catalog/mint_product_fields_v1.json` as `{}` until `data/usmint/usmint_product_schedule_2024.json` is acquired. Any emitted overlay entry MUST include `source_url` and `retrieved_at` provenance; the exporter omits any field lacking provenance.
+- **Execution Rule:** Zero runtime network calls. The Flutter app loads the pre-compiled `mint_product_fields_v1.json` asset bundle directly into memory.
+
+### 4.4 Asset Registration in `pubspec.yaml` & Tree Preflight (v1.7 MF-1)
+- On `4d17ca5e:numista_mobile/pubspec.yaml:92–96`:
+  ```yaml
+  assets:
+    - assets/
+    - assets/data/
+    - assets/fonts/
+    - assets/mint_mark_diagrams/
+  ```
+- On `b0b05808:numista_mobile/pubspec.yaml:92–97` (and `cc815522` / `origin/dev`), `- assets/catalog/` is **already registered at line 97**:
+  ```yaml
+  93:   assets:
+  94:     - assets/
+  95:     - assets/data/
+  96:     - assets/fonts/
+  97:     - assets/mint_mark_diagrams/
+  98:     - assets/catalog/
+  ```
+- **Preflight Gate:** Before modifying `pubspec.yaml`, assert `test -f numista_mobile/assets/catalog/catalog_public_v1.json` and add `- assets/catalog/` **only if not already present** (never add a duplicate line). Verify cited line numbers against the active target tree.
+
+---
+
+## 5. Join Matching Architecture & Key Resolution (MF-2, MF-3, MF-5a, MF-5b)
+
+### 5.1 Primary Join: Strict `NAC1.` Prefix + Eligibility Gate (v1.7 MF-2)
+If `coin.personalRef` contains a verified Numista Authority Code starting with `NAC1.` (or legacy `NAC.`), `lookupForCoin` MUST route through `_eligible` (`is_placeholder == false` and US-only gate) before reading `_byNacCode`:
+```dart
+// Matches §7.1 lookupForCoin:
+if (!_isUsCoin(coin)) return null;
+final ref = coin.personalRef.trim().toUpperCase();
+if (RegExp(r'^NAC1?\.').hasMatch(ref)) {
+  if (!eligible.containsKey(ref)) return null; // placeholder, non-US, or missing -> fail closed
+  return _byNacCode![ref];                      // null if no overlay entry
+}
+```
+
+### 5.2 Composite Fallback Join & US-Only / Blank Mint Rules (v1.7 MF-5a, MF-5b)
+When `personalRef` does not contain a verified NAC, the service evaluates an exact composite key tuple matching against `catalog_public_v1.json`:
+$$\text{CompositeKey} = (\text{year}, \text{mint\_facility}, \text{denomination}, \text{series})$$
+
+**Normalization Rules:**
+1. **US-Only Gate (MF-5a):** `coin.country` (default `'USA'` at `4d17ca5e:numista_mobile/lib/models/coin_model.dart:112`) must normalize to US (`'usa'`, `'united states'`, `'us'`, `'u.s.'`, `'u.s.a.'`), AND the eligible catalog row must have `type == 'coin'` (or `nac_code` containing `.US.`).
+2. **Year:** Parsed as integer (`coin.year.replaceAll(RegExp(r'\.0$'), '')`).
+3. **Facility Mapping (`coin.mintMark` → `mint_facility`):**
+   - `'D'` → `'Denver'`
+   - `'S'` → `'San Francisco'`
+   - `'W'` → `'West Point'`
+   - `'P'` → `'Philadelphia'`
+   - `'O'` → `'New Orleans'`
+   - `'CC'` → `'Carson City'`
+   - **Blank `''` (v1.7 MF-5b — Flagged for Founder Eric Sunday Confirm):** Because `CoinModel.mintMark` defaults to `''` (`4d17ca5e:coin_model.dart:84`), blank can mean either Philadelphia or "not entered". **v1.7 Rule:** blank `''` maps to `'Philadelphia'` **only when** the composite match is unique (`matches.length == 1`) **AND** the matched catalog row's `mint_mark_on_coin` is null/blank (`entry['mint_mark_on_coin'] == null || entry['mint_mark_on_coin'] == false || entry['mint_mark_on_coin'].toString().trim().isEmpty`). Otherwise return `null`.
+4. **Denomination:** Normalized lowercase (`'dollar'` / `'1d'`, `'half dollar'` / `'50c'`, `'quarter dollar'` / `'25c'`, `'dime'` / `'10c'`, `'cent'` / `'1c'`).
+5. **Series:** Case-insensitive string match against catalog `series`.
+
+### 5.3 Public Catalog Quarantine Gate (MF-3)
+In `catalog_public_v1.json`, records are filtered against the real schema fields:
+- **`is_placeholder` Gate:** A catalog record is **only eligible** if `is_placeholder == false`.
+- Records with `is_placeholder: true` (951 stub records) are quarantined and return `null`.
+- Status badges (`"Needs source"`, `"Pre-Federal"`, or `None`) with `is_placeholder: false` are **fully eligible** historical catalog entries.
+- **Fail-Closed Ambiguity Guard:** If the composite search yields $0$ matches or $>1$ matches, the lookup **fails closed and returns `null`**. Only a unique single match resolves.
+
+### 5.4 Schema Attribute Separation (MF-3)
+To eliminate any confusion between public catalog records and overlay metadata:
+
+| Schema Attribute | Originating File | Ingestion Purpose | Example Value |
+| :--- | :--- | :--- | :--- |
+| `nac_code` | `catalog_public_v1.json` | Primary join key | `"NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A"` |
+| `year` | `catalog_public_v1.json` | Composite join key | `2024` |
+| `mint_facility` | `catalog_public_v1.json` | Composite join key | `"West Point"` |
+| `denomination` | `catalog_public_v1.json` | Composite join key | `"Dollar"` |
+| `series` | `catalog_public_v1.json` | Composite join key | `"American Silver Eagle"` |
+| `status_badge` | `catalog_public_v1.json` | Public catalog status | `"Needs source"` |
+| `is_placeholder` | `catalog_public_v1.json` | Public quarantine gate | `false` |
+| `product_price_usd` | `mint_product_fields_v1.json` | Mint Issue Price | `80.00` |
+| `mint_schedule_status` | `mint_product_fields_v1.json` | Government schedule status | `"NOT_AVAILABLE"` |
+| `product_availability` | `mint_product_fields_v1.json` | Factual availability copy | `"No longer offered by U.S. Mint"` |
+| `release_date` | `mint_product_fields_v1.json` | ISO-8601 release date | `"2024-07-11"` |
+| `release_time_et` | `mint_product_fields_v1.json` | Release time (only with provenance) | `"12:00 PM"` (synthetic fixture) |
+
+### 5.5 Concrete Demonstrable Records (MF-2, MF-3)
+
+#### Record 1: 1921-D Morgan Silver Dollar (Classic Historical Strike)
+Verified catalog record from `catalog_public_v1.json`:
+```json
+{
+  "nac_code": "NAC1.CN.US.1D.MORGANSILV.1921.D.BASE.2",
+  "name": "1921-D Morgan Silver Dollars",
+  "type": "coin",
+  "year": 1921,
+  "denomination": "Dollar",
+  "series": "Morgan Silver Dollars",
+  "mint_facility": "Denver",
+  "mint_mark_on_coin": true,
+  "status_badge": "Needs source",
+  "is_placeholder": false
+}
+```
+Overlay entry — **SYNTHETIC TEST FIXTURE (not a U.S. Mint fact; no source acquired)**:
+```json
+{
+  "product_price_usd": null,
+  "mint_schedule_status": "NOT_AVAILABLE",
+  "product_availability": "No longer offered by U.S. Mint",
+  "release_date": null,
+  "release_time_et": null
+}
+```
+*Gate Result:* `is_placeholder: false` $
+ightarrow$ **SURVIVES GATE**.
+*Rendering:* `product_price_usd` is null, so issue price is omitted. Displays:
+- **Mint Schedule Status:** `"No longer offered by U.S. Mint"` (muted)
+
+#### Record 2: 2024-W American Silver Eagle (Modern Mint Product)
+Verified catalog record from `b0b05808:numista_mobile/assets/catalog/catalog_public_v1.json` (identical to `cc815522`; `status_badge: "Needs source"` verified on `b0b05808` per `REVISE_NET-810_v1.6_to_v1.7`):
+```json
+{
+  "nac_code": "NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A",
+  "name": "2024-W American Silver Eagle",
+  "type": "coin",
+  "year": 2024,
+  "denomination": "Dollar",
+  "series": "American Silver Eagle",
+  "mint_facility": "West Point",
+  "mint_mark_on_coin": true,
+  "status_badge": "Needs source",
+  "is_placeholder": false
+}
+```
+Overlay entry — **SYNTHETIC TEST FIXTURE (values `80.00`, `2024-07-11`, `12:00 PM`, as-of are placeholders, NOT verified U.S. Mint data; production emission prohibited until §2.0 MF-4 provenance exists)**:
+```json
+{
+  "product_price_usd": 80.00,
+  "mint_schedule_status": "NOT_AVAILABLE",
+  "product_availability": "No longer offered by U.S. Mint",
+  "release_date": "2024-07-11",
+  "release_time_et": "12:00 PM",
+  "mint_product_as_of": "2024-11-01T00:00:00Z"
+}
+```
+*Gate Result:* `is_placeholder: false` $
+ightarrow$ **SURVIVES GATE**.
+*Rendering:* Displays all four Mint fields in muted styling:
+- **Original U.S. Mint Issue Price:** `"$80.00"` (muted)
+- **Mint Schedule Status:** `"No longer offered by U.S. Mint"` (muted)
+- **Product Availability:** `"No longer offered by U.S. Mint"` (muted)
+- **Original Release Date:** `"Jul 11, 2024"` (muted)
+
+---
+
+## 6. Data Modeling & Persistence Safety: Decoupling from `CoinModel` (MF-1)
+
+### 6.1 Complete Preservation of `CoinModel`
+In v1.1, Mint fields were placed directly on `CoinModel`, threatening database writes. In v1.2 and v1.3:
+- **Zero fields are added to `CoinModel`.**
+- `CoinModel` constructor, `fromMap`, and `toFirestore()` remain 100% byte-for-byte identical to commit `4d17ca5e`.
+- Local optimistic updates in `coin_detail_screen.dart:491` and `:683` execute cleanly without risk of schema corruption.
+
+### 6.2 Standalone Immutable Container (`MintProductMetadata`)
+Located at `numista_mobile/lib/models/mint_product_metadata.dart`:
+
+```dart
+// numista_mobile/lib/models/mint_product_metadata.dart
+
+import 'package:flutter/foundation.dart';
+
+@immutable
+class MintProductMetadata {
+  final double? productPriceUsd;
+  final String? mintScheduleStatus;
+  final String? productAvailability;
+  final String? releaseDate;
+  final String? releaseTimeEt;
+  final DateTime? asOfDate;
+  final String? sourceUrl;
+  final DateTime? retrievedAt;
+
+  const MintProductMetadata({
+    this.productPriceUsd,
+    this.mintScheduleStatus,
+    this.productAvailability,
+    this.releaseDate,
+    this.releaseTimeEt,
+    this.asOfDate,
+    this.sourceUrl,
+    this.retrievedAt,
+  });
+
+  /// Factory constructing metadata from validated catalog / overlay JSON.
+  factory MintProductMetadata.fromJson(Map<String, dynamic> json) {
+    // Parse price with strict NaN and negative fail-closed checks
+    double? price;
+    final rawPrice = json['product_price_usd'];
+    if (rawPrice is num && !rawPrice.isNaN && !rawPrice.isInfinite && rawPrice >= 0) {
+      price = rawPrice.toDouble();
+    }
+
+    // Parse and validate ISO-8601 release date (YYYY-MM-DD)
+    String? validDate;
+    final rawDate = json['release_date']?.toString();
+    if (rawDate != null && RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(rawDate)) {
+      try {
+        DateTime.parse(rawDate);
+        validDate = rawDate;
+      } catch (_) {
+        validDate = null;
+      }
+    }
+
+    // Parse asOfDate & provenance (v1.7 MF-3)
+    DateTime? asOf;
+    final rawAsOf = json['mint_product_as_of']?.toString();
+    if (rawAsOf != null) {
+      asOf = DateTime.tryParse(rawAsOf);
+    }
+    final sourceUrl = json['source_url']?.toString().trim();
+    DateTime? retrievedAt;
+    final rawRetrieved = json['retrieved_at']?.toString();
+    if (rawRetrieved != null) {
+      retrievedAt = DateTime.tryParse(rawRetrieved);
+    }
+
+    return MintProductMetadata(
+      productPriceUsd: price,
+      mintScheduleStatus: json['mint_schedule_status']?.toString(),
+      productAvailability: json['product_availability']?.toString(),
+      releaseDate: validDate,
+      releaseTimeEt: json['release_time_et']?.toString(),
+      asOfDate: asOf,
+      sourceUrl: (sourceUrl != null && sourceUrl.isNotEmpty) ? sourceUrl : null,
+      retrievedAt: retrievedAt,
+    );
+  }
+
+  /// Serializes metadata to clean JSON map for testing and verification
+  Map<String, dynamic> toJson() {
+    return {
+      if (productPriceUsd != null) 'product_price_usd': productPriceUsd,
+      if (mintScheduleStatus != null) 'mint_schedule_status': mintScheduleStatus,
+      if (productAvailability != null) 'product_availability': productAvailability,
+      if (releaseDate != null) 'release_date': releaseDate,
+      if (releaseTimeEt != null) 'release_time_et': releaseTimeEt,
+      if (asOfDate != null) 'mint_product_as_of': asOfDate!.toIso8601String(),
+      if (sourceUrl != null) 'source_url': sourceUrl,
+      if (retrievedAt != null) 'retrieved_at': retrievedAt!.toIso8601String(),
+    };
+  }
+
+  /// Human-readable factual status copy (v1.7 MF-3: no hardcoded date).
+  String get displayStatus {
+    switch (mintScheduleStatus) {
+      case 'COMING_SOON':
+        return 'Scheduled by U.S. Mint';
+      case 'ON_SALE':
+        if (asOfDate != null) {
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return 'Available from U.S. Mint (as of ${months[asOfDate!.month - 1]} ${asOfDate!.year})';
+        }
+        return 'Available from U.S. Mint';
+      case 'NOT_AVAILABLE':
+      case 'SOLD_OUT':
+        return 'No longer offered by U.S. Mint';
+      default:
+        return '';
+    }
+  }
+
+  /// Formatted release date (e.g. "Jul 11, 2024").
+  String get displayReleaseDate {
+    if (releaseDate == null) return '';
+    try {
+      final dt = DateTime.parse(releaseDate!);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+    } catch (_) {
+      return '';
+    }
+  }
+}
+```
+
+### 6.3 Absolute PII Exclusion Guarantee
+1. `toPublicCatalogMap()` is **permanently prohibited** from `CoinModel`.
+2. Ten private collector inventory keys are strictly excluded from all public and overlay data paths:
+   - `Purchase Cost` (`purchaseCost`)
+   - `Purchase Date` (`purchaseDate`)
+   - `Retailer/Website` (`retailer`)
+   - `Retailer Item No.` (`retailerItemNo`)
+   - `Retailer Invoice #` (`retailerInvoiceNo`)
+   - `Storage Location` (`storageLocation`)
+   - `Personal Notes I` (`personalNotes`)
+   - `Personal Reference #` (`personalRef`)
+   - `owner_photos` (`ownerPhotos`)
+   - `provenanceLedger` (`provenanceLedger`)
+
+---
+
+## 7. Wired Lifecycle & Initialization Architecture (MF-1)
+
+### 7.1 `MintProductLookupService`
+Implemented at `numista_mobile/lib/services/mint_product_lookup_service.dart`:
+
+```dart
+// numista_mobile/lib/services/mint_product_lookup_service.dart
+
+import 'dart:convert';
+import 'package:flutter/foundation.dart'; // @visibleForTesting (v1.6)
+import 'package:flutter/services.dart';
+import '../models/coin_model.dart';
+import '../models/mint_product_metadata.dart';
+
+// v1.5 (R2): no cloud_firestore import and no Firestore field. Read-only asset join.
+
+class MintProductLookupService {
+  static final MintProductLookupService instance = MintProductLookupService._internal();
+  MintProductLookupService._internal();
+
+  Map<String, MintProductMetadata>? _byNacCode;
+  List<Map<String, dynamic>>? _rawCatalogEntries;
+  bool _isLoading = false;
+
+  /// Test constructor for dependency injection (MF-1)
+  MintProductLookupService.forTesting({
+    required Map<String, MintProductMetadata> entries,
+    List<Map<String, dynamic>>? rawEntries,
+  })  : _byNacCode = entries,
+        _rawCatalogEntries = rawEntries;
+
+  /// v1.6 (MF-3): uninitialized instance so tests can exercise ensureInitialized().
+  @visibleForTesting
+  MintProductLookupService.forInitTesting();
+
+  /// Last tolerated init failure (missing asset / bad JSON). Null on success. (v1.6 MF-3)
+  Object? lastInitError;
+
+  /// Asynchronous catalog asset loader. Fails closed ONLY for missing assets or bad JSON;
+  /// every other exception is rethrown so it cannot be silently swallowed (v1.6 MF-3).
+  Future<void> ensureInitialized({AssetBundle? bundle}) async {
+    if (_byNacCode != null || _isLoading) return;
+    _isLoading = true;
+    final b = bundle ?? rootBundle;
+    try {
+      final catalogJson = jsonDecode(await b.loadString('assets/catalog/catalog_public_v1.json')) as List<dynamic>;
+      _rawCatalogEntries = catalogJson.whereType<Map<String, dynamic>>().toList();
+      _eligibleRowsByNac = null;
+
+      final overlayJson = jsonDecode(await b.loadString('assets/catalog/mint_product_fields_v1.json')) as Map<String, dynamic>;
+      final map = <String, MintProductMetadata>{};
+      overlayJson.forEach((nac, data) {
+        if (data is Map<String, dynamic>) map[nac.toUpperCase()] = MintProductMetadata.fromJson(data);
+      });
+      _byNacCode = map;
+      lastInitError = null;
+    } on FlutterError catch (e) {          // asset not bundled
+      lastInitError = e; _byNacCode = {}; _rawCatalogEntries = [];
+    } on FormatException catch (e) {       // malformed JSON
+      lastInitError = e; _byNacCode = {}; _rawCatalogEntries = [];
+    } finally {
+      _isLoading = false;
+    }
+  }
+
+  /// v1.6 (MF-2) + v1.7 (MF-5a): eligibility index. ONLY rows with explicit
+  /// is_placeholder == false AND US coin type (`type == 'coin'` or `.US.` in nac_code).
+  Map<String, Map<String, dynamic>>? _eligibleRowsByNac;
+
+  Map<String, Map<String, dynamic>> get _eligible {
+    return _eligibleRowsByNac ??= {
+      for (final e in (_rawCatalogEntries ?? const <Map<String, dynamic>>[]))
+        if (e['is_placeholder'] == false &&
+            (e['nac_code']?.toString().isNotEmpty ?? false) &&
+            (e['type'] == 'coin' || e['nac_code'].toString().toUpperCase().contains('.US.')))
+          e['nac_code'].toString().toUpperCase(): e,
+    };
+  }
+
+  static bool _isUsCoin(CoinModel coin) {
+    final c = coin.country.trim().toLowerCase();
+    return c == 'usa' || c == 'united states' || c == 'us' || c == 'u.s.' || c == 'u.s.a.';
+  }
+
+  /// Synchronous in-memory lookup. Returns null if uninitialized, non-US, ineligible, or no unique match.
+  MintProductMetadata? lookupForCoin(CoinModel coin) {
+    if (_byNacCode == null) return null;
+    if (!_isUsCoin(coin)) return null; // v1.7 MF-5a: fail closed for non-US coins
+    final eligible = _eligible;
+
+    // 1. Primary join: NAC must exist as an ELIGIBLE US catalog row AND have an overlay entry.
+    final ref = coin.personalRef.trim().toUpperCase();
+    if (RegExp(r'^NAC1?\.').hasMatch(ref)) {
+      if (!eligible.containsKey(ref)) return null; // placeholder, non-US, or missing row -> fail closed
+      return _byNacCode![ref];                      // null if no overlay entry
+    }
+
+    // 2. Composite fallback join: all four keys required on BOTH sides.
+    final targetYear = int.tryParse(coin.year.replaceAll(RegExp(r'\.0$'), ''));
+    final rawMint = coin.mintMark.trim().toUpperCase();
+    final targetFacility = rawMint.isEmpty ? 'Philadelphia' : _mintMarkToFacility(rawMint);
+    final targetDenom = _normalizeDenom(coin.denomination);
+    final targetSeries = coin.programSeries.trim().toLowerCase();
+    if (targetYear == null || targetFacility.isEmpty || targetDenom.isEmpty || targetSeries.isEmpty) {
+      return null;
+    }
+
+    final matches = eligible.values.where((entry) {
+      final y = entry['year'];
+      final f = entry['mint_facility']?.toString().trim().toLowerCase() ?? '';
+      final d = _normalizeDenom(entry['denomination']?.toString() ?? '');
+      final sr = entry['series']?.toString().trim().toLowerCase() ?? '';
+      if (y is! int || f.isEmpty || d.isEmpty || sr.isEmpty) return false; // incomplete row -> no match
+      // v1.7 MF-5b: blank mint mark maps to Philadelphia ONLY if catalog row mint_mark_on_coin is null/blank/false
+      if (rawMint.isEmpty) {
+        final mmOnCoin = entry['mint_mark_on_coin'];
+        final isNoMintMark = mmOnCoin == null || mmOnCoin == false || mmOnCoin.toString().trim().isEmpty;
+        if (!isNoMintMark) return false;
+      }
+      return y == targetYear && f == targetFacility.toLowerCase() && d == targetDenom && sr == targetSeries;
+    }).toList();
+
+    if (matches.length != 1) return null; // ambiguity guard
+    final nac = matches.first['nac_code'].toString().toUpperCase();
+    return _byNacCode![nac]; // overlay only; never synthesize metadata from a catalog row
+  }
+
+  String _mintMarkToFacility(String mintMark) {
+    switch (mintMark.trim().toUpperCase()) {
+      case 'D': return 'Denver';
+      case 'S': return 'San Francisco';
+      case 'W': return 'West Point';
+      case 'P': return 'Philadelphia';
+      case 'O': return 'New Orleans';
+      case 'CC': return 'Carson City';
+      default: return '';
+    }
+  }
+
+  String _normalizeDenom(String denom) {
+    final d = denom.trim().toLowerCase();
+    if (d == 'dollar' || d == '$1' || d == '1d') return '1d';
+    if (d == 'half dollar' || d == '$0.50' || d == '50c') return '50c';
+    if (d == 'quarter dollar' || d == '$0.25' || d == '25c') return '25c';
+    if (d == 'dime' || d == '$0.10' || d == '10c') return '10c';
+    if (d == 'half dime' || d == '$0.05' || d == '5c') return '5c';
+    if (d == 'cent' || d == '1 cent' || d == '$0.01' || d == '1c') return '1c';
+    return d;
+  }
+}
+```
+
+### 7.2 Wiring Lifecycle in `_CoinDetailScreenState` (MF-1, v1.7 MF-2, v1.7 MF-4)
+In `numista_mobile/lib/screens/coin_detail_screen.dart`:
+0. **Required Imports at lines `28–30` (`git show 4d17ca5e:numista_mobile/lib/screens/coin_detail_screen.dart:29`):**
+   ```dart
+   <<<<
+   import 'package:image_picker/image_picker.dart';
+   import '../models/coin_model.dart';
+   import '../constants.dart';
+   ====
+   import 'package:image_picker/image_picker.dart';
+   import '../models/coin_model.dart';
+   import '../models/mint_product_metadata.dart';
+   import '../services/mint_product_lookup_service.dart';
+   import '../constants.dart';
+   >>>>
+   ```
+1. In `initState()` at lines **183–193**, trigger initialization (v1.7 MF-2: no blind `.catchError((_) {})` — `ensureInitialized()` already tolerates only `FlutterError`/`FormatException` and rethrows unexpected errors):
+   ```dart
+   @override
+   void initState() {
+     super.initState();
+     _coin = widget.coin;
+     _tabCtrl = TabController(length: 7, vsync: this);
+     _tabCtrl.addListener(() {
+       if (_tabCtrl.index == 3 && !_aiLoaded && !_aiLoading) {
+         _loadAiInsight();
+       }
+     });
+     _loadInspectorMode();
+     
+     // Wire Mint metadata initialization (MF-1, v1.7 MF-2)
+     MintProductLookupService.instance.ensureInitialized().then((_) {
+       if (mounted) setState(() {});
+     });
+   }
+   ```
+2. In `build()` inside `TabBarView` at lines **774–778**, pass the resolved metadata directly:
+   ```dart
+   _DetailsTab(
+     coin: _coin,
+     isInspectorMode: _isInspectorMode,
+     onInspectField: _showDiscrepancyDialog,
+     mintMetadata: MintProductLookupService.instance.lookupForCoin(_coin),
+   ),
+   ```
+
+---
+
+## 8. Scope Boundary: Exclusion of `UnifiedCoinDetailsModal` (MF-1)
+
+### 8.1 Scope Boundary
+`UnifiedCoinDetailsModal` is part of track **NET-813**, currently under review and **not yet merged into `dev`**.
+- Imposing requirements on a component not present at baseline commit `4d17ca5e` is strictly prohibited.
+- **R1 and AC-3 are scoped strictly and exclusively to `_DetailsTab` in `coin_detail_screen.dart`.**
+
+### 8.2 Future NET-813 Stub Hook
+When NET-813 merges, `UnifiedCoinDetailsModal` consumes `MintProductLookupService.instance.lookupForCoin(coin)` with zero changes to service logic:
+```dart
+// Future integration hook for NET-813 (Gated upon NET-813 merge)
+final mintMeta = MintProductLookupService.instance.lookupForCoin(coin);
+if (mintMeta != null) {
+  // Render muted tiles in modal
+}
+```
+
+---
+
+## 9. Visual Styling & Muted Per-Row Display Hook (MF-1, MF-4)
+
+### 9.1 Surgical Diff for `_DetailTile` (`coin_detail_screen.dart:3268–3309`)
+Adds `final bool isMuted = false;` and applies `_kSubtext(context)` and `FontWeight.normal` when muted:
+
+```diff
+--- a/numista_mobile/lib/screens/coin_detail_screen.dart
++++ b/numista_mobile/lib/screens/coin_detail_screen.dart
+@@ -3268,6 +3268,7 @@ class _DetailTile extends StatelessWidget {
+   final String label;
+   final String value;
+   final VoidCallback? onInspect;
++  final bool isMuted;
+-  const _DetailTile({required this.label, required this.value, this.onInspect});
++  const _DetailTile({
++    required this.label,
++    required this.value,
++    this.onInspect,
++    this.isMuted = false,
++  });
+
+   @override
+   Widget build(BuildContext context) {
+@@ -3299,6 +3300,10 @@ class _DetailTile extends StatelessWidget {
+           GestureDetector(
+             onLongPress: () => Clipboard.setData(ClipboardData(text: value)),
+             child: Text(value,
+-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+-                  color: _kText(context))),
++              style: TextStyle(
++                fontSize: 14,
++                fontWeight: isMuted ? FontWeight.normal : FontWeight.bold,
++                color: isMuted ? _kSubtext(context) : _kText(context),
++              )),
+           ),
+         ]),
+       ),
+```
+
+### 9.2 Surgical Diff for `_DetailsTab` (`coin_detail_screen.dart:1513–1570`)
+Exports `@visibleForTesting class DetailsTab`, switches `fields` to 3-tuples `(String label, String value, bool isMuted)`, places Mint fields before `Notes`, and wires `isMuted`:
+
+```diff
+--- a/numista_mobile/lib/screens/coin_detail_screen.dart
++++ b/numista_mobile/lib/screens/coin_detail_screen.dart
+@@ -1513,6 +1513,10 @@
+-class _DetailsTab extends StatelessWidget {
++@visibleForTesting
++class DetailsTab extends StatelessWidget {
+   final CoinModel coin;
+   final bool isInspectorMode;
+   final Function(String fieldName, String currentValue) onInspectField;
++  final MintProductMetadata? mintMetadata;
+
+-  const _DetailsTab({
++  const DetailsTab({
+     required this.coin,
+     this.isInspectorMode = false,
+     required this.onInspectField,
++    this.mintMetadata,
+   });
+
+   @override
+   Widget build(BuildContext context) {
+-    final fields = <(String, String)>[
++    final fields = <(String, String, bool)>[
+-      ('Year', coin.year.replaceAll(RegExp(r'\.0$'), '')),
++      ('Year', coin.year.replaceAll(RegExp(r'\.0$'), ''), false),
+-      ('Mint Mark', coin.mintMark),
++      ('Mint Mark', coin.mintMark, false),
+-      ('Denomination', _fmtDenomination(coin.denomination)),
++      ('Denomination', _fmtDenomination(coin.denomination), false),
+-      ('Program / Series', coin.programSeries.isEmpty ? (coin.country.isNotEmpty && coin.country != 'United States' ? 'Standard Circulation' : '') : coin.programSeries),
++      ('Program / Series', coin.programSeries.isEmpty ? (coin.country.isNotEmpty && coin.country != 'United States' ? 'Standard Circulation' : '') : coin.programSeries, false),
+-      ('Theme / Subject', coin.themeSubject),
++      ('Theme / Subject', coin.themeSubject, false),
+-      ('Variety / Error', coin.variety),
++      ('Variety / Error', coin.variety, false),
+-      ('Condition', coin.condition),
++      ('Condition', coin.condition, false),
+-      ('Strike Type', coin.strikeType),
++      ('Strike Type', coin.strikeType, false),
+-      ('Holder Type', coin.holderType),
++      ('Holder Type', coin.holderType, false),
+-      ('Grading Service', coin.gradingService),
++      ('Grading Service', coin.gradingService, false),
+-      ('Metal Content', coin.metalContent),
++      ('Metal Content', coin.metalContent, false),
+-      ('Country', coin.country),
++      ('Country', coin.country, false),
+-      ('Storage Location', coin.storageLocation),
++      ('Storage Location', coin.storageLocation, false),
+-      ('Quantity', coin.quantity.isNotEmpty ? coin.quantity : '1'),
++      ('Quantity', coin.quantity.isNotEmpty ? coin.quantity : '1', false),
++      if (mintMetadata != null) ...[
++        if (mintMetadata!.productPriceUsd != null && mintMetadata!.productPriceUsd! > 0)
++          ('Original U.S. Mint Issue Price', '\$${mintMetadata!.productPriceUsd!.toStringAsFixed(2)}', true),
++        if (mintMetadata!.displayStatus.isNotEmpty)
++          ('Mint Schedule Status', mintMetadata!.displayStatus, true),
++        if (mintMetadata!.productAvailability?.isNotEmpty == true)
++          ('Product Availability', mintMetadata!.productAvailability!, true),
++        if (mintMetadata!.displayReleaseDate.isNotEmpty)
++          ('Original Release Date', mintMetadata!.displayReleaseDate, true),
++      ],
+-      ('Notes', coin.personalNotes),
++      ('Notes', coin.personalNotes, false),
+     ].where((f) => f.$2.trim().isNotEmpty &&
+         f.$2 != 'null' && f.$2 != 'N/A' && f.$2 != 'Ungraded').toList();
+
+@@ -1551,6 +1563,7 @@
+               return _DetailTile(
+                 label: f.$1,
+                 value: f.$2,
++                isMuted: f.$3,
+                 onInspect: (isInspectorMode && isAuditable)
+                     ? () => onInspectField(f.$1, f.$2)
+                     : null,
+@@ -1571,1 +1584,2 @@
+ }
++typedef _DetailsTab = DetailsTab;
+```
+
+### 9.3 Display Rules & Value Separation Invariants
+1. **Zero Promotional Copy:** No "On Sale Now!", "Buy Before Sold Out", or urgency tickers. Only factual statements: `"Available from U.S. Mint (as of Nov 2026)"`, `"Scheduled by U.S. Mint"`, `"No longer offered by U.S. Mint"`.
+2. **Strict Value Separation:** `Original U.S. Mint Issue Price` is an immutable historical attribute. It is strictly excluded from:
+   - Portfolio total valuation.
+   - Greysheet Bid / Ask metrics.
+   - CPG Retail market pricing.
+   - Melt value calculations.
+
+---
+
+## 10. Comprehensive Executable Test Suite (MF-4)
+
+File location: `numista_mobile/test/mint_product_fields_test.dart`.
+
+Every test compiles cleanly against real public widgets and fails for the right reason.
+
+```dart
+// numista_mobile/test/mint_product_fields_test.dart
+
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // rootBundle, CachingAssetBundle, ByteData (v1.6)
+import 'package:flutter_test/flutter_test.dart';
+import 'package:numista_ai/models/coin_model.dart';
+import 'package:numista_ai/models/mint_product_metadata.dart';
+import 'package:numista_ai/services/mint_product_lookup_service.dart';
+import 'package:numista_ai/screens/coin_detail_screen.dart';
+
+/// v1.6 MF-3: test-only bundle. Catalog rows and overlay values are SYNTHETIC fixtures.
+class _FixtureBundle extends CachingAssetBundle {
+  @override
+  Future<ByteData> load(String key) async => throw FlutterError('not used');
+  @override
+  Future<String> loadString(String key, {bool cache = true}) async {
+    if (key == 'assets/catalog/catalog_public_v1.json') {
+      return jsonEncode([
+        {'nac_code': 'NAC1.FIXTURE.ELIGIBLE', 'is_placeholder': false},
+        {'nac_code': 'NAC1.FIXTURE.STUB', 'is_placeholder': true},
+      ]);
+    }
+    if (key == 'assets/catalog/mint_product_fields_v1.json') {
+      return jsonEncode({'NAC1.FIXTURE.ELIGIBLE': {'product_price_usd': 1.0}});
+    }
+    throw FlutterError('Unable to load asset: $key');
+  }
+}
+
+void main() {
+  group('NET-810 Unit Tests: Join and Fail-Closed Logic', () {
+    test('Primary NAC code join matches exact entry', () {
+      final service = MintProductLookupService.forTesting(
+        entries: {
+          'NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A': const MintProductMetadata(
+            productPriceUsd: 80.00,
+            mintScheduleStatus: 'NOT_AVAILABLE',
+            productAvailability: 'No longer offered by U.S. Mint',
+            releaseDate: '2024-07-11',
+          ),
+        },
+        // v1.6 MF-2: primary join now requires an ELIGIBLE catalog row
+        rawEntries: [
+          {'nac_code': 'NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A', 'is_placeholder': false},
+        ],
+      );
+
+      final coin = CoinModel(
+        id: 'c1',
+        personalRef: 'NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A',
+      );
+
+      final meta = service.lookupForCoin(coin);
+      expect(meta, isNotNull);
+      expect(meta!.productPriceUsd, 80.00);
+      expect(meta.displayStatus, 'No longer offered by U.S. Mint');
+      expect(meta.displayReleaseDate, 'Jul 11, 2024');
+    });
+
+    test('Composite fallback matches single record and normalizes facility', () {
+      final service = MintProductLookupService.forTesting(
+        entries: {
+          'NAC1.CN.US.1D.MORGANSILV.1921.D.BASE.2': const MintProductMetadata(
+            mintScheduleStatus: 'NOT_AVAILABLE',
+            productAvailability: 'No longer offered by U.S. Mint',
+          ),
+        },
+        rawEntries: [
+          {
+            'nac_code': 'NAC1.CN.US.1D.MORGANSILV.1921.D.BASE.2',
+            'year': 1921,
+            'mint_facility': 'Denver',
+            'denomination': 'Dollar',
+            'series': 'Morgan Silver Dollars',
+            'is_placeholder': false,
+            'status_badge': 'Needs source',
+          }
+        ],
+      );
+
+      final coin = CoinModel(
+        id: 'c2',
+        year: '1921',
+        mintMark: 'D',
+        denomination: 'Dollar',
+        programSeries: 'Morgan Silver Dollars',
+      );
+
+      final meta = service.lookupForCoin(coin);
+      expect(meta, isNotNull);
+      expect(meta!.productAvailability, 'No longer offered by U.S. Mint');
+    });
+
+    test('Ambiguous composite match fails closed and returns null', () {
+      final service = MintProductLookupService.forTesting(
+        entries: {},
+        rawEntries: [
+          {
+            'nac_code': 'NAC1.DUP.1',
+            'year': 1921,
+            'mint_facility': 'Denver',
+            'denomination': 'Dollar',
+            'series': 'Morgan Silver Dollars', // v1.6: complete keys so null is due to ambiguity
+            'is_placeholder': false,
+          },
+          {
+            'nac_code': 'NAC1.DUP.2',
+            'year': 1921,
+            'mint_facility': 'Denver',
+            'denomination': 'Dollar',
+            'series': 'Morgan Silver Dollars', // v1.6: complete keys so null is due to ambiguity
+            'is_placeholder': false,
+          },
+        ],
+      );
+
+      final coin = CoinModel(id: 'c3', year: '1921', mintMark: 'D', denomination: 'Dollar', programSeries: 'Morgan Silver Dollars');
+      expect(service.lookupForCoin(coin), isNull);
+    });
+
+    test('Quarantined placeholder status returns null (complete keys)', () {
+      final service = MintProductLookupService.forTesting(
+        entries: {
+          'NAC1.TEST': const MintProductMetadata(productAvailability: 'Should never render'),
+        },
+        rawEntries: [
+          {
+            'nac_code': 'NAC1.TEST',
+            'type': 'coin',
+            'year': 2024,
+            'mint_facility': 'West Point',
+            'denomination': 'Dollar',
+            'series': 'American Silver Eagle',
+            'is_placeholder': true, // Sole reason lookup returns null
+            'status_badge': 'Details coming',
+          }
+        ],
+      );
+
+      final coin = CoinModel(
+        id: 'c4',
+        year: '2024',
+        mintMark: 'W',
+        denomination: 'Dollar',
+        programSeries: 'American Silver Eagle',
+      );
+      expect(service.lookupForCoin(coin), isNull);
+    });
+
+    test('v1.7 MF-5a: Non-US coin fails closed and returns null', () {
+      final service = MintProductLookupService.forTesting(
+        entries: {
+          'NAC1.CN.US.1D.MORGANSILV.1921.D.BASE.2': const MintProductMetadata(
+            productAvailability: 'No longer offered by U.S. Mint',
+          ),
+        },
+        rawEntries: [
+          {
+            'nac_code': 'NAC1.CN.US.1D.MORGANSILV.1921.D.BASE.2',
+            'type': 'coin',
+            'year': 1921,
+            'mint_facility': 'Denver',
+            'denomination': 'Dollar',
+            'series': 'Morgan Silver Dollars',
+            'is_placeholder': false,
+          },
+        ],
+      );
+      final canadian = CoinModel(
+        id: 'c-ca',
+        country: 'Canada',
+        year: '1921',
+        mintMark: 'D',
+        denomination: 'Dollar',
+        programSeries: 'Morgan Silver Dollars',
+      );
+      expect(service.lookupForCoin(canadian), isNull);
+    });
+  });
+
+  group('NET-810 Widget Tests: Detail Tab & Styling', () {
+    testWidgets('Detail tab renders exact issue price label and muted styling', (tester) async {
+      final coin = CoinModel(
+        id: 'test-widget-coin',
+        year: '2024',
+        denomination: 'Dollar',
+        mintMark: 'W',
+      );
+
+      const metadata = MintProductMetadata(
+        productPriceUsd: 80.00,
+        mintScheduleStatus: 'NOT_AVAILABLE',
+        productAvailability: 'No longer offered by U.S. Mint',
+        releaseDate: '2024-07-11',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DetailsTab(
+              coin: coin,
+              mintMetadata: metadata,
+              onInspectField: (_, __) {},
+            ),
+          ),
+        ),
+      );
+
+      // Verify exact neutral factual labels
+      expect(find.text('Original U.S. Mint Issue Price'), findsOneWidget);
+      expect(find.text('\$80.00'), findsOneWidget);
+      expect(find.text('Mint Schedule Status'), findsOneWidget);
+      expect(find.text('Product Availability'), findsOneWidget);
+      expect(find.text('No longer offered by U.S. Mint'), findsNWidgets(2));
+      expect(find.text('Original Release Date'), findsOneWidget);
+      expect(find.text('Jul 11, 2024'), findsOneWidget);
+
+      // Verify muted font weight
+      final priceWidget = tester.widget<Text>(find.text('\$80.00'));
+      expect(priceWidget.style?.fontWeight, FontWeight.normal);
+
+      // Verify non-muted standard field has bold font weight
+      final yearWidget = tester.widget<Text>(find.text('2024'));
+      expect(yearWidget.style?.fontWeight, FontWeight.bold);
+    });
+
+    testWidgets('Detail tab renders ZERO commercial buy buttons or cart interactions', (tester) async {
+      final coin = CoinModel(
+        id: 'test-no-commerce-coin',
+        year: '2024',
+        denomination: 'Dollar',
+      );
+
+      const metadata = MintProductMetadata(
+        productPriceUsd: 80.00,
+        mintScheduleStatus: 'NOT_AVAILABLE',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DetailsTab(
+              coin: coin,
+              mintMetadata: metadata,
+              onInspectField: (_, __) {},
+            ),
+          ),
+        ),
+      );
+
+      // Assert zero commercial buy/cart action widgets
+      expect(find.byType(ElevatedButton), findsNothing);
+      expect(find.byType(TextButton), findsNothing);
+      expect(find.byType(OutlinedButton), findsNothing);
+      expect(find.textContaining('Buy', findRichText: true), findsNothing);
+      expect(find.textContaining('Cart', findRichText: true), findsNothing);
+      expect(find.textContaining('Order', findRichText: true), findsNothing);
+      expect(find.textContaining('Shop', findRichText: true), findsNothing);
+    });
+  });
+
+  group('NET-810 Verification: Zero Firestore Writes & PII Absence (MF-1, MF-3)', () {
+    testWidgets('Lookup + DetailsTab render/tap touch no Firestore client (R2)', (tester) async {
+      // No Firebase.initializeApp() is called anywhere in this file. Any access to
+      // FirebaseFirestore.instance from lookup or DetailsTab would throw
+      // (FlutterFire [core/no-app]) and fail this test.
+      final service = MintProductLookupService.forTesting(
+        entries: {
+          'NAC1.TEST': const MintProductMetadata(
+            productPriceUsd: 80.00,
+            mintScheduleStatus: 'NOT_AVAILABLE',
+            productAvailability: 'No longer offered by U.S. Mint',
+            releaseDate: '2024-07-11',
+          ),
+        },
+        rawEntries: [{'nac_code': 'NAC1.TEST', 'is_placeholder': false}], // v1.6 MF-2
+      );
+
+      final coin = CoinModel(
+        id: 'c-fs-test',
+        personalRef: 'NAC1.TEST',
+        year: '2024',
+        denomination: 'Dollar',
+      );
+
+      final meta = service.lookupForCoin(coin);
+      expect(meta, isNotNull);
+
+      // Render DetailsTab with the resolved metadata
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DetailsTab(
+              coin: coin,
+              mintMetadata: meta,
+              onInspectField: (_, __) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Exercise interaction: tap the issue price detail tile
+      final priceFinder = find.text('\$80.00');
+      expect(priceFinder, findsOneWidget);
+      await tester.tap(priceFinder);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('v1.6 MF-3: ensureInitialized + DetailsTab run with no Firebase app and surface no swallowed error', (tester) async {
+      // _FixtureBundle: test-only AssetBundle returning a 2-row catalog (one explicit false, one placeholder)
+      // and a SYNTHETIC overlay. No Firebase.initializeApp anywhere in this file.
+      final fresh = MintProductLookupService.forInitTesting(); // uninitialized instance (no entries)
+      await tester.runAsync(() => fresh.ensureInitialized(bundle: _FixtureBundle()));
+      expect(fresh.lastInitError, isNull);
+      final coin = CoinModel(id: 'x', personalRef: 'NAC1.FIXTURE.ELIGIBLE');
+      final meta = fresh.lookupForCoin(coin);
+      expect(meta, isNotNull);
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: DetailsTab(coin: coin, mintMetadata: meta, onInspectField: (_, __) {}))));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      // MUTATION CRITERION: adding FirebaseFirestore.instance to ensureInitialized / lookupForCoin /
+      // DetailsTab.build throws [core/no-app]; it is NOT caught (only FlutterError/FormatException are),
+      // so this test fails.
+    });
+  });
+
+  group('v1.6 MF-2: placeholder quarantine applies to BOTH joins', () {
+    final overlay = {'NAC1.TEST': const MintProductMetadata(productPriceUsd: 1.0)}; // synthetic
+    test('primary NAC pointing at a placeholder row returns null', () {
+      final s = MintProductLookupService.forTesting(entries: overlay, rawEntries: [
+        {'nac_code': 'NAC1.TEST', 'is_placeholder': true},
+      ]);
+      expect(s.lookupForCoin(CoinModel(id: 'a', personalRef: 'NAC1.TEST')), isNull);
+    });
+    test('primary NAC with no catalog row returns null', () {
+      final s = MintProductLookupService.forTesting(entries: overlay, rawEntries: const []);
+      expect(s.lookupForCoin(CoinModel(id: 'a', personalRef: 'NAC1.TEST')), isNull);
+    });
+    test('missing is_placeholder flag is ineligible', () {
+      final s = MintProductLookupService.forTesting(entries: overlay, rawEntries: [
+        {'nac_code': 'NAC1.TEST'},
+      ]);
+      expect(s.lookupForCoin(CoinModel(id: 'a', personalRef: 'NAC1.TEST')), isNull);
+    });
+    test('composite: row missing facility or series does not match', () {
+      final s = MintProductLookupService.forTesting(entries: overlay, rawEntries: [
+        {'nac_code': 'NAC1.TEST', 'is_placeholder': false, 'year': 2024, 'denomination': 'Dollar', 'series': 'Fixture Series'},
+        {'nac_code': 'NAC1.TEST2', 'is_placeholder': false, 'year': 2024, 'denomination': 'Dollar', 'mint_facility': 'West Point'},
+      ]);
+      expect(s.lookupForCoin(CoinModel(id: 'a', year: '2024', mintMark: 'W', denomination: 'Dollar', programSeries: 'Fixture Series')), isNull);
+    });
+    test('composite: blank mint mark resolves to Philadelphia', () {
+      final s = MintProductLookupService.forTesting(entries: overlay, rawEntries: [
+        {'nac_code': 'NAC1.TEST', 'is_placeholder': false, 'year': 1921, 'denomination': 'Dollar', 'series': 'Fixture Series', 'mint_facility': 'Philadelphia'},
+      ]);
+      expect(s.lookupForCoin(CoinModel(id: 'a', year: '1921', mintMark: '', denomination: 'Dollar', programSeries: 'Fixture Series')), isNotNull);
+    });
+  });
+
+  group('NET-810 privacy', () {
+    testWidgets('Serialized Mint metadata and real public catalog record guarantee 0 private collector keys (MF-3, R4)', (tester) async {
+      // 1. Serialize overlay JSON emitted by MintProductMetadata / scripts/export_mint_product_fields.py
+      const metadata = MintProductMetadata(
+        productPriceUsd: 80.00,
+        mintScheduleStatus: 'NOT_AVAILABLE',
+        productAvailability: 'No longer offered by U.S. Mint',
+        releaseDate: '2024-07-11',
+      );
+      final serializedOverlay = metadata.toJson();
+
+      // 2. Load the REAL public catalog record from assets/catalog/catalog_public_v1.json
+      // R4: asset bundle only (no CWD-relative File). Requires §4.4 pubspec registration of assets/catalog/.
+      final rawString = await tester.runAsync(
+        () => rootBundle.loadString('assets/catalog/catalog_public_v1.json'),
+      );
+      final catalogList = jsonDecode(rawString!) as List<dynamic>;
+
+      final realRecord = catalogList.firstWhere(
+        (item) => item['nac_code'] == 'NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A',
+      ) as Map<String, dynamic>;
+
+      // Assert real record exists with authentic public catalog fields
+      expect(realRecord['nac_code'], 'NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A');
+      expect(realRecord['status_badge'], 'Needs source');
+      expect(realRecord['is_placeholder'], isFalse);
+
+      // 3. Assert all 10 forbidden private collector keys are absent from BOTH real objects
+      const forbiddenPrivateKeys = [
+        'Purchase Cost', 'purchaseCost',
+        'Purchase Date', 'purchaseDate',
+        'Retailer/Website', 'retailer',
+        'Retailer Item No.', 'retailerItemNo',
+        'Retailer Invoice #', 'retailerInvoiceNo',
+        'Storage Location', 'storageLocation',
+        'Personal Notes I', 'personalNotes',
+        'Personal Reference #', 'personalRef',
+        'owner_photos', 'ownerPhotos',
+        'provenanceLedger',
+        'transferStatus', 'transferId',
+      ];
+
+      for (final forbidden in forbiddenPrivateKeys) {
+        expect(serializedOverlay.containsKey(forbidden), isFalse,
+            reason: 'Forbidden private key $forbidden leaked into serialized overlay metadata!');
+        expect(realRecord.containsKey(forbidden), isFalse,
+            reason: 'Forbidden private key $forbidden leaked into real public catalog record!');
+      }
+    });
+  });
+}
+```
+
+---
+
+## 11. Acceptance Checklist, File Manifest & Rollback (MF-1)
+
+### 11.1 Acceptance Criteria
+- [ ] **AC-R2 (v1.6, native PowerShell; no `rg` needed):** from repo root, `git diff <BASE>..HEAD -- numista_mobile/lib/services/mint_product_lookup_service.dart numista_mobile/lib/models/mint_product_metadata.dart numista_mobile/lib/screens/coin_detail_screen.dart | Select-String -Pattern '^\+.*(cloud_firestore|FirebaseFirestore|\.collection\(|\.doc\(|\.set\(|\.update\(|\.add\()'` returns nothing (`<BASE>` = pre-execution HEAD captured in `scratch/pre_exec_head_net810.txt`). The test file contains no `Firebase.initializeApp` and no `dart:io` import.
+- [ ] **AC-1:** Public catalog artifact `numista_mobile/assets/catalog/catalog_public_v1.json` and overlay `mint_product_fields_v1.json` are registered in `pubspec.yaml`.
+- [ ] **AC-2:** `CoinModel` remains 100% pristine with zero field modifications and zero signature changes to `toFirestore()`.
+- [ ] **AC-3:** `MintProductMetadata` is defined as a standalone immutable class in `lib/models/mint_product_metadata.dart`.
+- [ ] **AC-4:** Primary join matches official `NAC1.` prefix through `_eligible` + US-only gate; composite fallback matches `(year, mint_facility, denomination, series)` and fails closed on zero, non-US, or multiple matches.
+- [ ] **AC-5:** `ensureInitialized()` is wired into `_CoinDetailScreenState.initState()` (lines 183–193; +2 lines from v1.7 imports) with clean asynchronous rebuild.
+- [ ] **AC-6:** Scope is strictly bounded to `_DetailsTab` (`DetailsTab`) in `coin_detail_screen.dart`; `UnifiedCoinDetailsModal` is dropped.
+- [ ] **AC-7:** `_DetailTile` implements `final bool isMuted = false;` (pin `4d17ca5e:3268–3309`, shifted +2 lines after v1.7 imports), rendering `_kSubtext(context)` and `FontWeight.normal`.
+- [ ] **AC-8:** Mint rows display neutral factual copy only; zero commercial buy links or cart interactions exist.
+- [ ] **AC-9:** All tests in `numista_mobile/test/mint_product_fields_test.dart` compile and pass with exit code 0.
+- [ ] **AC-10:** Exactly 0 Firestore writes occur in live production or preview databases.
+
+### 11.2 File Manifest
+
+| File Path | Status | Operational Function |
+| :--- | :--- | :--- |
+| `numista_mobile/pubspec.yaml` | Modified | Registers `assets/catalog/` in Flutter asset bundle. |
+| `numista_mobile/lib/models/coin_model.dart` | **Pristine** | Preserves core collection model without any modifications. |
+| `numista_mobile/lib/models/mint_product_metadata.dart` | **New** | Immutable container for public U.S. Mint metadata. |
+| `numista_mobile/lib/services/mint_product_lookup_service.dart` | **New** | Asynchronous in-memory join service. |
+| `numista_mobile/lib/screens/coin_detail_screen.dart` | Modified | Wires `ensureInitialized()`, updates `_DetailsTab` (`DetailsTab`) and `_DetailTile` muted styling. |
+| `numista_mobile/assets/catalog/mint_product_fields_v1.json` | **New** | Privacy-cleared government Mint SKU metadata overlay. |
+| `data/usmint/usmint_product_schedule_2024.json` | **Planned** | Source export data (Status: TO-BE-ACQUIRED). |
+| `scripts/export_mint_product_fields.py` | **New** | Offline build-time export script for overlay. |
+| `numista_mobile/test/mint_product_fields_test.dart` | **New** | Comprehensive unit, widget, zero-writes, and privacy test suite. |
+
+### 11.3 Targeted Git Rollback Procedure (v1.7 MF-6)
+If any defect occurs during preview verification, revert locally (**`git revert` only; never `git reset --hard`**; any push requires a separate Founder Eric typed YES):
+```bash
+#!/usr/bin/env bash
+# Exact NET-810 execution commits are appended to scratch/revert_shas_net810.txt as each is made
+# (one SHA per line, oldest first). The source pin 4d17ca5e is NOT a substitute for this list.
+set -euo pipefail
+LIST=scratch/revert_shas_net810.txt
+[ -s "$LIST" ] || { echo "ABORT: $LIST is missing or empty"; exit 1; }
+BR=$(git rev-parse --abbrev-ref HEAD)
+[ "$BR" = "dev" ] || [ "$BR" = "p7-v8.9" ] || { echo "ABORT: on '$BR', expected dev or p7-v8.9"; exit 1; }
+[ "$(git rev-parse --short=8 HEAD)" != "9f04550a" ] || { echo "ABORT: HEAD is locked main 9f04550a"; exit 1; }
+git diff --quiet && git diff --cached --quiet || { echo "ABORT: dirty tree"; exit 1; }
+while read -r sha; do
+  [ -z "$sha" ] && continue
+  git cat-file -e "$sha^{commit}" || { echo "ABORT: $sha is not a commit"; exit 1; }
+  git merge-base --is-ancestor "$sha" HEAD || { echo "ABORT: $sha not in HEAD ancestry"; exit 1; }
+done < "$LIST"
+# Portable reverse order (no tac / process substitution):
+REV_SHAS=$(awk '{a[i++]=$0} END {for (j=i-1; j>=0; j--) if (a[j] != "") print a[j]}' "$LIST")
+for sha in $REV_SHAS; do
+  git revert --no-edit "$sha" || { git revert --abort || true; echo "ABORT: conflict on $sha; nothing pushed"; exit 1; }
+done
+# Local revert complete. Push ONLY after a separate Founder Eric typed YES:
+# git push origin "$BR"
+```
+
+---
+
+## 12. Multi-Agent Review Chain & Document Delivery History
+
+### 12.1 Delivery Log & Version Evolution
+- **v1.0 (5 Nov 2026):** Initial draft by AG CoS. Scored 58/100 FAIL by GROKCOS.
+- **v1.1 (7 Nov 2026, 19:40 ET):** Addressed v1.0 feedback. Scored 56/100 FAIL per `COS_SCORE_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.1_20261107.md`.
+- **v1.2 (7 Nov 2026, 21:00 ET):** Delivered at commit `843c1d59`. Scored 73/100 FAIL per `COS_SCORE_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.2_20261107.md`.
+- **v1.3 (7 Nov 2026, 22:00 ET):** Delivered for Attempt 3/4 at commit `62f68439` (SHA256: `f0dba9076450e80fc6ce96212b9c75494fe23002f4e350f62cc3640251debd1d`). Scored 88/100 FAIL per `COS_SCORE_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.3_20261107.md` and `RADIO_NET-855`.
+- **v1.4 (7 Nov 2026, 22:30 ET):** Delivered for Attempt 4/4 (LAST TRY) under `WAKE_AGCOS_NET-855_REVISE-810-v1.4_20261107-2152.md` and `RADIO_NET-855`. Resolves all 4 numbered blocking must-fixes:
+  1. (superseded in v1.5 by R2: Firestore parameter removed) Injected `FakeFirebaseFirestore` directly into `MintProductLookupService.forTesting(entries: ..., firestore: fakeFs)` and `testWidgets`, asserting zero collection writes across both `coins` and `users`.
+  2. Changed all test imports to `package:numista_ai/...` strictly adhering to pin `pubspec.yaml` line 1 (`name: numista_ai`).
+  3. Grounded private collector key absence assertion on real public catalog record `NAC1.CN.US.1D.AMERICANSI.2024.W.SILVEREAGL.A` loaded from `catalog_public_v1.json` alongside serialized overlay JSON.
+  4. Quoted `toFirestore()` wrapper lines verbatim at `:490-494` and `:682-686` including `, _coin.id`. Cited `_loadInspectorMode();` at line 192 (with line 193 as `}`).
+- **v1.4 score:** 93/100 FAIL (`COS_SCORE_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.4_20261107.md`, `RADIO_NET-856`). Writer cap reached for AG CoS v5.
+- **v1.5 (8 Nov 2026, ~07:30 ET):** GB CoS fresh writer (Eric GO 07:27 ET). Closes R1–R4 only (§2.1). PLAN ONLY. Scored 89 FAIL (`COS_SCORE_NET-810_MINT-PRODUCT-FIELDS_DETAIL-VIEW_v1.5_20261108.md`).
+- **v1.6 (8 Nov 2026, ~07:55 ET):** GB CoS fresh writer round 2. Closes CoS-89 MF-1..MF-4 only (§2.0). PLAN ONLY.
+
+---

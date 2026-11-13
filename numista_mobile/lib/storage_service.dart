@@ -182,11 +182,11 @@ class StorageService {
               _storage.ref().child('$storageBucketPath$optimizedName');
 
           await ref.putFile(file);
-          final String downloadUrl = await ref.getDownloadURL();
+          final String gsUri = 'gs://${ref.bucket}/${ref.fullPath}';
 
-          await doc.reference.update({fieldName: downloadUrl});
+          await doc.reference.update({fieldName: gsUri});
 
-          debugPrint('[SYNC] ☁️  Upload OK → $downloadUrl');
+          debugPrint('[SYNC] ☁️  Upload OK → $gsUri');
           uploadCount++;
         } catch (e, stack) {
           debugPrint('[SYNC] ❌ Upload FAILED for $optimizedName');

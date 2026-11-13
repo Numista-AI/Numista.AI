@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'storage_service.dart';
 import 'utils/numista_error_helper.dart';
+import 'utils/mint_helpers.dart';
+import 'services/canonical_mint_asset_service.dart';
 
 const _electricBlue = Color(0xFF4C8CDA);
 const _neuralBronze = Color(0xFF8B6B00);
@@ -128,8 +130,9 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
             itemBuilder: (context, index) {
               final data = coins[index].data();
 
-              final imageUrlObverse = data['image_url_obverse']?.toString();
-              final imageUrlReverse = data['image_url_reverse']?.toString();
+              final canon = CanonicalMintAssetService.resolveFromMap(data);
+              final imageUrlObverse = canon?.obverseUrl ?? data['image_url_obverse']?.toString();
+              final imageUrlReverse = canon?.reverseUrl ?? data['image_url_reverse']?.toString();
 
               // -------------------------------------------------------------
               // DATA MAPPING
@@ -138,8 +141,13 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
               final rawYear = data['Year']?.toString().trim() ?? '';
               final year = (rawYear.toLowerCase() == 'null' || rawYear.toLowerCase() == 'nan') ? '' : rawYear;
 
-              final rawMint = data['Mint Mark']?.toString().trim() ?? '';
-              final mintMark = (rawMint.toLowerCase() == 'null' || rawMint.toLowerCase() == 'nan') ? '' : rawMint;
+              final mintMark = MintHelpers.readMintMark(data);
+              final mintFacility = MintHelpers.readMintFacility(data);
+              final displayMint = MintHelpers.formatMintMarkForDisplay(
+                mintFacility,
+                mintMark,
+                compact: true,
+              );
 
               final rawDenom = data['Denomination']?.toString().replaceAll('Â£', '£').replaceAll('Â', '').trim() ?? '';
               final denomination = (rawDenom.toLowerCase() == 'null' || rawDenom.toLowerCase() == 'nan' || rawDenom.isEmpty)
@@ -156,14 +164,16 @@ class _InventoryGalleryPageState extends State<InventoryGalleryPage> {
               final theme = data['Theme/Subject']?.toString().trim() ?? '';
               final program = data['Program/Series']?.toString().trim() ?? '';
 
-              // Headline Logic: Skip missing Year/Mint Mark
+              // Headline Logic: Skip missing Year/Mint Mark; show NMM for Philly no-mint-mark
               String titleText = '';
-              if (year.isNotEmpty && mintMark.isNotEmpty) {
-                titleText = '$year-$mintMark $denomination';
+              if (year.isNotEmpty && displayMint.isNotEmpty) {
+                titleText = displayMint == 'NMM'
+                    ? '$year (NMM) $denomination'
+                    : '$year-$displayMint $denomination';
               } else if (year.isNotEmpty) {
                 titleText = '$year $denomination';
-              } else if (mintMark.isNotEmpty) {
-                titleText = '$mintMark $denomination';
+              } else if (displayMint.isNotEmpty) {
+                titleText = '$displayMint $denomination';
               } else {
                 titleText = denomination;
               }

@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../services/melt_value_service.dart';
+import '../../utils/catalog_image_guard.dart';
+import '../unified_coin_detail_screen.dart';
 
 class CatalogBrowseScreen extends StatefulWidget {
   final String? initialQuery;
@@ -26,6 +29,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
   String _selectedEra = 'all';
   bool _photosOnly = false;
   bool _chronological = false;
+  String? _notFoundNacCode;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -81,19 +85,8 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
               }
             });
           } else {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'We don\'t have item "${widget.initialNacCode}" in our reference catalog yet.',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    backgroundColor: const Color(0xFF0B2545),
-                    duration: const Duration(seconds: 4),
-                  ),
-                );
-              }
+            setState(() {
+              _notFoundNacCode = widget.initialNacCode!.trim();
             });
           }
         }
@@ -116,7 +109,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
 
     final query = _searchQuery.trim().toLowerCase();
 
-    List<Map<String, dynamic>> result = _allEntries.where((item) {
+    List<Map<String, dynamic>> filtered = _allEntries.where((item) {
       // Type filter
       final type = (item['type'] as String? ?? '').toLowerCase();
       if (_selectedType == 'coin' && type != 'coin') return false;
@@ -150,24 +143,42 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
         if (!hasPrimary && !hasType) return false;
       }
 
-      // Search query
-      if (query.isNotEmpty) {
+      return true;
+    }).toList();
+
+    // 2. Two-pass list-level search resolution
+    List<Map<String, dynamic>> result = filtered;
+    if (query.isNotEmpty) {
+      // Pass 1: Direct substring matches across metadata fields
+      final directMatches = filtered.where((item) {
         final name = (item['name'] as String? ?? '').toLowerCase();
         final series = (item['series'] as String? ?? '').toLowerCase();
         final denom = (item['denomination'] as String? ?? '').toLowerCase();
         final nac = (item['nac_code'] as String? ?? '').toLowerCase();
         final yearStr = item['year']?.toString() ?? '';
-
-        final matches = name.contains(query) ||
+        return name.contains(query) ||
             series.contains(query) ||
             denom.contains(query) ||
             nac.contains(query) ||
             yearStr.contains(query);
-        if (!matches) return false;
-      }
+      }).toList();
 
-      return true;
-    }).toList();
+      if (directMatches.isNotEmpty) {
+        result = directMatches;
+      } else {
+        // Pass 2: Multi-token fallback across combined metadata haystack
+        final tokens = query.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+        result = filtered.where((item) {
+          final name = (item['name'] as String? ?? '').toLowerCase();
+          final series = (item['series'] as String? ?? '').toLowerCase();
+          final denom = (item['denomination'] as String? ?? '').toLowerCase();
+          final nac = (item['nac_code'] as String? ?? '').toLowerCase();
+          final yearStr = item['year']?.toString() ?? '';
+          final haystack = '$name $series $denom $nac $yearStr';
+          return tokens.every((token) => haystack.contains(token));
+        }).toList();
+      }
+    }
 
     // Sort order
     if (_chronological) {
@@ -315,6 +326,38 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            if (_notFoundNacCode != null) ...[
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 20),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF8E1),
+                                  border: Border.all(color: const Color(0xFFF59E0B)),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.info_outline, color: Color(0xFFB45309)),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Reference code "$_notFoundNacCode" was not found in the public catalog.',
+                                        style: const TextStyle(
+                                          color: Color(0xFF0B2545),
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close, size: 18),
+                                      onPressed: () => setState(() => _notFoundNacCode = null),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                             // Top Block: Morgan Owl
                             Image.asset(
                               'assets/morgan_avatar.png',
@@ -808,6 +851,14 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
   }
 
   void _showItemDetailModal(Map<String, dynamic> item) {
+    UnifiedCoinDetailScreen.showPublic(
+      context,
+      projection: PublicCoinProjection.fromCatalogMap(item),
+      legacyOpen: () => _showLegacyItemDetailModal(item),
+    );
+  }
+
+  void _showLegacyItemDetailModal(Map<String, dynamic> item) {
     showDialog(
       context: context,
       builder: (context) {
@@ -907,7 +958,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
     final imgMap = primaryImg ?? typeImg;
     final isTypeImage = primaryImg == null && typeImg != null;
 
-    if (imgMap != null && imgMap['url'] != null) {
+    if (imgMap != null && imgMap['url'] is String && isApprovedCatalogImageUrl(imgMap['url'] as String)) {
       final url = imgMap['url'] as String;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -1085,6 +1136,13 @@ class _CatalogCard extends StatelessWidget {
     final badge = item['status_badge'] as String?;
     final year = item['year']?.toString() ?? 'Undated';
     final denom = item['denomination']?.toString() ?? '';
+    final isMedal = item['type'] == 'medal';
+    final faceVal = isMedal ? 0.0 : MeltValueService.parseFaceValue(denom);
+    final faceValText = faceVal > 0
+        ? (faceVal == 0.005 ? r'$0.005' : '\$${faceVal.toStringAsFixed(2)}')
+        : '\u2014';
+    final rawAiEst = (item['AI Estimated Value'] ?? item['ai_estimated_value'])?.toString().trim() ?? '';
+    final hasAiEst = rawAiEst.isNotEmpty && rawAiEst != 'Pending';
 
     return InkWell(
       onTap: onTap,
@@ -1102,7 +1160,9 @@ class _CatalogCard extends StatelessWidget {
             // Image
             Expanded(
               child: Center(
-                child: imgMap != null && imgMap['url'] != null
+                child: imgMap != null &&
+                        imgMap['url'] is String &&
+                        isApprovedCatalogImageUrl(imgMap['url'] as String)
                     ? Image.network(
                         imgMap['url'] as String,
                         fit: BoxFit.contain,
@@ -1146,6 +1206,46 @@ class _CatalogCard extends StatelessWidget {
                   'type photo (date may differ)',
                   style: TextStyle(fontSize: 12, color: Color(0xFF6B6B6B), fontStyle: FontStyle.italic),
                 ),
+              ),
+
+            const SizedBox(height: 6),
+            if (isMedal)
+              const Text(
+                'No face value',
+                style: TextStyle(fontSize: 13, color: Color(0xFF6B6B6B)),
+              )
+            else
+              Row(
+                children: [
+                  Text(
+                    faceValText,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F5FAD),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3CD),
+                        border: Border.all(color: const Color(0xFFFFEEBA)),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        hasAiEst ? 'AI Est: $rawAiEst' : 'Face value \u00b7 No retail estimate',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF856404),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
           ],
         ),

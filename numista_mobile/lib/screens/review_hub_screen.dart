@@ -6,10 +6,13 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../services/http_auth_client.dart';
+import '../services/canonical_mint_asset_service.dart';
 import '../utils/numista_error_helper.dart';
 import '../utils/review_field_keys.dart';
 import '../widgets/grade_badge_widget.dart';
 
+/// Top-level convenience alias for ReviewHubScreen.formatCurrency
+String formatCurrency(num amount) => ReviewHubScreen.formatCurrency(amount);
 
 class ReviewHubScreen extends StatefulWidget {
   const ReviewHubScreen({super.key});
@@ -69,6 +72,23 @@ class ReviewHubScreen extends StatefulWidget {
       skipped: skipped,
       flagged: flagged,
     );
+  }
+
+  /// Formats currency with string-based commercial half-up rounding (ROUND_HALF_UP).
+  /// Eliminates binary IEEE-754 underflow errors and handles negative amounts.
+  static String formatCurrency(num amount) {
+    final isNeg = amount.isNegative;
+    final absVal = amount.abs();
+    final s = absVal.toStringAsFixed(4);
+    final parts = s.split('.');
+    final whole = int.parse(parts[0]);
+    final frac = parts.length > 1 ? parts[1] : '0000';
+    int cents = whole * 100 + int.parse(frac.substring(0, 2));
+    if (frac.length > 2 && int.parse(frac.substring(2, 3)) >= 5) {
+      cents += 1;
+    }
+    final formatted = (cents / 100.0).toStringAsFixed(2);
+    return isNeg ? '-$formatted' : formatted;
   }
 
   /// Predicate for 100% AI Confidence items eligible for auto-commit.
@@ -1088,7 +1108,58 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                               }
                               setDialogState(() => isSaving = true);
                               try {
+                                final updates = <String, dynamic>{};
+                                controllers.forEach((key, ctrl) {
+                                  updates[key] = ctrl.text.trim();
+                                });
+                                // Quantity sanitization (CoS M2: positive int, fallback 1 on blank/invalid)
+                                final rawQty = controllers['Quantity']?.text.trim() ?? '';
+                                final parsedQty = int.tryParse(rawQty);
+                                final cleanQty = (parsedQty != null && parsedQty > 0) ? parsedQty : 1;
+                                updates['Quantity'] = cleanQty;
+                                controllers['Quantity']?.text = cleanQty.toString();
+
+                                // Auto-split combined Year+Mint (e.g. "2006D" → Year="2006" Mint="D")
+                                final ymRe = RegExp(r'^(\d{4}(?:-\d{4})?)\s*([A-WY-Z])$', caseSensitive: false);
+                                final ry = (updates['Year'] as String? ?? '').trim();
+                                final rm = (updates['Mint Mark'] as String? ?? '').trim();
+                                if (ry.isNotEmpty && rm.isEmpty) {
+                                  final ym = ymRe.firstMatch(ry);
+                                  if (ym != null) {
+                                    updates['Year'] = ym.group(1)!;
+                                    updates['Mint Mark'] = ym.group(2)!.toUpperCase();
+                                    controllers['Year']?.text = ym.group(1)!;
+                                    controllers['Mint Mark']?.text = ym.group(2)!.toUpperCase();
+                                  }
+                                }
                                 await targetRef.update(updates);
+                                final bulkUpdates = <String, dynamic>{};
+                                final loc = (updates['Storage Location'] ?? updates['storage_location'])?.toString().trim();
+                                if (loc != null && loc.isNotEmpty) {
+                                  bulkUpdates['storage_location'] = loc;
+                                }
+                                final cond = updates['Condition']?.toString().trim();
+                                if (cond != null && cond.isNotEmpty) {
+                                  bulkUpdates['condition'] = cond;
+                                }
+                                final notes = updates['Notes']?.toString().trim();
+                                if (notes != null && notes.isNotEmpty) {
+                                  bulkUpdates['notes'] = notes;
+                                }
+                                if (bulkUpdates.isNotEmpty) {
+                                  final res = await HttpAuthClient.post(
+                                    Uri.parse("$_apiUrl/api/review/bulk_update"),
+                                    headers: {"Content-Type": "application/json"},
+                                    body: jsonEncode({
+                                      "user_email": user.email,
+                                      "review_ids": [docId],
+                                      "updates": bulkUpdates,
+                                    }),
+                                  );
+                                  if (res.statusCode != 200) {
+                                    throw Exception('Failed to save update: ${res.body}');
+                                  }
+                                }
                                 if (!mounted) return;
                                 nav.pop();
                                 messenger.showSnackBar(
@@ -1141,6 +1212,34 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                 // Save dirty edits first (skip no-op update)
                                 if (updates.isNotEmpty) {
                                   await targetRef.update(updates);
+                                }
+                                // Save edits first via canonical bulk_update
+                                final bulkUpdates2 = <String, dynamic>{};
+                                final loc2 = (updates['Storage Location'] ?? updates['storage_location'])?.toString().trim();
+                                if (loc2 != null && loc2.isNotEmpty) {
+                                  bulkUpdates2['storage_location'] = loc2;
+                                }
+                                final cond2 = updates['Condition']?.toString().trim();
+                                if (cond2 != null && cond2.isNotEmpty) {
+                                  bulkUpdates2['condition'] = cond2;
+                                }
+                                final notes2 = updates['Notes']?.toString().trim();
+                                if (notes2 != null && notes2.isNotEmpty) {
+                                  bulkUpdates2['notes'] = notes2;
+                                }
+                                if (bulkUpdates2.isNotEmpty) {
+                                  final res = await HttpAuthClient.post(
+                                    Uri.parse("$_apiUrl/api/review/bulk_update"),
+                                    headers: {"Content-Type": "application/json"},
+                                    body: jsonEncode({
+                                      "user_email": user.email,
+                                      "review_ids": [docId],
+                                      "updates": bulkUpdates2,
+                                    }),
+                                  );
+                                  if (res.statusCode != 200) {
+                                    throw Exception('Failed to save update: ${res.body}');
+                                  }
                                 }
 
                                 // Then commit to main collection
@@ -2006,6 +2105,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               ),
             ),
             const SizedBox(width: 8),
+            _buildCoinThumbnail(data),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2215,12 +2316,39 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   const Divider(height: 24),
                   () {
                     final rawCost = data['Purchase Cost'] ?? data['Cost'];
-                    final rawSetCostLabel = (data['set_cost_label'] ?? '').toString().trim();
-                    final costStr = rawSetCostLabel.isNotEmpty
-                        ? rawSetCostLabel
-                        : (rawCost != null
-                            ? (rawCost is num ? '\$${rawCost.toStringAsFixed(2)}' : rawCost.toString())
-                            : 'N/A');
+                    final qtyVal = data['Quantity'] ?? data['qty'];
+                    final cleanQty = qtyVal != null ? int.tryParse(qtyVal.toString()) ?? 1 : 1;
+
+                    String costStr;
+                    if (cleanQty > 1) {
+                      if (data['unit_cost_cents'] != null) {
+                        costStr = '\$${((data['unit_cost_cents'] as num) / 100.0).toStringAsFixed(2)} each';
+                      } else if (data['unit_cost'] != null && data['unit_cost'] is num) {
+                        costStr = '\$${formatCurrency(data['unit_cost'] as num)} each';
+                      } else if (data['line_total'] != null && data['line_total'] is num) {
+                        costStr = '\$${formatCurrency((data['line_total'] as num) / cleanQty)} each';
+                      } else if (rawCost != null && rawCost is num) {
+                        costStr = '\$${formatCurrency(rawCost)} each';
+                      } else if (rawCost != null && num.tryParse(rawCost.toString()) != null) {
+                        costStr = '\$${formatCurrency(num.parse(rawCost.toString()))} each';
+                      } else {
+                        costStr = rawCost != null ? '$rawCost each' : 'N/A';
+                      }
+                    } else {
+                      if (data['unit_cost_cents'] != null) {
+                        costStr = '\$${((data['unit_cost_cents'] as num) / 100.0).toStringAsFixed(2)}';
+                      } else if (data['unit_cost'] != null && data['unit_cost'] is num) {
+                        costStr = '\$${formatCurrency(data['unit_cost'] as num)}';
+                      } else if (data['line_total'] != null && data['line_total'] is num) {
+                        costStr = '\$${formatCurrency(data['line_total'] as num)}';
+                      } else if (rawCost != null && rawCost is num) {
+                        costStr = '\$${formatCurrency(rawCost)}';
+                      } else if (rawCost != null && num.tryParse(rawCost.toString()) != null) {
+                        costStr = '\$${formatCurrency(num.parse(rawCost.toString()))}';
+                      } else {
+                        costStr = rawCost?.toString() ?? 'N/A';
+                      }
+                    }
 
                     final rawFee = data['allocated_fees'] ?? data['Allocated Fees'] ?? data['shipping_fee'] ?? data['Fee'] ?? data['fee'];
                     final feeStr = rawFee != null
@@ -2240,7 +2368,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         _buildMetaItem('Cost', costStr, Icons.attach_money),
                         _buildMetaItem('Fee', feeStr, Icons.local_shipping_outlined),
                         _buildMetaItem('Item #', ((data['retailer_item_num'] ?? data['item_number'] ?? data['Retailer Item No.']) ?? 'N/A').toString(), Icons.tag),
-                        _buildMetaItem('QTY', (data['Quantity'] ?? '1').toString(), Icons.numbers),
+                        _buildMetaItem('QTY', cleanQty.toString(), Icons.numbers),
                         _buildMetaItem('Date', (data['purchase_date'] ?? data['Purchase Date'] ?? 'N/A').toString(), Icons.calendar_today),
                         InkWell(
                           onTap: () => _showQuickStorageDialog(id, data, storageLoc),
@@ -2302,8 +2430,8 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
     );
   }
 
-  Widget _buildMetaItem(String label, String value, IconData icon) {
-    return SizedBox(
+  Widget _buildMetaItem(String label, String value, IconData icon, {VoidCallback? onTap}) {
+    final content = SizedBox(
       width: 140,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2315,12 +2443,64 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
-                Text(value, style: const TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.w500, overflow: TextOverflow.ellipsis)),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: onTap != null && value.startsWith('+') ? const Color(0xFF3B82F6) : const Color(0xFF475569),
+                    fontWeight: FontWeight.w500,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
+    );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: content,
+      );
+    }
+    return content;
+  }
+
+  Widget _buildCoinThumbnail(Map<String, dynamic> data) {
+    final canon = CanonicalMintAssetService.resolveFromMap(data);
+    final rawUrl = canon?.obverseUrl ??
+        (data['image_url_obverse'] ??
+            data['image_url'] ??
+            data['obverse_url'] ??
+            data['reference_image_url'] ??
+            data['image'] ??
+            '')
+        .toString()
+        .trim();
+
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: rawUrl.isNotEmpty
+          ? Image.network(
+              rawUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const Center(
+                child: Icon(Icons.monetization_on_outlined, size: 28, color: Color(0xFFC9A227)),
+              ),
+            )
+          : const Center(
+              child: Icon(Icons.monetization_on_outlined, size: 28, color: Color(0xFFC9A227)),
+            ),
     );
   }
 

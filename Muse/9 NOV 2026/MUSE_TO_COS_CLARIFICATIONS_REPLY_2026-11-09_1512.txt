@@ -1,0 +1,257 @@
+NUMISTA.AI: REPLY TO CLARIFICATIONS — COMPLETION-PAGE PIXEL, PATH 1, SOURCES
+============================================================================
+From: Muse (Meta AI), working with Eric Seaman  |  To: Eric's Chief of Staff
+Reply to: COS_TO_MUSE_CLARIFICATIONS_2026-11-09_1452_EST
+Date: Monday 9 November 2026, about 3:12 PM EST (America/New_York)
+
+No Meta account writes, verifications, test events or campaign builds were
+made for this reply. Advice and evidence only, from Meta's official Business
+Help Center and Meta for Developers documentation, cited in full.
+
+TWO CONCESSIONS, UP FRONT
+-------------------------
+1. Your Correction 1 is accepted. My Q4 critique assumed the completion-page
+   URL carried no fbclid, because your handoff didn't mention the forwarding.
+   With the click ID forwarded as you describe (plan v6 lines 190/236/298),
+   the "attribution hole" objection is WITHDRAWN. The re-evaluation below
+   replaces it.
+2. Your Correction 2 is accepted. My "Option A" wrongly implied the internal
+   marker was free. It is unbuilt code plus a new database record, behind the
+   same amendment/review/counsel gates. Your FOUR-path framing (1 Plain
+   Traffic, 2 Traffic + marker, 3 Standard Pixel, 4 Completion-page Pixel)
+   is the correct one and is used below.
+
+
+ASK 1 — COMPLETION-PAGE DESIGN, RE-EVALUATED WITH fbclid FORWARDED
+------------------------------------------------------------------
+(a) IS IT A VALID STANDARD EVENT?  Yes. [SOURCED]
+    CompleteRegistration is a predefined Meta standard event, defined as
+    "submitting information in exchange for a service provided by your
+    business. For example, signing up for an email subscription." The spec
+    lists no required parameters for it, so a parameterless firing is within
+    spec. Standard events are the event type Meta supports "for logging
+    conversions, optimizing for conversions, and building audiences."
+    Source: "Specifications for Meta Pixel standard events"
+    https://www.facebook.com/business/help/402791146561655
+    One implementation flag, stated neutrally: Meta's own note in that same
+    spec says the PageView event is included as part of the standard Pixel
+    base code. So IF the completion page loads the standard base snippet
+    unmodified, it will also send a PageView from that page — which differs
+    from your design statement of "no PageView." Whether your build includes
+    or omits that call is a fact your planned test can confirm. [SOURCED
+    about the base code; UNKNOWN for your build]
+
+(b) WILL THE SCRIPT PICK UP THE fbclid, SET COOKIES, LINK EVENT TO CLICK?
+    The mechanism is Meta's documented behavior. [SOURCED]
+    Meta for Developers, "ClickID and the fbp and fbc Parameters" (updated
+    9 Jan 2026):
+    https://developers.facebook.com/documentation/ads-commerce/conversions-api/parameters/fbp-and-fbc
+    What it documents:
+      - The ClickID (fbclid) is "passed with the URL of an advertiser's
+        website when a user clicks an ad on Facebook and/or Instagram."
+      - "Meta Pixel is installed on the website. In this case, Meta Pixel
+        automatically stores ClickID value in the _fbc browser cookie once
+        available."
+      - "When the Meta Pixel is installed on a website, and the Pixel uses
+        first-party cookies, the Pixel automatically saves a unique
+        identifier to an _fbp cookie for the website domain if one does not
+        already exist."
+      - The stored value's format is fb.<subdomainIndex>.<creationTime>.
+        <fbclid>, and the ClickID is case-sensitive — do not modify it.
+    Applied to your design: the Pixel does not need to have run on the
+    landing page. It needs the fbclid to be present in the URL of the page
+    where it DOES run, at load time. Your completion URL carries
+    ?fbclid=<snapshot> in the query string, which is exactly the documented
+    input. On that basis the design's pickup step rests on documented
+    behavior, not hope. Conditions and failure modes to keep in the plan:
+      - The fbclid must survive untransformed into the completion URL
+        (case-sensitive; no lowercasing/re-encoding anywhere in your chain,
+        and no redirect that drops the query string before the Pixel loads).
+      - Upstream stripping exists in the wild (for example iOS Link Tracking
+        Protection in some contexts can remove fbclid from shared/clicked
+        links). Your landing-page first-party capture is the mitigation,
+        but the capture itself depends on the fbclid surviving the
+        click-to-landing hop. [General ecosystem fact; rate for your
+        traffic UNKNOWN]
+      - The _fbp created on the completion page is fresh (no prior history
+        on that subdomain) and there is no advanced matching, so event match
+        quality rests almost entirely on fbc. That is enough for click
+        attribution; it is weaker for cross-device/people matching.
+    Whether YOUR build actually picks it up remains [UNKNOWN] until your
+    planned test (plan line 241) runs — that test is the right one, and as
+    your plan itself says, it proves carriage, not credit.
+
+(c) ATTRIBUTION AND DELIVERY.  Mechanism sourced; results not guaranteed.
+    With fbc attached, Meta has the join key it documents for tying the
+    event to the specific ad click, inside the campaign's attribution
+    setting (default for Sales is 7-day click). Meta's "Registrations
+    completed" metric "counts Complete Registration events that are tracked
+    by one of your Meta Business Tools... and attributed to your ads," with
+    statistical modeling used in some cases where events can't be counted
+    directly:
+    https://www.facebook.com/business/help/1764313906951681
+    [SOURCED] Prerequisites on our side are already met: the dataset is
+    connected to the operative ad account (confirmed 9 Nov).
+    Delivery is the genuinely weak leg, and your plan already prices this
+    in ("firing and delivery aren't guaranteed"): a single-try browser fire
+    can be lost to ad blockers, a closed tab, a failed load, or consent
+    timing. Meta can only attribute events it receives. No source can
+    quantify your loss rate in advance. [UNKNOWN]
+
+(d) OPTIMIZATION, LEARNING, VOLUME.  Threshold sourced; reachability unknown.
+    Once Meta receives CompleteRegistration and it shows active in Events
+    Manager, it can be selected as the optimization event for a Sales
+    (website) ad set — that is the standard mechanics of standard events
+    [SOURCED, same spec as (a)]. The learning bar is about 50 optimization
+    events per ad set in the week after the last significant edit; below
+    that, expect "Learning Limited":
+    https://www.facebook.com/business/help/112167992830700
+    https://www.facebook.com/business/help/269269737396981
+    You are right that this states Meta's preference, not your outcome: we
+    have no cost-per-click or cost-per-sign-up data for this product, so
+    whether $625 buys 50 sign-ups in 7 days is [UNKNOWN], not "can't." For
+    scale only — arithmetic, not a forecast [SPECULATION, labeled]: at a
+    hypothetical $1 per click, $625 buys ~625 clicks and 50 sign-ups needs
+    an 8% click-to-sign-up rate; at $2 per click it needs 16%. Whether
+    either is realistic for Numista.Ai is exactly what a first campaign
+    would measure. Also note Learning Limited is not a block: the ad set
+    still delivers and spends; optimization is just weaker.
+    REVISED VERDICT on Path 4: with fbclid forwarded, the design is
+    technically coherent — valid event, documented pickup, attributable if
+    delivered. Its honest costs are: one-try delivery loss, fresh-cookie
+    match quality, no landing-page funnel or retargeting audiences, and a
+    probable Learning Limited flight at this budget. That is a defensible
+    privacy-minimal measurement choice, as long as nobody expects it to
+    optimize like the standard install.
+
+
+ASK 2 — PATH 1 (PLAIN TRAFFIC, NO NEW TRACKING) COMPARED
+--------------------------------------------------------
+What Meta actually reports for a Pixel-free Traffic campaign [SOURCED from
+Meta's metric definitions and the Traffic objective documentation]:
+  impressions, reach, frequency, amount spent, CPM; link clicks (all and
+  outbound), CTR, CPC; video metrics for the video ad (plays, ThruPlays,
+  watch time); and landing page views — partially (see below). It reports
+  NOTHING about sign-ups, registrations or on-site behavior.
+  "About the Traffic objective":
+  https://www.facebook.com/business/help/301780226847564
+
+Performance goal without a Pixel — Link Clicks vs Landing Page Views:
+  - LINK CLICKS: available with no Pixel, no conditions. Traffic's own
+    description is showing the ad "to people most likely to click."
+    [SOURCED] This is the safe default for Path 1.
+  - LANDING PAGE VIEWS: Meta's metric definition says LPVs "are tracked
+    when people use the in-app browser on Meta technologies to visit your
+    destination web pages OR by having a Meta Pixel installed" — so LPV
+    REPORTING exists without a Pixel, covering in-app-browser loads, with
+    statistical modeling for some events:
+    https://www.facebook.com/business/help/361750134220832
+    And Meta's LPV optimization article says that starting in July 2025,
+    landing page view optimization "will be available for advertisers with
+    pixel sharing challenges," listing eligibility as "a functional
+    webpage":
+    https://www.facebook.com/business/help/417293491972212
+    So LPV OPTIMIZATION without a Pixel is plausibly offered — but I cannot
+    confirm it will appear in Eric's ad account until someone sees it in
+    the ad-set builder. [SOURCED that counting works without a Pixel;
+    UNKNOWN whether the optimization goal is offered in this account]
+    Recommendation: build with Link Clicks; if Landing Page Views is
+    offered at build time, it is the better goal (it filters out
+    click-and-bounce). Decide at build, not before.
+
+Path 1 vs the others, briefly:
+  Path 1 measures visits only, needs zero site code and zero counsel-gated
+  tracking decisions, and can be ready fastest. Paths 2–4 each add a
+  measurement layer at the cost of build + review + counsel time that is
+  currently blocked on your side by the STOP/amendment process — a schedule
+  fact, not a quality judgment: with 17 days left, Path 1 is the only path
+  whose readiness does not depend on that process finishing.
+
+SMALLEST PRACTICAL LAUNCH PATH (Path 1), presented as an option:
+  1. Landing page matches the ad's offer before launch (pricing tiers /
+     Free-10-items live, or ad copy adjusted to what's live). [Eric / your
+     site process — content, not tracking]
+  2. Instagram: recommended, NOT a Path 1 blocker. Ads can run on Facebook
+     and Instagram placements using the Page as the ad identity if no
+     Instagram account is linked; linking the account is better
+     presentation and unlocks the IG profile as the ad's home. [Standard
+     Ads Manager behavior; verify at build] If Eric wants it, the creation
+     steps in my previous reply stand, each separately approved.
+  3. Build the campaign in Ads Manager, ad account 1163173829566150:
+     Traffic objective, performance goal Link Clicks (or LPV if offered),
+     one ad set, broad US, "Coin collecting" as an Advantage+ suggestion,
+     one video ad to https://numista.ai/, $625 lifetime budget,
+     26 Nov – 2 Dec 2026, America/New_York. Eric clicks; I guide (my API
+     access is read-only for these accounts). [Eric, separate approval]
+  4. Add the replacement payment card at build time — never the closed
+     card ending 5086. [Eric, separate approval]
+  5. Submit for ad review by Tue 24 Nov (most reviews complete within 24
+     hours; first-time advertisers can take longer — buffer protects the
+     26 Nov start).
+  6. Publish Thu 26 Nov only on Eric's explicit approval.
+  No domain verification, no Pixel, no marker, no site code is required for
+  this path. What it gives up, knowingly: sign-up measurement inside Meta
+  and any optimization toward sign-ups.
+
+
+ASK 3 — THE THREE CLAIMS, SOURCED AND LABELED
+---------------------------------------------
+CLAIM 1: "Website sign-ups should use Sales rather than Leads."
+  LABEL: RECOMMENDATION grounded in Meta's official objective definitions
+  (not a hard requirement — Meta documents what each objective is FOR;
+  nothing physically stops a Leads campaign, but website registration
+  optimization is a Sales/website-conversions pattern).
+    - Sales: "for campaigns where you want to find people likely to
+      purchase your product or service... maximize sales or conversions on
+      your website," and it "can also optimize... for other actions" —
+      conversions on your website are its documented home:
+      https://www.facebook.com/business/help/672411877425804
+    - Leads: campaigns "to find potential customers... gather information
+      from new leads" via Instant Forms (its exclusive feature), calls, or
+      messages — i.e., lead capture, not completed account registrations
+      on your own website:
+      https://www.facebook.com/business/help/387294348401675
+    Precision note: "Lead" is also a standard EVENT (a form submission or
+    trial sign-up, per the standard-events spec). If Eric ever optimizes a
+    website flow inside Sales, the event choice CompleteRegistration vs
+    Lead is a modeling choice; the OBJECTIVE point stands either way.
+
+CLAIM 2: "Landing page views are reported without a Pixel."
+  LABEL: SOURCED (Meta metric definition), with a scope limit.
+    "Landing page views are tracked when people use the in-app browser on
+    Meta technologies to visit your destination web pages or by having a
+    Meta Pixel installed on them." Scope limit: without a Pixel, only
+    in-app-browser loads are counted (plus modeling) — a subset of all
+    landing loads, so treat LPVs as indicative, not exact.
+    https://www.facebook.com/business/help/361750134220832
+
+CLAIM 3: "The AEM / prioritized-events configuration is gone."
+  LABEL: SOURCED (requirement removed by Meta).
+    "About Meta's Aggregated Event Measurement": "You no longer need to
+    prioritize 8 conversion events per domain for web conversion
+    optimization... The Aggregated Event Measurement tab in Meta Events
+    Manager has been removed... You aren't required to verify your website
+    domains for purposes related to event configuration... You don't need
+    to select a conversion domain when you create a campaign in Ads
+    Manager."
+    https://www.facebook.com/business/help/721422165168355
+
+For completeness, two more labels used in Ask 1:
+  - Pixel stores ClickID in _fbc / saves _fbp automatically: SOURCED
+    (Meta for Developers, URL in Ask 1(b)).
+  - ~50 events/week learning threshold: SOURCED (URLs in Ask 1(d)).
+
+
+PROCESS NOTE
+------------
+Noted on the paste-and-implement point: my earlier Antigravity instruction
+file is a draft prepared for Eric. It executes nothing by itself; if Eric
+routes it through your amendment/review process instead of using it
+directly, that is his call and changes nothing on the Meta side either way.
+
+Eric has not picked a path, and this reply picks none for him. Smallest
+decision that unlocks the schedule: Path 1 can be ready on the timeline in
+Ask 2 with no dependency on the code-amendment process; Paths 2–4 depend on
+that process plus counsel's recorded decisions.
+
+-- End of reply. Muse, 9 Nov 2026, America/New_York (EST). --

@@ -13,6 +13,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/valuation_mode_service.dart';
 import 'currency_collection_screen.dart';
+import 'unified_coin_detail_screen.dart';
 import '../services/world_item_service.dart';
 import '../services/auth_service.dart';
 import '../models/coin_model.dart';
@@ -20,6 +21,7 @@ import '../services/epn_service.dart';
 import '../services/guest_seed_service.dart';
 import '../services/reference_library_service.dart';
 import '../services/coin_image_service.dart';
+import '../services/canonical_mint_asset_service.dart';
 import '../widgets/coin_set_viewer.dart';
 import '../widgets/set_contents_panel.dart';
 import '../widgets/grade_badge_widget.dart';
@@ -41,6 +43,8 @@ import '../services/set_grouping_service.dart';
 import '../models/collection_row.dart';
 import '../constants.dart';
 import '../constants/denomination_canon.dart';
+import '../widgets/collection_card_valuation_row.dart';
+import '../widgets/collection_card_image.dart';
 
 // --- Field name constants -----------------------------------------------------
 class _F {
@@ -2732,7 +2736,21 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             // For virtual children, inspector/detail navigate to parent
             final effectiveId = crw.isVirtualChild ? (crw.parentDocId ?? crw.id) : crw.id;
 
-            void onTap() => _showCoinInspectorDialog(effectiveId, m);
+            void onTap() {
+              final parentDoc = crw.isVirtualChild
+                  ? _cachedCoinsDocs.where((d) => d.id == crw.parentDocId).firstOrNull
+                  : crw.snapshot;
+              final coinData = (parentDoc?.data() as Map<String, dynamic>?) ?? m;
+              UnifiedCoinDetailScreen.show(
+                context,
+                coin: CoinModel.fromMap(coinData, effectiveId),
+                snapshot: parentDoc,
+                initialParentIndex: resolveParentIndex(docs, effectiveId),
+                collectionRows: docs,
+                cachedCoinsDocs: _cachedCoinsDocs,
+                legacyOpen: () => _showCoinInspectorDialog(effectiveId, m),
+              );
+            }
 
             // Actions cell (col 0)
             if (col == 0) {
@@ -2757,27 +2775,43 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             if (parentDoc == null) return; // parent missing — skip
                             final parentData = (parentDoc.data() as Map<String, dynamic>?) ?? {};
                             final coin = CoinModel.fromMap(parentData, parentDoc.id);
-                            CoinDetailScreen.show(
+                            UnifiedCoinDetailScreen.show(
                               context,
                               coin: coin,
-                              spotPrices: _spotPrices,
-                              onNavigateToAiChat: widget.onNavigateWithQuery != null
-                                  ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
-                                  : null,
-                              onDeleted: () => setState(() {}),
-                              onEdited: () => setState(() {}),
+                              snapshot: parentDoc,
+                              initialParentIndex: resolveParentIndex(docs, parentDoc.id),
+                              collectionRows: docs,
+                              cachedCoinsDocs: _cachedCoinsDocs,
+                              legacyOpen: () => CoinDetailScreen.show(
+                                context,
+                                coin: coin,
+                                spotPrices: _spotPrices,
+                                onNavigateToAiChat: widget.onNavigateWithQuery != null
+                                    ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
+                                    : null,
+                                onDeleted: () => setState(() {}),
+                                onEdited: () => setState(() {}),
+                              ),
                             );
                           } else {
                             final coin = CoinModel.fromMap(m, crw.id);
-                            CoinDetailScreen.show(
+                            UnifiedCoinDetailScreen.show(
                               context,
                               coin: coin,
-                              spotPrices: _spotPrices,
-                              onNavigateToAiChat: widget.onNavigateWithQuery != null
-                                  ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
-                                  : null,
-                              onDeleted: () => setState(() {}),
-                              onEdited: () => setState(() {}),
+                              snapshot: crw.snapshot,
+                              initialParentIndex: resolveParentIndex(docs, crw.id),
+                              collectionRows: docs,
+                              cachedCoinsDocs: _cachedCoinsDocs,
+                              legacyOpen: () => CoinDetailScreen.show(
+                                context,
+                                coin: coin,
+                                spotPrices: _spotPrices,
+                                onNavigateToAiChat: widget.onNavigateWithQuery != null
+                                    ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
+                                    : null,
+                                onDeleted: () => setState(() {}),
+                                onEdited: () => setState(() {}),
+                              ),
                             );
                           }
                         }),
@@ -3012,15 +3046,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final displayTitle = crw.isVirtualChild
             ? '\u21b3 ${themeStartsYear ? label : '$yearMint $label'}'.trim()
             : (themeStartsYear ? label : '$yearMint $label').trim();
-        
-        final valCpg = _parseNumber(m['cpgRetail']);
-        final finalVal = valCpg;
-        
-        final fmt = intl.NumberFormat.currency(symbol: '\$');
-        final rawAiVal = m[_F.aiValue] ?? m['ai_estimated_value'] ?? m['estValue'] ?? (m['ai_est_value'] != null ? fmt.format(m['ai_est_value']) : null);
-        final valueText = finalVal > 0 
-            ? fmt.format(finalVal) 
-            : (rawAiVal?.toString() ?? '—');
+        // Valuation precedence and pending chip encapsulated in CollectionCardValuationRow (NET-780b v2.3)
 
         // For virtual children, selection targets parent doc
         final effectiveId = crw.isVirtualChild ? (crw.parentDocId ?? crw.id) : crw.id;
@@ -3041,7 +3067,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           child: InkWell(
             onTap: () {
               setState(() => _selectedCoinId = effectiveId);
-              _showCoinInspectorDialog(effectiveId, m);
+              final parentDoc = crw.isVirtualChild
+                  ? _cachedCoinsDocs.where((d) => d.id == crw.parentDocId).firstOrNull
+                  : crw.snapshot;
+              final coinData = (parentDoc?.data() as Map<String, dynamic>?) ?? m;
+              UnifiedCoinDetailScreen.show(
+                context,
+                coin: CoinModel.fromMap(coinData, effectiveId),
+                snapshot: parentDoc,
+                initialParentIndex: resolveParentIndex(docs, effectiveId),
+                collectionRows: docs,
+                cachedCoinsDocs: _cachedCoinsDocs,
+                legacyOpen: () => _showCoinInspectorDialog(effectiveId, m),
+              );
             },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
@@ -3119,7 +3157,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           final parentId = m['parent_set_id'].toString();
                           final parentDoc = _cachedCoinsDocs.where((d) => d.id == parentId).firstOrNull;
                           if (parentDoc != null) {
-                            _showCoinInspectorDialog(parentDoc.id, parentDoc.data());
+                            final parentData = parentDoc.data();
+                            UnifiedCoinDetailScreen.show(
+                              context,
+                              coin: CoinModel.fromMap(parentData, parentDoc.id),
+                              snapshot: parentDoc,
+                              initialParentIndex: resolveParentIndex(docs, parentDoc.id),
+                              collectionRows: docs,
+                              cachedCoinsDocs: _cachedCoinsDocs,
+                              legacyOpen: () => _showCoinInspectorDialog(parentDoc.id, parentData),
+                            );
                           }
                         },
                         child: Container(
@@ -3164,31 +3211,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     style: TextStyle(fontSize: 11, color: _subtext),
                   ),
                   const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (valueText == '—' || m['enrichment_status'] == 'pending')
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFC9A227).withAlpha(25),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: const Color(0xFFC9A227).withAlpha(120)),
-                          ),
-                          child: const Text('Valuation Pending', style: TextStyle(fontSize: 10, color: Color(0xFFC9A227), fontWeight: FontWeight.bold)),
-                        )
-                      else
-                        Text(
-                          valueText,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFC9A227),
-                          ),
-                        ),
-                      if (condition.isNotEmpty)
-                        GradeBadgeWidget(gradeCode: condition),
-                    ],
+                  CollectionCardValuationRow(
+                    data: m,
+                    condition: condition,
                   ),
                 ],
               ),
@@ -3465,13 +3490,19 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
     // Pre-fetch reference image once (no user photo path only).
     // Capture in closure so FutureBuilder doesn't re-run on every rebuild.
-    final obvFallback = data[_F.imageObverse] ?? data['primary_image_url'] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).isNotEmpty ? data['photo_urls'][0] : null);
-    final revFallback = data[_F.imageReverse] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).length > 1 ? data['photo_urls'][1] : null);
-    final hasUserPhoto = obvFallback?.toString().startsWith('http') == true
-        || revFallback?.toString().startsWith('http') == true;
+    final hasUserPhoto = CanonicalMintAssetService.hasUserUploadedPhotos(data);
+    final canon = hasUserPhoto ? null : CanonicalMintAssetService.resolveFromMap(data);
     final refFuture = hasUserPhoto
         ? null
-        : CoinImageService.fetchReferenceImages(
+        : (canon != null
+            ? Future.value(CoinImageResult(
+                obverseUrl: canon.obverseUrl,
+                reverseUrl: canon.reverseUrl,
+                attribution: 'U.S. Mint',
+                sourceLabel: 'Canonical Mint Asset',
+                matchedKey: canon.sku,
+              ))
+            : CoinImageService.fetchReferenceImages(
             year:         year,
             mint:         mint.isEmpty ? null : mint,
             denomination: denom.isEmpty ? null : denom,
@@ -3481,7 +3512,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             subject:      _rowField(data, 'theme_subject', _F.themeSubject).isEmpty
                 ? null
                 : _rowField(data, 'theme_subject', _F.themeSubject),
-          );
+              ));
     // refFuture passed into FutureBuilder below
 
     showDialog(
@@ -4398,11 +4429,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   /// or an inviting "Add Your Photo" prompt otherwise.
   // ignore: unused_element — kept for CoinDetailScreen integration (Phase 2)
   Widget _buildCoinVaultGallery(Map<String, dynamic> data) {
-    final obvUrl = data[_F.imageObverse]?.toString() ?? '';
-    final revUrl = data[_F.imageReverse]?.toString() ?? '';
+    final hasUserPhoto = CanonicalMintAssetService.hasUserUploadedPhotos(data);
+    final canon = hasUserPhoto ? null : CanonicalMintAssetService.resolveFromMap(data);
+    final obvUrl = canon?.obverseUrl ?? (data[_F.imageObverse]?.toString() ?? '');
+    final revUrl = canon?.reverseUrl ?? (data[_F.imageReverse]?.toString() ?? '');
     final hasObv = obvUrl.isNotEmpty && obvUrl.startsWith('http');
     final hasRev = revUrl.isNotEmpty && revUrl.startsWith('http');
-    final hasAny = hasObv || hasRev;
+    final hasAny = hasUserPhoto || canon != null || hasObv || hasRev;
 
     // If switching to reverse but no reverse exists, stay on obverse
     final showObverse = _vaultShowObverse || (!hasRev && hasObv);
@@ -4965,7 +4998,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       });
 
       final snap = await task;
-      final url  = await snap.ref.getDownloadURL();
+      final url  = 'gs://${snap.ref.bucket}/${snap.ref.fullPath}';
 
       // Use the currently authenticated user's Firestore path
       await FirebaseFirestore.instance
@@ -5439,11 +5472,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     try {
       final refCompressed = FirebaseStorage.instance.ref('users/$userEmail/coins/$coinId/owner_photo_$photoId.$ext');
       await refCompressed.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
-      final compressedUrl = await refCompressed.getDownloadURL();
+      final compressedUrl = 'gs://${refCompressed.bucket}/${refCompressed.fullPath}';
       
       final refOriginal = FirebaseStorage.instance.ref('users/$userEmail/coins/$coinId/owner_photo_${photoId}_original.$ext');
       await refOriginal.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
-      final originalUrl = await refOriginal.getDownloadURL();
+      final originalUrl = 'gs://${refOriginal.bucket}/${refOriginal.fullPath}';
       
       if (!mounted) return;
       String caption = '';
@@ -6304,123 +6337,12 @@ class _TopScrollbarTrackWidgetState extends State<_TopScrollbarTrackWidget> {
   }
 }
 
-/// Robust image component for collection card grid.
-/// Displays personal scan if available, otherwise queries CoinImageService for reference image.
+// Delegated to production widget CollectionCardImage (NET-780c v2.3)
 class _CollectionCardImage extends StatelessWidget {
   final Map<String, dynamic> data;
   const _CollectionCardImage({required this.data});
-
-  static String _cleanUrl(dynamic val) {
-    if (val == null) return '';
-    final s = val.toString().trim();
-    if (s.isEmpty || s.startsWith('gs://') || !s.startsWith('http')) return '';
-    return s;
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final obv = _cleanUrl(data[_F.imageObverse] ?? data['primary_image_url'] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).isNotEmpty ? data['photo_urls'][0] : null));
-    final rev = _cleanUrl(data[_F.imageReverse] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).length > 1 ? data['photo_urls'][1] : null));
-    final directUrl = rev.isNotEmpty ? rev : obv;  // Prefer reverse (distinct design)
-
-    if (directUrl.isNotEmpty) {
-      return _buildCoinImage(directUrl);
-    }
-
-    // Dual-read: PascalCase first, lowercase fallback for unmigrated CSV docs
-    String dualRead(String snakeKey, String legacyKey) {
-      final s = data[snakeKey]?.toString();
-      if (s != null && s.trim().isNotEmpty && s.trim() != 'None' && s.trim() != 'null') return s.trim();
-      final l = data[legacyKey]?.toString();
-      if (l != null && l.trim().isNotEmpty && l.trim() != 'None' && l.trim() != 'null') return l.trim();
-      return '';
-    }
-    final year = dualRead('year', _F.year).replaceAll(RegExp(r'\.0$'), '');
-    final mint = dualRead('mint_mark', _F.mintMark);
-    final denom = dualRead('denomination', _F.denomination);
-    final series = dualRead('program_series', _F.programSeries);
-    final subject = dualRead('theme_subject', _F.themeSubject);
-
-    return FutureBuilder<CoinImageResult>(
-      future: CoinImageService.fetchReferenceImages(
-        year: year,
-        mint: mint.isEmpty ? null : mint,
-        denomination: denom.isEmpty ? null : denom,
-        series: series.isEmpty ? null : series,
-        subject: subject.isEmpty ? null : subject,
-      ),
-      builder: (context, snapshot) {
-        final ref = snapshot.data;
-        // MF-V3-3: When subject is known and reverse is null (steal-guard
-        // correctly blocked a generic reverse), show placeholder instead of
-        // falling back to generic obverse. Keeps obverse fallback for coins
-        // without a subject (e.g. generic Morgan/Peace).
-        final refUrl = (ref?.reverseUrl?.isNotEmpty == true)
-            ? ref!.reverseUrl!
-            : (subject.isEmpty && ref?.obverseUrl?.isNotEmpty == true)
-                ? ref!.obverseUrl!
-                : '';
-
-        if (refUrl.isNotEmpty) {
-          return _buildCoinImage(refUrl);
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFFC9A227),
-              ),
-            ),
-          );
-        }
-
-        return const Center(
-          child: Icon(Icons.image_not_supported_outlined, size: 36, color: Color(0xFF8B92B4)),
-        );
-      },
-    );
-  }
-
-  Widget _buildCoinImage(String url) {
-    return Center(
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFC9A227).withAlpha(40),
-              blurRadius: 14,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: Image.network(
-          url,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => const Center(
-            child: Icon(Icons.image_not_supported_outlined, size: 36, color: Color(0xFF8B92B4)),
-          ),
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return const Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFFC9A227),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => CollectionCardImage(data: data);
 }
 
 

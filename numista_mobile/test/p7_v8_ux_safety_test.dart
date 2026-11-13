@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+// ignore: depend_on_referenced_packages
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -33,9 +34,7 @@ import 'package:numista_ai/widgets/auth_gate.dart';
 import 'package:numista_ai/constants.dart';
 import 'package:numista_ai/utils/platform_gate.dart';
 import 'package:numista_ai/services/camera_recovery_service.dart';
-import 'package:numista_ai/screens/microscope_scan_screen.dart';
 import 'package:numista_ai/screens/review_hub_screen.dart';
-import 'package:numista_ai/widgets/morgan_greeter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

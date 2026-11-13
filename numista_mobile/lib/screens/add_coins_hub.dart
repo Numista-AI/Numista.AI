@@ -14,6 +14,7 @@ import '../widgets/add_coin_manual_form.dart';
 import '../widgets/extraction_success_dialog.dart';
 import '../services/wishlist_service.dart';
 import '../models/coin_model.dart';
+import '../utils/mint_helpers.dart';
 import '../services/pcgs_import_service.dart';
 import '../services/backup_export_service.dart';
 import '../services/beta_checklist_service.dart';
@@ -36,6 +37,53 @@ String buildAddCoinsHtmlPath(String email, {String apiBase = kApiBaseUrl}) {
 }
 
 class AddCoinsHub extends StatefulWidget {
+  @visibleForTesting
+  static Map<String, dynamic> buildSkuCoinDoc(Map<String, dynamic> data, String itemSku) {
+    final isSetItem = data['item_type'] == 'set';
+    final coinDoc = <String, dynamic>{
+      'source': 'manual_sku',
+      'sku': itemSku,
+      'mint_product_id': itemSku,
+      'Added': FieldValue.serverTimestamp(),
+      'created_at': FieldValue.serverTimestamp(),
+      'committed_at': FieldValue.serverTimestamp(),
+      'deep_dive_status': 'PENDING',
+      'is_demo': false,
+      'is_demo_cleared': false,
+    };
+
+    if (isSetItem) {
+      coinDoc.addAll({
+        'set_id': data['set_id'] ?? '',
+        'item_type': 'set',
+        'is_set': true,
+        'kept_as_set': true,
+        'set_broken_up': false,
+        'Year': data['year']?.toString() ?? '',
+        'Country': 'USA',
+        'Denomination': 'Set',
+        'Condition': 'Uncirculated',
+        'Quantity': 1,
+        'name': data['name'] ?? '',
+        'Program/Series': data['program'] ?? data['program_series'] ?? '',
+        'Theme/Subject': data['description'] ?? '',
+      });
+    } else {
+      coinDoc.addAll({
+        'Year': data['year']?.toString() ?? '',
+        'Mint Mark': data['mint_mark'] ?? '',
+        'Denomination': data['denomination'] ?? '',
+        'Program/Series': data['program_series'] ?? '',
+        'Theme/Subject': data['description'] ?? '',
+        'Condition': data['implied_condition'] ?? 'Uncirculated',
+        'Quantity': 1,
+        'Country': 'United States',
+        'item_type': 'coin',
+      });
+    }
+    return coinDoc;
+  }
+
   final Function(String)? onNavigate;
   final String? initialTabName;
   final bool showCertFullScreen;
@@ -65,6 +113,88 @@ class AddCoinsHub extends StatefulWidget {
   @override
   State<AddCoinsHub> createState() => _AddCoinsHubState();
 }
+
+@visibleForTesting
+const Map<String, Map<String, dynamic>> kFallbackUsMintSkus = {
+  '26EA': {
+    'sku': '26EA',
+    'name': 'American Silver Eagle Proof',
+    'program_series': 'American Silver Eagle',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26XE': {
+    'sku': '26XE',
+    'name': 'Morgan Dollar Enhanced Uncirculated',
+    'program_series': 'Morgan and Peace Silver Dollars',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26XL': {
+    'sku': '26XL',
+    'name': 'Peace Dollar Reverse Proof',
+    'program_series': 'Morgan and Peace Silver Dollars',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26XH': {
+    'sku': '26XH',
+    'name': 'Peace Dollar Uncirculated',
+    'program_series': 'Morgan and Peace Silver Dollars',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26XF': {
+    'sku': '26XF',
+    'name': 'Morgan Dollar Proof',
+    'program_series': 'Morgan and Peace Silver Dollars',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26GC': {
+    'sku': '26GC',
+    'name': 'American Innovation \$1 Proof Set',
+    'program_series': 'American Innovation \$1 Coins',
+    'year': '2026',
+    'item_type': 'set',
+  },
+  '26SQRP': {
+    'sku': '26SQRP',
+    'name': '2026 Semiquincentennial President Donald J. Trump \$1 Coin 25-Coin Roll',
+    'program_series': 'Presidential \$1 Coins',
+    'year': '2026',
+    'item_type': 'coin',
+  },
+  '26RG': {
+    'sku': '26RG',
+    'name': 'Clad Proof Set',
+    'program_series': 'Proof Sets',
+    'year': '2026',
+    'item_type': 'set',
+  },
+  '23RG': {
+    'sku': '23RG',
+    'name': '2023 Clad Proof Set',
+    'program_series': 'Proof Sets',
+    'year': '2023',
+    'item_type': 'set',
+  },
+  '26RH': {
+    'sku': '26RH',
+    'name': 'Silver Proof Set',
+    'program_series': 'Proof Sets',
+    'year': '2026',
+    'item_type': 'set',
+  },
+  '23RH': {
+    'sku': '23RH',
+    'name': '2023 Silver Proof Set',
+    'program_series': 'Proof Sets',
+    'year': '2023',
+    'item_type': 'set',
+  },
+};
+const _kFallbackUsMintSkus = kFallbackUsMintSkus;
 
 class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStateMixin {
   late TabController _tabController;
@@ -823,11 +953,8 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       ),
       _QuickAddCard(
         icon: Icons.upload_file_outlined,
-        label: 'Upload a list',
-        onTap: () {
-          setState(() => _showMoreWays = true);
-          _tabController.animateTo(0);
-        },
+        label: 'Upload an invoice',
+        onTap: _launchBulkImporter,
       ),
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -873,14 +1000,22 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ...entryCards,
-        if (_showMoreWays) ...[
-          _buildTabBar(),
-          Expanded(
-            child: TabBarView(
+    return SafeArea(
+      child: Stack(
+        children: [
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: entryCards,
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _buildTabBar(),
+              ),
+            ],
+            body: TabBarView(
               controller: _tabController,
               children: [
                 // ITEM 9: Tab order matches priority: upload → camera → manual → cert → sku → roll → world → set
@@ -950,10 +1085,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               ],
             ),
           ),
-        ] else
-          const Spacer(),
-        if (_isProcessing) _buildProcessingOverlay(),
-      ],
+          if (_isProcessing) _buildProcessingOverlay(),
+        ],
+      ),
     );
   }
 
@@ -1012,6 +1146,23 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   }
 
 
+  Future<void> _launchBulkImporter() async {
+    final guideState = MorganGuideService.current.value;
+    if (guideState?.guide.id == 'guide_invoice' && guideState?.step == 0) {
+      MorganGuideService.next();
+    }
+    final email = AuthService.userEmail;
+    final path  = buildAddCoinsHtmlPath(email);
+    final uri   = kIsWeb
+        ? Uri.base.resolve(path)
+        : Uri.parse('https://$kAppPublicDomain$path');
+    if (kIsWeb) {
+      await launchUrl(uri, webOnlyWindowName: '_self');
+    } else {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+    }
+  }
+
   Widget _buildUploadFilesTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
@@ -1054,22 +1205,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final guideState = MorganGuideService.current.value;
-                    if (guideState?.guide.id == 'guide_invoice' && guideState?.step == 0) {
-                      MorganGuideService.next();
-                    }
-                    final email = AuthService.userEmail;
-                    final path  = buildAddCoinsHtmlPath(email);
-                    final uri   = kIsWeb
-                        ? Uri.base.resolve(path)
-                        : Uri.parse('https://$kAppPublicDomain$path');
-                    if (kIsWeb) {
-                      await launchUrl(uri, webOnlyWindowName: '_self');
-                    } else {
-                      await launchUrl(uri, mode: LaunchMode.platformDefault);
-                    }
-                  },
+                  onPressed: _launchBulkImporter,
                   icon: const Icon(Icons.open_in_new, size: 18),
                   label: const Text('Open Bulk Import →',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
@@ -2580,9 +2716,10 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       _skuError = '';
     });
 
+    final docId = rawSku.replaceAll(RegExp(r'[^a-zA-Z0-9\-]'), '_').toUpperCase();
+
     try {
       DocumentSnapshot<Map<String, dynamic>> snap;
-      final docId = rawSku.replaceAll(RegExp(r'[^a-zA-Z0-9\-]'), '_').toUpperCase();
 
       if (_skuRetailer == 'US Mint') {
         snap = await FirebaseFirestore.instance
@@ -2607,6 +2744,14 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       }
 
       if (!snap.exists) {
+        final fallback = (_skuRetailer == 'US Mint') ? _kFallbackUsMintSkus[docId] : null;
+        if (fallback != null) {
+          setState(() {
+            _skuSearchResult = {...fallback, 'sku': docId};
+            _skuSearching = false;
+          });
+          return;
+        }
         setState(() {
           _skuError = 'SKU "$rawSku" not found in $_skuRetailer dictionary.';
           _skuSearching = false;
@@ -2615,10 +2760,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       }
 
       setState(() {
-        _skuSearchResult = snap.data();
+        final snapData = snap.data();
+        _skuSearchResult = snapData != null ? {...snapData, 'sku': docId} : null;
         _skuSearching = false;
       });
     } catch (e) {
+      final fallback = (_skuRetailer == 'US Mint') ? _kFallbackUsMintSkus[docId] : null;
+      if (fallback != null) {
+        setState(() {
+          _skuSearchResult = {...fallback, 'sku': docId};
+          _skuSearching = false;
+        });
+        return;
+      }
       setState(() {
         _skuError = NumistaErrorHelper.toUserFriendly(e);
         _skuSearching = false;
@@ -2632,48 +2786,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
     try {
       final data = _skuSearchResult!;
-      final isSetItem = data['item_type'] == 'set';
+      final itemSku = (_skuSearchResult?['sku'] ?? _skuSearchResult?['mint_product_id'] ?? _skuCtrl.text.trim().replaceAll(RegExp(r'[^a-zA-Z0-9\-]'), '_').toUpperCase()).toString();
       
-      final coinDoc = <String, dynamic>{
-        'source': 'manual_sku',
-        'Added': FieldValue.serverTimestamp(),
-        'created_at': FieldValue.serverTimestamp(),
-        'committed_at': FieldValue.serverTimestamp(),
-        'deep_dive_status': 'PENDING',
-        // ITEM 6: stamp is_demo: false so real coins remain visible after display filter ships
-        'is_demo': false,
-        'is_demo_cleared': false,
-      };
-
-      if (isSetItem) {
-        coinDoc.addAll({
-          'set_id': data['set_id'] ?? '',
-          'item_type': 'set',
-          'is_set': true,
-          'kept_as_set': true,
-          'set_broken_up': false,
-          'Year': data['year']?.toString() ?? '',
-          'Country': 'USA',
-          'Denomination': 'Set',
-          'Condition': 'Uncirculated',
-          'Quantity': 1,
-          'name': data['name'] ?? '',
-          'Program/Series': data['program'] ?? data['program_series'] ?? '',
-          'Theme/Subject': data['description'] ?? '',
-        });
-      } else {
-        coinDoc.addAll({
-          'Year': data['year']?.toString() ?? '',
-          'Mint Mark': data['mint_mark'] ?? '',
-          'Denomination': data['denomination'] ?? '',
-          'Program/Series': data['program_series'] ?? '',
-          'Theme/Subject': data['description'] ?? '',
-          'Condition': data['implied_condition'] ?? 'Uncirculated',
-          'Quantity': 1,
-          'Country': 'United States',
-          'item_type': 'coin',
-        });
-      }
+      final coinDoc = AddCoinsHub.buildSkuCoinDoc(data, itemSku);
 
       final docRef = await FirebaseFirestore.instance
           .collection(AuthService.coinsPath)
@@ -6102,21 +6217,32 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     final messenger = ScaffoldMessenger.of(context);
                     int count = 0;
                     for (final r in rawRows) {
+                      final csvYear = getValue(r, selectedYearHeader);
+                      final csvMintRaw = getValue(r, selectedMintHeader);
+                      final csvDenom = getValue(r, selectedDenomHeader);
+                      final csvVariety = getValue(r, selectedVarietyHeader);
+                      final resolvedMint = MintHelpers.resolveTwoFieldMint(
+                        rawMintMark: csvMintRaw,
+                        year: csvYear,
+                        denomination: csvDenom,
+                        variety: csvVariety,
+                      );
                       final itemData = {
                         // PascalCase keys matching _F.* UI constants
-                        'Year': getValue(r, selectedYearHeader),
-                        'Mint Mark': getValue(r, selectedMintHeader),
-                        'Denomination': getValue(r, selectedDenomHeader),
+                        'Year': csvYear,
+                        'mint': resolvedMint.mint,
+                        'mint_mark': resolvedMint.mintMark,
+                        'Mint Mark': resolvedMint.mintMark,
+                        'Denomination': csvDenom,
                         'Condition': getValue(r, selectedGradeHeader),
                         'Cost': getValue(r, selectedCostHeader),
-                        'Variety': getValue(r, selectedVarietyHeader),
+                        'Variety': csvVariety,
                         'Retailer/Website': getValue(r, selectedRetailerHeader),
                         'Retailer Invoice #': getValue(r, selectedInvoiceHeader),
                         'Personal Notes': getValue(r, selectedNotesHeader),
                         // Legacy lowercase keys for backward compat
-                        'year': getValue(r, selectedYearHeader),
-                        'mint_mark': getValue(r, selectedMintHeader),
-                        'denomination': getValue(r, selectedDenomHeader),
+                        'year': csvYear,
+                        'denomination': csvDenom,
                         'condition': getValue(r, selectedGradeHeader),
                         'cost_basis': getValue(r, selectedCostHeader),
                         'variety': getValue(r, selectedVarietyHeader),

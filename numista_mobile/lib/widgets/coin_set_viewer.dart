@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/numista_error_helper.dart';
+import '../services/canonical_mint_asset_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CoinSetViewer
@@ -44,13 +45,16 @@ class _CoinInSet {
     this.reverseUrl,
   });
 
-  factory _CoinInSet.fromMap(Map<String, dynamic> m) => _CoinInSet(
-        denomination: m['denomination'] as String? ?? '',
-        label:        m['label']        as String? ?? '',
-        name:         m['name']         as String? ?? '',
-        obverseUrl:   m['obverse_url']  as String?,
-        reverseUrl:   m['reverse_url']  as String?,
-      );
+  factory _CoinInSet.fromMap(Map<String, dynamic> m) {
+    final canon = CanonicalMintAssetService.resolveFromMap(m);
+    return _CoinInSet(
+      denomination: m['denomination'] as String? ?? '',
+      label:        m['label']        as String? ?? '',
+      name:         m['name']         as String? ?? '',
+      obverseUrl:   canon?.obverseUrl ?? (m['obverse_url'] as String?),
+      reverseUrl:   canon?.reverseUrl ?? (m['reverse_url'] as String?),
+    );
+  }
 }
 
 class _CoinSetData {

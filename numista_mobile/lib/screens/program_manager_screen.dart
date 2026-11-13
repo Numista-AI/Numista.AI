@@ -16,6 +16,7 @@ import 'coin_search_screen.dart';
 import '../services/guest_seed_service.dart';
 import '../widgets/morgan_guide_flow.dart';
 import '../utils/slot_resolver.dart';
+import '../utils/mint_helpers.dart';
 import '../services/set_expansion_helper.dart';
 import 'add_coins_hub.dart';
 import '../utils/numista_error_helper.dart';
@@ -2121,10 +2122,24 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         }
       }
 
+      final resolvedMint = MintHelpers.resolveTwoFieldMint(
+        rawMintMark: parsedMint,
+        year: parsedYear,
+        series: seriesName,
+        denomination: parsedDenom,
+        variety: varietyId == 'EU' ? 'Enhanced Uncirculated' : '',
+        strikeType: varietyId == 'EU'
+            ? 'Enhanced Uncirculated'
+            : (varietyId.contains('REVERSE-PROOF')
+                ? 'Reverse Proof'
+                : (varietyId.contains('PROOF') ? 'Proof' : '')),
+      );
+
       slots.add({
         'coin_name':    seriesName,
         'year':         parsedYear,
-        'mint_mark':    parsedMint,
+        'mint':         resolvedMint.mint,
+        'mint_mark':    resolvedMint.mintMark,
         'denomination': parsedDenom,
         'variety_id':   varietyId,
         'quantity':     1,

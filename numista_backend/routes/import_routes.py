@@ -123,7 +123,11 @@ async def import_spreadsheet(
                 existing_certs.add(str(cert).strip().lower())
             
             y = str(data.get("year") or data.get("Year") or "").strip()
-            mm = str(data.get("mint_mark") or data.get("Mint Mark") or "").strip().upper()
+            try:
+                from services.mint_helpers import read_mint_mark
+            except ImportError:
+                from numista_backend.services.mint_helpers import read_mint_mark
+            mm = read_mint_mark(data)
             den = _normalize_us_denomination(str(data.get("denomination") or data.get("Denomination") or ""))
             if y and den:
                 existing_combos.add(f"{y}_{mm}_{den.lower()}")
@@ -174,7 +178,24 @@ async def import_spreadsheet(
 
         cert = str(norm_coin.get("cert_number") or norm_coin.get("cert") or "").strip().lower()
         year = str(norm_coin.get("year") or "").strip()
-        mint = str(norm_coin.get("mint_mark") or norm_coin.get("mint") or "").strip().upper()
+        try:
+            from services.mint_helpers import resolve_two_field_mint
+        except ImportError:
+            from numista_backend.services.mint_helpers import resolve_two_field_mint
+        raw_mm = str(norm_coin.get("mint_mark") or "").strip()
+        raw_facility = str(norm_coin.get("mint") or norm_coin.get("mint_facility") or "").strip()
+        resolved_facility, mint, _ = resolve_two_field_mint(
+            raw_mint_mark=raw_mm,
+            raw_mint=raw_facility,
+            year=year,
+            series=str(norm_coin.get("program_series") or norm_coin.get("program") or ""),
+            denomination=canon_denom or "",
+            country=str(country or "United States"),
+            variety=str(norm_coin.get("variety") or ""),
+            strike_type=str(norm_coin.get("strike_type") or ""),
+        )
+        norm_coin["mint"] = resolved_facility
+        norm_coin["mint_mark"] = mint
 
         # Deduplication matching
         dedup_flag = "new_item"

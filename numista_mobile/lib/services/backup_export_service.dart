@@ -7,6 +7,7 @@ import 'backup_export_stub.dart'
 import 'auth_service.dart';
 import 'package:intl/intl.dart';
 import '../utils/text_sanitizer.dart';
+import '../utils/mint_helpers.dart';
 import '../constants.dart' show kAppVersion;
 
 /// Handles exporting the user's Firestore collection into a schemaVersion: 1 JSON bundle
@@ -258,13 +259,14 @@ class BackupExportService {
     final List coins = payload['coins'] as List? ?? (payload['collections'] as Map?)?['coins'] as List? ?? [];
 
     final StringBuffer csv = StringBuffer();
-    csv.writeln('Year,Mint Mark,Denomination,Program/Series,Theme/Subject,Condition,Qty,Cost,AI Estimated Value,Certification Number,Retailer,Invoice,Storage Location,Notes,Owner Photo URLs,Added');
+    csv.writeln('Year,Mint,Mint Mark,Denomination,Program/Series,Theme/Subject,Condition,Qty,Cost,AI Estimated Value,Certification Number,Retailer,Invoice,Storage Location,Notes,Owner Photo URLs,Added');
 
     for (final c in coins) {
       final map = c as Map<String, dynamic>;
       csv.writeln([
         _cleanCsvCell(_formatYear(map['Year'] ?? map['year'])),
-        _cleanCsvCell(map['Mint Mark'] ?? map['mint_mark']),
+        _cleanCsvCell(MintHelpers.readMintFacility(map)),
+        _cleanCsvCell(MintHelpers.readMintMark(map)),
         _cleanCsvCell(map['Denomination'] ?? map['denomination']),
         _cleanCsvCell(map['Program/Series'] ?? map['program_series']),
         _cleanCsvCell(map['Theme/Subject'] ?? map['theme_subject']),

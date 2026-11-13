@@ -20,6 +20,11 @@ from config.ingestion_config import (
     MAX_ROWS_PER_EXTRACTION_CHUNK
 )
 
+try:
+    from services.mint_helpers import resolve_two_field_mint, format_mint_mark_for_display
+except ImportError:
+    from numista_backend.services.mint_helpers import resolve_two_field_mint, format_mint_mark_for_display
+
 logger = logging.getLogger("numista_backend.checklist_parser")
 
 CHECKLIST_EXTRACTION_SYSTEM_PROMPT = """
@@ -309,10 +314,20 @@ def extract_checklist_document(
         extracted_items = []
         for idx, coin in enumerate(raw_coins):
             year = int(coin.get("year", 0)) if str(coin.get("year", "")).isdigit() else 0
-            mint_mark = str(coin.get("mint_mark", "P")).upper().strip()
+            raw_mm = str(coin.get("mint_mark", "") or "").strip()
+            raw_mint = str(coin.get("mint", "") or "").strip()
             theme_subject = str(coin.get("theme_subject", "")).strip()
             denom = str(coin.get("denomination", "Quarter")).strip()
             series = str(coin.get("program_series", program_series)).strip()
+            mint_facility, mint_mark, _ = resolve_two_field_mint(
+                raw_mint_mark=raw_mm,
+                raw_mint=raw_mint,
+                year=str(year) if year else "",
+                series=series,
+                denomination=denom,
+                variety=str(coin.get("variety", "") or ""),
+                strike_type=str(coin.get("strike_type", "") or ""),
+            )
             official_title = get_official_us_mint_title(year, theme_subject)
             
             box_clarity = float(coin.get("box_clarity_score", 0.95))
@@ -329,8 +344,11 @@ def extract_checklist_document(
             item_loc = normalize_storage_location(coin_loc, default_location=extracted_location)
             notes = coin.get("personal_notes", "").strip()
             
-            # Format item record matching canonical schema
-            title = f"{year} {mint_mark} {denom} - {theme_subject}" if theme_subject else f"{year} {mint_mark} {denom}"
+            # Format item record matching canonical schema (never invent a mint mark)
+            display_mm = format_mint_mark_for_display(mint_facility, mint_mark, compact=True)
+            title_parts = [str(year) if year else "", display_mm, denom]
+            base_title = " ".join(p for p in title_parts if p)
+            title = f"{base_title} - {theme_subject}" if theme_subject else base_title
             
             # Fail-closed quarantine gating
             is_quarantined = (handwriting_conf < HANDWRITING_QUARANTINE_THRESHOLD) or (not theme_subject)
@@ -360,6 +378,7 @@ def extract_checklist_document(
                 "is_foreign": False,
                 "Year": year or "",
                 "year": year,
+                "mint": mint_facility,
                 "Mint Mark": mint_mark,
                 "mint_mark": mint_mark,
                 "Denomination": denom,

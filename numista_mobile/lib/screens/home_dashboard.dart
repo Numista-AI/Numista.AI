@@ -1734,18 +1734,18 @@ class _Release {
 const _versionHistory = <_Release>[
   _Release(
     version: 'v8.18.15h',
-    date: '2026-10-26',
-    description: 'Us_mint Enhancements & Platform Updates',
+    date: '2026-10-31',
+    description: 'Mint Enhancements & Platform Updates',
     isLatest: true,
     changes: [
-      'Us_mint: credit shipping on 26SQRP roll invoices to zero fee and set 25 @ .44 with stale row purge',
-      'Morgan-pilot: sync Batch B rows.py State Quarters definitions',
-      'Net: NET-537 preview ready 26sqrp retailer parse failfix verified on p7gate',
-      'Backend: use set(merge=True) in _link_receipts_to_coins to prevent slash key error',
-      'Net: NET-536 re-GO FT all-invoices gate on fixed p7-gate preview',
-      'Net: NET-535 preview ready p7-gate api backend failfix verified',
-      'Preview: route preview channel add_coins.html and api base to p7gate backend',
-      'Net: NET-533 GO FT all-Invoices gate on p7-gate preview + WAKE_FIELDTESTER',
+      'Mint: execute NET-647 R2.6 fail-fix on p7-v8.9',
+      'Net-647: file failfix plan r2.6, contact sheet r2.6 with verified unclipped date zooms & set lens label, net-672',
+      'Net-647: file failfix plan r2.5, contact sheet r2.5 with unclipped date zooms & cos 26gc reverse, net-669',
+      'Net-647: file failfix plan r2.4, contact sheet r2.4 with eric 7c images & date zoom row, net-666',
+      'Net-647: file failfix plan r2.3, contact sheet png, net-664, update whose turn',
+      'Net-647: file failfix plan r2.2, acknowledge net-662 protocol, broadcast net-663',
+      'Net-647: file failfix plan r2.1, score 84 record, net-661 broadcast, update whose turn',
+      'Net-660: file NET-647 fail-fix round 2 plan for review',
     ],
   ),
   _Release(

@@ -1,0 +1,8 @@
+You are Stand Alone Grok (SAG), a fresh independent full-plan reviewer. The attached SAG_FULL-PLAN_REVIEW_PACKET_RSI-CONTROLS_v1.6.md is self-contained; read its header first.
+Review the WHOLE plan artifact A1 (RSI-CONTROLS Process Controls Plan v1.6, SHA-256 626ede6a69314e432b07f6f355fb8f7e2a8b7b643518bb6e9c7ae79b2e92c58e, 60976 bytes, 511 lines), not just the changes since v1.5.
+Score independently. The own CoS 100/100 in A4 is a G-1 score only and does not bind you; earlier v1.4/v1.5 scores do not transfer to v1.6.
+PASS requires an explicit PASS, a score >=95 AND no unresolved material or critical finding. A score >=95 is not automatically a PASS; REVISE at any score is acceptable. No outcome is expected.
+A1 is PLAN ONLY; its proposed watch text is unapplied, and source claims are writer-reported/unverified. Do not require runtime, source, ledger or approval proof, but flag any claim presented as verified without support.
+Report material/critical defects only (no cosmetics), each with A1 line numbers and a minimal fix. Use your own judgment on the two prior findings described in packet section 3.
+Output: the score; PASS or REVISE; material findings; six one-line checks (rule quote, counting, verdict definition, cohort/metrics, evidence honesty, execution boundary and regressions); and the exact A1 SHA-256 you reviewed.
+Your review is not a new plan attempt and grants no execution or other permission.

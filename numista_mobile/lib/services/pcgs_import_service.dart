@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
 import 'collection_stats_service.dart';
 import '../constants.dart';
+import '../utils/mint_helpers.dart';
 
 /// PCGS Public API import service.
 ///
@@ -246,9 +247,20 @@ class PcgsImportService {
     String denomination = pcgsData['Denomination']?.toString()
         ?? _parseDenomination(coinName.isNotEmpty ? coinName : designation);
 
+    final resolvedMint = MintHelpers.resolveTwoFieldMint(
+      rawMintMark: mintMark,
+      year: year,
+      series: seriesName.isNotEmpty ? seriesName : coinName,
+      denomination: denomination,
+      variety: dieVariety.isNotEmpty ? dieVariety : designation,
+      metalContent: metalContent,
+    );
+
     return {
       'Year':                     year,
-      'Mint Mark':                mintMark,
+      'mint':                     resolvedMint.mint,
+      'mint_mark':                resolvedMint.mintMark,
+      'Mint Mark':                resolvedMint.mintMark, // transitional dual-write; removed in Phase 7
       'Denomination':             denomination,
       'Program/Series':           coinName.isNotEmpty ? coinName : designation,
       'Condition':                gradeStr,

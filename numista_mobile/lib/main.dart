@@ -10,6 +10,7 @@ import 'screens/attorney_portal_screen.dart';
 import 'screens/not_found_screen.dart';
 import 'screens/public_wishlist_view_screen.dart';
 import 'screens/catalog/catalog_browse_screen.dart';
+import 'routing/public_catalog_route.dart';
 import 'services/theme_provider.dart';
 import 'widgets/morgan_feedback_drawer.dart';
 import 'services/guest_seed_service.dart';
@@ -20,6 +21,22 @@ import 'package:google_fonts/google_fonts.dart';
 import 'utils/numista_error_helper.dart';
 import 'config/ai_config.dart';
 
+
+class CatalogRouteInfo {
+  final bool isCatalog;
+  final String? initialNacCode;
+  const CatalogRouteInfo({required this.isCatalog, this.initialNacCode});
+}
+
+CatalogRouteInfo resolveCatalogRoute(Uri uri) {
+  if (!isCatalogUri(uri)) {
+    return const CatalogRouteInfo(isCatalog: false);
+  }
+  return CatalogRouteInfo(
+    isCatalog: true,
+    initialNacCode: extractInitialNac(uri),
+  );
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -153,17 +170,8 @@ Future<void> main() async {
   }
 
   // Public Catalog direct entry (zero auth required)
-  if (normalizedPath == '/catalog' || path.startsWith('/catalog/')) {
-    String? initialNacCode;
-    if (path.startsWith('/catalog/')) {
-      final sub = path.substring('/catalog/'.length).trim();
-      if (sub.isNotEmpty) {
-        initialNacCode = Uri.decodeComponent(sub);
-      }
-    }
-    if (initialNacCode == null && uri.queryParameters.containsKey('item')) {
-      initialNacCode = uri.queryParameters['item'];
-    }
+  final catalogRoute = resolveCatalogRoute(uri);
+  if (catalogRoute.isCatalog) {
     runApp(MaterialApp(
       title: 'Numista.AI Public Catalog',
       debugShowCheckedModeBanner: false,
@@ -176,7 +184,7 @@ Future<void> main() async {
           primary: const Color(0xFF0B2545),
         ),
       ),
-      home: CatalogBrowseScreen(initialNacCode: initialNacCode),
+      home: CatalogBrowseScreen(initialNacCode: catalogRoute.initialNacCode),
     ));
     return;
   }

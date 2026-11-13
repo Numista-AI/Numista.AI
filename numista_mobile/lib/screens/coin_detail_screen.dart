@@ -16,6 +16,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../utils/mint_helpers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import '../config/ai_config.dart';
@@ -28,6 +29,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/coin_model.dart';
+import '../models/mint_product_metadata.dart';
+import '../services/mint_product_lookup_service.dart';
 import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/http_auth_client.dart';
@@ -35,6 +38,7 @@ import '../services/inspector_service.dart';
 import '../services/melt_value_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/coin_image_service.dart';
+import '../services/canonical_mint_asset_service.dart';
 import '../services/mint_error_service.dart';
 import '../widgets/grade_badge_widget.dart';
 import '../widgets/glossary_tooltip_wrapper.dart';
@@ -193,6 +197,11 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
       }
     });
     _loadInspectorMode();
+
+    // Wire Mint metadata initialization (MF-1, v1.7 MF-2)
+    MintProductLookupService.instance.ensureInitialized().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _loadInspectorMode() async {
@@ -362,9 +371,10 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
   String _buildAiPrompt() {
     final c = _coin;
     final denom = _fmtDenomination(c.denomination);
+    final displayMint = MintHelpers.formatMintMarkForDisplay(c.mint, c.mintMark, compact: true);
     final coinId = [
       if (c.year.isNotEmpty) c.year.replaceAll(RegExp(r'\.0$'), ''),
-      if (c.mintMark.isNotEmpty) '(${c.mintMark})',
+      if (displayMint.isNotEmpty) '($displayMint)',
       if (denom.isNotEmpty) denom,
       if (c.programSeries.isNotEmpty) c.programSeries,
     ].join(' ');
@@ -486,6 +496,23 @@ Write in an engaging, authoritative style like a respected numismatic reference.
         yearMintSplit = true;
       }
     }
+
+    // ── Two-field mint sync (mint + mint_mark + transitional 'Mint Mark') ─────
+    final resolvedMint = MintHelpers.resolveTwoFieldMint(
+      rawMintMark: (updates['Mint Mark'] as String? ?? _coin.mintMark),
+      rawMint: _coin.mint,
+      year: (updates['Year'] as String? ?? _coin.year),
+      series: (updates['Program/Series'] as String? ?? _coin.programSeries),
+      denomination: (updates['Denomination'] as String? ?? _coin.denomination),
+      country: _coin.country,
+      variety: (updates['Variety'] as String? ?? _coin.variety),
+      strikeType: (updates['Strike Type'] as String? ?? _coin.strikeType),
+      metalContent: (updates['Metal Content'] as String? ?? _coin.metalContent),
+      retailerItemNo: _coin.retailerItemNo,
+    );
+    updates['mint'] = resolvedMint.mint;
+    updates['mint_mark'] = resolvedMint.mintMark;
+    updates['Mint Mark'] = resolvedMint.mintMark;
 
     try {
       await FirebaseFirestore.instance
@@ -781,6 +808,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
                 coin: _coin,
                 isInspectorMode: _isInspectorMode,
                 onInspectField: _showDiscrepancyDialog,
+                mintMetadata: MintProductLookupService.instance.lookupForCoin(_coin),
               ),
               _FinancialsTab(coin: _coin, spotPrices: widget.spotPrices, onCacToggled: _updateCac),
               _ProvenanceTab(coin: _coin),
@@ -1054,11 +1082,23 @@ class _CoinImagePairState extends State<_CoinImagePair> {
   @override
   void initState() {
     super.initState();
-    // gs:// URIs are not displayable by Image.network() — treat as empty
+    // gs:// URIs are not displayable by Image.network() – treat as empty
     // so CoinImageService can fill in a public HTTPS URL from coin_image_index.
-    _obvUrl = _toHttpsUrl(widget.coin.imageUrlObverse);
-    _revUrl = _toHttpsUrl(widget.coin.imageUrlReverse);
-    // Fetch reference images for any side that doesn't have a personal photo
+    final coinMap = <String, dynamic>{
+      ...widget.coin.toFirestore(),
+      'source': widget.coin.source,
+      'Personal Notes': widget.coin.personalNotes,
+    };
+    final canon = CanonicalMintAssetService.resolveFromMap(coinMap);
+    if (canon != null) {
+      _obvUrl = canon.obverseUrl;
+      _revUrl = canon.reverseUrl;
+      _attribution = 'U.S. Mint';
+    } else {
+      _obvUrl = _toHttpsUrl(widget.coin.imageUrlObverse);
+      _revUrl = _toHttpsUrl(widget.coin.imageUrlReverse);
+    }
+    // Fetch reference images for any side that doesn't have a personal photo or canonical asset
     if (_obvUrl.isEmpty || _revUrl.isEmpty) {
       _fetchReferenceImages();
     }
@@ -1504,35 +1544,50 @@ class _ActionBtn extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // DETAILS TAB
 // ─────────────────────────────────────────────────────────────────────────────
-class _DetailsTab extends StatelessWidget {
+@visibleForTesting
+class DetailsTab extends StatelessWidget {
   final CoinModel coin;
   final bool isInspectorMode;
   final Function(String fieldName, String currentValue) onInspectField;
+  final MintProductMetadata? mintMetadata;
 
-  const _DetailsTab({
+  const DetailsTab({
+    super.key,
     required this.coin,
     this.isInspectorMode = false,
     required this.onInspectField,
+    this.mintMetadata,
   });
 
   @override
   Widget build(BuildContext context) {
-    final fields = <(String, String)>[
-      ('Year', coin.year.replaceAll(RegExp(r'\.0$'), '')),
-      ('Mint Mark', coin.mintMark),
-      ('Denomination', _fmtDenomination(coin.denomination)),
-      ('Program / Series', coin.programSeries.isEmpty ? (coin.country.isNotEmpty && coin.country != 'United States' ? 'Standard Circulation' : '') : coin.programSeries),
-      ('Theme / Subject', coin.themeSubject),
-      ('Variety / Error', coin.variety),
-      ('Condition', coin.condition),
-      ('Strike Type', coin.strikeType),
-      ('Holder Type', coin.holderType),
-      ('Grading Service', coin.gradingService),
-      ('Metal Content', coin.metalContent),
-      ('Country', coin.country),
-      ('Storage Location', coin.storageLocation),
-      ('Quantity', coin.quantity.isNotEmpty ? coin.quantity : '1'),
-      ('Notes', coin.personalNotes),
+    final fields = <(String, String, bool)>[
+      ('Year', coin.year.replaceAll(RegExp(r'\.0$'), ''), false),
+      if (coin.mint.isNotEmpty) ('Mint Facility', coin.mint, false),
+      ('Mint Mark', MintHelpers.formatMintMarkForDisplay(coin.mint, coin.mintMark), false),
+      ('Denomination', _fmtDenomination(coin.denomination), false),
+      ('Program / Series', coin.programSeries.isEmpty ? (coin.country.isNotEmpty && coin.country != 'United States' ? 'Standard Circulation' : '') : coin.programSeries, false),
+      ('Theme / Subject', coin.themeSubject, false),
+      ('Variety / Error', coin.variety, false),
+      ('Condition', coin.condition, false),
+      ('Strike Type', coin.strikeType, false),
+      ('Holder Type', coin.holderType, false),
+      ('Grading Service', coin.gradingService, false),
+      ('Metal Content', coin.metalContent, false),
+      ('Country', coin.country, false),
+      ('Storage Location', coin.storageLocation, false),
+      ('Quantity', coin.quantity.isNotEmpty ? coin.quantity : '1', false),
+      if (mintMetadata != null) ...[
+        if (mintMetadata!.productPriceUsd != null && mintMetadata!.productPriceUsd! > 0)
+          ('Original U.S. Mint Issue Price', '\$${mintMetadata!.productPriceUsd!.toStringAsFixed(2)}', true),
+        if (mintMetadata!.displayStatus.isNotEmpty)
+          ('Mint Schedule Status', mintMetadata!.displayStatus, true),
+        if (mintMetadata!.productAvailability?.isNotEmpty == true)
+          ('Product Availability', mintMetadata!.productAvailability!, true),
+        if (mintMetadata!.displayReleaseDate.isNotEmpty)
+          ('Original Release Date', mintMetadata!.displayReleaseDate, true),
+      ],
+      ('Notes', coin.personalNotes, false),
     ].where((f) => f.$2.trim().isNotEmpty &&
         f.$2 != 'null' && f.$2 != 'N/A' && f.$2 != 'Ungraded').toList();
 
@@ -1555,6 +1610,7 @@ class _DetailsTab extends StatelessWidget {
               return _DetailTile(
                 label: f.$1,
                 value: f.$2,
+                isMuted: f.$3,
                 onInspect: (isInspectorMode && isAuditable)
                     ? () => onInspectField(f.$1, f.$2)
                     : null,
@@ -1575,6 +1631,7 @@ class _DetailsTab extends StatelessWidget {
     );
   }
 }
+typedef _DetailsTab = DetailsTab;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FINANCIALS TAB
@@ -3298,7 +3355,13 @@ class _DetailTile extends StatelessWidget {
   final String label;
   final String value;
   final VoidCallback? onInspect;
-  const _DetailTile({required this.label, required this.value, this.onInspect});
+  final bool isMuted;
+  const _DetailTile({
+    required this.label,
+    required this.value,
+    this.onInspect,
+    this.isMuted = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3315,21 +3378,37 @@ class _DetailTile extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: TextStyle(fontSize: 10, color: _kSubtext(context),
-                  fontWeight: FontWeight.w600, letterSpacing: 0.2)),
-              if (onInspect != null)
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: _kSubtext(context),
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+              if (onInspect != null) ...[
+                const SizedBox(width: 4),
                 GestureDetector(
                   onTap: onInspect,
                   child: Icon(Icons.comment_outlined, size: 12, color: _kAccent(context)),
                 ),
+              ],
             ],
           ),
           SizedBox(height: 4),
           GestureDetector(
             onLongPress: () => Clipboard.setData(ClipboardData(text: value)),
             child: Text(value,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
-                  color: _kText(context))),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isMuted ? FontWeight.normal : FontWeight.bold,
+                color: isMuted ? _kSubtext(context) : _kText(context),
+              )),
           ),
         ]),
       ),
@@ -4406,12 +4485,12 @@ class _OwnerPhotoHero extends StatelessWidget {
       final refCompressed = FirebaseStorage.instance
           .ref('users/$userEmail/coins/${coin.id}/owner_photo_$photoId.$ext');
       await refCompressed.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
-      final compressedUrl = await refCompressed.getDownloadURL();
+      final compressedUrl = 'gs://${refCompressed.bucket}/${refCompressed.fullPath}';
 
       final refOriginal = FirebaseStorage.instance
           .ref('users/$userEmail/coins/${coin.id}/owner_photo_${photoId}_original.$ext');
       await refOriginal.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
-      final originalUrl = await refOriginal.getDownloadURL();
+      final originalUrl = 'gs://${refOriginal.bucket}/${refOriginal.fullPath}';
 
       final photoMap = {
         'id': photoId,

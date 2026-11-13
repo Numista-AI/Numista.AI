@@ -61,10 +61,10 @@ class NicknameSuggestion {
 // ─── Grade review data model ──────────────────────────────────────────────────
 
 class GradeReviewCoin {
-  final String coinId, year, mintMark, denomination, programSeries,
+  final String coinId, reviewId, year, mintMark, denomination, programSeries,
       themeSubject, condition, source, scanSource, imageUrl, imageUrlObverse, imageUrlReverse, reviewStatus;
   final double confidenceScore;
-  final bool lowConfidence, hasBbox;
+  final bool lowConfidence, hasBbox, hasReverse;
   final int reviewCount;
   final Map<String, dynamic> slotBbox;
 
@@ -75,11 +75,13 @@ class GradeReviewCoin {
     required this.confidenceScore, required this.lowConfidence,
     required this.source, required this.imageUrl,
     required this.reviewStatus, required this.reviewCount,
+    this.reviewId = '',
     this.scanSource = '',
     this.imageUrlObverse = '',
     this.imageUrlReverse = '',
     this.slotBbox = const {},
     this.hasBbox = false,
+    this.hasReverse = false,
   });
 
   factory GradeReviewCoin.fromJson(Map<String, dynamic> j) {
@@ -90,7 +92,9 @@ class GradeReviewCoin {
     final obv = j['image_url_obverse'] ?? j['imageUrlObverse'] ?? '';
     final rev = j['image_url_reverse'] ?? j['imageUrlReverse'] ?? '';
     return GradeReviewCoin(
-      coinId: j['coin_id'] ?? '', year: j['year'] ?? '',
+      coinId: j['coin_id'] ?? '',
+      reviewId: j['review_id'] ?? '',
+      year: j['year'] ?? '',
       mintMark: j['mint_mark'] ?? '', denomination: j['denomination'] ?? '',
       programSeries: j['program_series'] ?? '',
       themeSubject: j['theme_subject'] ?? '',
@@ -106,6 +110,7 @@ class GradeReviewCoin {
       reviewStatus: j['grade_review_status'] ?? 'pending',
       reviewCount: j['grade_review_count'] ?? 0,
       hasBbox: hasBbox,
+      hasReverse: (j['has_reverse'] as bool?) ?? rev.isNotEmpty,
     );
   }
 
@@ -588,8 +593,11 @@ class _GradeReviewCardState extends State<_GradeReviewCard> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: coin.source == 'Binder Scan' && coin.imageUrl.isNotEmpty
+                        child: (coin.reviewId.isNotEmpty ||
+                                (coin.source == 'Binder Scan' && coin.imageUrl.isNotEmpty))
                             ? _CoinCropImage(
+                                reviewId: coin.reviewId,
+                                side: 'obverse',
                                 coinId: coin.coinId,
                                 userEmail: _userEmail,
                                 fallbackUrl: coin.imageUrl,
@@ -847,13 +855,16 @@ class _GradeReviewCardState extends State<_GradeReviewCard> {
 /// Falls back gracefully to full binder page image for old coins without bbox.
 
 class _CoinCropImage extends StatefulWidget {
-  final String coinId, userEmail, fallbackUrl;
+  final String coinId, userEmail, fallbackUrl, reviewId, side;
   final bool hasBbox;
   final double size;
 
   const _CoinCropImage({
+    super.key,
     required this.coinId, required this.userEmail,
     required this.fallbackUrl, required this.hasBbox,
+    this.reviewId = '',
+    this.side = 'obverse',
     this.size = 72,
   });
 
@@ -871,11 +882,31 @@ class _CoinCropImageState extends State<_CoinCropImage> {
   @override
   void initState() {
     super.initState();
-    if (widget.hasBbox) {
+    if (widget.reviewId.isNotEmpty) {
+      // Proxy handles both cropped slots and full-page fallbacks regardless of hasBbox.
+      _fetchProxyImage();
+    } else if (widget.hasBbox) {
       _fetchCrop();
     } else {
       // No bbox in Firestore — show full binder page immediately
       setState(() => _state = _CropState.fallback);
+    }
+  }
+
+  Future<void> _fetchProxyImage() async {
+    try {
+      final uri = Uri.parse(
+          '$_api/api/grade_review/image/${Uri.encodeComponent(widget.reviewId)}'
+          '?side=${Uri.encodeComponent(widget.side)}');
+      final res = await HttpAuthClient.get(uri, timeout: const Duration(seconds: 15));
+      if (!mounted) { return; }
+      if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
+        setState(() { _cropBytes = res.bodyBytes; _state = _CropState.cropped; });
+      } else {
+        setState(() => _state = _CropState.fallback);
+      }
+    } catch (_) {
+      if (mounted) { setState(() => _state = _CropState.fallback); }
     }
   }
 
@@ -928,7 +959,7 @@ class _CoinCropImageState extends State<_CoinCropImage> {
         );
 
       case _CropState.fallback:
-        return widget.fallbackUrl.isNotEmpty
+        return (widget.reviewId.isEmpty && widget.fallbackUrl.isNotEmpty)
             ? Image.network(
                 widget.fallbackUrl, width: s, height: s,
                 fit: BoxFit.cover,
@@ -997,7 +1028,7 @@ class _CoinImageLightboxDialogState extends State<_CoinImageLightboxDialog> {
   @override
   Widget build(BuildContext context) {
     final coin = widget.coin;
-    final hasReverse = coin.imageUrlReverse.isNotEmpty;
+    final hasReverse = coin.hasReverse || coin.imageUrlReverse.isNotEmpty;
     final isMicroscope = coin.source.toLowerCase().contains('microscope') ||
         coin.scanSource.toLowerCase().contains('microscope');
     final isBinder = coin.source == 'Binder Scan';
@@ -1212,8 +1243,12 @@ class _CoinImageLightboxDialogState extends State<_CoinImageLightboxDialog> {
                   minScale: 0.5,
                   maxScale: 10.0,
                   child: Center(
-                    child: (isBinder && !_showFullBinder && currentUrl.isNotEmpty)
+                    child: (coin.reviewId.isNotEmpty ||
+                            (isBinder && !_showFullBinder && currentUrl.isNotEmpty))
                         ? _CoinCropImage(
+                            key: ValueKey('${coin.reviewId}:${coin.coinId}:$_activeSide'),
+                            reviewId: coin.reviewId,
+                            side: _activeSide,
                             coinId: coin.coinId,
                             userEmail: widget.userEmail,
                             fallbackUrl: currentUrl,

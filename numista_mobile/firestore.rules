@@ -331,6 +331,17 @@ service cloud.firestore {
       allow write: if false;  // backend service account only via Admin SDK
     }
 
+    // NET-748: read-only SKU dictionary lookups for Add by SKU.
+    // Named docs only. {skuId} is a single-segment variable, NOT recursive.
+    match /global_metadata/usmint_sku_dictionary/skus/{skuId} {
+      allow get: if isAuthenticated();
+      allow list, write: if false;
+    }
+    match /global_metadata/littleton_sku_dictionary/skus/{skuId} {
+      allow get: if isAuthenticated();
+      allow list, write: if false;
+    }
+
     // ── Deny everything else ──────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

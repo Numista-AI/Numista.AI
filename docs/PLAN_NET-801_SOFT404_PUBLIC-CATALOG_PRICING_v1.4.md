@@ -688,7 +688,7 @@ The pricing surface is updated to reflect the structured beta model approved by 
 - **Trial Tier:** Free 10-Coin Trial with AI identification and valuation.
 - **Beta Access:** $30 / 6 months for active beta testers (up to 100+ coins).
 - **Grandfathered Beta Access:** Existing beta accounts grandfathered through general release.
-- **Holiday Promotion:** CHRISTMAS2026 50% discount code noted for general launch.
+- **Holiday Promotion:** [private promo code redacted] 50% discount code noted for general launch.
 - **Coverage Notice:** "Numista.AI currently supports United States coinage and currency. World numismatics coverage scheduled for 2027."
 - **Stripe-Locked Disclaimer:** "Credit card checkout is currently offline during private beta. Subscriptions will activate following public announcement."
 

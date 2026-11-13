@@ -11,6 +11,7 @@ from services.us_mint_catalog_service import (
     lookup_us_mint_item,
     expand_us_mint_truncation,
     enrich_us_mint_item,
+    calculate_mint_pricing,
     US_MINT_PRODUCT_CATALOG,
     US_MINT_TRUNCATION_MAP,
 )
@@ -114,3 +115,35 @@ def test_enrich_us_mint_item_with_notes_fallback():
     assert enriched["_catalog_grounded"] is True
 
 
+def test_calculate_mint_pricing_contract():
+    """Verify deterministic integer cents and unit cost calculations (Lock L1 and G2)."""
+    # 26GC Innovation $64.97 / 2 -> $32.49 (3249 cents, ROUND_HALF_UP from 32.485)
+    p1 = calculate_mint_pricing(64.97, 2)
+    assert p1["line_total"] == 64.97
+    assert p1["quantity"] == 2
+    assert p1["unit_cost_cents"] == 3249
+    assert p1["unit_cost"] == 32.49
+
+    # 26SQRP $61.00 / 25 -> $2.44 (244 cents)
+    p2 = calculate_mint_pricing("$61.00", 25)
+    assert p2["line_total"] == 61.00
+    assert p2["quantity"] == 25
+    assert p2["unit_cost_cents"] == 244
+    assert p2["unit_cost"] == 2.44
+
+    # 26XE Morgan $169.00 / 2 -> $84.50 (8450 cents)
+    p3 = calculate_mint_pricing("169.00", "2")
+    assert p3["line_total"] == 169.00
+    assert p3["quantity"] == 2
+    assert p3["unit_cost_cents"] == 8450
+    assert p3["unit_cost"] == 84.50
+
+
+def test_11_sku_catalog_thumbnails():
+    """Verify all 11 required catalog SKUs have valid GCS reference library thumbnails."""
+    skus = ["26SQRP", "26XL", "26XM", "26EA", "26XE", "26XH", "26XF", "26RG", "26RJ", "26GC", "2026-AI-IA"]
+    for sku in skus:
+        item = lookup_us_mint_item(sku)
+        assert item is not None, f"Missing catalog entry for SKU {sku}"
+        thumb = item.get("thumbnail_url")
+        assert thumb is not None and thumb.startswith("https://storage.googleapis.com/numista-reference-library/"), f"Invalid thumbnail for {sku}: {thumb}"

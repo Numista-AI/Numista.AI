@@ -10,6 +10,7 @@ Also resolves truncated US Mint packing slip line-item strings.
 
 import re
 import logging
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger("numista_backend.us_mint_catalog_service")
@@ -35,6 +36,9 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "issue_price": "$173.00",
         "retailer": "United States Mint",
         "mintage_limit": 250000,
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xl___a.webp",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xl___a.webp",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xl___a.webp",
     },
     "26XM": {
         "title": "2026 Morgan Silver Dollar (Reverse Proof)",
@@ -53,6 +57,9 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "issue_price": "$173.00",
         "retailer": "United States Mint",
         "mintage_limit": 250000,
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xh_image_3.jpg",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xh_image_3.jpg",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xh_image_3.jpg",
     },
     "26EA": {
         "title": "2026 American Silver Eagle",
@@ -70,6 +77,9 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "weight_grams": 31.103,
         "issue_price": "$173.00",
         "retailer": "United States Mint",
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26ea_a.webp",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26ea_a.webp",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26ea_a.webp",
     },
     "26XE": {
         "title": "2026 Morgan Silver Dollar (Enhanced Uncirculated)",
@@ -89,6 +99,9 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "issue_price": "$169.00",
         "retailer": "United States Mint",
         "mintage_limit": 250000,
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xe_a.webp",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xe_a.webp",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xe_a.webp",
     },
     "26XH": {
         "title": "2026 Peace Silver Dollar (Enhanced Uncirculated)",
@@ -108,6 +121,9 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "issue_price": "$169.00",
         "retailer": "United States Mint",
         "mintage_limit": 250000,
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xh_image_3.jpg",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xh_image_3.jpg",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xh_image_3.jpg",
     },
     "26XJ": {
         "title": "2026 Peace Silver Dollar (Uncirculated)",
@@ -179,6 +195,99 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "issue_price": "$61.00",
         "retailer": "United States Mint",
         "catalog_url": "https://catalog.usmint.gov/",
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26sqrp_b.webp",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26sqrp_b.webp",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26sqrp_b.webp",
+    },
+    "26XF": {
+        "title": "2026 Morgan Silver Dollar (Reverse Proof)",
+        "formal_name": "Morgan Silver Dollar 2026 Reverse Proof Coin",
+        "year": 2026,
+        "mint_mark": "",
+        "mint_facility": "Philadelphia (P)",
+        "denomination": "Dollar",
+        "program_series": "Morgan and Peace Silver Dollars",
+        "theme_subject": "Morgan Dollar Reverse Proof",
+        "strike_type": "Reverse Proof",
+        "condition": "Reverse Proof",
+        "metal_content": "99.9% Silver",
+        "purity": 0.999,
+        "weight_grams": 31.103,
+        "issue_price": "$173.00",
+        "retailer": "United States Mint",
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xe_a.webp",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xe_a.webp",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26xe_a.webp",
+    },
+    "26RG": {
+        "title": "2026 Semiquincentennial Proof Set",
+        "formal_name": "Semiquincentennial Proof Set 2026",
+        "year": 2026,
+        "denomination": "Set",
+        "program_series": "Proof Sets",
+        "theme_subject": "Semiquincentennial Proof Set",
+        "strike_type": "Proof",
+        "condition": "Proof",
+        "retailer": "United States Mint",
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26rg_b.webp",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26rg_b.webp",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26rg_b.webp",
+    },
+    "26RJ": {
+        "title": "2026 Uncirculated Coin Set",
+        "formal_name": "Uncirculated Coin Set 2026",
+        "year": 2026,
+        "denomination": "Set",
+        "program_series": "Uncirculated Mint Sets",
+        "theme_subject": "2026 Uncirculated Coin Set",
+        "strike_type": "Uncirculated",
+        "condition": "Uncirculated",
+        "retailer": "United States Mint",
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26rj_a.webp",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26rj_a.webp",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26rj_a.webp",
+    },
+    "26GC": {
+        "title": "2026 American Innovation $1 Coin Reverse Proof Set",
+        "formal_name": "American Innovation $1 Coin 2026 Reverse Proof Set",
+        "year": 2026,
+        "denomination": "Dollar",
+        "program_series": "American Innovation $1",
+        "theme_subject": "American Innovation Reverse Proof Set (Iowa, Refrigeration, Cray-1, Steve Jobs)",
+        "strike_type": "Reverse Proof",
+        "condition": "Reverse Proof",
+        "retailer": "United States Mint",
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26gc_b.webp",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26gc_b.webp",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26gc_b.webp",
+    },
+    "2026-AI-IA": {
+        "title": "2026 American Innovation $1 Coin (Iowa)",
+        "formal_name": "American Innovation $1 Coin – Iowa",
+        "year": 2026,
+        "denomination": "Dollar",
+        "program_series": "American Innovation $1",
+        "theme_subject": "American Innovation – Iowa",
+        "strike_type": "Uncirculated",
+        "condition": "Uncirculated",
+        "retailer": "United States Mint",
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_series/2026_american_innovation_iowa_reverse.jpg",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_series/2026_american_innovation_iowa_reverse.jpg",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_series/2026_american_innovation_iowa_reverse.jpg",
+    },
+    "2026AIIA": {
+        "title": "2026 American Innovation $1 Coin (Iowa)",
+        "formal_name": "American Innovation $1 Coin – Iowa",
+        "year": 2026,
+        "denomination": "Dollar",
+        "program_series": "American Innovation $1",
+        "theme_subject": "American Innovation – Iowa",
+        "strike_type": "Uncirculated",
+        "condition": "Uncirculated",
+        "retailer": "United States Mint",
+        "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_series/2026_american_innovation_iowa_reverse.jpg",
+        "image_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_series/2026_american_innovation_iowa_reverse.jpg",
+        "image_url_obverse": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_series/2026_american_innovation_iowa_reverse.jpg",
     },
 
     # ── 2026 Sets & Rolls (Plan.v3 C2 / IG-2) ─────────────────────────────────
@@ -359,6 +468,36 @@ def expand_us_mint_truncation(text: str) -> str:
     return expanded.strip()
 
 
+def calculate_mint_pricing(raw_line_total: Any, qty: Any) -> Dict[str, Any]:
+    """
+    Computes deterministic integer cents and unit cost using Decimal and ROUND_HALF_UP.
+    Follows Argon R2.6 suggestion: normalize with Decimal(f"{float(x):.2f}") before division.
+    """
+    try:
+        clean_total_str = re.sub(r'[^\d.]', '', str(raw_line_total or '0')) or '0'
+        line_total_dec = Decimal(f"{float(clean_total_str):.2f}")
+    except (ValueError, TypeError):
+        line_total_dec = Decimal('0.00')
+
+    try:
+        qty_int = int(qty or 1)
+        if qty_int <= 0:
+            qty_int = 1
+    except (ValueError, TypeError):
+        qty_int = 1
+
+    qty_dec = Decimal(str(qty_int))
+    unit_cost_cents = int(((line_total_dec / qty_dec) * Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+    unit_cost = float(Decimal(unit_cost_cents) / Decimal('100'))
+
+    return {
+        "line_total": float(line_total_dec),
+        "quantity": qty_int,
+        "unit_cost_cents": unit_cost_cents,
+        "unit_cost": unit_cost,
+    }
+
+
 def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
     """
     Deterministically enriches an extracted invoice line item using US Mint catalog data.
@@ -435,6 +574,14 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
         if catalog_match.get("weight_grams") and not item.get("weight_grams"):
             item["weight_grams"] = catalog_match["weight_grams"]
 
+        # Thumbnail and Reference Images
+        if catalog_match.get("thumbnail_url") and not item.get("thumbnail_url"):
+            item["thumbnail_url"] = catalog_match["thumbnail_url"]
+        if catalog_match.get("image_url") and not item.get("image_url"):
+            item["image_url"] = catalog_match["image_url"]
+        if catalog_match.get("image_url_obverse") and not item.get("image_url_obverse"):
+            item["image_url_obverse"] = catalog_match["image_url_obverse"]
+
         # Plan.v3 C2 / IG-2: fill-missing-only copy for set & image & valuation fields
         for fld in ("is_set", "set_id", "item_type", "image_url_obverse", "image_url_reverse", "issue_price", "metal_content"):
             if fld in catalog_match and not item.get(fld):
@@ -507,6 +654,15 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
                         item["set_cost_label"] = f"${cost_float:.2f} ({new_qty} @ ${cost_float / new_qty:.2f})"
                 except (ValueError, TypeError):
                     pass
+
+        # Deterministic Integer Cents Pricing Contract (Lock L1 & G2, Argon R2.6 Decimal normalization)
+        cost_val = item.get("Cost") or item.get("Purchase Cost") or item.get("cost") or item.get("line_total")
+        raw_qty = item.get("Quantity") or item.get("qty") or 1
+        if cost_val is not None:
+            pricing = calculate_mint_pricing(cost_val, raw_qty)
+            item["unit_cost_cents"] = pricing["unit_cost_cents"]
+            item["unit_cost"] = pricing["unit_cost"]
+            item["line_total"] = pricing["line_total"]
 
         # Plan.v1 / Argon A-2: Propagate image keys so card & inspector resolve without error
         cat_obv = item.get("image_url_obverse")

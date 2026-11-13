@@ -1,0 +1,11 @@
+**RADIO OVER NET-683 (AGCOS to ALL, 31 Oct 8:12 PM ET):** AG CoS v4 FILED `FAILFIX_PLAN_NET-647_R2.8_20261031.md` per Founder Eric Directive NET-681D ("Get my account 100% right, then we can check the other accounts").
+- SCOPE: Eric's entire real account (252 items across `users/eric.seaman@yahoo.com` [247 coins] and `users/eric@numista.ai` [5 coins]). Filter '2026' plus all historical years.
+- COMPREHENSIVE AUDIT: Full read-only audit completed across all 252 items. Identified 15 year mismatches, 127 missing direct image URLs, 93 unspecified grades, 116 valuation pending items.
+- ROOT CAUSE DIAGNOSTICS: Q1-Q5, E1-E5, E6 (2026 dimes showing 2025 Roosevelt), E7 (26EA Inspector showing 2023 Walking Liberty on reverse) fully diagnosed.
+- IMAGE SOURCE HIERARCHY: Tier 1 (Eric's US Mint downloads: `1 NUMISTA.AI\BETA TEST\MY TESTING\31 OCT 2026\Images from US MInt`), Tier 2 (`gs://numista-reference-library/reference_library/`), Tier 3 (Eric's photos `COIN IMAGES`). Gold placeholder permitted ONLY if machine-logged proof confirms no image across Tiers 1-3.
+- CLIENT-SIDE READ-TIME FIXES: Zero-mutation display fallback in `my_collection_screen.dart` and `review_hub_screen.dart` repairs existing docs at render time (unit cost compute, image catalog map lookup, valuation fallback, grade normalization, Morgan/Peace obverse priority, maxLines: 2).
+- YEAR & SIDE GUARDS: Regex year guard on URL vs coin year + side guard preventing obverse/reverse swap in Cards & Inspector.
+- BACKFILL TOOLING: `backfill_eric_collection_100pct.py` ready for dry-run inspection; `--apply` strictly HELD pending Eric's separate typed YES.
+- Acceptance Gate: Field Tester PASS on Eric's own account at 100%, zero wrong items. Other accounts remain out of scope.
+- PLAN ONLY: 0 code edits, 0 commits of code, 0 deploys, 0 GCS/Firestore writes.
+- TURN: ARGON / GROK COS (R2.8 Review & Scoring >= 95) -> SAG Review -> Eric Typed YES -> Execution on p7-v8.9 ONLY. Locks unchanged: main 9f04550a, dev 9b55f3d9, Stripe OFF. OVER.

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
+import 'canonical_mint_asset_service.dart';
 
 /// Looks up reference coin images from the Firestore coin_image_index collection,
 /// which is built by build_image_index.py from the GCS buckets:
@@ -493,6 +494,24 @@ class CoinImageService {
     String? series,
     String? subject,   // Theme/Subject field — e.g. 'New Jersey' for state quarters
   }) async {
+    final y = year.toString().replaceFirst(RegExp(r'\.0+$'), '');
+    if (y == '2026' || y == '2023') {
+      final pair = CanonicalMintAssetService.resolve(
+        title: [series, subject].whereType<String>().join(' '),
+        year: y,
+        mintMark: mint,
+        denomination: denomination,
+      );
+      if (pair != null) {
+        return CoinImageResult(
+          obverseUrl: pair.obverseUrl,
+          reverseUrl: pair.reverseUrl,
+          attribution: 'U.S. Mint',
+          sourceLabel: 'Canonical Mint Asset',
+          matchedKey: pair.sku,
+        );
+      }
+    }
     try {
       final program = _resolveProgram(denomination, series, subject: subject);
       if (program == null) return const CoinImageResult();

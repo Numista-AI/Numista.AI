@@ -1,0 +1,22 @@
+# Own CoS G1 — RSI-CONTROLS v1.5 — 98/100 REVISE
+Recorded: 2026-11-09 07:24:55 PM EST
+Scorer: Chief of Staff. Full-plan judgment, not SAG; PLAN ONLY.
+
+## Exact packet and own coverage
+Plan /workspace/rsi/v15-cohort-repair/PLAN_RSI-CONTROLS_PROCESS-CONTROLS_v1.5.md SHA256572e0dfb270881c76a1f0fb57808219994c5adca55e0e13c5790bfb8b7791d66,57989bytes,508contentlines. Closure33764aa652936022bf309d04358f954e37a213a81750ee3149b20476ef6352ab; manifestd866b3f377296e710df6156438d4a1cdaa4def3c80de2279aca67684bf9c449e; diff9159fa94a8f19cb661d005acbf39f1ec466132fe4a88cf5a5c7bffcbc7ecce8c.
+I personally read all508planlines, all14closurelines, all28manifestlines and all73difflines. Independently checked all16manifest input/output hashes, exactSAGcohortsentence and12preservedsections; §7.2 is otherwise byte-identical. No source/runtime query or test.
+Actualformalreturn = samewriter GB-RSI-Replacement-20261109-A try2/4, documentedtrack8/10, historicalresidual retained. This review is not another submission.
+
+## Prior finding CLOSED
+MF3 pilotvelocitycohort-start clarification is correctly inserted atL350 using SAG's exact supplied sentence. It excludes historical/parent packets from pilotvelocity while retaining auditlineage and cap accounting; no restart/reset. Coherent reworkpacket populations and other prior closures remain preserved. No cosmetic deduction or new runtime-proof demand.
+
+## One newly detected material counting defect — MF1, minus2
+L142 defines the evaluated terminal non-pass solely as score<95. L149 repeats that threshold in the fourth-try trigger. L170–171 define PASS/REVISE numerically; L180 expressly says if both reviewers score>=95 it counts1PASS. L198/L201/L348/L370 and proposedwatchL397/L404 carry the same score-only shortcut. This conflicts with G1L319 requiring zero unmitigated must-fixes and the actual requirement that a material REVISE cannot clear either review gate even above95.
+Concrete counterexample already in this workstream: v1.4 received ownCoS99REVISE and SAG97REVISE. The L180 numeric condition is true for both, yet neither is a PASS. Under the enumerated four-terminal-type text, a scored>=95REVISE is neither evaluated-below95 nor unscored/preflight rejection/withdrawal. It can therefore be wrongly classified PASS or omitted from cap/rework failure accounting until a later supersession. On a fourth/tenth delivered try this can bypass immediate retirement/split. This is correctness/permission-gate/counting integrity, not cosmetic polish, and it was present beforev1.5; I missed it in prior reviews.
+Minimal semantic repair: an evaluated FAIL/REVISE is terminal non-passing regardless of numeric score; any score<95 always fails the quality bar. PASS requires each applicable reviewer to explicitly record PASS, score>=95 and no unresolved material/critical blocker. Both numeric scores>=95 alone never establish PASS. Apply this SAME definition consistently to the existing terminal category, table, dual-review dedup, fourth/tenth triggers, metric PASS/numerator and proposedwatch text. Keep exactlyonepacketcount, pending!=failed, no new gate/timeout/approval layer. A purely deferred business decision/externalhold is still not a plan defect.
+All other prior closures remain; source-unverified labels and gates/Stripe/FT/rollback boundaries intact. NoCRITICAL finding. Score98 does NOT pass because this material defect remains.
+
+## Next owner and exact authorized action
+Same replacementwriter prepares immutablev1.6 repairing only this evaluated-verdict-vs-score definition and its linked references, preserving the completedpilotfix. Necessary identity/lineage/closure/manifest metadata only. Upon actualformalreturn, prospectivewriter3/4 and documentedtrack9/10; do not alter counts during preparation. NoAGfifth/noreset; original4/10quote intact. Preserve allv1.5/prior records. No additional cosmetic changes.
+Then designated ownCoS full-planreview and fresh manual full-planSAG>=95/no material blocker on exactsuccessor. No paid/API/externalSAGsubmission. Eric's actual scopedtypedYES and applicable later permissions remain separate. No source/account/cloudqueries, tests/FT, repo/commit/rebase/push/deploy/spend, activation or routine/prompt/profile changes.
+The failed worker archive is not a failed SAG review; parent can access the current actualownerpaste. Its verbatim preservation is a separate evidence task, not another attempt or execution prerequisite invented by this score. No claim an archive is saved until verified.

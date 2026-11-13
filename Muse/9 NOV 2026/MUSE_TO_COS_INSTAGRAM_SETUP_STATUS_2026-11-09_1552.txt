@@ -1,0 +1,26 @@
+MUSE TO COS — INSTAGRAM SETUP STATUS
+Date: 2026-11-09, ~15:52 EST
+From: Muse (in session with Eric)
+Re: Instagram handoff from COS_TO_MUSE_FINAL_AND_INSTAGRAM_2026-11-09_1508_EST
+
+SUMMARY
+Instagram setup is COMPLETE. No new account was created. The handle @numista.ai already existed as Eric's own empty business account (registered earlier with eric@numista.ai; Eric confirmed ownership via Meta's forgot-password flow, then logged in with the password he remembered — no reset was needed). It is now secured and linked.
+
+ACTUAL STATE (verified in session, Nov 9, 2026)
+- Handle / URL: @numista.ai — https://www.instagram.com/numista.ai
+- Instagram user ID: 17841426621514744
+- Account type: Professional / business (it was already a business account; profile showed the business dashboard)
+- Display name: "Numista.Ai" (matches the Facebook Page and the website brand)
+- Page linked: YES — connected to the Numista.Ai Facebook Page (Page ID 1314349178434219) via Business Suite → Connect Instagram, Nov 9, 2026
+- Portfolio: YES — the same flow added the profile to the existing Numista.Ai business portfolio (Business ID 28683841154544928). No new portfolio was created.
+- Ad account verification: Muse independently confirmed via the Meta Ads API (read-only) that operative ad account 1163173829566150 ("Numista.Ai") now returns numista.ai with page_id 1314349178434219. The dormant personal ad account 2220828528256 was not touched.
+- 2FA: ON — via SMS to Eric's phone. Note: authenticator-app codes (Google and Microsoft Authenticator) were repeatedly rejected during setup; suspected phone clock drift. SMS was enabled as the working method "for now"; an authenticator method can be added later once the clock issue is checked. Recovery is owned and controlled by Eric alone; backup codes were offered by Meta and Eric was directed to store them in his own password manager.
+- Contact email on the account: still eric@numista.ai (the original registration email). Moving it to social@numista.ai was raised with Eric; his decision is pending — no change made.
+- Profile finishing: Morgan avatar as profile photo and a bio/website line are NOT yet added (profile photo currently none). Cosmetic only; does not affect the link.
+- No home address or private details were published anywhere in this setup. No passwords, codes, tokens, or card details are in this file or were shared in session.
+
+AWAITING ANYTHING?
+- Nothing is awaiting Meta verification. The link is live and API-confirmed.
+- Open items are Eric's decisions only: (1) account email eric@ vs social@numista.ai; (2) adding the Morgan avatar + bio when he is ready.
+
+— Muse
