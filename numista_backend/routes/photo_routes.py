@@ -7,8 +7,8 @@ from pydantic import BaseModel
 
 from routes.deps import (
     check_and_increment_rate_cap,
-    get_current_user,
     logger,
+    require_registered_user,
     storage_client,
 )
 from services.coin_image_service import (
@@ -30,17 +30,11 @@ class SignedPhotoUrlRequest(BaseModel):
 @router.post("/signed_url")
 def create_signed_photo_urls(
     req: SignedPhotoUrlRequest,
-    user: Dict[str, Any] = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(require_registered_user),
 ) -> Dict[str, Any]:
     """Mints 15-minute V4 GCS Signed GET URLs for verified owner photo paths."""
-    firebase_claims = user.get("firebase") or {}
-    if firebase_claims.get("sign_in_provider") == "anonymous":
-        raise HTTPException(status_code=403, detail="Forbidden")
-
     caller_uid = (user.get("uid") or user.get("user_id") or "").strip()
     caller_email = (user.get("email") or "").strip().lower()
-    if is_production_env() and caller_uid == "dev_guest_uid":
-        raise HTTPException(status_code=403, detail="Forbidden")
 
     if not req.urls or len(req.urls) > MAX_BATCH_URLS:
         raise HTTPException(

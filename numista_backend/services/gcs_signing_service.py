@@ -22,6 +22,8 @@ def generate_v4_signed_url(
     expiry_minutes: int = 15,
     method: str = "GET",
     content_type: Optional[str] = None,
+    response_disposition: Optional[str] = None,
+    response_type: Optional[str] = None,
 ) -> str:
     """Generate a short-lived V4 GCS Signed URL (local key or IAM signBlob)."""
     bucket = storage_client.bucket(bucket_name)
@@ -34,6 +36,10 @@ def generate_v4_signed_url(
     }
     if content_type:
         sign_kwargs["content_type"] = content_type
+    if response_disposition:
+        sign_kwargs["response_disposition"] = response_disposition
+    if response_type:
+        sign_kwargs["response_type"] = response_type
 
     creds = getattr(storage_client, "_credentials", None)
     if creds is not None and not hasattr(creds, "sign_bytes"):

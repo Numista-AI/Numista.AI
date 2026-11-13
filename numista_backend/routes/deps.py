@@ -97,6 +97,30 @@ async def require_admin_user(request: Request, user: Dict[str, Any] = Depends(ge
     return user
 
 
+async def require_registered_user(
+    request: Request,
+    user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """FastAPI dependency requiring a non-anonymous, non-guest Firebase user."""
+    firebase_claims = user.get("firebase") or {}
+    if firebase_claims.get("sign_in_provider") == "anonymous":
+        raise HTTPException(
+            status_code=403,
+            detail="Please sign in with a registered Numista.AI account.",
+        )
+
+    uid = (user.get("uid") or user.get("user_id") or "").strip()
+    email = (user.get("email") or "").strip().lower()
+    if not uid and not email:
+        raise HTTPException(status_code=401, detail="Invalid user identity in token")
+    if uid == "dev_guest_uid" or email == "dev_guest@numista.ai":
+        raise HTTPException(
+            status_code=403,
+            detail="Please sign in with a registered Numista.AI account.",
+        )
+    return user
+
+
 def check_and_increment_rate_cap(
     uid: str,
     endpoint: str,
