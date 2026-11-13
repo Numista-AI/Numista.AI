@@ -14,6 +14,7 @@ import '../services/estate_report_service.dart';
 import '../services/estate_fiduciary_service.dart';
 import '../services/beta_checklist_service.dart';
 import '../services/valuation_mode_service.dart';
+import '../widgets/signed_storage_image.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme-aware color tokens
@@ -2240,12 +2241,15 @@ class _CoinEstateEditSheetState extends State<_CoinEstateEditSheet> {
                       width: 40,
                       height: 40,
                       margin: const EdgeInsets.only(right: 10),
+                      clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(6),
-                        image: DecorationImage(
-                          image: NetworkImage(widget.coin.imageUrlObverse),
-                          fit: BoxFit.cover,
-                        ),
+                      ),
+                      child: SignedStorageImage(
+                        url: widget.coin.imageUrlObverse,
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
                       ),
                     ),
                   Expanded(
@@ -3169,18 +3173,23 @@ class _CoinEstateRow extends StatelessWidget {
           Container(
             width: 36,
             height: 36,
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(4),
               color: _kNavy(context),
-              image: hasPhoto
-                  ? DecorationImage(
-                      image: NetworkImage(coin.imageUrlObverse),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
             ),
             child: hasPhoto
-                ? null
+                ? SignedStorageImage(
+                    url: coin.imageUrlObverse,
+                    width: 36,
+                    height: 36,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_) => Icon(
+                      Icons.monetization_on_outlined,
+                      color: _kTextSecondary(context),
+                      size: 18,
+                    ),
+                  )
                 : Icon(Icons.monetization_on_outlined,
                     color: _kTextSecondary(context), size: 18),
           ),

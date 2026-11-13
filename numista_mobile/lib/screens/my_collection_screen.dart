@@ -25,6 +25,7 @@ import '../services/canonical_mint_asset_service.dart';
 import '../widgets/coin_set_viewer.dart';
 import '../widgets/set_contents_panel.dart';
 import '../widgets/grade_badge_widget.dart';
+import '../widgets/signed_storage_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import '../services/http_auth_client.dart';
@@ -2079,10 +2080,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           ),
                           child: Center(
                             child: item.imageObverse != null
-                                ? Image.network(
-                                    item.imageObverse!,
+                                ? SignedStorageImage(
+                                    url: item.imageObverse!,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) => Text(item.itemCategory.emoji, style: TextStyle(fontSize: 36)),
+                                    errorBuilder: (_) => Text(item.itemCategory.emoji, style: TextStyle(fontSize: 36)),
                                   )
                                 : Text(item.itemCategory.emoji, style: TextStyle(fontSize: 36)),
                           ),
@@ -3751,13 +3752,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                     child: hasActive
                                         ? Stack(fit: StackFit.expand, children: [
-                                            Image.network(activeUrl, fit: BoxFit.contain,
-                                              loadingBuilder: (ctx, child, prog) => prog == null ? child
-                                                  : Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
-                                              errorBuilder: (ctx, err, st) {
-                                                debugPrint('Image load error: $err  url: $activeUrl');
-                                                return _vaultPlaceholder(showObv ? 'Obverse' : 'Reverse', isError: true);
-                                              },
+                                            SignedStorageImage(
+                                              url: activeUrl,
+                                              fit: BoxFit.contain,
+                                              placeholderBuilder: (_) => Center(
+                                                child: CircularProgressIndicator(color: _accent, strokeWidth: 2),
+                                              ),
+                                              errorBuilder: (_) => _vaultPlaceholder(
+                                                showObv ? 'Obverse' : 'Reverse',
+                                                isError: true,
+                                              ),
                                             ),
                                             Positioned(bottom: 8, right: 8,
                                               child: Container(
@@ -4544,26 +4548,25 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           borderRadius: BorderRadius.circular(8),
                           child: Stack(
                             children: [
-                              Image.network(
-                                refUrl,
+                              SignedStorageImage(
+                                url: refUrl,
                                 width: double.infinity,
                                 height: 220,
                                 fit: BoxFit.contain,
-                                loadingBuilder: (_, child, prog) =>
-                                    prog == null
-                                        ? child
-                                        : Container(
-                                            height: 220,
-                                            color: Color(0xFFF0F2F6),
-                                            child: Center(
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        color: _accent,
-                                                        strokeWidth: 2)),
-                                          ),
-                                errorBuilder: (_, _, _) => _vaultPlaceholder(
-                                    _vaultShowObverse ? 'Obverse' : 'Reverse',
-                                    isError: true),
+                                placeholderBuilder: (_) => Container(
+                                  height: 220,
+                                  color: Color(0xFFF0F2F6),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      color: _accent,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                                errorBuilder: (_) => _vaultPlaceholder(
+                                  _vaultShowObverse ? 'Obverse' : 'Reverse',
+                                  isError: true,
+                                ),
                               ),
                               Positioned(
                                 bottom: 8, right: 8,
@@ -4733,23 +4736,25 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     borderRadius: BorderRadius.circular(8),
                     child: Stack(
                       children: [
-                        Image.network(
-                          activeUrl,
+                        SignedStorageImage(
+                          url: activeUrl,
                           width: double.infinity,
                           height: 220,
                           fit: BoxFit.cover,
-                          loadingBuilder: (_, child, prog) => prog == null
-                              ? child
-                              : Container(
-                                  height: 220,
-                                  color: Color(0xFFF0F2F6),
-                                  child: Center(
-                                      child: CircularProgressIndicator(
-                                          color: _accent, strokeWidth: 2)),
-                                ),
-                          errorBuilder: (_, _, _) => _vaultPlaceholder(
-                              showObverse ? 'Obverse' : 'Reverse',
-                              isError: true),
+                          placeholderBuilder: (_) => Container(
+                            height: 220,
+                            color: Color(0xFFF0F2F6),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: _accent,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                          errorBuilder: (_) => _vaultPlaceholder(
+                            showObverse ? 'Obverse' : 'Reverse',
+                            isError: true,
+                          ),
                         ),
                         Positioned(
                           bottom: 8,
@@ -5212,10 +5217,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 child: InteractiveViewer(
                   minScale: 0.8,
                   maxScale: 5.0,
-                  child: Image.network(
-                    url,
+                  child: SignedStorageImage(
+                    url: url,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => Padding(
+                    errorBuilder: (_) => Padding(
                       padding: EdgeInsets.all(40),
                       child: Icon(Icons.broken_image_outlined,
                           color: Colors.white30, size: 60),
@@ -5391,13 +5396,17 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
               runSpacing: 8,
               children: (data['owner_photos'] as List).map((p) {
                 return Container(
-                  width: 80, height: 80,
+                  width: 80,
+                  height: 80,
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    image: DecorationImage(
-                      image: NetworkImage(p['url'] ?? ''),
-                      fit: BoxFit.cover,
-                    ),
+                  ),
+                  child: SignedStorageImage(
+                    url: p['url'] ?? '',
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
                   ),
                 );
               }).toList(),

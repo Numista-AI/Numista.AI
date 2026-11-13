@@ -3,6 +3,7 @@ import 'package:numista_ai/services/canonical_mint_asset_service.dart';
 import 'package:numista_ai/services/coin_image_service.dart';
 import 'package:numista_ai/utils/collection_image_utils.dart';
 import 'package:numista_ai/utils/owned_storage_url.dart';
+import 'package:numista_ai/widgets/signed_storage_image.dart';
 
 /// Semantic request key for memoizing reference image fetches.
 /// Uses CanonicalMintAssetService.canonicalYear to normalize year representation.
@@ -230,23 +231,20 @@ class _CollectionCardImageState extends State<CollectionCardImage> {
             ),
           ],
         ),
-        child: Image.network(
-          url,
+        child: SignedStorageImage(
+          url: url,
           fit: BoxFit.contain, // Prevents coin edge cropping
-          errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return const Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFFC9A227),
-                ),
+          errorBuilder: (_) => _buildPlaceholder(),
+          placeholderBuilder: (_) => const Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFC9A227),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );

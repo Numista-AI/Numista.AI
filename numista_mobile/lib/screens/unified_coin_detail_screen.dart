@@ -358,6 +358,9 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
   late int? _currentParentIndex;
   bool _showValues = false;
   bool _showLegislation = false;
+  bool _showReverse = false;
+  String? _heroFutureUrl;
+  Future<String?>? _heroPhotoFuture;
   Map<String, dynamic>? _laws;
   Timer? _lawsWatchdog;
   bool _lawsTimedOut = false;
@@ -380,6 +383,7 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
     _currentCoin = widget.initialCoin;
     _currentSnapshot = widget.initialSnapshot;
     _currentParentIndex = widget.initialParentIndex;
+    _refreshHeroPhotoFuture();
     _loadCurrentDoc();
   }
 
@@ -394,7 +398,10 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
     if (id == null || id.isEmpty) return;
     final data = await _deps.store.getDoc('coins', id);
     if (!mounted || data == null) return;
-    setState(() => _currentCoin = CoinModel.fromMap(data, id));
+    setState(() {
+      _currentCoin = CoinModel.fromMap(data, id);
+      _refreshHeroPhotoFuture();
+    });
   }
 
   bool get canNavigatePrevious =>
@@ -447,8 +454,10 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
         _currentSnapshot = doc;
         _currentParentIndex = parentIndex;
         _showLegislation = false;
+        _showReverse = false;
         _laws = null;
         _lawsTimedOut = false;
+        _refreshHeroPhotoFuture();
       });
       return;
     }
@@ -526,6 +535,12 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
     setState(() => _laws = result);
   }
 
+  bool _hasReverseImage(CoinModel? coin) {
+    if (widget.publicProjection != null) return false;
+    final rev = coin?.imageUrlReverse ?? '';
+    return rev.isNotEmpty && isOwnedStorageUrl(rev);
+  }
+
   String? _selectHeroImageUrl(CoinModel? coin) {
     if (widget.publicProjection != null) {
       final url = widget.publicProjection!.primaryImageUrl;
@@ -536,8 +551,24 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
       }
       return null;
     }
+    if (_showReverse && _hasReverseImage(coin)) {
+      return coin!.imageUrlReverse;
+    }
     final obv = coin?.imageUrlObverse ?? '';
     return isOwnedStorageUrl(obv) ? obv : null;
+  }
+
+  void _refreshHeroPhotoFuture() {
+    final url = _selectHeroImageUrl(_currentCoin);
+    if (url == _heroFutureUrl) return;
+    _heroFutureUrl = url;
+    if (url != null &&
+        _deps.resolvePhotoUrl != null &&
+        SignedPhotoUrlService.needsSigning(url)) {
+      _heroPhotoFuture = _deps.resolvePhotoUrl!(url);
+    } else {
+      _heroPhotoFuture = null;
+    }
   }
 
   void _openLegislationTab(CoinModel? coin) {
@@ -576,63 +607,101 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
     final headerFg = isDark ? const Color(0xFFF8FAFC) : Colors.white;
     final heroUrl = _selectHeroImageUrl(coin);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          key: const Key('udv_header_surface'),
-          decoration: BoxDecoration(color: headerBg),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  coin?.themeSubject ?? '',
-                  key: const Key('udv_header_title'),
-                  style: TextStyle(
-                    color: headerFg,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: 560,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            key: const Key('udv_header_surface'),
+            decoration: BoxDecoration(color: headerBg),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                if (canNavigatePrevious)
+                  IconButton(
+                    key: const Key('udv_prev_button'),
+                    icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                    onPressed: () => _stepNavigation(-1),
+                  ),
+                Expanded(
+                  child: Text(
+                    coin?.themeSubject ?? '',
+                    key: const Key('udv_header_title'),
+                    style: TextStyle(
+                      color: headerFg,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-              if (canNavigateNext)
+                if (canNavigateNext)
+                  IconButton(
+                    key: const Key('udv_next_button'),
+                    icon: const Icon(Icons.arrow_forward_ios, color: Colors.white),
+                    onPressed: () => _stepNavigation(1),
+                  ),
                 IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios, color: Colors.white),
-                  onPressed: () => _stepNavigation(1),
+                  key: const Key('udv_close_button'),
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(context).maybePop(),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
-        if (heroUrl != null &&
-            _deps.resolvePhotoUrl != null &&
-            SignedPhotoUrlService.needsSigning(heroUrl))
-          FutureBuilder<String?>(
-            future: _deps.resolvePhotoUrl!(heroUrl),
-            builder: (_, snapshot) {
-              final resolved = snapshot.data;
-              if (resolved == null || resolved.isEmpty) {
-                return _buildHeroPlaceholder();
-              }
-              _deps.onImageLoad?.call(resolved);
-              return Image.network(
-                resolved,
-                key: const Key('hero_coin_image'),
-                errorBuilder: (_, _, _) => _buildHeroPlaceholder(),
-              );
-            },
-          )
-        else if (heroUrl != null)
-          Builder(builder: (_) {
-            _deps.onImageLoad?.call(heroUrl);
-            return Image.network(
-              heroUrl,
-              key: const Key('hero_coin_image'),
-              errorBuilder: (_, _, _) => _buildHeroPlaceholder(),
-            );
-          })
-        else
-          _buildHeroPlaceholder(),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_heroPhotoFuture != null)
+                    FutureBuilder<String?>(
+                      future: _heroPhotoFuture,
+                      builder: (_, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const SizedBox(
+                            height: 160,
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        final resolved = snapshot.data;
+                        if (resolved == null || resolved.isEmpty) {
+                          return _buildHeroPlaceholder();
+                        }
+                        _deps.onImageLoad?.call(resolved);
+                        return Image.network(
+                          resolved,
+                          key: const Key('hero_coin_image'),
+                          errorBuilder: (_, _, _) => _buildHeroPlaceholder(),
+                        );
+                      },
+                    )
+                  else if (heroUrl != null)
+                    Builder(builder: (_) {
+                      _deps.onImageLoad?.call(heroUrl);
+                      return Image.network(
+                        heroUrl,
+                        key: const Key('hero_coin_image'),
+                        errorBuilder: (_, _, _) => _buildHeroPlaceholder(),
+                      );
+                    })
+                  else
+                    _buildHeroPlaceholder(),
+                  if (_hasReverseImage(coin))
+                    TextButton.icon(
+                      key: const Key('udv_toggle_side_button'),
+                      onPressed: () => setState(() {
+                        _showReverse = !_showReverse;
+                        _refreshHeroPhotoFuture();
+                      }),
+                      icon: const Icon(Icons.flip),
+                      label:
+                          Text(_showReverse ? 'Show Obverse' : 'Show Reverse'),
+                    ),
         Text((coin?.metalContent.isNotEmpty ?? false)
             ? coin!.metalContent
             : 'Not Recorded'),
@@ -679,6 +748,11 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
           ],
         ],
       ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

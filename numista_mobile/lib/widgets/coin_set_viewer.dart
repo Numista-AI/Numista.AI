@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/numista_error_helper.dart';
 import '../services/canonical_mint_asset_service.dart';
+import 'signed_storage_image.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CoinSetViewer
@@ -277,10 +278,10 @@ class _CoinSetViewerState extends State<CoinSetViewer> {
                 child: InteractiveViewer(
                   minScale: 0.8,
                   maxScale: 5.0,
-                  child: Image.network(
-                    url,
+                  child: SignedStorageImage(
+                    url: url,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Padding(
+                    errorBuilder: (_) => const Padding(
                       padding: EdgeInsets.all(40),
                       child: Icon(Icons.broken_image_outlined,
                           color: Colors.white30, size: 60),
@@ -378,11 +379,11 @@ class _CoinTileState extends State<_CoinTile> {
                         transitionBuilder: (child, animation) =>
                             FadeTransition(opacity: animation, child: child),
                         child: _currentUrl != null
-                            ? Image.network(
-                                _currentUrl!,
+                            ? SignedStorageImage(
                                 key: ValueKey(_currentUrl),
+                                url: _currentUrl!,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, e, st) => const Center(
+                                errorBuilder: (_) => const Center(
                                   child: Icon(Icons.broken_image_outlined,
                                       color: _kSubtext, size: 28),
                                 ),
@@ -491,10 +492,10 @@ class CoinSetThumbnail extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: Image.network(
-              heroUrl,
+            child: SignedStorageImage(
+              url: heroUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
+              errorBuilder: (_) => Container(
                 color: _kBorder,
                 child: const Icon(Icons.monetization_on_outlined,
                     color: _kSubtext, size: 20),

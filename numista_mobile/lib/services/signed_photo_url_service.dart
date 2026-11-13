@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
@@ -39,9 +41,21 @@ class SignedPhotoUrlService {
   static const Duration _cacheTtl = Duration(minutes: 12);
   static const Duration _coalesceWindow = Duration(milliseconds: 25);
   static const int _maxBatchSize = 50;
+  static const int _maxCacheEntries = 500;
+  static const int _maxAttempts = 2;
+  static final math.Random _defaultRandom = math.Random();
 
   @visibleForTesting
   static DateTime Function() clock = DateTime.now;
+
+  @visibleForTesting
+  static Future<void> Function(Duration) delayFn = Future.delayed;
+
+  @visibleForTesting
+  static int Function(int max)? jitterNextInt;
+
+  static void Function(Object error, StackTrace? stack, {String? reason})?
+      onSigningError;
 
   static final Map<String, _CachedSignedUrl> _cache = {};
   static final Map<String, _PendingRequest> _inFlight = {};
@@ -61,6 +75,19 @@ class SignedPhotoUrlService {
     _batchQueue.clear();
     _cache.clear();
     clock = DateTime.now;
+    delayFn = Future.delayed;
+    jitterNextInt = null;
+    onSigningError = null;
+  }
+
+  /// Removes [rawUrl] (trimmed) from the client cache. Safe to call from
+  /// widget `errorBuilder` callbacks on the UI isolate.
+  static void invalidate(String? rawUrl) {
+    if (rawUrl == null) return;
+    final key = rawUrl.trim();
+    if (key.isNotEmpty) {
+      _cache.remove(key);
+    }
   }
 
   /// Returns true if [url] is a private user photo reference that requires
@@ -146,30 +173,67 @@ class SignedPhotoUrlService {
 
   static Future<void> _executeBatch(List<String> urls) async {
     final Map<String, String> resolved = {};
-    try {
-      final endpoint = Uri.parse('$kApiBaseUrl/api/v1/photos/signed_url');
-      final response = await HttpAuthClient.post(
-        endpoint,
-        body: jsonEncode({'urls': urls}),
-      );
+    final endpoint = Uri.parse('$kApiBaseUrl/api/v1/photos/signed_url');
+    Object? lastError;
+    StackTrace? lastStack;
 
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          final signedMap = decoded['signed_urls'];
-          if (signedMap is Map) {
-            for (final entry in signedMap.entries) {
-              final k = entry.key?.toString();
-              final v = entry.value?.toString();
-              if (k != null && v != null && v.isNotEmpty) {
-                resolved[k] = v;
+    for (var attempt = 1; attempt <= _maxAttempts; attempt++) {
+      var shouldRetry = false;
+      try {
+        final response = await HttpAuthClient.post(
+          endpoint,
+          body: jsonEncode({'urls': urls}),
+        );
+
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            final signedMap = decoded['signed_urls'];
+            if (signedMap is Map) {
+              for (final entry in signedMap.entries) {
+                final k = entry.key?.toString();
+                final v = entry.value?.toString();
+                if (k != null && v != null && v.isNotEmpty) {
+                  resolved[k] = v;
+                }
               }
             }
           }
+          lastError = null;
+          break;
         }
+
+        if (response.statusCode == 429 || response.statusCode >= 500) {
+          shouldRetry = attempt < _maxAttempts;
+          lastError = StateError('HTTP ${response.statusCode} from signed_url');
+          debugPrint('[SignedPhotoUrlService] Attempt $attempt got ${response.statusCode}');
+        } else {
+          lastError = StateError('HTTP ${response.statusCode} (non-retryable)');
+          break;
+        }
+      } on SocketException catch (e, st) {
+        shouldRetry = attempt < _maxAttempts;
+        lastError = e;
+        lastStack = st;
+      } on TimeoutException catch (e, st) {
+        shouldRetry = attempt < _maxAttempts;
+        lastError = e;
+        lastStack = st;
+      } catch (e, st) {
+        lastError = e;
+        lastStack = st;
+        break;
       }
-    } catch (e) {
-      debugPrint('[SignedPhotoUrlService] Batch signing failed: $e');
+
+      if (shouldRetry) {
+        final jitterMs = 250 + (jitterNextInt ?? _defaultRandom.nextInt)(501);
+        await delayFn(Duration(milliseconds: jitterMs));
+      }
+    }
+
+    if (lastError != null && resolved.isEmpty) {
+      debugPrint('[SignedPhotoUrlService] Batch signing failed: $lastError');
+      onSigningError?.call(lastError, lastStack, reason: 'batch_signed_url_failed');
     }
 
     final now = clock();
@@ -177,6 +241,9 @@ class SignedPhotoUrlService {
     for (final url in urls) {
       final signed = resolved[url];
       if (signed != null) {
+        if (_cache.length >= _maxCacheEntries && !_cache.containsKey(url)) {
+          _cache.remove(_cache.keys.first);
+        }
         _cache[url] = _CachedSignedUrl(signed, expiresAt);
       } else {
         _cache.remove(url);

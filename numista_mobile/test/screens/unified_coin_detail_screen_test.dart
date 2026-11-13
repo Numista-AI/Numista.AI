@@ -574,4 +574,137 @@ void main() {
     UnifiedDetailsGate.debugReset();
     expect(await UnifiedDetailsGate.isEnabled(), isTrue);
   });
+
+  testWidgets('Test 17: Previous arrow and Close button work in header',
+      (tester) async {
+    final rows = [
+      const _FakeRow(id: 'p1'),
+      const _FakeRow(id: 'p2'),
+    ];
+    final cachedDocs = [
+      _FakeQueryDocumentSnapshot('p1', {'themeSubject': 'First Coin'}),
+      _FakeQueryDocumentSnapshot('p2', {'themeSubject': 'Second Coin'}),
+    ];
+    final startCoin = CoinModel(id: 'p2', themeSubject: 'Second Coin');
+
+    await tester.pumpWidget(MaterialApp(
+      home: Navigator(
+        onGenerateRoute: (_) => MaterialPageRoute(
+          builder: (ctx) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showDialog(
+                  context: ctx,
+                  builder: (_) => Dialog(
+                    child: UnifiedCoinDetailScreen(
+                      coin: startCoin,
+                      initialParentIndex: resolveParentIndex(rows, 'p2'),
+                      collectionRows: rows,
+                      cachedCoinsDocs: cachedDocs,
+                      deps: harness,
+                    ),
+                  ),
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Second Coin'), findsOneWidget);
+    expect(find.byKey(const Key('udv_prev_button')), findsOneWidget);
+    expect(find.byKey(const Key('udv_close_button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('udv_prev_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('First Coin'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('udv_close_button')));
+    await tester.pumpAndSettle();
+    expect(find.byType(UnifiedCoinDetailScreen), findsNothing);
+  });
+
+  testWidgets(
+      'Test 18: Tapping Show values does not re-fetch signed hero URL',
+      (tester) async {
+    int resolveCalls = 0;
+    const gsUri = 'gs://numista-uploads-studio-9101802118-8c9a8/users/u1/hero.jpg';
+    final customHarness = UnifiedCoinDetailDeps(
+      store: t.store,
+      clock: t.clock,
+      lawsFetcher: (_) async => null,
+      onLaunchUrl: (url) => t.lastLaunchedUrl = url,
+      resolvePhotoUrl: (_) async {
+        resolveCalls++;
+        return 'https://storage.googleapis.com/signed-hero.jpg';
+      },
+    );
+
+    final coin = CoinModel(
+      id: 'c_cached_hero',
+      themeSubject: 'Cached Hero',
+      imageUrlObverse: gsUri,
+      cpgRetail: 42.0,
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: UnifiedCoinDetailScreen(coin: coin, deps: customHarness),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(resolveCalls, equals(1));
+
+    await tester.tap(find.text('Show values'));
+    await tester.pumpAndSettle();
+    expect(find.text(r'$42.00'), findsOneWidget);
+    expect(resolveCalls, equals(1));
+  });
+
+  testWidgets(
+      'Test 19: Obverse/Reverse toggle switches hero image when reverse exists',
+      (tester) async {
+    final requested = <String>[];
+    const obvUri = 'gs://numista-uploads-studio-9101802118-8c9a8/users/u1/obv.jpg';
+    const revUri = 'gs://numista-uploads-studio-9101802118-8c9a8/users/u1/rev.jpg';
+    final customHarness = UnifiedCoinDetailDeps(
+      store: t.store,
+      clock: t.clock,
+      lawsFetcher: (_) async => null,
+      onLaunchUrl: (url) => t.lastLaunchedUrl = url,
+      resolvePhotoUrl: (raw) async {
+        requested.add(raw);
+        return 'https://storage.googleapis.com/${raw.split('/').last}';
+      },
+    );
+
+    final coin = CoinModel(
+      id: 'c_rev_toggle',
+      themeSubject: 'Two-Sided Coin',
+      imageUrlObverse: obvUri,
+      imageUrlReverse: revUri,
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: UnifiedCoinDetailScreen(coin: coin, deps: customHarness),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(requested, equals([obvUri]));
+    expect(find.byKey(const Key('udv_toggle_side_button')), findsOneWidget);
+    expect(find.text('Show Reverse'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('udv_toggle_side_button')));
+    await tester.pumpAndSettle();
+
+    expect(requested, equals([obvUri, revUri]));
+    expect(find.text('Show Obverse'), findsOneWidget);
+  });
 }
