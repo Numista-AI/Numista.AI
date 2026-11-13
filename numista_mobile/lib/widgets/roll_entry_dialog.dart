@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 import '../services/mint_history_service.dart';
+import '../utils/mint_helpers.dart';
 
 // ─── Roll types ───────────────────────────────────────────────────────────────
 enum RollType { identical, sequential, mixed, lot }
@@ -304,19 +305,66 @@ class _RollDialogState extends State<_RollDialog> {
 
     switch (_rollType) {
       case RollType.identical:
+        final resolved = MintHelpers.resolveTwoFieldMint(
+          rawMintMark: _mint,
+          year: _year.toString(),
+          series: series,
+          denomination: denomLabel,
+        );
         for (int i = 0; i < _quantity; i++) {
-          _preview.add({'Year': _year.toString(), 'Mint Mark': _mint, 'Denomination': denomLabel, 'Program/Series': series, 'Condition': _condition, 'Personal Notes': _notes});
+          _preview.add({
+            'Year': _year.toString(),
+            'mint': resolved.mint,
+            'mint_mark': resolved.mintMark,
+            'Mint Mark': resolved.mintMark,
+            'Denomination': denomLabel,
+            'Program/Series': series,
+            'Condition': _condition,
+            'Personal Notes': _notes,
+          });
         }
         break;
       case RollType.sequential:
         for (final e in _yearMints.entries) {
           for (final m in e.value) {
-            _preview.add({'Year': e.key.toString(), 'Mint Mark': m, 'Denomination': denomLabel, 'Program/Series': series, 'Condition': _condition});
+            final resolved = MintHelpers.resolveTwoFieldMint(
+              rawMintMark: m,
+              year: e.key.toString(),
+              series: series,
+              denomination: denomLabel,
+            );
+            _preview.add({
+              'Year': e.key.toString(),
+              'mint': resolved.mint,
+              'mint_mark': resolved.mintMark,
+              'Mint Mark': resolved.mintMark,
+              'Denomination': denomLabel,
+              'Program/Series': series,
+              'Condition': _condition,
+            });
           }
         }
         break;
       case RollType.lot:
-        _preview.add({'Year': _startYear > 0 ? '~$_startYear' : 'Unknown', 'Denomination': denomLabel, 'Program/Series': series, 'Condition': 'Unknown', 'Personal Notes': _lotNotes, 'roll_type': 'lot', 'lot_quantity': _quantity});
+        final lotYear = _startYear > 0 ? '~$_startYear' : 'Unknown';
+        final resolved = MintHelpers.resolveTwoFieldMint(
+          rawMintMark: '',
+          year: lotYear,
+          series: series,
+          denomination: denomLabel,
+        );
+        _preview.add({
+          'Year': lotYear,
+          'mint': resolved.mint,
+          'mint_mark': resolved.mintMark,
+          'Mint Mark': resolved.mintMark,
+          'Denomination': denomLabel,
+          'Program/Series': series,
+          'Condition': 'Unknown',
+          'Personal Notes': _lotNotes,
+          'roll_type': 'lot',
+          'lot_quantity': _quantity,
+        });
         break;
       default: break;
     }

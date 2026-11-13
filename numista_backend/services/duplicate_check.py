@@ -11,9 +11,9 @@ import logging
 from typing import Any, Dict, List, Optional
 
 try:
-    from services.mint_helpers import read_mint_mark
+    from services.mint_helpers import read_mint_mark, query_docs_by_mint_mark
 except ImportError:
-    from numista_backend.services.mint_helpers import read_mint_mark
+    from numista_backend.services.mint_helpers import read_mint_mark, query_docs_by_mint_mark
 
 logger = logging.getLogger("numista_backend.duplicate_check")
 
@@ -53,14 +53,12 @@ def check_and_flag_duplicate(
     exclude = set(exclude_ids or [])
     try:
         # Check against coins collection (PascalCase schema)
-        q = (
+        base_q = (
             coins_ref
             .where("Year", "==", year_val)
-            .where("Mint Mark", "==", mint_val)
             .where("Denomination", "in", denom_variants[:10])
-            .limit(5)
-            .get()
         )
+        q = query_docs_by_mint_mark(base_q, mint_val, limit=5)
         matches = [d for d in q if d.id not in exclude]
         if matches:
             coin_dict["possible_duplicate"] = True

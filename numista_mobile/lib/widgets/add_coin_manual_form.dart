@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/denomination_canon.dart';
+import '../utils/mint_helpers.dart';
 import '../utils/web_input_helper.dart';
 
 class AddCoinManualForm extends StatefulWidget {
@@ -348,15 +349,30 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
       _formKey.currentState!.save();
 
       // Read values from controllers (controllers are the source of truth).
+      final rawMint = (_mintCtrl.text.trim().toUpperCase() == 'W (WEST POINT)' || _mintCtrl.text.trim().toUpperCase() == 'W')
+          ? 'W'
+          : _mintCtrl.text.trim().toUpperCase();
+      final yearStr = _yearCtrl.text.trim();
+      final denomStr = DenominationCanon.normalize(_denomCtrl.text.trim());
+      final progStr = _programCtrl.text.trim();
+      final varietyStr = _varietyCtrl.text.trim();
+      final resolvedMint = MintHelpers.resolveTwoFieldMint(
+        rawMintMark: rawMint,
+        year: yearStr,
+        series: progStr,
+        denomination: denomStr,
+        variety: varietyStr,
+      );
+
       final formData = <String, dynamic>{
-        'Year':               _yearCtrl.text.trim(),
-                'Mint Mark':          (_mintCtrl.text.trim().toUpperCase() == 'W (WEST POINT)' || _mintCtrl.text.trim().toUpperCase() == 'W')
-            ? 'W'
-            : _mintCtrl.text.trim().toUpperCase(),
-        'Denomination':       DenominationCanon.normalize(_denomCtrl.text.trim()),
-        'Program/Series':     _programCtrl.text.trim(),
+        'Year':               yearStr,
+        'mint':               resolvedMint.mint,
+        'mint_mark':          resolvedMint.mintMark,
+        'Mint Mark':          resolvedMint.mintMark,
+        'Denomination':       denomStr,
+        'Program/Series':     progStr,
         'Theme/Subject':      _themeCtrl.text.trim(),
-        'Variety':            _varietyCtrl.text.trim(),
+        'Variety':            varietyStr,
         'Condition':          _conditionCtrl.text.trim(),
         'Cost':               _costCtrl.text.trim(),
         'Quantity':           _qtyCtrl.text.trim().isEmpty ? '1' : _qtyCtrl.text.trim(),

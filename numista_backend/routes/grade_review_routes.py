@@ -344,7 +344,7 @@ async def submit_grade_review(
             'flagged_at':        firestore.SERVER_TIMESTAMP,
             'resolved':          False,
             'year':              d.get('Year', ''),
-            'mint_mark':         d.get('Mint Mark', ''),
+            'mint_mark':         read_mint_mark(d),
             'program_series':    d.get('Program/Series', ''),
         }, merge=True)
 

@@ -469,21 +469,32 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   static Future<bool> _checkAttributeDuplicate(Map<String, dynamic> coinData) async {
     try {
       final year = (coinData['Year'] ?? coinData['year'] ?? '').toString().trim();
-      final mint = (coinData['Mint Mark'] ?? coinData['mint'] ?? coinData['mint_mark'] ?? '').toString().trim();
+      final mint = MintHelpers.readMintMark(coinData);
       final rawDenom = (coinData['Denomination'] ?? coinData['denomination'] ?? '').toString().trim();
       if (year.isEmpty || rawDenom.isEmpty) return false;
       final normDenom = rawDenom.replaceAll(RegExp(r'^\$'), '').trim();
       final denomVariants = {rawDenom, normDenom, '\$$normDenom'}.where((s) => s.isNotEmpty).toList();
 
-      final query = await FirebaseFirestore.instance
-          .collection(AuthService.coinsPath)
+      final col = FirebaseFirestore.instance.collection(AuthService.coinsPath);
+      final base = col
           .where('Year', isEqualTo: year)
-          .where('Mint Mark', isEqualTo: mint)
-          .where('Denomination', whereIn: denomVariants)
-          .limit(1)
-          .get();
+          .where('Denomination', whereIn: denomVariants);
 
-      return query.docs.isNotEmpty;
+      final canonicalMatches = mint.isEmpty
+          ? [
+              await base.where('mint_mark', isEqualTo: '').limit(1).get(),
+              await base.where('mint_mark', isNull: true).limit(1).get(),
+            ]
+          : [await base.where('mint_mark', isEqualTo: mint).limit(1).get()];
+      if (canonicalMatches.any((s) => s.docs.isNotEmpty)) return true;
+
+      final legacyMatches = mint.isEmpty
+          ? [
+              await base.where('Mint Mark', isEqualTo: '').limit(1).get(),
+              await base.where('Mint Mark', isNull: true).limit(1).get(),
+            ]
+          : [await base.where('Mint Mark', isEqualTo: mint).limit(1).get()];
+      return legacyMatches.any((s) => s.docs.isNotEmpty);
     } catch (_) {
       return false;
     }
@@ -743,6 +754,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     final grader = (preset['grader'] ?? preset['Grading Service'] ?? preset['grading_service'] ?? '').toString().trim();
     final certNo = (preset['certNo'] ?? preset['Certification Number'] ?? preset['cert_number'] ?? preset['Cert #'] ?? '').toString().trim();
     final denom = (preset['Denomination'] ?? preset['denomination'] ?? '').toString().trim();
+    final resolvedMint = MintHelpers.resolveTwoFieldMint(
+      rawMintMark: mint,
+      year: year,
+      series: displayName,
+      denomination: denom,
+    );
 
     setState(() => _isProcessing = true);
     try {
@@ -750,7 +767,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'CoinName': displayName,
         'Theme/Subject': displayName,
         'Year': year,
-        'Mint Mark': mint,
+        'mint': resolvedMint.mint,
+        'mint_mark': resolvedMint.mintMark,
+        'Mint Mark': resolvedMint.mintMark,
         'Condition': effectiveCond,
         'condition': effectiveCond,
         if (effectiveGrade.isNotEmpty) 'Grade': effectiveGrade,
@@ -2137,6 +2156,15 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'Program/Series'       : name,
         'Denomination'         : 'Set',
         'Year'                 : '2026',
+        'mint'                 : isProof
+            ? MintHelpers.resolveTwoFieldMint(
+                rawMintMark: _kProofMint,
+                year: '2026',
+                series: name,
+                denomination: 'Set',
+              ).mint
+            : '',
+        'mint_mark'            : isProof ? _kProofMint : '',
         'Mint Mark'            : isProof ? _kProofMint : '',
         'Purchase Cost'        : cost.isEmpty ? '' : cost,
         'Purchase Date'        : date,
@@ -2169,6 +2197,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         for (final coin in coins) {
           final ref = col.doc();
           coinDocIds.add(ref.id);
+          final resolvedCoinMint = MintHelpers.resolveTwoFieldMint(
+            rawMintMark: mint,
+            year: '2026',
+            series: coin.$2,
+            denomination: coin.$1,
+          );
           batch.set(ref, {
             'is_set'               : false,
             'set_id'               : setId,
@@ -2176,7 +2210,9 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
             'member_of'            : mintLabel,
             'in_original_packaging': true,
             'Year'                 : '2026',
-            'Mint Mark'            : mint,
+            'mint'                 : resolvedCoinMint.mint,
+            'mint_mark'            : resolvedCoinMint.mintMark,
+            'Mint Mark'            : resolvedCoinMint.mintMark,
             'Denomination'         : coin.$1,
             'Program/Series'       : coin.$2,
             'Theme/Subject'        : coin.$3,
@@ -2310,9 +2346,18 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     }
 
                     // ── Build Firestore document from form data (all 13 fields) ─
+                    final resolvedMint = MintHelpers.resolveTwoFieldMint(
+                      rawMintMark: MintHelpers.readMintMark(data),
+                      year: yearStr,
+                      series: progStr,
+                      denomination: denomStr,
+                      variety: (data['Variety'] ?? '').toString().trim(),
+                    );
                     final coinDoc = <String, dynamic>{
                       'Year':                yearStr,
-                      'Mint Mark':           data['Mint Mark'] ?? '',
+                      'mint':                resolvedMint.mint,
+                      'mint_mark':           resolvedMint.mintMark,
+                      'Mint Mark':           resolvedMint.mintMark,
                       'Denomination':        denomStr,
                       'Program/Series':      progStr,
                       'Theme/Subject':       data['Theme/Subject'] ?? '',
@@ -4216,7 +4261,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'CoinName':             _certManualCoinName.text.trim(),
         'Year':                 _certManualYear.text.trim(),
         'year':                 _certManualYear.text.trim(),
-        'Mint Mark':         _certManualMint.text.trim(),
+        ...(() {
+          final resolved = MintHelpers.resolveTwoFieldMint(
+            rawMintMark: _certManualMint.text.trim(),
+            year: _certManualYear.text.trim(),
+            series: _certManualCoinName.text.trim(),
+            denomination: _certManualDenom.text.trim(),
+          );
+          return <String, dynamic>{
+            'mint': resolved.mint,
+            'mint_mark': resolved.mintMark,
+            'Mint Mark': resolved.mintMark,
+          };
+        })(),
         'Grade':                grade,
         'grade':                grade,
         'Condition':            effectiveCond,

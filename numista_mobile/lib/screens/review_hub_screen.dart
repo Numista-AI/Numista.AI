@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../services/http_auth_client.dart';
 import '../services/canonical_mint_asset_service.dart';
+import '../utils/mint_helpers.dart';
 import '../utils/numista_error_helper.dart';
 import '../utils/review_field_keys.dart';
 import '../widgets/grade_badge_widget.dart';
@@ -1132,6 +1133,16 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                                     controllers['Mint Mark']?.text = ym.group(2)!.toUpperCase();
                                   }
                                 }
+                                final resolvedMint = MintHelpers.resolveTwoFieldMint(
+                                  rawMintMark: (updates['Mint Mark'] as String? ?? '').trim(),
+                                  year: (updates['Year'] as String? ?? '').trim(),
+                                  series: (updates['Program/Series'] as String? ?? '').trim(),
+                                  denomination: (updates['Denomination'] as String? ?? '').trim(),
+                                  variety: (updates['Variety'] as String? ?? '').trim(),
+                                );
+                                updates['mint'] = resolvedMint.mint;
+                                updates['mint_mark'] = resolvedMint.mintMark;
+                                updates['Mint Mark'] = resolvedMint.mintMark;
                                 await targetRef.update(updates);
                                 final bulkUpdates = <String, dynamic>{};
                                 final loc = (updates['Storage Location'] ?? updates['storage_location'])?.toString().trim();
@@ -1900,7 +1911,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                       children: contents.take(12).map((c) {
                         final coin = c as Map<String, dynamic>? ?? {};
                         final yr = coin['Year']?.toString() ?? '';
-                        final mm = coin['Mint Mark']?.toString() ?? '';
+                        final mm = MintHelpers.readMintMark(coin);
                         final dn = coin['Denomination']?.toString() ?? '';
                         final label = [yr + (mm.isNotEmpty ? '-$mm' : ''), dn]
                             .where((s) => s.isNotEmpty).join(' ');
@@ -2114,7 +2125,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   Row(
                     children: [
                       Text(
-                        '${data['Year'] ?? 'Unknown'} ${data['Denomination'] ?? 'Item'}${data['Mint Mark'] != null && data['Mint Mark'].toString().isNotEmpty ? ' (${data['Mint Mark']})' : ''}',
+                        '${data['Year'] ?? 'Unknown'} ${data['Denomination'] ?? 'Item'}${MintHelpers.readMintMark(data).isNotEmpty ? ' (${MintHelpers.readMintMark(data)})' : ''}',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFC9A227)),
                       ),
                       const SizedBox(width: 8),
@@ -2196,7 +2207,7 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                   const SizedBox(height: 4),
                   () {
                     final yr       = (data['Year'] ?? '').toString().trim();
-                    final mm       = (data['Mint Mark'] ?? '').toString().trim();
+                    final mm       = MintHelpers.readMintMark(data);
                     final den      = (data['Denomination'] ?? '').toString().trim();
                     final ser      = (data['Program/Series'] ?? '').toString().trim();
                     final offTitle = (data['official_us_mint_title'] ?? data['Official US Mint Title'] ?? '').toString().trim();
