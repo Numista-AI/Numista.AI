@@ -311,3 +311,41 @@ def format_mint_facility_and_mark(mint: str, mint_mark: str) -> str:
     if facility:
         return facility
     return mm
+
+
+def query_docs_by_mint_mark(
+    base_query,
+    mint_mark: str,
+    limit: Optional[int] = None,
+) -> list:
+    """
+    Transitional Firestore query helper for mint_mark (canonical) with fallback
+    to legacy 'Mint Mark' so both pre- and post-Phase 7 documents are matched.
+
+    Uses two-step equality queries instead of a cross-field Filter.or_ to avoid
+    requiring new multi-field composite Firestore indexes.
+    When mint_mark is empty, checks both "" and None on each field.
+    """
+    mm = _clean_str(mint_mark)
+    values = ["", None] if mm == "" else [mm]
+    results = []
+    seen_ids = set()
+
+    for field_name in ("mint_mark", "Mint Mark"):
+        for val in values:
+            q = base_query.where(field_name, "==", val)
+            if limit is not None:
+                remaining = limit - len(results)
+                if remaining <= 0:
+                    return results
+                q = q.limit(remaining)
+            for doc in q.get():
+                doc_id = getattr(doc, "id", None)
+                if doc_id is not None:
+                    if doc_id in seen_ids:
+                        continue
+                    seen_ids.add(doc_id)
+                results.append(doc)
+                if limit is not None and len(results) >= limit:
+                    return results
+    return results

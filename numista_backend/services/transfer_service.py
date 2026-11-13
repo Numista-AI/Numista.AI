@@ -15,6 +15,19 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 from google.cloud import firestore
 
+try:
+    from services.mint_helpers import (
+        build_mint_write_fields,
+        read_mint_facility,
+        read_mint_mark,
+    )
+except ImportError:
+    from numista_backend.services.mint_helpers import (
+        build_mint_write_fields,
+        read_mint_facility,
+        read_mint_mark,
+    )
+
 COLLECTION_TRANSFERS = "transfers"
 logger = logging.getLogger("numista_backend.transfer_service")
 
@@ -395,7 +408,24 @@ def execute_claim_transaction(
 
         denom = item.get("Denomination") or item.get("denomination") or ""
         year_str = item.get("Year") or item.get("year") or ""
-        mint_str = item.get("Mint Mark") or item.get("mintMark") or ""
+        if "mint" in item and "mint_mark" in item:
+            preserved_mint = str(item.get("mint") or "").strip()
+            preserved_mark = read_mint_mark(item)
+            mint_fields = {
+                "mint": preserved_mint,
+                "mint_mark": preserved_mark,
+                "Mint Mark": preserved_mark,
+            }
+        else:
+            mint_fields = build_mint_write_fields(
+                read_mint_mark(item),
+                raw_mint=read_mint_facility(item),
+                year=str(year_str).strip(),
+                series=str(item.get("Program/Series") or item.get("series") or "").strip(),
+                denomination=str(denom).strip(),
+                country=str(item.get("Country") or item.get("country") or "United States").strip(),
+                variety=str(item.get("Variety") or item.get("variety") or "").strip(),
+            )
 
         new_coin_doc = {
             **item,
@@ -403,7 +433,7 @@ def execute_claim_transaction(
             "Quantity": transfer_qty,
             "Denomination": str(denom).strip() if str(denom).strip() else "N/A",
             "Year": str(year_str).strip(),
-            "Mint Mark": str(mint_str).strip(),
+            **mint_fields,
             "original_transfer_id": transfer_ref.id,
             "provenanceLedger": provenance,
             "transferStatus": "active",

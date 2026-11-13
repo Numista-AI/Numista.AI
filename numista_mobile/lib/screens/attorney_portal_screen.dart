@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../utils/mint_helpers.dart';
 import '../utils/numista_error_helper.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -727,7 +728,8 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
       ])),
       DataCell(Text(c['Year']?.toString() ?? '—',
           style: TextStyle(color: _kTextSecondary(context), fontSize: 12))),
-      DataCell(Text(c['Mint Mark']?.toString() ?? '—',
+      DataCell(Text(
+  MintHelpers.readMintMark(c).isEmpty ? '—' : MintHelpers.readMintMark(c),
           style: TextStyle(color: _kTextSecondary(context), fontSize: 12))),
       DataCell(Text(c['Condition']?.toString() ?? '—',
           style: TextStyle(color: _kTextPrimary(context), fontSize: 12))),

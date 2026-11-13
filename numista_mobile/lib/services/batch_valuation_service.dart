@@ -15,6 +15,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'http_auth_client.dart';
 import '../constants.dart';
+import '../utils/mint_helpers.dart';
 import 'auth_service.dart';
 
 
@@ -111,7 +112,7 @@ class BatchValuationService {
 
     final year    = data['Year']?.toString()           ?? '';
     final denom   = data['Denomination']?.toString()   ?? '';
-    final mint    = data['Mint Mark']?.toString()      ?? '';
+    final mint    = MintHelpers.readMintMark(data);
     final cond    = data['Condition']?.toString()      ?? '';
     final series  = data['Program/Series']?.toString() ?? '';
     final metal   = data['Metal Content']?.toString()  ?? '';

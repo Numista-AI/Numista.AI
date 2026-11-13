@@ -17,6 +17,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import '../config/ai_config.dart';
+import '../utils/mint_helpers.dart';
 import 'auth_service.dart';
 import 'guest_seed_service.dart';
 
@@ -90,11 +91,23 @@ class CoinNormalizerService {
   ) async {
     // Only fetch coins where Mint Mark is empty — avoids reading all 3,700 docs.
     // Coins with a populated Mint Mark are already split.
-    final emptyMintSnap = await col.where('Mint Mark', isEqualTo: '').get();
-    final nullMintSnap  = await col.where('Mint Mark', isNull: true).get();
-    final candidates = [...emptyMintSnap.docs, ...nullMintSnap.docs];
+    final canonicalEmptySnap = await col.where('mint_mark', isEqualTo: '').get();
+    final canonicalNullSnap  = await col.where('mint_mark', isNull: true).get();
+    final legacyEmptySnap    = await col.where('Mint Mark', isEqualTo: '').get();
+    final legacyNullSnap     = await col.where('Mint Mark', isNull: true).get();
+
+    final seenIds = <String>{};
+    final candidates = [
+      ...canonicalEmptySnap.docs,
+      ...canonicalNullSnap.docs,
+      ...legacyEmptySnap.docs,
+      ...legacyNullSnap.docs,
+    ].where((doc) => seenIds.add(doc.id)).toList();
+
     final toFix = candidates.where((doc) {
-      final rawYear = doc.data()['Year']?.toString().trim() ?? '';
+      final data = doc.data();
+      if (MintHelpers.readMintMark(data).isNotEmpty) return false;
+      final rawYear = data['Year']?.toString().trim() ?? '';
       return _yearMintRe.hasMatch(rawYear);
     }).toList();
 
@@ -111,11 +124,22 @@ class CoinNormalizerService {
       final chunk = toFix.skip(i).take(firestoreBatchLimit);
       final wb = FirebaseFirestore.instance.batch();
       for (final doc in chunk) {
-        final rawYear = doc.data()['Year']?.toString().trim() ?? '';
+        final data = doc.data();
+        final rawYear = data['Year']?.toString().trim() ?? '';
         final m = _yearMintRe.firstMatch(rawYear)!;
+        final splitYear = m.group(1)!;
+        final resolved = MintHelpers.resolveTwoFieldMint(
+          rawMintMark: m.group(2)!.toUpperCase(),
+          year: splitYear,
+          series: (data['Program/Series'] ?? data['series'] ?? '').toString().trim(),
+          denomination: (data['Denomination'] ?? data['denomination'] ?? '').toString().trim(),
+          variety: (data['Variety'] ?? data['variety'] ?? '').toString().trim(),
+        );
         wb.set(col.doc(doc.id), {
-          'Year': m.group(1),
-          'Mint Mark': m.group(2)!.toUpperCase(),
+          'Year': splitYear,
+          'mint': resolved.mint,
+          'mint_mark': resolved.mintMark,
+          'Mint Mark': resolved.mintMark,
           // reset _normalized so AI also re-reviews these coins' other fields
           '_normalized': false,
         }, SetOptions(merge: true));

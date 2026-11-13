@@ -32,7 +32,12 @@ from logging_config import get_logger, request_id_var, generate_request_id, rate
 from numista_scraper.config import DB_PATH
 from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL
 from services.checklist_parser import parse_checklist_notes, slugify_theme, extract_checklist_document
-from services.mint_helpers import apply_imported_mint_fields, build_mint_write_fields, read_mint_mark
+from services.mint_helpers import (
+    apply_imported_mint_fields,
+    build_mint_write_fields,
+    query_docs_by_mint_mark,
+    read_mint_mark,
+)
 from services.document_classifier_service import classify_document_bytes
 from services.us_mint_catalog_service import enrich_us_mint_item, expand_us_mint_truncation
 from set_pricing import get_set_valuation
@@ -2732,10 +2737,9 @@ def execute_add_coin(
         col_ref = db.collection('users').document(user_email).collection('coins')
         is_dupe = False
         try:
-            existing = col_ref.where('Year', '==', str(year)) \
-                              .where('Denomination', '==', norm_denom) \
-                              .where('Mint Mark', '==', clean_mint) \
-                              .limit(1).get()
+            base_q = col_ref.where('Year', '==', str(year)) \
+                            .where('Denomination', '==', norm_denom)
+            existing = query_docs_by_mint_mark(base_q, clean_mint, limit=1)
             is_dupe = len(existing) > 0
         except Exception:
             pass
@@ -5582,13 +5586,12 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest, _user: dict = D
         # A coin is a duplicate ONLY if Year + Mint + Denomination match AND
         # it's stored in a DIFFERENT location. Same-location copies are allowed.
         try:
-            existing = (
+            base_q = (
                 coins_ref
                 .where("Year",         "==", year)
-                .where("Mint Mark",    "==", mint)
                 .where("Denomination", "==", denomination)
-                .get()
             )
+            existing = query_docs_by_mint_mark(base_q, mint)
 
             for existing_doc in existing:
                 existing_data = existing_doc.to_dict()
@@ -7478,7 +7481,7 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
             inv_no   = str(item.get("Retailer Invoice #") or item.get("invoice_number") or rec.get("invoice_number", "")).lower().strip()
             item_no  = str(item.get("Retailer Item No.", "")).lower().strip()
             item_yr  = str(item.get("Year", "")).strip()
-            item_mm  = str(item.get("Mint Mark", "")).strip().upper()
+            item_mm  = read_mint_mark(item).upper()
             item_ser = str(item.get("Program/Series", "") or item.get("Denomination", "")).lower().strip()
 
             if not matched_coin_id:
@@ -7489,7 +7492,7 @@ def _link_receipts_to_coins(user_email: str, session_id: str) -> dict:
                     c_inv      = str(c_data.get("Retailer Invoice #", "") or c_data.get("invoice_number", "")).lower().strip()
                     c_item_no  = str(c_data.get("Retailer Item No.", "")).lower().strip()
                     c_yr       = str(c_data.get("Year", "")).strip()
-                    c_mm       = str(c_data.get("Mint Mark", "")).strip().upper()
+                    c_mm       = read_mint_mark(c_data).upper()
                     c_ser      = str(c_data.get("Program/Series", "")).lower().strip()
 
                     if inv_no and c_inv == inv_no and retailer and c_retailer == retailer \
@@ -9401,14 +9404,12 @@ def checklist_add_coins(req: ChecklistAddRequest, _user: dict = Depends(get_curr
     try:
         coins_ref = db.collection('users').document(caller_email).collection('coins')
         for slot in req.slots:
-            q = (
+            base_q = (
                 coins_ref
                 .where('program_id', '==', req.program_id)
                 .where('Year', '==', slot.year)
-                .where('Mint Mark', '==', slot.mint_mark)
-                .limit(1)
             )
-            existing = q.get()
+            existing = query_docs_by_mint_mark(base_q, slot.mint_mark, limit=1)
             if existing:
                 duplicate_warning = True
                 break
@@ -9800,7 +9801,7 @@ def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
     for uc in user_coins:
         denom = _normalize_denom_stats(uc.get("Denomination"))
         year = str(uc.get("Year") or "").strip()
-        mint = _normalize_mint_stats(uc.get("Mint Mark"))
+        mint = _normalize_mint_stats(read_mint_mark(uc))
         theme = str(uc.get("Theme/Subject") or "").lower().strip()
         u_variety = str(uc.get("variety") or "").lower().strip()
         series_val = str(uc.get("Program/Series") or "").lower().strip()

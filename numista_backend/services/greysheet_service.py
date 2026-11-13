@@ -10,6 +10,11 @@ from google.genai import types
 
 from services.greysheet_quota_service import GreysheetQuotaService
 
+try:
+    from services.mint_helpers import read_mint_mark
+except ImportError:
+    from numista_backend.services.mint_helpers import read_mint_mark
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("greysheet_service")
@@ -381,8 +386,7 @@ class GreysheetService:
 
         gs_lower = greysheet_name.lower()
         year = str(coin_data.get("Year") or coin_data.get("year") or "").strip()
-        mint = str(coin_data.get("Mint Mark") or coin_data.get("mintMark") or
-                   coin_data.get("MintMark") or "").strip().upper()
+        mint = read_mint_mark(coin_data).upper()
         series = str(coin_data.get("Program/Series") or coin_data.get("series") or
                      coin_data.get("ProgramSeries") or "").lower()
         denom = str(coin_data.get("Denomination") or coin_data.get("denomination") or "").lower()
@@ -496,8 +500,7 @@ class GreysheetService:
         pcgs_number = (coin_data.get("PCGSNo") or coin_data.get("pcgs_number") or
                        coin_data.get("pcgsNo") or coin_data.get("PCGS Number"))
         year        = str(coin_data.get("Year") or coin_data.get("year") or "")
-        mint_mark   = str(coin_data.get("MintMark") or coin_data.get("mintMark") or
-                          coin_data.get("Mint Mark") or "").upper()
+        mint_mark   = read_mint_mark(coin_data).upper()
         denomination = str(coin_data.get("Denomination") or coin_data.get("denomination") or "")
         series      = str(coin_data.get("ProgramSeries") or coin_data.get("programSeries") or
                           coin_data.get("series") or coin_data.get("Program/Series") or "")

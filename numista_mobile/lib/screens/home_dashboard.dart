@@ -21,6 +21,7 @@ import '../services/market_news_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../widgets/beta_checklist_widget.dart';
 import '../services/beta_checklist_service.dart';
+import '../utils/mint_helpers.dart';
 import '../utils/platform_gate.dart';
 import '../widgets/beta_welcome_dialog.dart';
 import 'ai_chat_screen.dart';
@@ -797,7 +798,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             children: last5.asMap().entries.map((entry) {
                               final data = entry.value;
                               final year   = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-                              final mint   = data['Mint Mark']?.toString() ?? '';
+                              final mint   = MintHelpers.readMintMark(data);
                               final denom  = data['Denomination']?.toString() ?? '';
                               final series = data['Program/Series']?.toString() ?? '';
                               final theme  = data['Theme/Subject']?.toString() ?? '';
