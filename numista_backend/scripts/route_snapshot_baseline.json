@@ -360,6 +360,15 @@
     "dependencies": []
   },
   {
+    "path": "/api/grade_review/image/{review_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_grade_review_image",
+    "tags": [],
+    "dependencies": []
+  },
+  {
     "path": "/api/grade_review/queue",
     "methods": [
       "GET"

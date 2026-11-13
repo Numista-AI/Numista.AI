@@ -4363,123 +4363,99 @@ def get_coin_crop(
     _user: dict = Depends(get_current_user),
 ):
     """
-    Returns a base64-encoded JPEG crop of the specific coin's binder slot.
-
-    Strategy:
-    1. Load the coin doc -> get scan_uuid, page_index, slot_bbox from Firestore.
-    2. If slot_bbox exists (new scans): download the GCS page image, PIL crop, return.
-    3. If slot_bbox is missing (old scans): return {"fallback": true} so Flutter
-       displays the full binder page image instead (graceful degradation).
+    Returns a base64-encoded JPEG crop (or downscaled full-page fallback) of a coin's binder slot.
+    Strictly owner-only (or audited admin=True); never returns raw storage URLs.
     """
-    caller_uid = _user.get("uid") or _user.get("user_id") or ""
+    from routes.deps import storage_client as _deps_storage_client
+    from services.coin_image_service import (
+        is_production_env,
+        load_sanitized_coin_image,
+        parse_and_validate_storage_url,
+    )
+
+    caller_uid = (_user.get("uid") or _user.get("user_id") or "").strip()
     caller_email = (_user.get("email") or "").strip().lower()
-    is_dev_guest = os.environ.get("ALLOW_UNAUTHENTICATED") == "1" and caller_email == "dev_guest@numista.ai"
-    if not _user.get("admin") and not is_dev_guest:
+    is_prod = is_production_env()
+    if is_prod and os.environ.get("ALLOW_UNAUTHENTICATED") == "1":
+        logger.critical("ALLOW_UNAUTHENTICATED=1 is set in production — ignoring dev_guest bypass.")
+
+    is_admin = _user.get("admin") is True
+    is_dev_guest = (
+        not is_prod
+        and os.environ.get("ALLOW_UNAUTHENTICATED") == "1"
+        and caller_email == "dev_guest@numista.ai"
+    )
+
+    if not is_admin and not is_dev_guest:
         if user_email.strip().lower() != caller_email and user_email.strip() != caller_uid:
             raise HTTPException(status_code=403, detail="Forbidden")
+        owner_key = caller_email or caller_uid
+        allowed_owners = {x for x in (caller_email, caller_uid) if x}
+    elif is_admin:
+        owner_key = user_email.strip().lower() or user_email.strip()
+        logger.warning(
+            "coin_crop admin access admin=%s owner=%s coin=%s",
+            caller_email or caller_uid,
+            owner_key,
+            coin_id,
+        )
+        allowed_owners = {owner_key}
+    else:
+        owner_key = caller_email or caller_uid
+        allowed_owners = {x for x in (caller_email, caller_uid) if x}
+
+    if not owner_key:
+        raise HTTPException(status_code=401, detail="Authentication token missing identity")
 
     try:
-        coin_ref = (db.collection('users').document(user_email)
-                      .collection('coins').document(coin_id))
+        coin_ref = (
+            db.collection("users")
+            .document(owner_key)
+            .collection("coins")
+            .document(coin_id)
+        )
         coin_doc = coin_ref.get()
         if not coin_doc.exists:
-            raise HTTPException(status_code=404, detail='Coin not found.')
+            raise HTTPException(status_code=404, detail="Coin not found.")
 
-        coin = coin_doc.to_dict()
-        scan_uuid  = coin.get('scan_uuid', '')
-        page_index = coin.get('page_index', 0)
-        slot_bbox  = coin.get('slot_bbox', {})
-        gcs_url    = coin.get('image_url_obverse', '')  # Full binder page URL
+        coin = coin_doc.to_dict() or {}
+        if is_admin:
+            for extra in (coin.get("uid"), coin.get("user_uid"), coin.get("user_email")):
+                if isinstance(extra, str) and extra.strip():
+                    allowed_owners.add(extra.strip().lower())
 
-        # Graceful degradation for old coins without bbox
-        if (not slot_bbox
-                or slot_bbox.get('w_pct', 0) == 0
-                or slot_bbox.get('h_pct', 0) == 0):
-            return {
-                'status':    'fallback',
-                'message':   'No crop data for this coin -- showing full binder page.',
-                'image_url': gcs_url,
-                'coin_id':   coin_id,
-            }
-
+        slot_bbox = coin.get("slot_bbox") or {}
+        gcs_url = coin.get("image_url_obverse", "")
         if not gcs_url:
-            raise HTTPException(status_code=404, detail='No binder page image on file.')
+            raise HTTPException(status_code=404, detail="No binder page image on file.")
 
-        # Download the full binder page from GCS
-        from google.cloud import storage as _gcs
-        import re as _re
-
-        # Parse GCS URL: could be gs:// or https://storage.googleapis.com/
-        if gcs_url.startswith('gs://'):
-            bucket_name, blob_name = gcs_url[5:].split('/', 1)
-        elif 'storage.googleapis.com' in gcs_url:
-            m = _re.match(
-                r'https://storage\.googleapis\.com/([^/]+)/(.+)', gcs_url)
-            if not m:
-                raise HTTPException(status_code=400,
-                    detail='Cannot parse GCS URL.')
-            bucket_name, blob_name = m.group(1), m.group(2)
-        else:
-            # Not a GCS URL (could be Firebase Storage CDN URL)
-            # Fall back to full-page display
-            return {
-                'status':    'fallback',
-                'message':   'Image not in GCS -- showing full binder page.',
-                'image_url': gcs_url,
-                'coin_id':   coin_id,
-            }
-
-        _gcs_client = _gcs.Client()
-        bucket = _gcs_client.bucket(bucket_name)
-        blob   = bucket.blob(blob_name)
-        img_bytes = blob.download_as_bytes()
-
-        # Open with PIL and crop using percentage coordinates
-        img = _PILImage.open(_io.BytesIO(img_bytes)).convert('RGB')
-        W, H = img.size
-
-        x_pct = float(slot_bbox.get('x_pct', 0))
-        y_pct = float(slot_bbox.get('y_pct', 0))
-        w_pct = float(slot_bbox.get('w_pct', 0.1))
-        h_pct = float(slot_bbox.get('h_pct', 0.1))
-
-        # Add 25% margin so label below coin is included
-        margin_x = w_pct * 0.25
-        margin_y = h_pct * 0.25
-
-        x1 = max(0, int((x_pct - margin_x) * W))
-        y1 = max(0, int((y_pct - margin_y) * H))
-        x2 = min(W, int((x_pct + w_pct + margin_x) * W))
-        y2 = min(H, int((y_pct + h_pct + margin_y) * H))
-
-        # Ensure minimum crop size (at least 80×80 px)
-        if (x2 - x1) < 80 or (y2 - y1) < 80:
-            cx = (x1 + x2) // 2
-            cy = (y1 + y2) // 2
-            half = max(60, (x2 - x1) // 2, (y2 - y1) // 2)
-            x1 = max(0, cx - half); x2 = min(W, cx + half)
-            y1 = max(0, cy - half); y2 = min(H, cy + half)
-
-        cropped = img.crop((x1, y1, x2, y2))
-
-        # Encode as JPEG base64
-        buf = _io.BytesIO()
-        cropped.save(buf, format='JPEG', quality=88)
-        b64 = base64.b64encode(buf.getvalue()).decode()
+        bucket_name, blob_name = parse_and_validate_storage_url(gcs_url, allowed_owners)
+        has_bbox = bool(
+            slot_bbox
+            and float(slot_bbox.get("w_pct", 0) or 0) > 0
+            and float(slot_bbox.get("h_pct", 0) or 0) > 0
+        )
+        jpeg_bytes, crop_size = load_sanitized_coin_image(
+            _deps_storage_client,
+            bucket_name,
+            blob_name,
+            slot_bbox=slot_bbox if has_bbox else None,
+        )
+        b64 = base64.b64encode(jpeg_bytes).decode()
 
         return {
-            'status':   'ok',
-            'coin_id':  coin_id,
-            'crop_b64': b64,
-            'crop_size': [x2 - x1, y2 - y1],
+            "status": "ok",
+            "coin_id": coin_id,
+            "crop_b64": b64,
+            "crop_size": [crop_size[0], crop_size[1]],
+            "full_page": not has_bbox,
         }
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("Coin crop error")
-        raise HTTPException(status_code=500,
-            detail=f'Crop failed: {str(e)}')
+        raise HTTPException(status_code=500, detail="Could not load image.")
 
 
 @app.post("/api/analyze_binder_scan")
