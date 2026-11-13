@@ -1,17 +1,15 @@
 import os
 import pandas as pd
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 import kagglehub
 
 # --- CONFIGURATION ---
 from dotenv import load_dotenv
 load_dotenv()
 GEMINI_API_KEY = (os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or "").strip()
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-
-# Use Gemini 3.8 Flash for identification
-model = genai.GenerativeModel('gemini-3.8-flash')
+GEMINI_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-4-hydrogen")
+genai_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 # File Paths (Matching your current folder structure)
 MANIFEST_PATH = 'numista_database_ready (1).csv'
@@ -49,11 +47,17 @@ def identify_coin_and_link_official(image_filename):
     if not os.path.exists(image_path):
         return "Image not found."
 
-    # Send to Gemini 3
-    print(f"Gemini 3 is analyzing {image_filename}...")
-    sample_file = genai.upload_file(path=image_path)
+    # Send to Gemini 4
+    print(f"Gemini 4 is analyzing {image_filename}...")
+    if genai_client is None:
+        raise RuntimeError("GOOGLE_API_KEY or GEMINI_API_KEY not set")
+    with open(image_path, "rb") as f:
+        img_bytes = f.read()
     prompt = "Identify this US coin. Provide only the common name (e.g., 'American Eagle Gold Proof')."
-    response = model.generate_content([prompt, sample_file])
+    response = genai_client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=[prompt, genai_types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg")],
+    )
     detected_name = response.text.strip()
 
     # Match with your CSV

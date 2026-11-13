@@ -363,9 +363,9 @@ def classify_with_gemini(blob, storage_client):
         ext  = Path(blob.name).suffix.lower()
         mime = "image/jpeg" if ext in (".jpg", ".jpeg") else f"image/{ext.lstrip('.')}"
 
-        client = genai.Client(vertexai=True, project=PROJECT, location="us-central1")
+        client = genai.Client(vertexai=True, project=PROJECT, location="global")
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-4-hydrogen",
             contents=[
                 genai_types.Part.from_text(GEMINI_VISION_PROMPT),
                 genai_types.Part.from_bytes(data=image_bytes, mime_type=mime),

@@ -442,14 +442,15 @@ async def get_ui_variant(
 
 
 # --- GEMINI MODEL CONFIGURATION ----------------------------------------------
-# Per official deprecation schedule as of August 14, 2026:
+# Per official deprecation schedule as of November 13, 2026:
 #
-#   gemini-3.8-flash       Released September 2, 2026. NO shutdown announced. -> PRIMARY WORKHORSE
-#   gemini-3.1-pro-preview Released Feb 19, 2026. NO shutdown announced. -> PRO
-#   gemini-3.5-flash-lite  Released July 21, 2026. NO shutdown announced. -> LITE TASKS
-#   gemini-3.1-flash-image Released May 28, 2026. NO shutdown announced. -> IMAGE EDITING
+#   gemini-4-hydrogen      Released November 12, 2026. NO shutdown announced. -> PRIMARY WORKHORSE
+#   gemini-4-argon         Released October 13, 2026. NO shutdown announced.  -> PRO
+#   gemini-3.5-flash-lite  Released July 21, 2026. NO shutdown announced.     -> LITE TASKS
+#   gemini-3.1-flash-image Released May 28, 2026. NO shutdown announced.      -> IMAGE EDITING (Overflow)
+#   gemini-3-pro-image     Nano Banana Pro (first 100/mo via image_model_router) -> IMAGE GEN (Primary)
 #
-# Model bindings are centralized in config.py
+# Model bindings are centralized in config/__init__.py
 PRIMARY_MODEL = GEMINI_FLASH_MODEL
 PRO_MODEL     = GEMINI_PRO_MODEL
 IMAGE_MODEL   = GEMINI_IMAGE_MODEL
@@ -4821,7 +4822,7 @@ async def analyze_binder_scan(
                 response_mime_type="application/json",
                 temperature=0.1,
                 max_output_tokens=65536,
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),  # MINIMAL thinking
+                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),  # LOW thinking for fast JSON
             ),
         )
         try:
@@ -5405,7 +5406,7 @@ IMPORTANT:
                     response_mime_type="application/json",
                     temperature=0.1,
                     max_output_tokens=65536,
-                    thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                    thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
                 ),
             )
             try:
@@ -6053,7 +6054,7 @@ Return ONLY valid JSON — no markdown fences, no commentary:
                 response_mime_type="application/json",
                 temperature=0.1,
                 max_output_tokens=16384,
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
             ),
         )
 
@@ -6476,7 +6477,7 @@ async def call_gemini_identify(contents, model=PRIMARY_MODEL):
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
             ),
         ),
     )
@@ -7028,7 +7029,7 @@ async def estimate_value_text(request: TextValuationRequest, _user: dict = Depen
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
             ),
         )
         raw = resp.text.strip()
@@ -7123,7 +7124,7 @@ async def estimate_value_general(request: GeneralValuationRequest, _user: dict =
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
                 temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
             ),
         )
         raw = resp.text.strip()
@@ -8567,7 +8568,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         config=genai_types.GenerateContentConfig(
                             response_mime_type="application/json",
                             temperature=0.1,
-                            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                            thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
                         ),
                     )
                     raw1 = resp1.text.strip()
@@ -8597,7 +8598,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             config=genai_types.GenerateContentConfig(
                                 response_mime_type="application/json",
                                 temperature=0.1,
-                                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
                             ),
                         )
                         raw2 = resp2.text.strip()

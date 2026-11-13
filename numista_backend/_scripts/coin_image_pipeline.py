@@ -228,22 +228,29 @@ def make_coin_image_prompt(coin: dict) -> str:
     return prompt
 
 
-def generate_coin_image(client, coin: dict) -> bytes | None:
-    """Generate an AI coin image using Imagen. Returns PNG bytes or None."""
+def generate_coin_image(client, coin: dict, db=None) -> bytes | None:
+    """Generate an AI coin image via image_model_router (Nano Banana Pro first 100/mo, then Nano Banana 2)."""
+    from services.image_model_router import execute_with_image_routing
+
     prompt = make_coin_image_prompt(coin)
     try:
-        result = client.models.generate_images(
-            model='imagen-3.0-generate-002',
-            prompt=prompt,
-            config=genai_types.GenerateImagesConfig(
-                number_of_images=1,
-                aspect_ratio="1:1",
-                safety_filter_level="block_few",
-                person_generation="dont_allow",
+        def _call(model_id: str):
+            return client.models.generate_content(
+                model=model_id,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    response_modalities=["IMAGE"],
+                ),
             )
-        )
-        if result.generated_images:
-            return result.generated_images[0].image.image_bytes
+
+        result, used_model = execute_with_image_routing(db, _call)
+        candidates = getattr(result, "candidates", None) or []
+        for cand in candidates:
+            parts = getattr(getattr(cand, "content", None), "parts", None) or []
+            for part in parts:
+                inline = getattr(part, "inline_data", None)
+                if inline and getattr(inline, "data", None):
+                    return inline.data
         return None
     except Exception as e:
         print(f"      [AI] Generation failed: {e}")
@@ -365,7 +372,7 @@ def main():
                     method = "ai_cached"
                 else:
                     print(f"    ? Generating AI image...")
-                    img_bytes = generate_coin_image(genai_client, coin)
+                    img_bytes = generate_coin_image(genai_client, coin, db=db)
                     if img_bytes:
                         gcs_url = upload_bytes_to_gcs(
                             gcs_client, img_bytes, GCS_BUCKET, blob_path

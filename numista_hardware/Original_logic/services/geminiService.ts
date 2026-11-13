@@ -32,7 +32,7 @@ export const estimateCoinValue = async (coin: Coin): Promise<ValuationResult> =>
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-4-hydrogen',
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -100,7 +100,7 @@ export const processImportedData = async (rawData: any[], onProgress?: (current:
     
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-4-hydrogen',
         contents: prompt,
         config: { 
           responseMimeType: "application/json",
@@ -174,7 +174,7 @@ export const generateCoinAnalysis = async (coin: Coin): Promise<{ text: string }
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-4-argon',
       contents: prompt,
       config: {
         thinkingConfig: { thinkingBudget: 4000 }
@@ -196,7 +196,7 @@ export const findMissingCoinsForSet = async (setName: string, selectedCoins: Coi
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-4-hydrogen',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -221,7 +221,7 @@ export const getCollectionInsights = async (coins: Coin[], query: string): Promi
   
   try {
     const response = await ai.models.generateContent({ 
-        model: 'gemini-3-flash-preview', 
+        model: 'gemini-4-hydrogen', 
         contents: prompt,
         config: { thinkingConfig: { thinkingBudget: 0 } }
     });

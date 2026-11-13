@@ -181,14 +181,17 @@ limiter = Limiter(
 )
 
 # ── Model config ───────────────────────────────────────────────────────────────────
-# Per official deprecation schedule August 14, 2026:
-#   gemini-3.8-flash  Released September 2, 2026. NO shutdown announced.
-#                     Primary workhorse model for document/checklist parsing.
-#                     Requires location='global' on Vertex AI.
+# Per official deprecation schedule November 13, 2026:
+#   gemini-4-hydrogen  Released November 12, 2026. NO shutdown announced.
+#                      Primary workhorse model for document/checklist parsing.
+#                      Requires location='global' on Vertex AI.
+#   gemini-4-argon     Released October 13, 2026. NO shutdown announced.
+#                      High-reasoning model for estate reports.
 PROJECT_ID = os.environ.get("GCP_PROJECT", "studio-9101802118-8c9a8")
 LOCATION   = os.environ.get("GCP_REGION",  "global")
 # MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
-MODEL      = "gemini-3.8-flash"
+MODEL      = os.getenv("GEMINI_FLASH_MODEL", "gemini-4-hydrogen")
+PRO_MODEL  = os.getenv("GEMINI_PRO_MODEL",   "gemini-4-argon")
 
 client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
 db     = firestore.Client(project=PROJECT_ID)
@@ -569,7 +572,7 @@ def generate_estate_report():
         result = asyncio.run(_generate(
             db=db,
             client=client,
-            model=MODEL,
+            model=PRO_MODEL,
             uid=uid,
             report_request=report_request,
         ))

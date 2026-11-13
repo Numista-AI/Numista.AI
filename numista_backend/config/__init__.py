@@ -21,10 +21,13 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 # Gemini Model Configuration
 # Centralized here so main.py and all routes import from one place.
 # Defaults match the model IDs documented in main.py — Cloud Run env vars take precedence.
-GEMINI_FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.8-flash")          # Primary workhorse
-GEMINI_PRO_MODEL   = os.getenv("GEMINI_PRO_MODEL",   "gemini-3.1-pro-preview")    # High-reasoning tasks
-GEMINI_LITE_MODEL  = os.getenv("GEMINI_LITE_MODEL",  "gemini-3.5-flash-lite")     # Lightweight/fast tasks
-GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")    # Image generation
+GEMINI_FLASH_MODEL           = os.getenv("GEMINI_FLASH_MODEL", "gemini-4-hydrogen")          # Primary workhorse (interactive vision, chat, OCR)
+GEMINI_PRO_MODEL             = os.getenv("GEMINI_PRO_MODEL",   "gemini-4-argon")             # High-reasoning tasks (invoices, estate, grading)
+GEMINI_LITE_MODEL            = os.getenv("GEMINI_LITE_MODEL",  "gemini-3.5-flash-lite")      # Lightweight/fast fallback tasks
+GEMINI_IMAGE_MODEL           = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")     # Nano Banana 2 (overflow/default image gen)
+GEMINI_IMAGE_PRO_MODEL       = os.getenv("GEMINI_IMAGE_PRO_MODEL", "gemini-3-pro-image")     # Nano Banana Pro (first 100/mo for typography)
+GEMINI_IMAGE_PRO_MONTHLY_CAP = int(os.getenv("GEMINI_IMAGE_PRO_MONTHLY_CAP", "100"))         # Monthly Pro image generation cap
+GEMINI_EMBEDDING_MODEL       = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2")     # Vector embeddings / RAG
 
 # Route-level model aliases (used by scan_routes.py and ai_routes.py)
 # These allow per-route overrides via env vars while defaulting to the core models above.

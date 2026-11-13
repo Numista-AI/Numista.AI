@@ -61,7 +61,7 @@ export const verifyNgcCert = async (certNumber: string, grade: string): Promise<
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-4-hydrogen',
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],

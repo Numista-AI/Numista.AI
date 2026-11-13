@@ -86,7 +86,7 @@ async def run_estate_report_test():
         result = await generate_estate_report(
             db=db,
             client=None,
-            model="gemini-3.8-flash",
+            model="gemini-4-argon",
             uid=TEST_EMAIL,
             report_request=report_request
         )

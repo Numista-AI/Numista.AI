@@ -62,7 +62,7 @@ PROMPT = (
 try:
     # Try with JSON mode
     response = client.models.generate_content(
-        model="gemini-3.5-flash",
+        model="gemini-4-hydrogen",
         contents=PROMPT,
         config=genai_types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -76,7 +76,7 @@ except Exception as e:
     print(f"JSON mode failed: {e}")
     # Fall back to text mode
     response = client.models.generate_content(
-        model="gemini-3.5-flash",
+        model="gemini-4-hydrogen",
         contents=PROMPT,
         config=genai_types.GenerateContentConfig(
             temperature=0.0,

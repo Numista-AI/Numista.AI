@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
+import '../config/ai_config.dart';
 import '../utils/numista_error_helper.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -305,8 +306,11 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
 
     try {
       final model = FirebaseAI.googleAI().generativeModel(
-        model: 'gemini-3.8-flash',
-        generationConfig: GenerationConfig(temperature: 0.7),
+        model: AiConfig.flashModel,
+        generationConfig: GenerationConfig(
+          temperature: 0.7,
+          thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.medium),
+        ),
       );
 
       // Build multimodal parts list — attach coin photos if available for true visual appraisal

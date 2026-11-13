@@ -21,7 +21,7 @@ from google.genai import types as genai_types
 PROJECT_ID  = "studio-9101802118-8c9a8"
 LOCATION    = "global"
 # MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
-MODEL       = "gemini-3.5-flash"
+MODEL       = "gemini-4-hydrogen"
 MASTER_JSON = pathlib.Path(__file__).parent / "master_coin_programs.json"
 
 SYSTEM_PROMPT = """\

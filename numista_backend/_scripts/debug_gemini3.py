@@ -9,7 +9,7 @@ from google.cloud import documentai_v1beta3 as documentai
 import google.auth, json
 
 creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-client = genai.Client(vertexai=True, project="studio-9101802118-8c9a8", location="us-central1", credentials=creds)
+client = genai.Client(vertexai=True, project="studio-9101802118-8c9a8", location="global", credentials=creds)
 
 doc_service = documentai.DocumentServiceClient(
     credentials=creds,
@@ -51,7 +51,7 @@ PROMPT = (
 )
 
 response = client.models.generate_content(
-    model="gemini-3.5-flash",
+    model="gemini-4-hydrogen",
     contents=PROMPT,
     config=genai_types.GenerateContentConfig(
         response_mime_type="application/json", temperature=0.0, max_output_tokens=8192),
