@@ -8919,6 +8919,18 @@ def checklist_add_coins(req: ChecklistAddRequest, _user: dict = Depends(get_curr
         # normalise to "" — slot_resolver EU gate requires mintMark=='W'||mintMark.isEmpty.
         strike_fields = _derive_strike_fields(slot.variety_id)
         normalized_mint = "" if slot.mint_mark == "EU" else slot.mint_mark
+        try:
+            from services.mint_helpers import resolve_two_field_mint
+        except ImportError:
+            from numista_backend.services.mint_helpers import resolve_two_field_mint
+        mint_facility, resolved_mm, _ = resolve_two_field_mint(
+            raw_mint_mark=normalized_mint,
+            year=str(slot.year or ""),
+            series=str(req.program_name or ""),
+            denomination=str(slot.denomination or ""),
+            variety=str(strike_fields.get('Variety', '') or ""),
+            strike_type=str(strike_fields.get('Strike Type', '') or ""),
+        )
 
         batch.set(doc_ref, {
             # Identity fields — program_id is mandatory on all new checklist writes
@@ -8928,7 +8940,9 @@ def checklist_add_coins(req: ChecklistAddRequest, _user: dict = Depends(get_curr
             # Slot fields
             'Theme/Subject':  slot.coin_name,
             'Year':           slot.year,
-            'Mint Mark':      normalized_mint,          # "EU" normalised to "" (MF1-B)
+            'mint':           mint_facility,
+            'mint_mark':      resolved_mm,
+            'Mint Mark':      resolved_mm,              # transitional dual-write; removed in Phase 7
             'Denomination':   slot.denomination,
             'variety_id':     slot.variety_id,          # persisted for future audit/migration
 

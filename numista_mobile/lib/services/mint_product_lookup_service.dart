@@ -93,7 +93,9 @@ class MintProductLookupService {
     // 2. Composite fallback join: all four keys required on BOTH sides.
     final targetYear = int.tryParse(coin.year.replaceAll(RegExp(r'\.0$'), ''));
     final rawMint = coin.mintMark.trim().toUpperCase();
-    final targetFacility = rawMint.isEmpty ? 'Philadelphia' : _mintMarkToFacility(rawMint);
+    final targetFacility = coin.mint.trim().isNotEmpty
+        ? coin.mint.trim()
+        : (rawMint.isEmpty ? 'Philadelphia' : _mintMarkToFacility(rawMint));
     final targetDenom = _normalizeDenom(coin.denomination);
     final targetSeries = coin.programSeries.trim().toLowerCase();
     if (targetYear == null || targetFacility.isEmpty || targetDenom.isEmpty || targetSeries.isEmpty) {

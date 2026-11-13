@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import '../models/program_model.dart';
+import 'mint_helpers.dart';
 
 /// Representation of matching collection items for a specific program slot & variety.
 class SlotMatchResult {
@@ -196,7 +197,10 @@ class SlotResolver {
       _field(item, ['Variety', 'variety', 'Theme/Subject', 'theme_subject']);
 
   static String _mintMark(Map<String, dynamic> item) =>
-      _field(item, ['Mint Mark', 'mint_mark', 'Mint', 'mint']);
+      MintHelpers.readMintMark(item);
+
+  static String _mintFacility(Map<String, dynamic> item) =>
+      MintHelpers.readMintFacility(item);
 
   // ─── G3b fast-path subject helpers ─────────────────────────────────────────
 
@@ -680,8 +684,9 @@ class SlotResolver {
 
   /// Resolves which specific variety/mint column an item belongs to.
   static bool matchesVariety(Map<String, dynamic> item, ChecklistVariety variety) {
-    final mintMark   = _mintMark(item);
-    final strikeType = _strikeType(item);
+    final mintMark     = _mintMark(item);
+    final mintFacility = _mintFacility(item).toUpperCase();
+    final strikeType   = _strikeType(item);
     final varField   = _variety(item);
     final metal      = _metalContent(item);
     final vId        = variety.id.toUpperCase();
@@ -740,7 +745,10 @@ class SlotResolver {
     // ── Reverse Proof — mint-specific ────────────────────────────────────────
     // P-REVERSE-PROOF: Philadelphia RP (Morgan 26XF, Peace 26XL)
     if (vId == 'P-REVERSE-PROOF') {
-      return (mintMark == 'P' || mintMark.isEmpty) && isReverseProof;
+      return (mintMark == 'P' ||
+              (mintMark.isEmpty &&
+                  (mintFacility.isEmpty || mintFacility == 'PHILADELPHIA'))) &&
+          isReverseProof;
     }
     // S-REVERSE-PROOF: San Francisco RP (Innovation dollars)
     if (vId == 'S-REVERSE-PROOF') {
@@ -758,7 +766,10 @@ class SlotResolver {
     // ── Enhanced Uncirculated — mint-specific ─────────────────────────────────
     // EU: struck at West Point; coin may bear no mint mark (Morgan/Peace 2026 26XE/26XH)
     if (vId == 'EU') {
-      return isEnhancedUnc && (mintMark == 'W' || mintMark.isEmpty);
+      return isEnhancedUnc &&
+          (mintMark == 'W' ||
+              (mintMark.isEmpty &&
+                  (mintFacility.isEmpty || mintFacility == 'WEST POINT')));
     }
     // W-EU: Enhanced Unc, West Point marked (ASE 26EG, AGE 26EH)
     if (vId == 'W-EU') {
@@ -775,7 +786,11 @@ class SlotResolver {
     if (vId == 'P-PROOF-CONG') {
       final title = _field(item, ['Title', 'title', 'official_us_mint_title']);
       final isCongrats = varField.contains('CONGRATUL') || title.contains('CONGRATUL');
-      return (mintMark == 'P' || mintMark.isEmpty) && isProof && isCongrats;
+      return (mintMark == 'P' ||
+              (mintMark.isEmpty &&
+                  (mintFacility.isEmpty || mintFacility == 'PHILADELPHIA'))) &&
+          isProof &&
+          isCongrats;
     }
 
     // ── S-SILVER (1976-S 40% silver BU only — NOT proof) ─────────────────────
@@ -795,15 +810,20 @@ class SlotResolver {
 
     // ── Philadelphia Proof (1936-1942, 1950-1964) — id: 'PROOF' ──────────────
     if (vId == 'PROOF') {
-      final isPhillyOrUnmarked = mintMark.isEmpty || mintMark == 'NONE' ||
-                                  mintMark == 'P'  || mintMark == 'PHILADELPHIA';
+      final isPhillyOrUnmarked = mintMark == 'P' ||
+          (mintMark.isEmpty &&
+              (mintFacility.isEmpty || mintFacility == 'PHILADELPHIA'));
       return isProof && isPhillyOrUnmarked && !isSMS;
     }
 
     // ── P-PROOF: Philadelphia Proof (Morgan 1895-P, proof-only dated coins) ───
     // isReverseProof guard prevents P-REVERSE-PROOF coins landing here.
     if (vId == 'P-PROOF') {
-      return (mintMark == 'P' || mintMark.isEmpty) && isProof && !isReverseProof;
+      return (mintMark == 'P' ||
+              (mintMark.isEmpty &&
+                  (mintFacility.isEmpty || mintFacility == 'PHILADELPHIA'))) &&
+          isProof &&
+          !isReverseProof;
     }
 
     // ── Generic mint+PROOF (W-PROOF: ASE 26EA, AGE 26EB, Buffalo 26EL) ───────
@@ -826,7 +846,8 @@ class SlotResolver {
     final baseMint = vId.split('-').first;
     if (mintMark == baseMint && !isProof && !isSMS && !isEnhancedUnc) return true;
     if (baseMint == 'P' &&
-        (mintMark.isEmpty || mintMark == 'NONE' || mintMark == 'PHILADELPHIA') &&
+        (mintMark.isEmpty &&
+            (mintFacility.isEmpty || mintFacility == 'PHILADELPHIA')) &&
         !isProof && !isSMS && !isEnhancedUnc) { return true; }
 
     // ── Annual uncirculated set — D-UNC blank-mint guard ─────────────────────

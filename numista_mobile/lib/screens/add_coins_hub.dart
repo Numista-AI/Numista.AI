@@ -14,6 +14,7 @@ import '../widgets/add_coin_manual_form.dart';
 import '../widgets/extraction_success_dialog.dart';
 import '../services/wishlist_service.dart';
 import '../models/coin_model.dart';
+import '../utils/mint_helpers.dart';
 import '../services/pcgs_import_service.dart';
 import '../services/backup_export_service.dart';
 import '../services/beta_checklist_service.dart';
@@ -6202,21 +6203,32 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     final messenger = ScaffoldMessenger.of(context);
                     int count = 0;
                     for (final r in rawRows) {
+                      final csvYear = getValue(r, selectedYearHeader);
+                      final csvMintRaw = getValue(r, selectedMintHeader);
+                      final csvDenom = getValue(r, selectedDenomHeader);
+                      final csvVariety = getValue(r, selectedVarietyHeader);
+                      final resolvedMint = MintHelpers.resolveTwoFieldMint(
+                        rawMintMark: csvMintRaw,
+                        year: csvYear,
+                        denomination: csvDenom,
+                        variety: csvVariety,
+                      );
                       final itemData = {
                         // PascalCase keys matching _F.* UI constants
-                        'Year': getValue(r, selectedYearHeader),
-                        'Mint Mark': getValue(r, selectedMintHeader),
-                        'Denomination': getValue(r, selectedDenomHeader),
+                        'Year': csvYear,
+                        'mint': resolvedMint.mint,
+                        'mint_mark': resolvedMint.mintMark,
+                        'Mint Mark': resolvedMint.mintMark,
+                        'Denomination': csvDenom,
                         'Condition': getValue(r, selectedGradeHeader),
                         'Cost': getValue(r, selectedCostHeader),
-                        'Variety': getValue(r, selectedVarietyHeader),
+                        'Variety': csvVariety,
                         'Retailer/Website': getValue(r, selectedRetailerHeader),
                         'Retailer Invoice #': getValue(r, selectedInvoiceHeader),
                         'Personal Notes': getValue(r, selectedNotesHeader),
                         // Legacy lowercase keys for backward compat
-                        'year': getValue(r, selectedYearHeader),
-                        'mint_mark': getValue(r, selectedMintHeader),
-                        'denomination': getValue(r, selectedDenomHeader),
+                        'year': csvYear,
+                        'denomination': csvDenom,
                         'condition': getValue(r, selectedGradeHeader),
                         'cost_basis': getValue(r, selectedCostHeader),
                         'variety': getValue(r, selectedVarietyHeader),

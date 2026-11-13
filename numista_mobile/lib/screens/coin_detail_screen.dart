@@ -16,6 +16,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../utils/mint_helpers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import '../utils/numista_error_helper.dart';
@@ -363,9 +364,10 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
   String _buildAiPrompt() {
     final c = _coin;
     final denom = _fmtDenomination(c.denomination);
+    final displayMint = MintHelpers.formatMintMarkForDisplay(c.mint, c.mintMark, compact: true);
     final coinId = [
       if (c.year.isNotEmpty) c.year.replaceAll(RegExp(r'\.0$'), ''),
-      if (c.mintMark.isNotEmpty) '(${c.mintMark})',
+      if (displayMint.isNotEmpty) '($displayMint)',
       if (denom.isNotEmpty) denom,
       if (c.programSeries.isNotEmpty) c.programSeries,
     ].join(' ');
@@ -487,6 +489,23 @@ Write in an engaging, authoritative style like a respected numismatic reference.
         yearMintSplit = true;
       }
     }
+
+    // ── Two-field mint sync (mint + mint_mark + transitional 'Mint Mark') ─────
+    final resolvedMint = MintHelpers.resolveTwoFieldMint(
+      rawMintMark: (updates['Mint Mark'] as String? ?? _coin.mintMark),
+      rawMint: _coin.mint,
+      year: (updates['Year'] as String? ?? _coin.year),
+      series: (updates['Program/Series'] as String? ?? _coin.programSeries),
+      denomination: (updates['Denomination'] as String? ?? _coin.denomination),
+      country: _coin.country,
+      variety: (updates['Variety'] as String? ?? _coin.variety),
+      strikeType: (updates['Strike Type'] as String? ?? _coin.strikeType),
+      metalContent: (updates['Metal Content'] as String? ?? _coin.metalContent),
+      retailerItemNo: _coin.retailerItemNo,
+    );
+    updates['mint'] = resolvedMint.mint;
+    updates['mint_mark'] = resolvedMint.mintMark;
+    updates['Mint Mark'] = resolvedMint.mintMark;
 
     try {
       await FirebaseFirestore.instance
@@ -1537,7 +1556,8 @@ class DetailsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final fields = <(String, String, bool)>[
       ('Year', coin.year.replaceAll(RegExp(r'\.0$'), ''), false),
-      ('Mint Mark', coin.mintMark, false),
+      if (coin.mint.isNotEmpty) ('Mint Facility', coin.mint, false),
+      ('Mint Mark', MintHelpers.formatMintMarkForDisplay(coin.mint, coin.mintMark), false),
       ('Denomination', _fmtDenomination(coin.denomination), false),
       ('Program / Series', coin.programSeries.isEmpty ? (coin.country.isNotEmpty && coin.country != 'United States' ? 'Standard Circulation' : '') : coin.programSeries, false),
       ('Theme / Subject', coin.themeSubject, false),

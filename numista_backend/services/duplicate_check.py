@@ -10,6 +10,11 @@ Never drops or deletes coins; flags them with possible_duplicate: True.
 import logging
 from typing import Any, Dict, List, Optional
 
+try:
+    from services.mint_helpers import read_mint_mark
+except ImportError:
+    from numista_backend.services.mint_helpers import read_mint_mark
+
 logger = logging.getLogger("numista_backend.duplicate_check")
 
 
@@ -40,7 +45,7 @@ def check_and_flag_duplicate(
     denom_variants = [x for x in denom_variants if not (x in seen or seen.add(x))]
 
     year_val = str(coin_dict.get("Year") or coin_dict.get("year") or "").strip()
-    mint_val = str(coin_dict.get("Mint Mark") or coin_dict.get("mint_mark") or "").strip()
+    mint_val = read_mint_mark(coin_dict)
 
     if not year_val or not denom_variants:
         return False
