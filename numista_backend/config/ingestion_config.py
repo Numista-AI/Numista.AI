@@ -7,7 +7,7 @@ Numista.AI System of Record
 CLASSIFIER_MODEL = "gemini-4-hydrogen"
 EXTRACTION_MODEL = "gemini-4-argon"
 FALLBACK_FLASH_MODEL = "gemini-4-hydrogen"
-FALLBACK_PRO_MODEL = "gemini-3.1-pro-preview"
+FALLBACK_PRO_MODEL = "gemini-4-hydrogen"
 
 # Prompt and Processing Versions
 CHECKLIST_PROMPT_VERSION = "checklist_v7_20260815"
