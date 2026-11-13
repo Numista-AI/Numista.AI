@@ -54,9 +54,9 @@
 
 ## 1. Executive Summary & Itemized Must-Fix Closeout Table (Preserved 95/100 PASS + Optional `parseFaceValue` Test)
 
-Plan v2.0 preserves every item marked **Closed** in `COS_SCORE_NET-817_CARDS_IMAGES_v1.9_20261107.md` (`MF-B1'`, `MF-B2'`, `MF-B3'`, `MF-C1`, `MF-C2'`, `MF-C3'`, `MF-C4`, `MF-C5'`, `MF-C6'`, `MF-C7`) and adds the optional standalone `MeltValueService.parseFaceValue` unit test in §6.1:
+Plan v2.3 preserves every item marked **Closed** in `COS_SCORE_NET-817_CARDS_IMAGES_v1.9_20261107.md` (`MF-B1'`, `MF-B2'`, `MF-B3'`, `MF-C1`, `MF-C2'`, `MF-C3'`, `MF-C4`, `MF-C5'`, `MF-C6'`, `MF-C7`) and adds the optional standalone `MeltValueService.parseFaceValue` unit test in §6.1:
 
-| Must-Fix # | Must-Fix Description | Plan v2.0 Resolution & Verbatim Grounding at `4d17ca5e` | Plan Section |
+| Must-Fix # | Must-Fix Description | Plan v2.3 Resolution & Verbatim Grounding at `4d17ca5e` | Plan Section |
 | :--- | :--- | :--- | :--- |
 | **MF-B1'** | **Resolve Orphaned Kaggle/Google Inspector Deletions & Correct Verbatim Quotes (CLOSED — Preserved):** Do not point at parked NET-816 v1.11 as active owner. Fix stale quotes for `:3531–3548`, `:4387–4406`, and `:4408–4426`. | **Explicit Re-Homing / Self-Contained Gate:** Records that NET-816 v1.11 is **PARKED** and Catalog Chunk 1 (`9bbe20e4`) is scoped strictly to 2 catalog items (`catalog_service.dart` / `catalog_browse_screen.dart`), NOT `my_collection_screen.dart`. Therefore: (a) NET-817's card/image changes (`:3017–3023`, `:3167–3192`, `:6356–6479`) are **100% independent** of the inspector/Google-button lines and do not touch them by default; AND (b) if CoS explicitly assigns the orphaned inspector/Google-button removal to NET-817 at execution gate, §2.A provides a verified span list (v2.1: NOT a diff; see §0 MF-SAG-C5) (`:150–151`, `:3454`, `:3531–3548`, `:3820`, `:4387–4406`, `:5252–5278`, `:5549–5684`). All quotes are corrected verbatim from `git show 4d17ca5e:numista_mobile/lib/screens/my_collection_screen.dart` (`OutlinedButton.icon` + `void _onSearchGoogle(Map<String, dynamic> data) async` + `void _onSearchEbay(Map<String, dynamic> data) async` calling `EpnService.generateSearchUrl(coin, soldOnly: true)`). | §2.A, §4.B |
 | **MF-B2'** | **Pin Code Commit (`4d17ca5e`), Not Docs HEAD (`ebf1eed8`), & Honest DTG (CLOSED — Preserved):** Pre-flight must check `git diff --quiet 4d17ca5e HEAD -- numista_mobile/` and stamp real wall-clock filing time. | Pre-flight gate (§4.A) pins `4d17ca5e` via `git diff --quiet 4d17ca5e HEAD -- numista_mobile/` so docs-only commits on `p7-v8.9` never invalidate the code baseline while any unexpected code drift aborts immediately. DTG stamped from observed wall-clock (`2026-11-07 16:33 ET`). | Header, §4.A |
@@ -163,7 +163,7 @@ Verifying `git show 4d17ca5e:numista_mobile/lib/screens/my_collection_screen.dar
 
 **Resolution of Ownership (`MF-B1'`):**
 - NET-816 v1.11 is **PARKED**, and Catalog Chunk 1 (`9bbe20e4`) is scoped strictly to 2 catalog items (`catalog_service.dart` and `catalog_browse_screen.dart`), NOT `my_collection_screen.dart`.
-- **Default Execution Scope for NET-817:** Neither `FAILFIX_PLAN_NET-780b_CARDS_v2.0.md` nor `FAILFIX_PLAN_NET-780c_IMAGES_v2.0.md` depends on deleting lines `150–151`, `3454`, `3531–3548`, `3820`, `4387–4406`, `5252–5278`, or `5549–5684`. Those inspector/Google-button deletions are **recorded as out-of-scope for NET-817 and awaiting CoS re-homing to a dedicated inspector/cleanup chunk**.
+- **Default Execution Scope for NET-817:** Neither `FAILFIX_PLAN_NET-780b_CARDS_v2.3.md` nor `FAILFIX_PLAN_NET-780c_IMAGES_v2.3.md` depends on deleting lines `150–151`, `3454`, `3531–3548`, `3820`, `4387–4406`, `5252–5278`, or `5549–5684`. Those inspector/Google-button deletions are **recorded as out-of-scope for NET-817 and awaiting CoS re-homing to a dedicated inspector/cleanup chunk**.
 - **Optional Self-Contained Deletion Gate:** If CoS/Eric explicitly directs NET-817 to execute the inspector/Google-button removal as part of the Cards commit (Step 1), all 7 spans (`:150–151`, `:3454`, `:3531–3548`, `:3820`, `:4387–4406`, `:5252–5278`, `:5549–5684`) are deleted atomically in a single commit in NET-780b while strictly preserving `_onSearchEbay` at `:4408–4426`.
 
 ---
@@ -407,8 +407,10 @@ class CollectionCardValuationRow extends StatelessWidget {
   static double _parseNumber(dynamic val) {
     if (val == null) return 0.0;
     if (val is num) return val.toDouble();
-    final clean = val.toString().replaceAll(RegExp(r'[^\d.]'), '');
-    return double.tryParse(clean) ?? 0.0;
+    final s = val.toString().trim();
+    final m = RegExp(r'^\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?)$').firstMatch(s);
+    if (m == null) return 0.0;
+    return double.tryParse(m.group(1)!.replaceAll(',', '')) ?? 0.0;
   }
 
   /// Reads AI value across the canonical Firestore key `'AI Estimated Value'` (`_F.aiValue` at `:72`)
@@ -442,8 +444,11 @@ class CollectionCardValuationRow extends StatelessWidget {
   };
 
   static const Set<String> _usDenoms = {
-    'quarter dollar', 'quarter', 'dime', 'one cent', 'cent', 'penny',
-    'lincoln cent', 'jefferson nickel', 'half dollar', 'dollar',
+    'quarter dollar', 'quarter', 'dime', 'half dime', 'five cents', 'nickel',
+    'three cent nickel', 'three cent silver', 'three cents', 'two cents',
+    'half cent', 'one cent', 'cent', 'penny', '1c', '1¢', '5c', '5¢',
+    '10c', '10¢', '25c', '25¢', '50c', '50¢', 'lincoln cent',
+    'jefferson nickel', 'half dollar', 'dollar',
     'five dollars (half eagle)', 'half eagle', 'eagle', 'double eagle',
   };
 
@@ -456,10 +461,15 @@ class CollectionCardValuationRow extends StatelessWidget {
     if (_usAllowList.contains(countryClean)) return true;
     if (countryClean.isEmpty || countryClean == 'none') {
       final denomClean = (data['Denomination'] ?? data['denomination'] ?? '').toString().toLowerCase().trim();
+      if (denomClean.contains('centime') ||
+          denomClean.contains('centavo') ||
+          denomClean.contains('centesim') ||
+          denomClean.contains('euro')) {
+        return false;
+      }
       final isUSDenom = _usDenoms.contains(denomClean) ||
           denomClean.contains('quarter') ||
-          denomClean.contains('dime') ||
-          denomClean.contains('cent');
+          denomClean.contains('dime');
       return isUSDenom || denomClean.isEmpty;
     }
     return false;
@@ -640,7 +650,7 @@ import '../widgets/collection_card_valuation_row.dart';
 ====
             : (themeStartsYear ? label : '$yearMint $label').trim();
 
-        // Valuation precedence and pending chip encapsulated in CollectionCardValuationRow (NET-780b v2.0)
+        // Valuation precedence and pending chip encapsulated in CollectionCardValuationRow (NET-780b v2.3)
 >>>>
 ```
 ```dart
@@ -768,7 +778,7 @@ Before executing any file modifications on branch `p7-v8.9` (only after CoS $\ge
 BR=$(git rev-parse --abbrev-ref HEAD)
 [ "$BR" = "p7-v8.9" ] || { echo "ABORT: HEAD is '$BR', not p7-v8.9"; exit 1; }
 git diff --quiet && git diff --cached --quiet || { echo "ABORT: dirty tree"; exit 1; }
-[ "$(git rev-parse origin/main)" = "9f04550a" ] || echo "WARN: check origin/main pin"
+[ "$(git rev-parse --short=8 origin/main)" = "9f04550a" ] || { echo "ABORT: origin/main drifted from 9f04550a"; exit 1; }
 git diff --quiet 4d17ca5e HEAD -- numista_mobile/
 ```
 - `origin/main` remains strictly locked at `9f04550a`. Stripe remains locked OFF.
@@ -1042,9 +1052,14 @@ void main() {
       expect(find.text('\$about twelve'), findsOneWidget);
     });
 
-    testWidgets('Case 8 (v2.3 MF-3): Non-US row with "cent" denomination never renders USD face value', (tester) async {
+    testWidgets('Case 8 (v2.3 MF-3): Non-US row with "cent" or blank-country "Centimes" never renders USD face value', (tester) async {
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: CollectionCardValuationRow(
         data: {'Country': 'Canada', 'Denomination': '1 Cent', 'cpgRetail': 0.0}))));
+      expect(find.text('\$0.01'), findsNothing);
+      expect(find.text('—'), findsOneWidget);
+
+      await tester.pumpWidget(MaterialApp(home: Scaffold(body: CollectionCardValuationRow(
+        data: {'Denomination': '50 Centimes', 'cpgRetail': 0.0}))));
       expect(find.text('\$0.01'), findsNothing);
       expect(find.text('—'), findsOneWidget);
     });
@@ -1106,13 +1121,25 @@ void main() {
     });
 
     test('MF-C5\': Denomination regex constructs without FormatException and rejects tokens reaching the new regex', () {
-      // Explicit RegExp constructor check (ECMAScript lookbehind in Dart VM & JS)
-      final centRe = RegExp(r'(?:^|\b)(?:1\s*cents?|1c|1¢(?!\w)|one\s+cent|(?<![\d.])cent|penny)\b', caseSensitive: false);
-      final nickelRe = RegExp(r'(?:^|\b)(?:5\s*cents?|5c|5¢(?!\w)|five\s+cents?|(?<![\d.])nickel)\b', caseSensitive: false);
+      // Explicit RegExp constructor check matching §3.C production patterns byte-for-byte
+      final centRe = RegExp(
+        r'(?<![\d.])(?:1c|1¢|1 cents?|one cent|penny)(?!\w)|(?:^|(?<![\d.])\s+)\bcent\b',
+        caseSensitive: false,
+      );
+      final nickelRe = RegExp(
+        r'(?<![\d.])(?:5c|5¢|5 cents?|five cents?|nickel)(?!\w)',
+        caseSensitive: false,
+      );
       expect(centRe.hasMatch('1 cent'), isTrue);
+      expect(centRe.hasMatch('1¢'), isTrue);
+      expect(centRe.hasMatch('cent'), isTrue);
       expect(nickelRe.hasMatch('5 cents'), isTrue);
+      expect(nickelRe.hasMatch('5¢'), isTrue);
       expect(centRe.hasMatch('15¢'), isFalse);
       expect(centRe.hasMatch('15 cent'), isFalse);
+      expect(centRe.hasMatch('2.5 cent'), isFalse);
+      expect(nickelRe.hasMatch('15¢'), isFalse);
+      expect(nickelRe.hasMatch('25 cents'), isFalse);
 
       // Note: '25c' and '50c' are caught by earlier isQuarter/isHalf branches; '15¢', '15 cent', '35 cent', '100 cent' reach the new regex.
       for (final nonCentOrNickel in const ['15¢', '15 cent', '35 cent', '100 cent', '25 cent', '25c', '50 cent', '50c']) {
@@ -1139,4 +1166,4 @@ void main() {
 ## 7. Delivery & Sign-Off Requirements
 - **Verification Command (Post-Approval Execution Only):**
   `flutter test test/widgets/my_collection_card_pricing_test.dart test/services/canonical_mint_asset_service_v2_0_test.dart test/services/canonical_mint_asset_service_test.dart`
-- **Review Gate:** Requires independent score $\ge 95$ from Grok Bot CoS and Stand Alone Grok (SAG, grok-4.7) on **both** `FAILFIX_PLAN_NET-780b_CARDS_v2.0.md` and `FAILFIX_PLAN_NET-780c_IMAGES_v2.0.md` prior to Founder Eric's typed YES.
+- **Review Gate:** Requires independent score $\ge 95$ from Grok Bot CoS and Stand Alone Grok (SAG, grok-4.7) on **both** `FAILFIX_PLAN_NET-780b_CARDS_v2.3.md` and `FAILFIX_PLAN_NET-780c_IMAGES_v2.3.md` prior to Founder Eric's typed YES.

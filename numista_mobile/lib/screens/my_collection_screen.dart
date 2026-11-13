@@ -42,6 +42,7 @@ import '../services/set_grouping_service.dart';
 import '../models/collection_row.dart';
 import '../constants.dart';
 import '../constants/denomination_canon.dart';
+import '../widgets/collection_card_valuation_row.dart';
 
 // --- Field name constants -----------------------------------------------------
 class _F {
@@ -3013,14 +3014,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final displayTitle = crw.isVirtualChild
             ? '\u21b3 ${themeStartsYear ? label : '$yearMint $label'}'.trim()
             : (themeStartsYear ? label : '$yearMint $label').trim();
-        
-        final valCpg = _parseNumber(m['cpgRetail']);
-        final finalVal = valCpg;
-        
-        final fmt = intl.NumberFormat.currency(symbol: '\$');
-        final valueText = finalVal > 0 
-            ? fmt.format(finalVal) 
-            : (m[_F.aiValue]?.toString() ?? '—');
+
+        // Valuation precedence and pending chip encapsulated in CollectionCardValuationRow (NET-780b v2.3)
 
         // For virtual children, selection targets parent doc
         final effectiveId = crw.isVirtualChild ? (crw.parentDocId ?? crw.id) : crw.id;
@@ -3164,31 +3159,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     style: TextStyle(fontSize: 11, color: _subtext),
                   ),
                   const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (valueText == '—' || m['enrichment_status'] == 'pending')
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFC9A227).withAlpha(25),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: const Color(0xFFC9A227).withAlpha(120)),
-                          ),
-                          child: const Text('Valuation Pending', style: TextStyle(fontSize: 10, color: Color(0xFFC9A227), fontWeight: FontWeight.bold)),
-                        )
-                      else
-                        Text(
-                          valueText,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFC9A227),
-                          ),
-                        ),
-                      if (condition.isNotEmpty)
-                        GradeBadgeWidget(gradeCode: condition),
-                    ],
+                  CollectionCardValuationRow(
+                    data: m,
+                    condition: condition,
                   ),
                 ],
               ),

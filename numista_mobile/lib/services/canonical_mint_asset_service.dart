@@ -75,6 +75,54 @@ class CanonicalMintAssetService {
     return m != null ? m.group(1)! : s;
   }
 
+  /// MF-C7: Extracts normalized 4-digit canonical year from coin metadata.
+  /// Strictly additive at line 77. Leaves resolveFromMap completely unchanged.
+  /// Intentionally excludes Personal Notes to prevent neighbor note bleed.
+  static String canonicalYear(Map<String, dynamic> data) {
+    for (final k in const <String>[
+      'year',
+      'Year',
+      'coin_year',
+      'canonical_year',
+      'issue_year',
+      'mintDate',
+    ]) {
+      final v = data[k];
+      if (v != null) {
+        final s = v.toString().trim();
+        if (s.isNotEmpty) {
+          final dualMatch = RegExp(r'(?:1776|1976)[-–~](\d{4})').firstMatch(s);
+          if (dualMatch != null) return dualMatch.group(1)!;
+
+          final norm = _normYear(s);
+          if (RegExp(r'^\d{4}$').hasMatch(norm)) return norm;
+        }
+      }
+    }
+
+    for (final k in const <String>[
+      'title',
+      'name',
+      'Theme/Subject',
+      'theme_subject',
+      'Program/Series',
+      'program_series',
+      'description',
+    ]) {
+      final v = data[k];
+      if (v != null) {
+        final s = v.toString();
+        final dualMatch = RegExp(r'(?:1776|1976)[-–~](\d{4})').firstMatch(s);
+        if (dualMatch != null) return dualMatch.group(1)!;
+
+        final m = RegExp(r'\b(1[789]\d{2}|20\d{2})\b').firstMatch(s);
+        if (m != null) return m.group(1)!;
+      }
+    }
+
+    return '';
+  }
+
   static String extractSku(Map<String, dynamic> data) {
     for (final k in const <String>[
       'mint_product_id',
@@ -428,11 +476,13 @@ class CanonicalMintAssetService {
         );
       }
       // MF-1: cent and nickel, whole word or denomination field only. NEVER substring 'cent'.
-      final isCent = RegExp(r'\b(1c|1¢|one cent|cent|penny)\b').hasMatch(cleanDenom) ||
-          RegExp(r'\b(lincoln cent|one cent|penny)\b').hasMatch(cleanTitle);
-      final isNickel = RegExp(r'\b(5c|5¢|five cents?|nickel)\b').hasMatch(cleanDenom) ||
-          RegExp(r'\b(jefferson nickel|nickel|five cents?)\b').hasMatch(cleanTitle);
-      if (isCent && !isQuarter && !isHalf) {
+      // MF-C5': (?!\w) fixes broken trailing \b on Unicode ¢; (?<![\d.]) prevents 15¢/25c/25 cent
+      // from matching 1¢/5¢/cent while preserving '1 cent', '1¢', 'cent', '5¢', '5 cents', 'five cents'.
+      final isCent = RegExp(r'(?<![\d.])(?:1c|1¢|1 cents?|one cent|penny)(?!\w)|(?:^|(?<![\d.])\s+)\bcent\b', caseSensitive: false).hasMatch(cleanDenom) ||
+          RegExp(r'\b(lincoln cent|one cent|penny)\b', caseSensitive: false).hasMatch(cleanTitle);
+      final isNickel = RegExp(r'(?<![\d.])(?:5c|5¢|5 cents?|five cents?|nickel)(?!\w)', caseSensitive: false).hasMatch(cleanDenom) ||
+          RegExp(r'\b(jefferson nickel|nickel|five cents?)\b', caseSensitive: false).hasMatch(cleanTitle);
+      if (isCent && !isQuarter && !isHalf && !isNickel) {
         final effMint = cleanMint == 'D' ? 'D' : 'P';
         return CanonicalMintAssetPair(
           sku: '2026-CENT-$effMint',
