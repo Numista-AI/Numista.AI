@@ -133,7 +133,7 @@ def resolve_coin_catalog_metadata(
     try:
         from services.mint_helpers import resolve_two_field_mint
     except ImportError:
-        from numista_backend.services.mint_helpers import resolve_two_field_mint
+        from .mint_helpers import resolve_two_field_mint
 
     mint_facility, resolved_mm, _ = resolve_two_field_mint(
         raw_mint_mark=(mint_mark or "").strip(),

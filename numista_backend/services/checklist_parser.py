@@ -23,7 +23,7 @@ from config.ingestion_config import (
 try:
     from services.mint_helpers import resolve_two_field_mint, format_mint_mark_for_display
 except ImportError:
-    from numista_backend.services.mint_helpers import resolve_two_field_mint, format_mint_mark_for_display
+    from .mint_helpers import resolve_two_field_mint, format_mint_mark_for_display
 
 logger = logging.getLogger("numista_backend.checklist_parser")
 

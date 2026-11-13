@@ -26,18 +26,15 @@ from typing import Any
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _BACKEND_DIR = _SCRIPT_DIR.parent
 _REPO_ROOT = _BACKEND_DIR.parent
-for _p in (str(_BACKEND_DIR), str(_REPO_ROOT)):
+for _p in (str(_REPO_ROOT), str(_BACKEND_DIR)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-try:
-    from services.mint_helpers import read_mint_facility, read_mint_mark, resolve_two_field_mint
-except ImportError:
-    from numista_backend.services.mint_helpers import (
-        read_mint_facility,
-        read_mint_mark,
-        resolve_two_field_mint,
-    )
+from services.mint_helpers import (
+    read_mint_facility,
+    read_mint_mark,
+    resolve_two_field_mint,
+)
 
 BATCH_LIMIT = 400
 

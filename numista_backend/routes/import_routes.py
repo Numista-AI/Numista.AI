@@ -128,10 +128,7 @@ async def import_spreadsheet(
                 existing_certs.add(str(cert).strip().lower())
             
             y = str(data.get("year") or data.get("Year") or "").strip()
-            try:
-                from services.mint_helpers import read_mint_mark
-            except ImportError:
-                from numista_backend.services.mint_helpers import read_mint_mark
+            from services.mint_helpers import read_mint_mark
             mm = read_mint_mark(data)
             den = _normalize_us_denomination(str(data.get("denomination") or data.get("Denomination") or ""))
             if y and den:
@@ -183,10 +180,7 @@ async def import_spreadsheet(
 
         cert = str(norm_coin.get("cert_number") or norm_coin.get("cert") or "").strip().lower()
         year = str(norm_coin.get("year") or "").strip()
-        try:
-            from services.mint_helpers import resolve_two_field_mint
-        except ImportError:
-            from numista_backend.services.mint_helpers import resolve_two_field_mint
+        from services.mint_helpers import resolve_two_field_mint
         raw_mm = str(norm_coin.get("mint_mark") or "").strip()
         raw_facility = str(norm_coin.get("mint") or norm_coin.get("mint_facility") or "").strip()
         resolved_facility, mint, _ = resolve_two_field_mint(

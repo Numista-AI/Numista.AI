@@ -23,7 +23,7 @@ try:
         read_mint_mark,
     )
 except ImportError:
-    from numista_backend.services.mint_helpers import (
+    from .mint_helpers import (
         build_mint_write_fields,
         read_mint_facility,
         read_mint_mark,

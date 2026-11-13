@@ -5,8 +5,20 @@ from dotenv import load_dotenv
 # Setup logging for backend tracking/auditing
 logger = logging.getLogger(__name__)
 
+
+def _safe_load_dotenv(dotenv_path: str | os.PathLike[str] | None = None) -> bool:
+    """Load .env as UTF-8 (with BOM support), falling back to cp1252 if Windows-1252 bytes exist."""
+    try:
+        return load_dotenv(dotenv_path=dotenv_path, encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        logging.getLogger(__name__).warning(
+            "Non-UTF-8 byte detected in .env; falling back to cp1252 decoding."
+        )
+        return load_dotenv(dotenv_path=dotenv_path, encoding="cp1252")
+
+
 # Load environment variables from a .env file (if present)
-load_dotenv()
+_safe_load_dotenv()
 
 def load_stripe_keys():
     """

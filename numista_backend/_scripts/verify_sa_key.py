@@ -19,7 +19,10 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-load_dotenv()
+try:
+    load_dotenv(encoding="utf-8-sig")
+except UnicodeDecodeError:
+    load_dotenv(encoding="cp1252")
 PROJECT_ID = "studio-9101802118-8c9a8"
 LOCATION = "us-central1"
 
