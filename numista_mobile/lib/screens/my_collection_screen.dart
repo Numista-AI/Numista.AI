@@ -43,6 +43,7 @@ import '../models/collection_row.dart';
 import '../constants.dart';
 import '../constants/denomination_canon.dart';
 import '../widgets/collection_card_valuation_row.dart';
+import '../widgets/collection_card_image.dart';
 
 // --- Field name constants -----------------------------------------------------
 class _F {
@@ -6324,131 +6325,12 @@ class _TopScrollbarTrackWidgetState extends State<_TopScrollbarTrackWidget> {
   }
 }
 
-/// Robust image component for collection card grid.
-/// Displays personal scan if available, otherwise queries CoinImageService for reference image.
+// Delegated to production widget CollectionCardImage (NET-780c v2.3)
 class _CollectionCardImage extends StatelessWidget {
   final Map<String, dynamic> data;
   const _CollectionCardImage({required this.data});
-
-  static String _cleanUrl(dynamic val) {
-    if (val == null) return '';
-    final s = val.toString().trim();
-    if (s.isEmpty || s.startsWith('gs://') || !s.startsWith('http')) return '';
-    return s;
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final canon = CanonicalMintAssetService.resolveFromMap(data);
-    if (canon != null) {
-      final canonUrl = canon.reverseUrl.isNotEmpty ? canon.reverseUrl : canon.obverseUrl;
-      if (canonUrl.isNotEmpty) {
-        return _buildCoinImage(canonUrl);
-      }
-    }
-
-    final obv = _cleanUrl(data[_F.imageObverse]);
-    final rev = _cleanUrl(data[_F.imageReverse]);
-    final directUrl = rev.isNotEmpty ? rev : obv;  // Prefer reverse (distinct design)
-
-    if (directUrl.isNotEmpty) {
-      return _buildCoinImage(directUrl);
-    }
-
-    // Dual-read: PascalCase first, lowercase fallback for unmigrated CSV docs
-    String dualRead(String snakeKey, String legacyKey) {
-      final s = data[snakeKey]?.toString();
-      if (s != null && s.trim().isNotEmpty && s.trim() != 'None' && s.trim() != 'null') return s.trim();
-      final l = data[legacyKey]?.toString();
-      if (l != null && l.trim().isNotEmpty && l.trim() != 'None' && l.trim() != 'null') return l.trim();
-      return '';
-    }
-    final year = dualRead('year', _F.year).replaceAll(RegExp(r'\.0$'), '');
-    final mint = dualRead('mint_mark', _F.mintMark);
-    final denom = dualRead('denomination', _F.denomination);
-    final series = dualRead('program_series', _F.programSeries);
-    final subject = dualRead('theme_subject', _F.themeSubject);
-
-    return FutureBuilder<CoinImageResult>(
-      future: CoinImageService.fetchReferenceImages(
-        year: year,
-        mint: mint.isEmpty ? null : mint,
-        denomination: denom.isEmpty ? null : denom,
-        series: series.isEmpty ? null : series,
-        subject: subject.isEmpty ? null : subject,
-      ),
-      builder: (context, snapshot) {
-        final ref = snapshot.data;
-        // MF-V3-3: When subject is known and reverse is null (steal-guard
-        // correctly blocked a generic reverse), show placeholder instead of
-        // falling back to generic obverse. Keeps obverse fallback for coins
-        // without a subject (e.g. generic Morgan/Peace).
-        final refUrl = (ref?.reverseUrl?.isNotEmpty == true)
-            ? ref!.reverseUrl!
-            : (subject.isEmpty && ref?.obverseUrl?.isNotEmpty == true)
-                ? ref!.obverseUrl!
-                : '';
-
-        if (refUrl.isNotEmpty) {
-          return _buildCoinImage(refUrl);
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFFC9A227),
-              ),
-            ),
-          );
-        }
-
-        return const Center(
-          child: Icon(Icons.image_not_supported_outlined, size: 36, color: Color(0xFF8B92B4)),
-        );
-      },
-    );
-  }
-
-  Widget _buildCoinImage(String url) {
-    return Center(
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFC9A227).withAlpha(40),
-              blurRadius: 14,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: Image.network(
-          url,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => const Center(
-            child: Icon(Icons.image_not_supported_outlined, size: 36, color: Color(0xFF8B92B4)),
-          ),
-          loadingBuilder: (context, child, progress) {
-            if (progress == null) return child;
-            return const Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFFC9A227),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => CollectionCardImage(data: data);
 }
 
 

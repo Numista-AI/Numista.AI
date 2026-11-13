@@ -51,11 +51,11 @@
 | **MF-SAG-I6** | Rollback hole | §4.D: assert `p7-v8.9`, clean tree, preflight; revert Images (it is applied after Cards, so it reverts first); push `p7-v8.9` only after success; never main. | — |
 | **MF-SAG-I7** | balabaskar coverage claimed but not asserted | Fixture `…/reference_library/balabaskar_coins/…` added and asserted in §6.1. | Pin `build_image_index.py:84` `"reference_library/balabaskar_coins/",` (quoted in §2.B). |
 
-## 1. Executive Summary & Itemized Must-Fix Closeout Table (v1.9 $\rightarrow$ v2.0 Delta)
+## 1. Executive Summary & Itemized Must-Fix Closeout Table (v2.3 Consolidated)
 
-Plan v2.0 preserves every item marked **Closed** in `COS_SCORE_NET-817_CARDS_IMAGES_v1.9_20261107.md` (`MF-B1'`, `MF-B2'`, `MF-B3'`, `MF-I1`, `MF-I2`, `MF-I3'`, `MF-I4`, `MF-I5'`, `MF-I6`) and closes the sole remaining blocking item **`MF-I7'`** with verbatim `git show 4d17ca5e:...` quotes:
+Plan v2.3 preserves every item marked **Closed** in `COS_SCORE_NET-817_CARDS_IMAGES_v1.9_20261107.md` (`MF-B1'`, `MF-B2'`, `MF-B3'`, `MF-I1`, `MF-I2`, `MF-I3'`, `MF-I4`, `MF-I5'`, `MF-I6`) and closes the sole remaining blocking item **`MF-I7'`** with verbatim `git show 4d17ca5e:...` quotes:
 
-| Must-Fix # | Must-Fix Description | Plan v2.0 Resolution & Verbatim Grounding at `4d17ca5e` | Plan Section |
+| Must-Fix # | Must-Fix Description | Plan v2.3 Resolution & Verbatim Grounding at `4d17ca5e` | Plan Section |
 | :--- | :--- | :--- | :--- |
 | **MF-I7'** | **BLOCKING — Re-Quote Real Index Emitters from `git show 4d17ca5e`:** Use real paths `numista_backend/_scripts/build_image_index.py` (`SCAN_TARGETS`, `FIRESTORE_COLLECTION = "coin_image_index"`, `public_url = f"{PUBLIC_URL_BASE}/{bucket}/{encoded_path}"`), `numista_backend/_scripts/build_currency_image_index.py` (`FIRESTORE_COLLECTION = "currency_image_index"`, `REFERENCE_BUCKET = "numista-reference-library"`, `GCS_PREFIX = "reference_library/us_banknotes/"`, `public_url = f"{PUBLIC_URL_BASE}/{REFERENCE_BUCKET}/{blob.name}"`), `numista_backend/_scripts/promote_user_photos.py` (`BUCKET_NAME = "numista-uploads-studio-9101802118-8c9a8"`, `REF_PREFIX = "reference"`, `PUBLIC_BASE = "https://storage.googleapis.com"`, `return f"{PUBLIC_BASE}/{BUCKET_NAME}/{dest_path}"`), and `numista_mobile/lib/services/coin_image_service.dart` (`static const _collection = 'coin_image_index';`, `bestObvUrl = d['public_url'] as String?;` at `:567`, `bestRevUrl = d['public_url'] as String?;` at `:583`). Align test fixtures to real emitted path shapes. | Drops all references to nonexistent `scripts/reference_library/`, `SOURCES`, `CURRENCY_PREFIX`, `UPLOADS_BUCKET`, `REF_BUCKET`, `reference_images`, and `currency_reference_images`. Quotes the exact verbatim lines from `git show 4d17ca5e:numista_backend/_scripts/build_image_index.py` (`:44–103`, `:301–316`), `git show 4d17ca5e:numista_backend/_scripts/build_currency_image_index.py` (`:38–42`, `:267–281`), `git show 4d17ca5e:numista_backend/_scripts/promote_user_photos.py` (`:16–18`, `:34–37`, `:125–130`), and `git show 4d17ca5e:numista_mobile/lib/services/coin_image_service.dart` (`:16–18`, `:561–589`). Updates `owned_storage_url_test.dart` (§6.1) with sanitized fixtures matching every real emitted path shape (`Numista_Attributed_Coins%20(1)/...`, `reference_library/bulk_programs/...`, `reference_library/wikimedia_uscoin/...`, `reference_library/rare_uscoin/...`, `reference_library/balabaskar_coins/...`, `reference_library/2026_series/...`, `reference_library/user_contributed/...`, `reference_library/us_banknotes/...`, and `reference/{program_slug}/{year}_{program_slug}_{side}.jpg`). | §2.B, §6.1 |
 | **MF-B1'** | **Orphaned Kaggle/Google Inspector Deletions & Verbatim Quotes (CLOSED — Preserved):** | Preserved verbatim from v1.9 (§2.A, §4.B). | §2.A, §4.B |
@@ -386,10 +386,10 @@ bool isOwnedStorageUrl(String? url) {
   if (trimmed.split(RegExp(r'[?#]')).first.split('/').any((p) => p == '.' || p == '..')) return false;
 
   bool badSegs(Iterable<String> segs) =>
-      segs.expand((p) => p.split('/')).any((p) => p == '.' || p == '..');
+      segs.expand((p) => p.split('/')).any((p) => p.isEmpty || p == '.' || p == '..');
 
   // 1. Relative same-origin paths: single leading '/', no '//', no dot segments
-  // (Polish note: relative '/assets/...' is a dead allow for Image.network unless served over web origin, kept harmlessly for same-origin URL parity)
+  // Deliberate same-origin relative-path exception for Image.network; not reachable via network URLs.
   if (trimmed.startsWith('/')) {
     if (trimmed.startsWith('//')) return false;
     final segs = trimmed.substring(1).split('/');
@@ -405,9 +405,9 @@ bool isOwnedStorageUrl(String? url) {
   final segs = uri.pathSegments; // decoded
   if (segs.isEmpty || segs.any((p) => p.isEmpty) || badSegs(segs)) return false;
 
-  // 3. Form A: Firebase Storage download URL for the real project bucket
+  // 3. Form A: Firebase Storage download URL for the real project bucket (requires object segment segs[4])
   if (host == 'firebasestorage.googleapis.com') {
-    return segs.length >= 4 && segs[0] == 'v0' && segs[1] == 'b' &&
+    return segs.length >= 5 && segs[0] == 'v0' && segs[1] == 'b' &&
         segs[2] == 'studio-9101802118-8c9a8.firebasestorage.app' && segs[3] == 'o';
   }
 
@@ -638,12 +638,7 @@ class CollectionCardImageRequestKey {
           subject == other.subject;
 
   @override
-  int get hashCode =>
-      year.hashCode ^
-      mint.hashCode ^
-      denomination.hashCode ^
-      series.hashCode ^
-      subject.hashCode;
+  int get hashCode => Object.hash(year, mint, denomination, series, subject);
 }
 
 typedef ImageFetcherFn = Future<CoinImageResult> Function({
@@ -854,20 +849,21 @@ import '../widgets/collection_card_valuation_row.dart';
 import '../widgets/collection_card_image.dart';
 >>>>
 ```
-2. **Widget Delegation (`my_collection_screen.dart:6356–6479`):**
+2. **Widget Delegation (`my_collection_screen.dart:6356–6479` at `4d17ca5e`, `:6328–6451` post-Cards):**
 ```dart
 <<<<
-6356: class _CollectionCardImage extends StatelessWidget {
+// Note: Match by exact class declaration below (shifts -28 lines after Step 1 Cards).
+class _CollectionCardImage extends StatelessWidget {
 ...
-6479: }
+}
 ====
-6356: // Delegated to production widget CollectionCardImage (NET-780c v2.0)
-6357: class _CollectionCardImage extends StatelessWidget {
-6358:   final Map<String, dynamic> data;
-6359:   const _CollectionCardImage({required this.data});
-6360:   @override
-6361:   Widget build(BuildContext context) => CollectionCardImage(data: data);
-6362: }
+// Delegated to production widget CollectionCardImage (NET-780c v2.3)
+class _CollectionCardImage extends StatelessWidget {
+  final Map<String, dynamic> data;
+  const _CollectionCardImage({required this.data});
+  @override
+  Widget build(BuildContext context) => CollectionCardImage(data: data);
+}
 >>>>
 ```
 
@@ -998,6 +994,8 @@ void main() {
       expect(isOwnedStorageUrl('https://storage.googleapis.com/us_mint_coin_images/../other-bucket/x.jpg'), isFalse);
       expect(isOwnedStorageUrl('https://storage.googleapis.com/us_mint_coin_images/a%2f..%2fb/x.jpg'), isFalse);
       expect(isOwnedStorageUrl('https://firebasestorage.googleapis.com/v0/b/studio-9101802118-8c9a8.firebasestorage.app/o/users%2F..%2Fx.jpg'), isFalse);
+      expect(isOwnedStorageUrl('https://firebasestorage.googleapis.com/v0/b/studio-9101802118-8c9a8.firebasestorage.app/o'), isFalse);
+      expect(isOwnedStorageUrl('https://firebasestorage.googleapis.com/v0/b/studio-9101802118-8c9a8.firebasestorage.app/o/users%2F%2Fcoin.jpg'), isFalse);
       expect(isOwnedStorageUrl('https://user:pw@storage.googleapis.com/us_mint_coin_images/x.jpg'), isFalse);
       expect(isOwnedStorageUrl('https://storage.googleapis.com:8443/us_mint_coin_images/x.jpg'), isFalse);
       expect(isOwnedStorageUrl('/assets/../secret.png'), isFalse);

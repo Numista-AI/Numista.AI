@@ -37,14 +37,23 @@ class CanonicalMintAssetService {
              s.contains('studio-9101802118-8c9a8-uploads') ||
              s.contains('numista-uploads-studio-') ||
              s.contains('/users/') ||
+             s.contains('users%2f') ||
              s.contains('/user_uploads/') ||
              s.contains('user_upload');
     }
 
     return isUserUrl(data['image_url_obverse']) ||
            isUserUrl(data['image_url_reverse']) ||
+           isUserUrl(data['imageUrlObverse']) ||
+           isUserUrl(data['imageUrlReverse']) ||
+           isUserUrl(data['obverse_image_url']) ||
+           isUserUrl(data['reverse_image_url']) ||
+           isUserUrl(data['obverse_url']) ||
+           isUserUrl(data['reverse_url']) ||
            isUserUrl(data['imageObverse']) ||
            isUserUrl(data['imageReverse']) ||
+           isUserUrl(data['obverseUrl']) ||
+           isUserUrl(data['reverseUrl']) ||
            isUserUrl(data['stored_obv']) ||
            isUserUrl(data['stored_rev']);
   }
