@@ -960,6 +960,17 @@
     "dependencies": []
   },
   {
+    "path": "/api/v1/photos/signed_url",
+    "methods": [
+      "POST"
+    ],
+    "name": "create_signed_photo_urls",
+    "tags": [
+      "photos"
+    ],
+    "dependencies": []
+  },
+  {
     "path": "/api/v1/rag/query",
     "methods": [
       "POST"

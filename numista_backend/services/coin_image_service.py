@@ -4,14 +4,20 @@ import io
 import os
 import posixpath
 import urllib.parse
-from typing import Optional, Set, Tuple
+from datetime import timedelta
+from typing import Any, Dict, Optional, Set, Tuple
 
 from fastapi import HTTPException
+from google.auth.transport import requests as google_auth_requests
 from PIL import Image, ImageOps
 
 DEFAULT_ALLOWED_IMAGE_BUCKETS = (
     "numista-uploads-studio-9101802118-8c9a8,"
     "studio-9101802118-8c9a8.firebasestorage.app"
+)
+DEFAULT_SIGNER_SA = os.getenv(
+    "SIGNER_SA",
+    os.getenv("INSTALLER_SIGNER_SA", "568985927038-compute@developer.gserviceaccount.com"),
 )
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
 MAX_IMAGE_PIXELS = 40_000_000
@@ -177,3 +183,30 @@ def load_sanitized_coin_image(
     buf = io.BytesIO()
     out_img.save(buf, format="JPEG", quality=quality, exif=b"")
     return buf.getvalue(), out_img.size
+
+
+def generate_v4_signed_get_url(
+    storage_client,
+    bucket_name: str,
+    blob_name: str,
+    expiry_minutes: int = 15,
+) -> str:
+    """Generates a short-lived V4 GCS Signed GET URL (supports local key & Cloud Run IAM signBlob)."""
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    sign_kwargs: Dict[str, Any] = {
+        "version": "v4",
+        "expiration": timedelta(minutes=expiry_minutes),
+        "method": "GET",
+    }
+
+    creds = getattr(storage_client, "_credentials", None)
+    if creds is not None and not hasattr(creds, "sign_bytes"):
+        auth_req = google_auth_requests.Request()
+        creds.refresh(auth_req)
+        sa_email = getattr(creds, "service_account_email", None) or DEFAULT_SIGNER_SA
+        sign_kwargs["service_account_email"] = sa_email
+        sign_kwargs["access_token"] = creds.token
+
+    return blob.generate_signed_url(**sign_kwargs)

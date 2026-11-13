@@ -9,6 +9,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/coin_model.dart';
+import '../services/signed_photo_url_service.dart';
 import '../utils/owned_storage_url.dart';
 import 'unified_coin_detail_deps.dart';
 
@@ -603,7 +604,25 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
             ],
           ),
         ),
-        if (heroUrl != null)
+        if (heroUrl != null &&
+            _deps.resolvePhotoUrl != null &&
+            SignedPhotoUrlService.needsSigning(heroUrl))
+          FutureBuilder<String?>(
+            future: _deps.resolvePhotoUrl!(heroUrl),
+            builder: (_, snapshot) {
+              final resolved = snapshot.data;
+              if (resolved == null || resolved.isEmpty) {
+                return _buildHeroPlaceholder();
+              }
+              _deps.onImageLoad?.call(resolved);
+              return Image.network(
+                resolved,
+                key: const Key('hero_coin_image'),
+                errorBuilder: (_, _, _) => _buildHeroPlaceholder(),
+              );
+            },
+          )
+        else if (heroUrl != null)
           Builder(builder: (_) {
             _deps.onImageLoad?.call(heroUrl);
             return Image.network(

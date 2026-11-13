@@ -5038,7 +5038,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       });
 
       final snap = await task;
-      final url  = await snap.ref.getDownloadURL();
+      final url  = 'gs://${snap.ref.bucket}/${snap.ref.fullPath}';
 
       // Use the currently authenticated user's Firestore path
       await FirebaseFirestore.instance
@@ -5512,11 +5512,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     try {
       final refCompressed = FirebaseStorage.instance.ref('users/$userEmail/coins/$coinId/owner_photo_$photoId.$ext');
       await refCompressed.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
-      final compressedUrl = await refCompressed.getDownloadURL();
+      final compressedUrl = 'gs://${refCompressed.bucket}/${refCompressed.fullPath}';
       
       final refOriginal = FirebaseStorage.instance.ref('users/$userEmail/coins/$coinId/owner_photo_${photoId}_original.$ext');
       await refOriginal.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
-      final originalUrl = await refOriginal.getDownloadURL();
+      final originalUrl = 'gs://${refOriginal.bucket}/${refOriginal.fullPath}';
       
       if (!mounted) return;
       String caption = '';

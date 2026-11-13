@@ -4443,12 +4443,12 @@ class _OwnerPhotoHero extends StatelessWidget {
       final refCompressed = FirebaseStorage.instance
           .ref('users/$userEmail/coins/${coin.id}/owner_photo_$photoId.$ext');
       await refCompressed.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
-      final compressedUrl = await refCompressed.getDownloadURL();
+      final compressedUrl = 'gs://${refCompressed.bucket}/${refCompressed.fullPath}';
 
       final refOriginal = FirebaseStorage.instance
           .ref('users/$userEmail/coins/${coin.id}/owner_photo_${photoId}_original.$ext');
       await refOriginal.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
-      final originalUrl = await refOriginal.getDownloadURL();
+      final originalUrl = 'gs://${refOriginal.bucket}/${refOriginal.fullPath}';
 
       final photoMap = {
         'id': photoId,

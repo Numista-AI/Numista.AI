@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart' show QueryDocumentSnapshot;
 
+import '../services/signed_photo_url_service.dart';
+
 abstract class CoinDocStore {
   int get writeCount;
   int get readCount;
@@ -14,6 +16,7 @@ abstract class DetailClock {
 typedef LawsFetcher = Future<Map<String, dynamic>?> Function(String legislationKey);
 typedef UrlLauncherHook = void Function(String url);
 typedef ImageLoadRecorder = void Function(String url);
+typedef PhotoUrlResolver = Future<String?> Function(String url);
 
 class UnifiedCoinDetailDeps {
   final CoinDocStore store;
@@ -21,6 +24,7 @@ class UnifiedCoinDetailDeps {
   final LawsFetcher? lawsFetcher; // null -> no online fallback
   final UrlLauncherHook? onLaunchUrl; // injected in tests, null in production
   final ImageLoadRecorder? onImageLoad; // injected in tests, null in production
+  final PhotoUrlResolver? resolvePhotoUrl;
 
   const UnifiedCoinDetailDeps({
     required this.store,
@@ -28,6 +32,7 @@ class UnifiedCoinDetailDeps {
     this.lawsFetcher,
     this.onLaunchUrl,
     this.onImageLoad,
+    this.resolvePhotoUrl,
   });
 
   factory UnifiedCoinDetailDeps.production(
@@ -36,6 +41,7 @@ class UnifiedCoinDetailDeps {
       UnifiedCoinDetailDeps(
         store: CachedCoinDocStore(cached),
         clock: const SystemDetailClock(),
+        resolvePhotoUrl: SignedPhotoUrlService.resolve,
       );
 }
 

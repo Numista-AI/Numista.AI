@@ -22,6 +22,20 @@ bool isOwnedStorageUrl(String? url) {
     return !segs.any((p) => p.isEmpty || p == '.' || p == '..');
   }
 
+  const allowedGsBuckets = {
+    'numista-uploads-studio-9101802118-8c9a8',
+    'studio-9101802118-8c9a8.firebasestorage.app',
+  };
+
+  if (lower.startsWith('gs://')) {
+    final gsUri = Uri.tryParse(trimmed);
+    if (gsUri == null || gsUri.scheme != 'gs') return false;
+    if (gsUri.userInfo.isNotEmpty || gsUri.hasPort) return false;
+    if (!allowedGsBuckets.contains(gsUri.host)) return false;
+    final gsPath = gsUri.path.startsWith('/') ? gsUri.path.substring(1) : gsUri.path;
+    return gsPath.isNotEmpty && !gsPath.startsWith('/');
+  }
+
   // 2. Strict HTTPS parsing
   final uri = Uri.tryParse(trimmed);
   if (uri == null || uri.scheme != 'https') return false;
