@@ -42,6 +42,12 @@ except ImportError:
 BATCH_LIMIT = 400
 
 
+def _durable_flush(fh: Any) -> None:
+    """Flush + fsync so backup records survive a crash before the batch commits."""
+    fh.flush()
+    os.fsync(fh.fileno())
+
+
 def _anon_doc_id(doc_path: str) -> str:
     """Return a non-PII short identifier for logging (never logs user email)."""
     parts = doc_path.split("/")
@@ -84,6 +90,10 @@ def compute_migration_update(doc_data: dict[str, Any], force_recheck: bool = Fal
         retailer_item_no=item_no,
     )
 
+    # F1 guard: never overwrite a non-empty existing facility with "".
+    if not new_mint and raw_mint:
+        new_mint = raw_mint
+
     payload = {
         "mint": new_mint,
         "mint_mark": new_mm,
@@ -115,6 +125,10 @@ def run_forward(
         out_dir.mkdir(parents=True, exist_ok=True)
         backup_path = out_dir / f"mint_migration_backup_{ts}.jsonl"
         backup_fh = backup_path.open("w", encoding="utf-8")
+        try:
+            os.chmod(backup_path, 0o600)  # F4: backup holds user-identifying doc paths
+        except OSError:
+            pass
 
     batch = db.batch() if execute else None
     pending_ops = 0
@@ -151,17 +165,23 @@ def run_forward(
                     "prev_mint_mark": data.get("mint_mark"),
                     "had_legacy_mint_mark": "Mint Mark" in data,
                     "prev_legacy_mint_mark": data.get("Mint Mark"),
+                    # F3: what this run wrote, so rollback can detect later user edits.
+                    "new_mint": payload["mint"],
+                    "new_mint_mark": payload["mint_mark"],
+                    "new_legacy_mint_mark": payload["Mint Mark"],
                 }
                 backup_fh.write(json.dumps(backup_record) + "\n")
                 batch.update(snap.reference, payload)
                 pending_ops += 1
                 if pending_ops >= BATCH_LIMIT:
+                    _durable_flush(backup_fh)  # F4: backup on disk BEFORE commit
                     batch.commit()
                     stats["batches_committed"] += 1
                     batch = db.batch()
                     pending_ops = 0
 
         if execute and batch is not None and pending_ops > 0:
+            _durable_flush(backup_fh)  # F4
             batch.commit()
             stats["batches_committed"] += 1
     finally:
@@ -181,6 +201,7 @@ def run_rollback(
     backup_file: str | Path,
     execute: bool = False,
     delete_sentinel: Any = None,
+    force: bool = False,
 ) -> dict[str, Any]:
     """Restore documents from a JSONL backup snapshot created during `--execute`."""
     path = Path(backup_file)
@@ -192,6 +213,7 @@ def run_rollback(
         delete_sentinel = fb_firestore.DELETE_FIELD
 
     stats: Counter[str] = Counter()
+    skipped: list[str] = []
     batch = db.batch() if execute else None
     pending_ops = 0
 
@@ -203,12 +225,30 @@ def run_rollback(
             stats["records_read"] += 1
             rec = json.loads(line)
             doc_ref = db.document(rec["doc_path"])
+
+            # F3: skip docs edited after the migration wrote them (unless forced).
+            if not force and "new_mint" in rec:
+                cur_snap = doc_ref.get()
+                cur = (cur_snap.to_dict() or {}) if getattr(cur_snap, "exists", True) else {}
+                if (
+                    cur.get("mint") != rec["new_mint"]
+                    or cur.get("mint_mark") != rec["new_mint_mark"]
+                    or cur.get("Mint Mark") != rec["new_legacy_mint_mark"]
+                ):
+                    stats["skipped_modified_since_migration"] += 1
+                    skipped.append(_anon_doc_id(rec["doc_path"]))
+                    continue
+
             restore_payload: dict[str, Any] = {
                 "mint": rec["prev_mint"] if rec.get("had_mint") else delete_sentinel,
                 "mint_mark": rec["prev_mint_mark"] if rec.get("had_mint_mark") else delete_sentinel,
+                # F3: forward always wrote the legacy key; remove it if it did not exist before.
+                "Mint Mark": (
+                    rec.get("prev_legacy_mint_mark")
+                    if rec.get("had_legacy_mint_mark")
+                    else delete_sentinel
+                ),
             }
-            if rec.get("had_legacy_mint_mark"):
-                restore_payload["Mint Mark"] = rec.get("prev_legacy_mint_mark")
 
             stats["would_restore"] += 1
             if execute and batch is not None:
@@ -223,7 +263,11 @@ def run_rollback(
     if execute and batch is not None and pending_ops > 0:
         batch.commit()
 
-    return {"mode": "rollback-execute" if execute else "rollback-dry-run", "stats": dict(stats)}
+    return {
+        "mode": "rollback-execute" if execute else "rollback-dry-run",
+        "stats": dict(stats),
+        "skipped_modified": skipped[:50],
+    }
 
 
 def run_prune_legacy_key(
@@ -282,6 +326,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="Report counts without writing (default).")
     parser.add_argument("--execute", action="store_true", help="Execute live Firestore writes (requires --confirm-token=YES).")
     parser.add_argument("--rollback", action="store_true", help="Rollback from JSONL backup file.")
+    parser.add_argument("--rollback-force", action="store_true", help="Rollback even docs edited after migration.")
     parser.add_argument("--prune-legacy-key", action="store_true", help="Phase 7: remove deprecated 'Mint Mark' key.")
     parser.add_argument("--backup-file", type=str, default="", help="Path to JSONL backup file for --rollback.")
     parser.add_argument("--confirm-token", type=str, default="", help="Must be 'YES' for any write operation.")
@@ -295,7 +340,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.rollback:
         if not args.backup_file:
             parser.error("--rollback requires --backup-file=<path>")
-        result = run_rollback(db, args.backup_file, execute=is_confirmed)
+        result = run_rollback(db, args.backup_file, execute=is_confirmed, force=args.rollback_force)
     elif args.prune_legacy_key:
         result = run_prune_legacy_key(db, execute=is_confirmed)
     else:

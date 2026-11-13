@@ -73,3 +73,63 @@ def test_dual_key_priority_prefers_snake_case():
     assert read_mint_mark(doc) == ""
     assert format_mint_facility_and_mark("Philadelphia", "") == "Philadelphia (NMM)"
     assert format_mint_facility_and_mark("Denver", "D") == "Denver (D)"
+
+
+def test_f1_rule11_preserves_raw_mint_and_facility_text_in_mark():
+    assert resolve_two_field_mint(raw_mint="Royal Canadian Mint", country="Canada", year="2020") == ("Royal Canadian Mint", "", 11)
+    assert resolve_two_field_mint(raw_mint_mark="D", raw_mint="Denver", year="1900") == ("Denver", "D", 11)
+    assert resolve_two_field_mint(raw_mint_mark="DENVER", year="1990") == ("Denver", "", 11)
+
+
+def test_build_mint_write_fields_dual_key():
+    from numista_backend.services.mint_helpers import build_mint_write_fields
+
+    out = build_mint_write_fields("D", year="1921", series="Morgan Dollars", denomination="Dollar")
+    assert out == {"mint": "Denver", "mint_mark": "D", "Mint Mark": "D"}
+
+
+def test_f8_country_flows_into_catalog_metadata_resolver():
+    from numista_backend.services.mint_nomenclature_service import resolve_coin_catalog_metadata
+
+    foreign = resolve_coin_catalog_metadata(year="1950", denomination="Cent", country="Canada")
+    assert foreign["mint"] != "Philadelphia"  # Rule 10 must not apply to non-US coins
+    assert foreign["country"] == "Canada"
+    assert foreign["is_foreign"] is True
+
+    us = resolve_coin_catalog_metadata(year="1950", denomination="Cent")
+    assert us["mint"] == "Philadelphia"
+    assert us["country"] == "United States"
+    assert us["is_foreign"] is False
+
+
+def test_f2_import_row_routes_facility_vs_mark_by_value():
+    from numista_backend.services.mint_helpers import apply_imported_mint_fields
+
+    d = apply_imported_mint_fields({"Mint": "Denver", "Mint Mark": "", "Year": "1990"})
+    assert (d["mint"], d["mint_mark"], d["Mint Mark"]) == ("Denver", "", "")
+    assert "Mint" not in d
+
+    m = apply_imported_mint_fields({"Mint": "D", "Mint Mark": "", "Year": "1921"})
+    assert (m["mint"], m["mint_mark"], m["Mint Mark"]) == ("Denver", "D", "D")
+
+    c = apply_imported_mint_fields({"Mint": "Royal Canadian Mint", "Year": "2020", "Country": "Canada"})
+    assert (c["mint"], c["mint_mark"]) == ("Royal Canadian Mint", "")
+
+    # lowercase CSV key at commit time, and idempotency
+    lc = apply_imported_mint_fields({"mint_mark": "S", "Mint Mark": "", "Year": "1990"})
+    assert lc["mint_mark"] == "S" and lc["Mint Mark"] == "S" and lc["mint"] == "San Francisco"
+    assert apply_imported_mint_fields(dict(lc)) == lc
+
+
+def test_f2_main_header_map_does_not_route_mint_into_mint_mark():
+    import ast
+
+    src = (Path(__file__).resolve().parents[1] / "main.py").read_text(encoding="utf-8")
+    node = next(
+        n for n in ast.parse(src).body
+        if isinstance(n, ast.AnnAssign) and getattr(n.target, "id", "") == "LOCAL_HEADER_MAP"
+    )
+    header_map = ast.literal_eval(node.value)
+    assert header_map["mint"] == "Mint"
+    assert header_map["mint mark"] == "Mint Mark"
+    assert "'mint_mark': 'Mint Mark'" not in src

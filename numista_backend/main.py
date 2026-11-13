@@ -32,6 +32,7 @@ from logging_config import get_logger, request_id_var, generate_request_id, rate
 from numista_scraper.config import DB_PATH
 from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL
 from services.checklist_parser import parse_checklist_notes, slugify_theme, extract_checklist_document
+from services.mint_helpers import apply_imported_mint_fields, build_mint_write_fields, read_mint_mark
 from services.document_classifier_service import classify_document_bytes
 from services.us_mint_catalog_service import enrich_us_mint_item, expand_us_mint_truncation
 from set_pricing import get_set_valuation
@@ -737,7 +738,7 @@ LOCAL_HEADER_MAP: dict[str, str] = {
     # Year / Date
     "year": "Year", "yr": "Year", "date": "Year", "series year": "Year", "year/date": "Year", "series_year_parsed": "Year",
     # Mint Mark
-    "mint mark": "Mint Mark", "mint": "Mint Mark", "mm": "Mint Mark", "m.m.": "Mint Mark", "mintmark": "Mint Mark",
+    "mint mark": "Mint Mark", "mint": "Mint", "mm": "Mint Mark", "m.m.": "Mint Mark", "mintmark": "Mint Mark",
     # Denomination
     "denomination": "Denomination", "denom": "Denomination", "face value": "Denomination", "value": "Denomination", "denomination_parsed": "Denomination",
     # Cost / Price
@@ -2740,7 +2741,8 @@ def execute_add_coin(
         new_doc_ref = col_ref.document()
         coin_data = {
             "Year": str(year),
-            "Mint Mark": clean_mint,
+            # Transitional dual-write (mint, mint_mark, legacy 'Mint Mark'); legacy removed in Phase 7.
+            **build_mint_write_fields(clean_mint, year=str(year), series=series_name, denomination=norm_denom, country=country_str, variety=variety_str),
             "Denomination": norm_denom,
             "Program/Series": series_name,
             "series_slug": series_slug,
@@ -3629,7 +3631,7 @@ async def commit_reviews(
                 # ── Field-name normalization BEFORE dupe queries ─────────
                 # CSV import writes lowercase; UI + dupe queries use PascalCase
                 _FIELD_MAP = {
-                    'year': 'Year', 'mint_mark': 'Mint Mark',
+                    'year': 'Year',
                     'denomination': 'Denomination', 'condition': 'Condition',
                     'cost_basis': 'Cost', 'cost': 'Cost', 'purchase_cost': 'Cost',
                     'variety': 'Variety', 'theme_subject': 'Theme/Subject',
@@ -3642,6 +3644,9 @@ async def commit_reviews(
                 for lc_key, canonical in _FIELD_MAP.items():
                     if lc_key in data and canonical not in data:
                         data[canonical] = data[lc_key]
+                # F2: lowercase CSV 'mint_mark'/'mint' -> dual-write (mint, mint_mark, legacy 'Mint Mark').
+                if data.get('item_type') != 'paper_currency':
+                    apply_imported_mint_fields(data)
                 
                 # -- Hybrid Duplicate Detection --------------------------------------
                 # Primary: invoice-based (if invoice# matches + item# matches -> definite dupe)
@@ -4232,7 +4237,7 @@ async def dedup_sweep(user_email: str = Form(...), _admin: dict = Depends(requir
         for doc in docs:
             d = doc.to_dict()
             year    = str(d.get('Year', '')).strip()
-            mint    = str(d.get('Mint Mark', '')).strip()
+            mint    = read_mint_mark(d)
             denom   = str(d.get('Denomination', '')).strip().lstrip('$')
             series  = str(d.get('Program/Series', '')).strip().lower()
             theme   = str(d.get('Theme/Subject', '')).strip().lower()
@@ -4348,7 +4353,7 @@ async def dedup_auto_clean(user_email: str = Form(...), _admin: dict = Depends(r
         for doc in docs:
             d = doc.to_dict()
             year    = str(d.get('Year', '')).strip()
-            mint    = str(d.get('Mint Mark', '')).strip()
+            mint    = read_mint_mark(d)
             denom   = str(d.get('Denomination', '')).strip().lstrip('$')
             series  = str(d.get('Program/Series', '')).strip().lower()
             theme   = str(d.get('Theme/Subject', '')).strip().lower()
@@ -5561,7 +5566,8 @@ async def confirm_binder_scan(request: ConfirmBinderScanRequest, _user: dict = D
         new_doc = {
             # Golden Schema fields
             "Year":                year,
-            "Mint Mark":           mint,
+            # Transitional dual-write (mint, mint_mark, legacy 'Mint Mark'); legacy removed in Phase 7.
+            **build_mint_write_fields(mint, year=str(year), series=str(program), denomination=str(denomination)),
             "Denomination":        denomination,
             "Program/Series":      program,
             "Theme/Subject":       subject,
@@ -8156,6 +8162,10 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                                 doc['Denomination'] = 'One Dollar'
                             raw_cond = doc.get('Condition') or ''
                             doc['Condition'] = str(raw_cond).strip() or 'Ungraded'
+
+                        if not is_currency:
+                            # F2: route facility vs mark by value; dual-write mint + mint_mark + legacy.
+                            apply_imported_mint_fields(doc)
 
                         for fld in ('Cost', 'Denomination'):
                             val = doc.get(fld)
