@@ -27,6 +27,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/coin_model.dart';
+import '../models/mint_product_metadata.dart';
+import '../services/mint_product_lookup_service.dart';
 import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/http_auth_client.dart';
@@ -190,6 +192,11 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
       }
     });
     _loadInspectorMode();
+
+    // Wire Mint metadata initialization (MF-1, v1.7 MF-2)
+    MintProductLookupService.instance.ensureInitialized().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _loadInspectorMode() async {
@@ -775,6 +782,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
                 coin: _coin,
                 isInspectorMode: _isInspectorMode,
                 onInspectField: _showDiscrepancyDialog,
+                mintMetadata: MintProductLookupService.instance.lookupForCoin(_coin),
               ),
               _FinancialsTab(coin: _coin, spotPrices: widget.spotPrices, onCacToggled: _updateCac),
               _ProvenanceTab(coin: _coin),
@@ -1510,35 +1518,49 @@ class _ActionBtn extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // DETAILS TAB
 // ─────────────────────────────────────────────────────────────────────────────
-class _DetailsTab extends StatelessWidget {
+@visibleForTesting
+class DetailsTab extends StatelessWidget {
   final CoinModel coin;
   final bool isInspectorMode;
   final Function(String fieldName, String currentValue) onInspectField;
+  final MintProductMetadata? mintMetadata;
 
-  const _DetailsTab({
+  const DetailsTab({
+    super.key,
     required this.coin,
     this.isInspectorMode = false,
     required this.onInspectField,
+    this.mintMetadata,
   });
 
   @override
   Widget build(BuildContext context) {
-    final fields = <(String, String)>[
-      ('Year', coin.year.replaceAll(RegExp(r'\.0$'), '')),
-      ('Mint Mark', coin.mintMark),
-      ('Denomination', _fmtDenomination(coin.denomination)),
-      ('Program / Series', coin.programSeries.isEmpty ? (coin.country.isNotEmpty && coin.country != 'United States' ? 'Standard Circulation' : '') : coin.programSeries),
-      ('Theme / Subject', coin.themeSubject),
-      ('Variety / Error', coin.variety),
-      ('Condition', coin.condition),
-      ('Strike Type', coin.strikeType),
-      ('Holder Type', coin.holderType),
-      ('Grading Service', coin.gradingService),
-      ('Metal Content', coin.metalContent),
-      ('Country', coin.country),
-      ('Storage Location', coin.storageLocation),
-      ('Quantity', coin.quantity.isNotEmpty ? coin.quantity : '1'),
-      ('Notes', coin.personalNotes),
+    final fields = <(String, String, bool)>[
+      ('Year', coin.year.replaceAll(RegExp(r'\.0$'), ''), false),
+      ('Mint Mark', coin.mintMark, false),
+      ('Denomination', _fmtDenomination(coin.denomination), false),
+      ('Program / Series', coin.programSeries.isEmpty ? (coin.country.isNotEmpty && coin.country != 'United States' ? 'Standard Circulation' : '') : coin.programSeries, false),
+      ('Theme / Subject', coin.themeSubject, false),
+      ('Variety / Error', coin.variety, false),
+      ('Condition', coin.condition, false),
+      ('Strike Type', coin.strikeType, false),
+      ('Holder Type', coin.holderType, false),
+      ('Grading Service', coin.gradingService, false),
+      ('Metal Content', coin.metalContent, false),
+      ('Country', coin.country, false),
+      ('Storage Location', coin.storageLocation, false),
+      ('Quantity', coin.quantity.isNotEmpty ? coin.quantity : '1', false),
+      if (mintMetadata != null) ...[
+        if (mintMetadata!.productPriceUsd != null && mintMetadata!.productPriceUsd! > 0)
+          ('Original U.S. Mint Issue Price', '\$${mintMetadata!.productPriceUsd!.toStringAsFixed(2)}', true),
+        if (mintMetadata!.displayStatus.isNotEmpty)
+          ('Mint Schedule Status', mintMetadata!.displayStatus, true),
+        if (mintMetadata!.productAvailability?.isNotEmpty == true)
+          ('Product Availability', mintMetadata!.productAvailability!, true),
+        if (mintMetadata!.displayReleaseDate.isNotEmpty)
+          ('Original Release Date', mintMetadata!.displayReleaseDate, true),
+      ],
+      ('Notes', coin.personalNotes, false),
     ].where((f) => f.$2.trim().isNotEmpty &&
         f.$2 != 'null' && f.$2 != 'N/A' && f.$2 != 'Ungraded').toList();
 
@@ -1561,6 +1583,7 @@ class _DetailsTab extends StatelessWidget {
               return _DetailTile(
                 label: f.$1,
                 value: f.$2,
+                isMuted: f.$3,
                 onInspect: (isInspectorMode && isAuditable)
                     ? () => onInspectField(f.$1, f.$2)
                     : null,
@@ -1581,6 +1604,7 @@ class _DetailsTab extends StatelessWidget {
     );
   }
 }
+typedef _DetailsTab = DetailsTab;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FINANCIALS TAB
@@ -3269,7 +3293,13 @@ class _DetailTile extends StatelessWidget {
   final String label;
   final String value;
   final VoidCallback? onInspect;
-  const _DetailTile({required this.label, required this.value, this.onInspect});
+  final bool isMuted;
+  const _DetailTile({
+    required this.label,
+    required this.value,
+    this.onInspect,
+    this.isMuted = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3286,21 +3316,37 @@ class _DetailTile extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: TextStyle(fontSize: 10, color: _kSubtext(context),
-                  fontWeight: FontWeight.w600, letterSpacing: 0.2)),
-              if (onInspect != null)
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: _kSubtext(context),
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+              if (onInspect != null) ...[
+                const SizedBox(width: 4),
                 GestureDetector(
                   onTap: onInspect,
                   child: Icon(Icons.comment_outlined, size: 12, color: _kAccent(context)),
                 ),
+              ],
             ],
           ),
           SizedBox(height: 4),
           GestureDetector(
             onLongPress: () => Clipboard.setData(ClipboardData(text: value)),
             child: Text(value,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
-                  color: _kText(context))),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isMuted ? FontWeight.normal : FontWeight.bold,
+                color: isMuted ? _kSubtext(context) : _kText(context),
+              )),
           ),
         ]),
       ),
