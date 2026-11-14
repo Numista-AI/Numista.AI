@@ -823,7 +823,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
                 onOpenChat: () {
                   Navigator.of(context).pop();
                   widget.onNavigateToAiChat?.call(
-                    'Tell me more about this coin: ${_coin.year} ${_coin.mintMark} '
+                    'Tell me more about this coin: ${_coin.year} ${MintHelpers.formatMintMarkForDisplay(_coin.mint, _coin.mintMark, compact: true)} '
                     '${_coin.denomination} — ${_coin.programSeries} ${_coin.themeSubject}',
                   );
                 },
@@ -2958,7 +2958,7 @@ class _HistoryTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${coin.year} ${coin.mintMark} ${coin.denomination}',
+                  '${coin.year} ${MintHelpers.formatMintMarkForDisplay(coin.mint, coin.mintMark, compact: true)} ${coin.denomination}',
                   style: TextStyle(
                     color: _kAccent(context),
                     fontSize: 18,
@@ -2968,7 +2968,7 @@ class _HistoryTab extends StatelessWidget {
                 SizedBox(height: 12),
                 Text(
                   'This issue represents an important piece of ${coin.country.isNotEmpty ? coin.country : 'numismatic'} coinage history. '
-                  'Minted in ${coin.year.isNotEmpty ? coin.year : 'its era'}${coin.mintMark.isNotEmpty ? ' at the ${coin.mintMark} Mint facility' : ''}, '
+                  'Minted in ${coin.year.isNotEmpty ? coin.year : 'its era'}${coin.mint.isNotEmpty ? ' at the ${coin.mint} Mint facility' : (coin.mintMark.isNotEmpty ? ' with mint mark ${coin.mintMark}' : '')}, '
                   'it was struck in ${coin.metalContent.isNotEmpty ? coin.metalContent : 'standard coinage metal'}. '
                   '${coin.programSeries.isNotEmpty ? 'Part of the canonical ${coin.programSeries} series.' : ''}',
                   style: TextStyle(

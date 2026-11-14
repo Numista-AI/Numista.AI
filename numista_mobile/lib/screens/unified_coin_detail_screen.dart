@@ -9,8 +9,11 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/coin_model.dart';
+import '../services/mint_product_lookup_service.dart';
 import '../services/signed_photo_url_service.dart';
+import '../utils/mint_helpers.dart';
 import '../utils/owned_storage_url.dart';
+import '../widgets/signed_storage_image.dart';
 import 'unified_coin_detail_deps.dart';
 
 /// Fail-closed feature gate consulted by UnifiedCoinDetailScreen.show() and showPublic().
@@ -116,6 +119,10 @@ class PublicCoinProjection {
   final String title;
   final String denomination;
   final String composition;
+  final String year;
+  final String mint;
+  final String mintMark;
+  final String programSeries;
   final double? cpgRetail;
   final String? primaryImageUrl;
   final String? legislationKey;
@@ -127,6 +134,10 @@ class PublicCoinProjection {
     required this.title,
     required this.denomination,
     required this.composition,
+    this.year = '',
+    this.mint = '',
+    this.mintMark = '',
+    this.programSeries = '',
     this.cpgRetail,
     this.primaryImageUrl,
     this.legislationKey,
@@ -170,6 +181,14 @@ class PublicCoinProjection {
       composition: m['composition']?.toString() ??
           m['metalContent']?.toString() ??
           'Not Recorded',
+      year: m['year']?.toString() ?? '',
+      mint: m['mint']?.toString() ?? '',
+      mintMark:
+          m['mint_mark']?.toString() ?? m['mintMark']?.toString() ?? '',
+      programSeries: m['program_series']?.toString() ??
+          m['programSeries']?.toString() ??
+          m['series']?.toString() ??
+          '',
       cpgRetail: (m['cpg_retail'] as num?)?.toDouble() ??
           (m['cpgRetail'] as num?)?.toDouble(),
       primaryImageUrl: _approvedPrimaryImageUrl(m['primary_image']),
@@ -191,6 +210,10 @@ class PublicCoinProjection {
       denomination: coin.denomination,
       composition:
           coin.metalContent.isNotEmpty ? coin.metalContent : 'Not Recorded',
+      year: coin.year,
+      mint: coin.mint,
+      mintMark: coin.mintMark,
+      programSeries: coin.programSeries,
       cpgRetail: coin.cpgRetail > 0 ? coin.cpgRetail : null,
       primaryImageUrl: referenceImageUrl,
       legislationKey: null,
@@ -205,6 +228,10 @@ class PublicCoinProjection {
       themeSubject: title,
       denomination: denomination,
       metalContent: composition,
+      year: year,
+      mint: mint,
+      mintMark: mintMark,
+      programSeries: programSeries,
       cpgRetail: cpgRetail ?? 0.0,
       imageUrlObverse: primaryImageUrl ?? '',
     );
@@ -359,8 +386,8 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
   bool _showValues = false;
   bool _showLegislation = false;
   bool _showReverse = false;
-  String? _heroFutureUrl;
-  Future<String?>? _heroPhotoFuture;
+  String? _lastRecordedPublicUrl;
+  final Set<String> _recordedResolvedUrls = <String>{};
   Map<String, dynamic>? _laws;
   Timer? _lawsWatchdog;
   bool _lawsTimedOut = false;
@@ -383,8 +410,16 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
     _currentCoin = widget.initialCoin;
     _currentSnapshot = widget.initialSnapshot;
     _currentParentIndex = widget.initialParentIndex;
-    _refreshHeroPhotoFuture();
     _loadCurrentDoc();
+    unawaited(
+      _deps.ensureMintCatalogInitialized
+              ?.call()
+              .then((_) {
+                if (mounted) setState(() {});
+              })
+              .catchError((_) {}) ??
+          Future<void>.value(),
+    );
   }
 
   @override
@@ -400,7 +435,6 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
     if (!mounted || data == null) return;
     setState(() {
       _currentCoin = CoinModel.fromMap(data, id);
-      _refreshHeroPhotoFuture();
     });
   }
 
@@ -457,7 +491,6 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
         _showReverse = false;
         _laws = null;
         _lawsTimedOut = false;
-        _refreshHeroPhotoFuture();
       });
       return;
     }
@@ -558,19 +591,6 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
     return isOwnedStorageUrl(obv) ? obv : null;
   }
 
-  void _refreshHeroPhotoFuture() {
-    final url = _selectHeroImageUrl(_currentCoin);
-    if (url == _heroFutureUrl) return;
-    _heroFutureUrl = url;
-    if (url != null &&
-        _deps.resolvePhotoUrl != null &&
-        SignedPhotoUrlService.needsSigning(url)) {
-      _heroPhotoFuture = _deps.resolvePhotoUrl!(url);
-    } else {
-      _heroPhotoFuture = null;
-    }
-  }
-
   void _openLegislationTab(CoinModel? coin) {
     setState(() {
       _showLegislation = true;
@@ -587,7 +607,17 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
   }
 
   void _launchEbaySearch(CoinModel coin) {
-    final query = Uri.encodeComponent('${coin.year} ${coin.themeSubject}'.trim());
+    final mintMarkCompact = MintHelpers.formatMintMarkForDisplay(
+      coin.mint,
+      coin.mintMark,
+      compact: true,
+    );
+    final rawQuery = <String>[
+      coin.year,
+      mintMarkCompact,
+      coin.themeSubject,
+    ].where((s) => s.trim().isNotEmpty).join(' ');
+    final query = Uri.encodeComponent(rawQuery);
     final url = 'https://www.ebay.com/sch/i.html?_nkw=$query';
     _deps.onLaunchUrl?.call(url);
   }
@@ -597,6 +627,49 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
         key: Key('hero_coin_placeholder'),
         size: 64,
       );
+
+  Widget _buildHeroImage(String? heroUrl) {
+    if (heroUrl == null || heroUrl.isEmpty) {
+      return _buildHeroPlaceholder();
+    }
+    if (SignedPhotoUrlService.needsSigning(heroUrl)) {
+      final resolver = _deps.resolvePhotoUrl;
+      if (resolver == null) {
+        return _buildHeroPlaceholder();
+      }
+      return SignedStorageImage(
+        url: heroUrl,
+        imageKey: const Key('hero_coin_image'),
+        resolver: (rawUrl) async {
+          if (rawUrl == null || rawUrl.isEmpty) return null;
+          final resolved = await resolver(rawUrl);
+          if (resolved != null &&
+              resolved.isNotEmpty &&
+              _recordedResolvedUrls.add(resolved)) {
+            _deps.onImageLoad?.call(resolved);
+          }
+          return resolved;
+        },
+        placeholderBuilder: (_) => const SizedBox(
+          key: Key('hero_coin_loading'),
+          height: 160,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        errorBuilder: (_) => _buildHeroPlaceholder(),
+      );
+    }
+    if (_lastRecordedPublicUrl != heroUrl) {
+      _lastRecordedPublicUrl = heroUrl;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _deps.onImageLoad?.call(heroUrl);
+      });
+    }
+    return Image.network(
+      heroUrl,
+      key: const Key('hero_coin_image'),
+      errorBuilder: (_, _, _) => _buildHeroPlaceholder(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -657,46 +730,12 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_heroPhotoFuture != null)
-                    FutureBuilder<String?>(
-                      future: _heroPhotoFuture,
-                      builder: (_, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const SizedBox(
-                            height: 160,
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
-                        final resolved = snapshot.data;
-                        if (resolved == null || resolved.isEmpty) {
-                          return _buildHeroPlaceholder();
-                        }
-                        _deps.onImageLoad?.call(resolved);
-                        return Image.network(
-                          resolved,
-                          key: const Key('hero_coin_image'),
-                          errorBuilder: (_, _, _) => _buildHeroPlaceholder(),
-                        );
-                      },
-                    )
-                  else if (heroUrl != null)
-                    Builder(builder: (_) {
-                      _deps.onImageLoad?.call(heroUrl);
-                      return Image.network(
-                        heroUrl,
-                        key: const Key('hero_coin_image'),
-                        errorBuilder: (_, _, _) => _buildHeroPlaceholder(),
-                      );
-                    })
-                  else
-                    _buildHeroPlaceholder(),
+                  _buildHeroImage(heroUrl),
                   if (_hasReverseImage(coin))
                     TextButton.icon(
                       key: const Key('udv_toggle_side_button'),
                       onPressed: () => setState(() {
                         _showReverse = !_showReverse;
-                        _refreshHeroPhotoFuture();
                       }),
                       icon: const Icon(Icons.flip),
                       label:
@@ -705,6 +744,35 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
         Text((coin?.metalContent.isNotEmpty ?? false)
             ? coin!.metalContent
             : 'Not Recorded'),
+        if (coin != null) ...() {
+          final mintFacility = coin.mint.trim();
+          final mintMarkDisplay = MintHelpers.formatMintMarkForDisplay(
+            coin.mint,
+            coin.mintMark,
+          );
+          final lookup = (_deps.lookupMintProduct ??
+                  MintProductLookupService.instance.lookupForCoin)(coin);
+          return <Widget>[
+            if (mintFacility.isNotEmpty)
+              Text('Mint Facility: $mintFacility'),
+            if (mintMarkDisplay.isNotEmpty)
+              Text('Mint Mark: $mintMarkDisplay'),
+            if (lookup != null) ...[
+              if (lookup.displayStatus.isNotEmpty)
+                Text('Mint Status: ${lookup.displayStatus}'),
+              if (lookup.productPriceUsd != null)
+                Text(
+                  'Mint Issue Price: \$${lookup.productPriceUsd!.toStringAsFixed(2)}',
+                ),
+              if (lookup.productAvailability != null &&
+                  lookup.productAvailability!.isNotEmpty)
+                Text('Availability: ${lookup.productAvailability!}'),
+              if (lookup.releaseDate != null &&
+                  lookup.releaseDate!.isNotEmpty)
+                Text('Release Date: ${lookup.releaseDate!}'),
+            ],
+          ];
+        }(),
         TextButton(
           onPressed: () => setState(() => _showValues = !_showValues),
           child: const Text('Show values'),

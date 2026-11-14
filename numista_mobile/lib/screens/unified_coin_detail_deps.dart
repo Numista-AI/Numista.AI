@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart' show QueryDocumentSnapshot;
 
+import '../models/coin_model.dart';
+import '../models/mint_product_metadata.dart';
+import '../services/mint_product_lookup_service.dart';
 import '../services/signed_photo_url_service.dart';
 
 abstract class CoinDocStore {
@@ -17,6 +20,8 @@ typedef LawsFetcher = Future<Map<String, dynamic>?> Function(String legislationK
 typedef UrlLauncherHook = void Function(String url);
 typedef ImageLoadRecorder = void Function(String url);
 typedef PhotoUrlResolver = Future<String?> Function(String url);
+typedef MintCatalogInitializer = Future<void> Function();
+typedef MintProductLookup = MintProductMetadata? Function(CoinModel coin);
 
 class UnifiedCoinDetailDeps {
   final CoinDocStore store;
@@ -25,6 +30,8 @@ class UnifiedCoinDetailDeps {
   final UrlLauncherHook? onLaunchUrl; // injected in tests, null in production
   final ImageLoadRecorder? onImageLoad; // injected in tests, null in production
   final PhotoUrlResolver? resolvePhotoUrl;
+  final MintCatalogInitializer? ensureMintCatalogInitialized;
+  final MintProductLookup? lookupMintProduct;
 
   const UnifiedCoinDetailDeps({
     required this.store,
@@ -33,6 +40,8 @@ class UnifiedCoinDetailDeps {
     this.onLaunchUrl,
     this.onImageLoad,
     this.resolvePhotoUrl,
+    this.ensureMintCatalogInitialized,
+    this.lookupMintProduct,
   });
 
   factory UnifiedCoinDetailDeps.production(
@@ -42,6 +51,9 @@ class UnifiedCoinDetailDeps {
         store: CachedCoinDocStore(cached),
         clock: const SystemDetailClock(),
         resolvePhotoUrl: SignedPhotoUrlService.resolve,
+        ensureMintCatalogInitialized:
+            MintProductLookupService.instance.ensureInitialized,
+        lookupMintProduct: MintProductLookupService.instance.lookupForCoin,
       );
 }
 
