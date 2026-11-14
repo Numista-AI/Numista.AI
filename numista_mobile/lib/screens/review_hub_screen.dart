@@ -10,6 +10,7 @@ import '../services/canonical_mint_asset_service.dart';
 import '../utils/mint_helpers.dart';
 import '../utils/numista_error_helper.dart';
 import '../utils/review_field_keys.dart';
+import '../services/morgan_screen_state_registry.dart';
 import '../widgets/grade_badge_widget.dart';
 
 /// Top-level convenience alias for ReviewHubScreen.formatCurrency
@@ -117,6 +118,18 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
 
   // Backend API URL
   final String _apiUrl = kApiBaseUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    MorganScreenStateRegistry.instance.markScreenHydrated(
+      route: 'Review Hub',
+      hydrated: true,
+      contextPatch: {
+        'selectedCount': _selectedIds.length,
+      },
+    );
+  }
 
   // ─── item_type badge config ────────────────────────────────────────────────
   static const Map<String, _ItemTypeMeta> _typeMetaMap = {

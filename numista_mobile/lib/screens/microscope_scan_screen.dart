@@ -52,10 +52,123 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
 
   // ─── Camera Selector State ─────────────────────────────────────────────────
   List<int> _availableCameras = [];
+  List<Map<String, dynamic>> _cameraDetails = [];
   int _activeCameraIdx = -1;
+  String _activeCameraName = '';
   bool _loadingCameras = false;
 
   bool _microscopeConfigured = false;
+  bool _agentPreviouslyInstalled = false;
+  bool _wakingAgent = false;
+  bool _wakeTimedOut = false;
+  bool _isHydrated = false;
+
+  final GlobalKey _wakeBtnKey = GlobalKey();
+  final GlobalKey _downloadBtnKey = GlobalKey();
+  final GlobalKey _cameraDropdownKey = GlobalKey();
+
+  void _publishMorganState() {
+    HardwareService.registeredUiKeys['btn_wake_microscope_agent'] = _wakeBtnKey;
+    HardwareService.registeredUiKeys['btn_download_microscope_agent'] =
+        _downloadBtnKey;
+    HardwareService.registeredUiKeys['dropdown_camera_select'] =
+        _cameraDropdownKey;
+
+    HardwareService.registeredUiInvokers['enable_microscope_setting'] =
+        ([_]) async {
+      await HardwareService.setMicroscopeConfigured(true);
+      await _checkServer();
+    };
+    HardwareService.registeredUiInvokers['btn_wake_microscope_agent'] =
+        ([_]) async {
+      await _handleWakeAgentTap();
+    };
+    HardwareService.registeredUiInvokers['set_camera_index'] = ([params]) async {
+      final rawIdx = params?['index'] ?? params?['camera_index'];
+      final idx = rawIdx is int ? rawIdx : int.tryParse('$rawIdx');
+      if (idx != null && _availableCameras.contains(idx)) {
+        final ok = await _hw.setCameraIndex(idx);
+        if (ok && mounted) {
+          setState(() {
+            _activeCameraIdx = idx;
+            _activeCameraName = _cameraLabelForIndex(idx);
+          });
+          _publishMorganState();
+        }
+      }
+    };
+
+    HardwareService.publishMicroscopeState({
+      'isHydrated': _isHydrated,
+      'microscopeConfigured': _microscopeConfigured,
+      'serverOnline': _serverOnline,
+      'agentInstalledBefore': _agentPreviouslyInstalled,
+      'availableCameras': _cameraDetails,
+      'activeCameraIdx': _activeCameraIdx,
+      'activeCameraName': _activeCameraName,
+      'wakingAgent': _wakingAgent,
+      'wakeTimedOut': _wakeTimedOut,
+      if (HardwareService.isMockEnabled) ...{
+        'sharpness': HardwareService.mockSharpness,
+        if (HardwareService.mockScanStep != null)
+          'scanStep': HardwareService.mockScanStep,
+        if (HardwareService.mockLastError != null)
+          'lastError': HardwareService.mockLastError,
+      },
+    });
+  }
+
+  String _cameraLabelForIndex(int idx) {
+    for (final detail in _cameraDetails) {
+      if (detail['index'] == idx) {
+        final name = detail['name']?.toString().trim();
+        final isRecommended = detail['is_recommended'] == true;
+        if (name != null && name.isNotEmpty) {
+          return isRecommended ? '$name (Recommended)' : name;
+        }
+      }
+    }
+    return 'Camera $idx';
+  }
+
+  Future<void> _handleWakeAgentTap() async {
+    // Launch synchronously within the user's tap gesture so browser preserves
+    // the activation token for custom URI schemes (numista-agent://launch).
+    HardwareService.launchDesktopAgent();
+    if (!mounted) return;
+    setState(() {
+      _wakingAgent = true;
+      _wakeTimedOut = false;
+    });
+    _publishMorganState();
+
+    for (int i = 0; i < 8; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      final online = await _hw.isServerRunning(bypassConfigCheck: true);
+      if (!mounted) return;
+      if (online) {
+        setState(() {
+          _wakingAgent = false;
+          _wakeTimedOut = false;
+          _serverOnline = true;
+          _agentPreviouslyInstalled = true;
+        });
+        _startPolling();
+        await _loadCameras();
+        return;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _wakingAgent = false;
+        _wakeTimedOut = true;
+        _serverOnline = false;
+      });
+      _publishMorganState();
+    }
+  }
 
   @override
   void initState() {
@@ -78,33 +191,67 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   // ─── Server Ping ────────────────────────────────────────────────────────────
   Future<void> _checkServer() async {
     final configured = await HardwareService.isMicroscopeConfigured();
-    if (!mounted) return;
-    setState(() => _microscopeConfigured = configured);
     if (!configured) {
-      setState(() => _serverOnline = false);
-      return;
+      await HardwareService.setMicroscopeConfigured(true);
     }
-    final online = await _hw.isServerRunning();
-    if (mounted) {
-      setState(() => _serverOnline = online);
+    final previouslyInstalled = await HardwareService.wasAgentEverInstalled();
+    if (!mounted) return;
+    setState(() {
+      _microscopeConfigured = true;
+      _agentPreviouslyInstalled = previouslyInstalled;
+    });
+    final online = await _hw.isServerRunning(bypassConfigCheck: true);
+    if (!mounted) return;
+    setState(() {
+      _serverOnline = online;
       if (online) {
-        _startPolling();
-        _loadCameras();
+        _agentPreviouslyInstalled = true;
+        _wakeTimedOut = false;
       }
+    });
+    if (online) {
+      _startPolling();
+      await _loadCameras();
+    } else {
+      setState(() => _isHydrated = true);
+      _publishMorganState();
     }
   }
 
   Future<void> _loadCameras() async {
     if (!mounted) return;
     setState(() => _loadingCameras = true);
-    final res = await _hw.listCameras();
-    if (mounted) {
-      setState(() {
-        _availableCameras = List<int>.from(res['cameras'] ?? []);
-        _activeCameraIdx = res['active'] as int? ?? -1;
-        _loadingCameras = false;
-      });
+    final res = await _hw.listCameras(bypassConfigCheck: true);
+    if (!mounted) return;
+    final rawDetails = (res['camera_details'] as List<dynamic>? ?? [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    final visibleDetails =
+        rawDetails.where((d) => d['blocked'] != true).toList();
+    final parsedIndices = visibleDetails.isNotEmpty
+        ? visibleDetails.map((d) => d['index']).whereType<int>().toList()
+        : List<int>.from(res['cameras'] ?? []);
+
+    int activeIdx = res['active'] as int? ?? -1;
+    if (parsedIndices.isNotEmpty && !parsedIndices.contains(activeIdx)) {
+      final recommended =
+          visibleDetails.where((d) => d['is_recommended'] == true);
+      activeIdx = recommended.isNotEmpty
+          ? (recommended.first['index'] as int? ?? parsedIndices.first)
+          : parsedIndices.first;
     }
+
+    setState(() {
+      _cameraDetails = rawDetails;
+      _availableCameras = parsedIndices;
+      _activeCameraIdx = activeIdx;
+      _activeCameraName =
+          res['active_name']?.toString() ?? _cameraLabelForIndex(activeIdx);
+      _loadingCameras = false;
+      _isHydrated = true;
+    });
+    _publishMorganState();
   }
 
   // ─── Polling ────────────────────────────────────────────────────────────────
@@ -296,12 +443,132 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
   }
 
   // ─── Server Status Banner ────────────────────────────────────────────────────
+  Widget _buildOfflineHelperCard(BuildContext context) {
+    final showWakePrimary = _agentPreviouslyInstalled;
+    final showDownloadPrimary = !showWakePrimary || _wakeTimedOut;
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      color: const Color(0xFF0F172A),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: Color(0xFFF5C451), width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              showWakePrimary
+                  ? 'Microscope Helper Not Awake'
+                  : 'Connect Your USB Microscope',
+              style: const TextStyle(
+                color: Color(0xFFF8FAFC),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _wakeTimedOut
+                  ? 'We could not wake the Microscope Helper automatically within 4 seconds. You can run or reinstall the one-time setup below.'
+                  : showWakePrimary
+                      ? 'Your Microscope Helper is installed on this PC, just asleep. Click below to wake it up in one tap.'
+                      : 'Install the small Windows Microscope Helper once, or wake it up if you have already installed it on this computer.',
+              style: const TextStyle(
+                color: Color(0xFFE2E8F0),
+                fontSize: 16,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Semantics(
+              identifier: 'morgan_wake_agent_btn',
+              button: true,
+              label: 'Wake Up Microscope Helper',
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  key: _wakeBtnKey,
+                  onPressed: _wakingAgent ? null : _handleWakeAgentTap,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF5C451),
+                    foregroundColor: const Color(0xFF0F172A),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
+                    textStyle: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  icon: _wakingAgent
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Color(0xFF0F172A),
+                          ),
+                        )
+                      : const Icon(Icons.power_settings_new_rounded, size: 22),
+                  label: Text(
+                    _wakingAgent
+                        ? 'Waking Microscope Helper...'
+                        : '🔌 Wake Up Microscope Helper',
+                  ),
+                ),
+              ),
+            ),
+            if (showDownloadPrimary) ...[
+              const SizedBox(height: 12),
+              Semantics(
+                identifier: 'morgan_download_agent_btn',
+                button: true,
+                label: 'Download Microscope Helper (One-Time Setup)',
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 56),
+                  child: ElevatedButton.icon(
+                    key: _downloadBtnKey,
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const DesktopAgentDownloadScreen(showBack: true),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF14532D),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
+                      textStyle: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    icon: const Icon(Icons.download_rounded, size: 22),
+                    label: const Text(
+                      '📥 Download Microscope Helper (One-Time Setup)',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildServerStatus() {
     if (isNativePhone) {
       return const SizedBox.shrink();
     }
-    if (!_microscopeConfigured) {
-      return const SizedBox.shrink();
+    if (!_serverOnline) {
+      return _buildOfflineHelperCard(context);
     }
     if (_serverOnline) {
       // ── Online state: compact green pill ────────────────────────────────────
@@ -559,12 +826,7 @@ class _MicroscopeScanScreenState extends State<MicroscopeScanScreen>
                 icon: const Icon(Icons.arrow_drop_down, color: _electricBlue),
                 hint: const Text('Select Camera', style: TextStyle(color: Colors.grey, fontSize: 14)),
                 items: _availableCameras.map((int idx) {
-                  String label = 'Camera $idx';
-                  if (idx == 0) {
-                    label = 'Camera 0 (Built-in Webcam)';
-                  } else if (idx == 1 || idx == 2) {
-                    label = 'Camera $idx (USB Microscope)';
-                  }
+                  final label = _cameraLabelForIndex(idx);
                   return DropdownMenuItem<int>(
                     value: idx,
                     child: Text(label, style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14)),

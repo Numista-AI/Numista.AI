@@ -429,10 +429,57 @@ def _start_agent():
         logging.error("[TRAY] Failed to bind Flask server on ports 8443 and 5000.")
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
+def _register_uri_protocol_scheme():
+    """Register numista-agent:// URI protocol under HKCU (zero admin rights required — MF-2)."""
+    if sys.platform != "win32":
+        return False
+    try:
+        import winreg
+        exe_path = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
+        base_key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Classes\numista-agent")
+        winreg.SetValueEx(base_key, "", 0, winreg.REG_SZ, "URL:Numista.AI Microscope Helper")
+        winreg.SetValueEx(base_key, "URL Protocol", 0, winreg.REG_SZ, "")
+        winreg.CloseKey(base_key)
+
+        cmd_key = winreg.CreateKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Classes\numista-agent\shell\open\command",
+        )
+        winreg.SetValueEx(cmd_key, "", 0, winreg.REG_SZ, f'"{exe_path}" --uri "%1"')
+        winreg.CloseKey(cmd_key)
+        logging.info(f"[TRAY] Registered numista-agent:// protocol → \"{exe_path}\"")
+        return True
+    except Exception as e:
+        logging.warning(f"[TRAY] Could not register numista-agent:// URI scheme: {e}")
+        return False
+
+
+def _ensure_autostart_first_run():
+    """Enable Windows HKCU autostart on first launch so the agent stays warm after reboots."""
+    if sys.platform != "win32" or _is_autostart_enabled():
+        return
+    try:
+        import winreg
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Run",
+            0,
+            winreg.KEY_SET_VALUE | winreg.KEY_READ,
+        )
+        exe_path = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(sys.argv[0])
+        winreg.SetValueEx(key, "NumistaAgent", 0, winreg.REG_SZ, f'"{exe_path}"')
+        winreg.CloseKey(key)
+        logging.info(f"[TRAY] Enabled default Windows autostart → \"{exe_path}\"")
+    except Exception as e:
+        logging.warning(f"[TRAY] Default autostart registration skipped: {e}")
+
+
 def main():
     global _tray_icon
 
     _acquire_single_instance()
+    _register_uri_protocol_scheme()
+    _ensure_autostart_first_run()
 
     logging.info("=" * 55)
     logging.info("  Numista.AI Hardware Agent v2.0")

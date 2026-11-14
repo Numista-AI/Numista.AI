@@ -1100,6 +1100,19 @@
     ]
   },
   {
+    "path": "/api/morgan/copilot",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_morgan_copilot",
+    "tags": [
+      "Morgan AI Proposals & Safe Operations"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
     "path": "/api/morgan/propose",
     "methods": [
       "POST"

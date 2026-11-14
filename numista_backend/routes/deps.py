@@ -127,6 +127,7 @@ def check_and_increment_rate_cap(
     daily_limit: int,
     is_admin: bool = False,
     amount: int = 1,
+    detail_message: Optional[str] = None,
 ) -> None:
     """Per-user daily cap helper storing counts in _rate_limits/{uid}/{endpoint}/{YYYY-MM-DD}.
 
@@ -143,20 +144,18 @@ def check_and_increment_rate_cap(
     clean_uid = str(uid).strip()
     clean_endpoint = str(endpoint).strip().lstrip("/")
     doc_ref = db.collection("_rate_limits").document(clean_uid).collection(clean_endpoint).document(today_date)
+    limit_msg = detail_message or "Daily limit reached"
     try:
         snap = doc_ref.get()
-        current_count = 0
-        if snap.exists:
-            data = snap.to_dict() or {}
-            current_count = data.get("count", 0)
+        current_count = _safe_doc_count(snap)
         if current_count + step > daily_limit:
-            raise HTTPException(status_code=429, detail="Daily limit reached")
+            raise HTTPException(status_code=429, detail=limit_msg)
         doc_ref.set({"count": firestore.Increment(step)}, merge=True)
     except HTTPException:
         raise
     except Exception as e:
         logger.warning(f"Rate cap check failed for {clean_uid}/{clean_endpoint}: {e}")
-        raise HTTPException(status_code=429, detail="Daily limit reached")
+        raise HTTPException(status_code=429, detail=limit_msg)
 
 
 _check_and_increment_rate_cap = check_and_increment_rate_cap

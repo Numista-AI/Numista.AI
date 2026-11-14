@@ -30,16 +30,17 @@ Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
   bool isLoading = true;
   StateSetter? dialogSetState;
 
-  // 2. Request user webcam stream with 1280x720 ideal bounds
+  // 2. Request user webcam stream with 1280x720 ideal bounds.
+  // Never pass facingMode:'environment' on desktop browsers because Windows
+  // routes it to Phone Link Virtual Camera.
   final constraints = {
     'video': {
       'width': {'ideal': 1280},
       'height': {'ideal': 720},
-      'facingMode': 'environment'
     }
   }.jsify() as web.MediaStreamConstraints;
 
-  web.window.navigator.mediaDevices.getUserMedia(constraints).toDart.then((streamObj) {
+  _requestPreferredWebCameraStream(constraints).then((streamObj) {
     localStream = streamObj;
     video.srcObject = streamObj;
     
@@ -199,11 +200,22 @@ Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
               ],
             ),
             actions: [
+              if (errorMessage == null)
+                _WebCameraSelectorButton(
+                  videoElement: video,
+                  onStreamSwitched: (newStream) {
+                    localStream = newStream;
+                  },
+                ),
               SizedBox(
                 height: 48,
                 child: TextButton(
                   onPressed: () {
                     _stopStream(localStream);
+                    final src = video.srcObject;
+                    if (src != null) {
+                      _stopStream(src as web.MediaStream);
+                    }
                     Navigator.pop(ctx);
                     completer.complete(null);
                   },
@@ -237,6 +249,10 @@ Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
                           final bytes = base64Decode(base64Data);
 
                           _stopStream(localStream);
+                          final src = video.srcObject;
+                          if (src != null) {
+                            _stopStream(src as web.MediaStream);
+                          }
                           Navigator.pop(ctx);
                           completer.complete(CameraCaptureResult(
                             bytes: bytes,
@@ -245,6 +261,10 @@ Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
                         } catch (e) {
                           debugPrint('Capture error: $e');
                           _stopStream(localStream);
+                          final src = video.srcObject;
+                          if (src != null) {
+                            _stopStream(src as web.MediaStream);
+                          }
                           Navigator.pop(ctx);
                           completer.complete(null);
                         }
@@ -279,5 +299,211 @@ void _stopStream(web.MediaStream? stream) {
     }
   } catch (e) {
     debugPrint('Error stopping stream: $e');
+  }
+}
+
+final RegExp _blockedWebCameraPattern = RegExp(
+  r'phone\s*link|link\s*to\s*windows|windows\s*virtual|cross[\s_-]?device|continuity|virtual|droidcam|iriun|epoccam|infrared|\bir\s+camera\b|windows\s*hello',
+  caseSensitive: false,
+);
+
+final RegExp _preferredMicroscopePattern = RegExp(
+  r'microscope|jiusion|tomlov|plugable|celestron|andostar|hayear|usb2\.0|usb\s*2\.0|uvc',
+  caseSensitive: false,
+);
+
+bool _isBlockedWebCameraLabel(String label) =>
+    label.trim().isNotEmpty && _blockedWebCameraPattern.hasMatch(label);
+
+bool _isPreferredWebCameraLabel(String label) =>
+    !_isBlockedWebCameraLabel(label) &&
+    _preferredMicroscopePattern.hasMatch(label);
+
+Future<List<web.MediaDeviceInfo>> _enumerateSafeWebVideoDevices() async {
+  try {
+    final raw = await web.window.navigator.mediaDevices.enumerateDevices().toDart;
+    final devices = raw.toDart;
+    final safe = <web.MediaDeviceInfo>[];
+    for (final d in devices) {
+      if (d.kind != 'videoinput') continue;
+      if (_isBlockedWebCameraLabel(d.label)) continue;
+      safe.add(d);
+    }
+    safe.sort((a, b) {
+      final aPref = _isPreferredWebCameraLabel(a.label) ? 0 : 1;
+      final bPref = _isPreferredWebCameraLabel(b.label) ? 0 : 1;
+      return aPref.compareTo(bPref);
+    });
+    return safe;
+  } catch (e) {
+    debugPrint('enumerateDevices failed: $e');
+    return const [];
+  }
+}
+
+Future<web.MediaStream> _requestPreferredWebCameraStream(
+  web.MediaStreamConstraints fallbackConstraints,
+) async {
+  final preSafe = await _enumerateSafeWebVideoDevices();
+  final labeledSafe =
+      preSafe.where((d) => d.label.trim().isNotEmpty && d.deviceId.isNotEmpty).toList();
+  if (labeledSafe.isNotEmpty) {
+    final bestId = labeledSafe.first.deviceId;
+    try {
+      final specific = {
+        'video': {
+          'width': {'ideal': 1280},
+          'height': {'ideal': 720},
+          'deviceId': {'exact': bestId},
+        }
+      }.jsify() as web.MediaStreamConstraints;
+      return await web.window.navigator.mediaDevices.getUserMedia(specific).toDart;
+    } catch (_) {
+      // Fall through to generic constraints
+    }
+  }
+
+  final stream = await web.window.navigator.mediaDevices
+      .getUserMedia(fallbackConstraints)
+      .toDart;
+
+  // Verify the granted stream did not bind to Phone Link / Virtual camera.
+  try {
+    final videoTracks = stream.getVideoTracks().toDart;
+    final activeLabel = videoTracks.isNotEmpty ? videoTracks.first.label : '';
+    final postSafe = await _enumerateSafeWebVideoDevices();
+    final hasPreferredUpgrade = postSafe.any(
+      (d) => _isPreferredWebCameraLabel(d.label) && d.label != activeLabel,
+    );
+    if (_isBlockedWebCameraLabel(activeLabel) || hasPreferredUpgrade) {
+      final target = postSafe.where((d) => d.deviceId.isNotEmpty).toList();
+      if (target.isNotEmpty) {
+        _stopStream(stream);
+        final specific = {
+          'video': {
+            'width': {'ideal': 1280},
+            'height': {'ideal': 720},
+            'deviceId': {'exact': target.first.deviceId},
+          }
+        }.jsify() as web.MediaStreamConstraints;
+        return await web.window.navigator.mediaDevices
+            .getUserMedia(specific)
+            .toDart;
+      }
+    }
+  } catch (_) {}
+
+  return stream;
+}
+
+class _WebCameraSelectorButton extends StatefulWidget {
+  final web.HTMLVideoElement videoElement;
+  final void Function(web.MediaStream newStream) onStreamSwitched;
+
+  const _WebCameraSelectorButton({
+    required this.videoElement,
+    required this.onStreamSwitched,
+  });
+
+  @override
+  State<_WebCameraSelectorButton> createState() =>
+      _WebCameraSelectorButtonState();
+}
+
+class _WebCameraSelectorButtonState extends State<_WebCameraSelectorButton> {
+  List<web.MediaDeviceInfo> _devices = const [];
+  String? _selectedDeviceId;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshDevices();
+  }
+
+  Future<void> _refreshDevices() async {
+    final safe = await _enumerateSafeWebVideoDevices();
+    if (!mounted) return;
+    String? currentId = _selectedDeviceId;
+    if (currentId == null && safe.isNotEmpty) {
+      final srcObj = widget.videoElement.srcObject;
+      if (srcObj != null) {
+        final tracks = (srcObj as web.MediaStream).getVideoTracks().toDart;
+        final activeLabel = tracks.isNotEmpty ? tracks.first.label : '';
+        final match = safe.where((d) => d.label == activeLabel).toList();
+        currentId = match.isNotEmpty ? match.first.deviceId : safe.first.deviceId;
+      } else {
+        currentId = safe.first.deviceId;
+      }
+    }
+    setState(() {
+      _devices = safe;
+      _selectedDeviceId = currentId;
+    });
+  }
+
+  Future<void> _switchCamera(String deviceId) async {
+    try {
+      final existing = widget.videoElement.srcObject;
+      if (existing != null) {
+        _stopStream(existing as web.MediaStream);
+      }
+      final constraints = {
+        'video': {
+          'width': {'ideal': 1280},
+          'height': {'ideal': 720},
+          'deviceId': {'exact': deviceId},
+        }
+      }.jsify() as web.MediaStreamConstraints;
+      final newStream =
+          await web.window.navigator.mediaDevices.getUserMedia(constraints).toDart;
+      widget.videoElement.srcObject = newStream;
+      widget.onStreamSwitched(newStream);
+      if (mounted) {
+        setState(() => _selectedDeviceId = deviceId);
+      }
+    } catch (e) {
+      debugPrint('Failed to switch web camera: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final validDevices = _devices
+        .where((d) => d.deviceId.isNotEmpty)
+        .toList(growable: false);
+    if (validDevices.length <= 1) {
+      return const SizedBox.shrink();
+    }
+    final activeValue =
+        validDevices.any((d) => d.deviceId == _selectedDeviceId)
+            ? _selectedDeviceId
+            : validDevices.first.deviceId;
+    return Semantics(
+      identifier: 'morgan_web_camera_selector',
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: activeValue,
+          dropdownColor: const Color(0xFF1E293B),
+          style: const TextStyle(color: Colors.white, fontSize: 15),
+          items: validDevices.map((d) {
+            final label = d.label.trim().isNotEmpty
+                ? d.label
+                : 'Camera ${validDevices.indexOf(d) + 1}';
+            return DropdownMenuItem<String>(
+              value: d.deviceId,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 210),
+                child: Text(label, overflow: TextOverflow.ellipsis),
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null && value != _selectedDeviceId) {
+              _switchCamera(value);
+            }
+          },
+        ),
+      ),
+    );
   }
 }

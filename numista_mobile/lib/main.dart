@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
-import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, debugPrint;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, kReleaseMode, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -20,6 +20,7 @@ import 'constants.dart';  // ITEM 10: kApiBaseUrl startup guard
 import 'package:google_fonts/google_fonts.dart';
 import 'utils/numista_error_helper.dart';
 import 'config/ai_config.dart';
+import 'services/hardware_agent_persistence.dart';
 
 
 class CatalogRouteInfo {
@@ -40,6 +41,17 @@ CatalogRouteInfo resolveCatalogRoute(Uri uri) {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Plan §14 safety invariant: MorganTestHarness must never be enabled in release builds.
+  const bool testHarnessFlag = bool.fromEnvironment('MORGAN_TEST_HARNESS');
+  assert(
+    !kReleaseMode || !testHarnessFlag,
+    'MORGAN_TEST_HARNESS=true is forbidden in release builds',
+  );
+  if (kReleaseMode && testHarnessFlag) {
+    throw StateError('MORGAN_TEST_HARNESS cannot be enabled in release builds.');
+  }
+  HardwareAgentPersistence.ensureRegistered();
 
   PlatformDispatcher.instance.onError = (error, stack) {
     debugPrint('Uncaught platform error: $error\n$stack');

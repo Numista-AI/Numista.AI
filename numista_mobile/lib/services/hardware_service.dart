@@ -16,8 +16,152 @@ class HardwareService {
   static const List<String> _baseUrls = [
     'https://localhost:8443',
     'https://localhost:5000',
+    'http://127.0.0.1:5000',
+    'http://localhost:5000',
   ];
   static String _activeBaseUrl = _baseUrls[0];
+
+  static bool _mockEnabled = false;
+  static bool _mockServerOnline = false;
+  static bool? _mockAgentInstalled;
+  static List<Map<String, dynamic>> _mockCameraDetails = const [];
+  static int _mockActiveCameraIdx = -1;
+  static double _mockSharpness = 0.0;
+  static String? _mockScanStep;
+  static String? _mockLastError;
+
+  static void setMockHardwareState({
+    bool enabled = true,
+    bool serverOnline = false,
+    bool? agentInstalled,
+    List<Map<String, dynamic>>? cameraDetails,
+    int activeCameraIdx = -1,
+    double sharpness = 0.0,
+    String? scanStep,
+    String? lastError,
+  }) {
+    _mockEnabled = enabled;
+    _mockServerOnline = serverOnline;
+    _mockAgentInstalled = agentInstalled;
+    _mockCameraDetails = cameraDetails ?? const [];
+    _mockActiveCameraIdx = activeCameraIdx;
+    _mockSharpness = sharpness;
+    _mockScanStep = scanStep;
+    _mockLastError = lastError;
+  }
+
+  static void clearMockHardwareState() {
+    _mockEnabled = false;
+    _mockServerOnline = false;
+    _mockAgentInstalled = null;
+    _mockCameraDetails = const [];
+    _mockActiveCameraIdx = -1;
+    _mockSharpness = 0.0;
+    _mockScanStep = null;
+    _mockLastError = null;
+  }
+
+  static bool get isMockEnabled => _mockEnabled;
+  static bool get mockServerOnline => _mockServerOnline;
+  static double get mockSharpness => _mockSharpness;
+  static String? get mockScanStep => _mockScanStep;
+  static String? get mockLastError => _mockLastError;
+
+  static const String prefAgentInstalled = 'hardware_agent_installed';
+  static const String prefAgentLastCamera = 'hardware_agent_last_camera';
+
+  static Future<bool> Function()? firestoreAgentInstalledLoader;
+  static Future<void> Function(Map<String, dynamic> data)?
+      firestoreAgentInstalledWriter;
+  static Future<bool> Function()? agentUriLauncher;
+  static Uri? lastLaunchedAgentUri;
+
+  /// Broadcasts live Microscope state & action hooks to Morgan Co-Pilot
+  /// (`MorganScreenStateRegistry` & `MorganProactiveRescueObserver`) without
+  /// introducing circular UI imports.
+  static final ValueNotifier<Map<String, dynamic>> liveMicroscopeState =
+      ValueNotifier<Map<String, dynamic>>({
+    'isHydrated': false,
+    'microscopeConfigured': false,
+    'serverOnline': false,
+    'agentInstalledBefore': false,
+    'availableCameras': <Map<String, dynamic>>[],
+    'activeCameraIdx': -1,
+    'activeCameraName': '',
+    'scanStep': 'IDLE',
+    'sharpness': 0.0,
+    'waitingForFlip': false,
+    'lastError': null,
+  });
+
+  static final Map<String, Object?> registeredUiKeys = <String, Object?>{};
+  static final Map<String, Future<void> Function([Map<String, dynamic>?])>
+      registeredUiInvokers =
+      <String, Future<void> Function([Map<String, dynamic>?])>{};
+
+  static void publishMicroscopeState(Map<String, dynamic> patch) {
+    final next = Map<String, dynamic>.from(liveMicroscopeState.value)
+      ..addAll(patch);
+    liveMicroscopeState.value = next;
+  }
+
+  /// Invokes `numista-agent://launch` synchronously within a user tap gesture.
+  static Future<bool> launchDesktopAgent() async {
+    final uri = Uri.parse('numista-agent://launch');
+    lastLaunchedAgentUri = uri;
+    final launcher = agentUriLauncher;
+    if (launcher != null) {
+      try {
+        return await launcher();
+      } catch (_) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  static Future<bool> isAgentInstalledLocal() async {
+    if (_mockEnabled && _mockAgentInstalled != null) {
+      return _mockAgentInstalled!;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(prefAgentInstalled) ?? false;
+  }
+
+  static Future<bool> wasAgentEverInstalled() async {
+    if (_mockEnabled && _mockAgentInstalled != null) {
+      return _mockAgentInstalled!;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(prefAgentInstalled) ?? false) {
+      return true;
+    }
+    try {
+      final remote = await firestoreAgentInstalledLoader?.call() ?? false;
+      if (remote) {
+        await prefs.setBool(prefAgentInstalled, true);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  static Future<void> markAgentInstalled({String? lastCameraName}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(prefAgentInstalled, true);
+    await prefs.setBool(prefMicroscopeEnabled, true);
+    if (lastCameraName != null && lastCameraName.isNotEmpty) {
+      await prefs.setString(prefAgentLastCamera, lastCameraName);
+    }
+    try {
+      await firestoreAgentInstalledWriter?.call({
+        'installed': true,
+        'version': '2.1',
+        if (lastCameraName != null && lastCameraName.isNotEmpty)
+          'last_camera_name': lastCameraName,
+      });
+    } catch (_) {}
+  }
 
   static String get _baseUrl => _activeBaseUrl;
 
@@ -139,8 +283,11 @@ class HardwareService {
   }
 
   // ─── Server Health Check ──────────────────────────────────────────────────
-  Future<bool> isServerRunning() async {
-    if (!(await isMicroscopeConfigured())) {
+  Future<bool> isServerRunning({bool bypassConfigCheck = false}) async {
+    if (_mockEnabled) {
+      return _mockServerOnline;
+    }
+    if (!bypassConfigCheck && !(await isMicroscopeConfigured())) {
       return false;
     }
     for (final base in _baseUrls) {
@@ -150,6 +297,7 @@ class HardwareService {
             .timeout(const Duration(seconds: 2));
         if (resp.statusCode == 200) {
           _activeBaseUrl = base;
+          await markAgentInstalled();
           return true;
         }
       } catch (_) {
@@ -199,21 +347,67 @@ class HardwareService {
   }
 
   // ─── List Cameras ─────────────────────────────────────────────────────────
-  Future<Map<String, dynamic>> listCameras() async {
-    if (!(await isMicroscopeConfigured())) {
-      return {'cameras': <int>[], 'active': -1};
+  Future<Map<String, dynamic>> listCameras({bool bypassConfigCheck = false}) async {
+    if (_mockEnabled) {
+      final filteredDetails = _mockCameraDetails
+          .where((d) => d['blocked'] != true)
+          .toList(growable: false);
+      final camIndices = filteredDetails
+          .map((d) => d['index'])
+          .whereType<int>()
+          .toList(growable: false);
+      int active = _mockActiveCameraIdx;
+      if (active < 0 || !camIndices.contains(active)) {
+        final rec = filteredDetails.where((d) => d['is_recommended'] == true);
+        if (rec.isNotEmpty) {
+          active = rec.first['index'] as int? ?? -1;
+        } else if (camIndices.isNotEmpty) {
+          active = camIndices.first;
+        } else {
+          active = -1;
+        }
+      }
+      String activeName = '';
+      for (final d in filteredDetails) {
+        if (d['index'] == active) {
+          activeName = d['name']?.toString() ?? '';
+          break;
+        }
+      }
+      return {
+        'cameras': camIndices,
+        'camera_details': _mockCameraDetails,
+        'active': active,
+        'active_name': activeName,
+      };
+    }
+    if (!bypassConfigCheck && !(await isMicroscopeConfigured())) {
+      return {
+        'cameras': <int>[],
+        'camera_details': <Map<String, dynamic>>[],
+        'active': -1,
+        'active_name': '',
+      };
     }
     try {
       final response = await http
           .get(Uri.parse('$_baseUrl/list-cameras'))
           .timeout(const Duration(seconds: 3));
       if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+        final activeName = decoded['active_name']?.toString();
+        await markAgentInstalled(lastCameraName: activeName);
+        return decoded;
       }
     } catch (e) {
       debugPrint('[HW] /list-cameras failed: $e');
     }
-    return {'cameras': <int>[], 'active': -1};
+    return {
+      'cameras': <int>[],
+      'camera_details': <Map<String, dynamic>>[],
+      'active': -1,
+      'active_name': '',
+    };
   }
 
   // ─── Set Camera Index ─────────────────────────────────────────────────────

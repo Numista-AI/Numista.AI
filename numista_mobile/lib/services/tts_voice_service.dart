@@ -8,6 +8,9 @@ class TtsVoiceService {
   TtsVoiceService._();
 
   static bool _isPlaying = false;
+  static final ValueNotifier<bool> isSpeakingNotifier =
+      ValueNotifier<bool>(false);
+  static DateTime? lastSpeechEndedAt;
   static String? _currentlySpeakingText;
   static double _speechRate = 0.48; // Measured natural tone (0.48 = ~150 wpm)
   static final double _pitch = 1.0;
@@ -35,6 +38,7 @@ class TtsVoiceService {
     await stop();
 
     _isPlaying = true;
+    isSpeakingNotifier.value = true;
     _currentlySpeakingText = text;
 
     tts_impl.webSpeak(
@@ -43,11 +47,15 @@ class TtsVoiceService {
       _pitch,
       () {
         _isPlaying = false;
+        lastSpeechEndedAt = DateTime.now();
+        isSpeakingNotifier.value = false;
         _currentlySpeakingText = null;
         if (onComplete != null) onComplete();
       },
       () {
         _isPlaying = false;
+        lastSpeechEndedAt = DateTime.now();
+        isSpeakingNotifier.value = false;
         _currentlySpeakingText = null;
       },
     );
@@ -55,8 +63,13 @@ class TtsVoiceService {
 
   /// Stops current speech playback.
   static Future<void> stop() async {
+    final wasPlaying = _isPlaying;
     tts_impl.webStop();
     _isPlaying = false;
+    if (wasPlaying) {
+      lastSpeechEndedAt = DateTime.now();
+    }
+    isSpeakingNotifier.value = false;
     _currentlySpeakingText = null;
   }
 

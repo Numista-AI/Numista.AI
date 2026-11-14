@@ -82,6 +82,225 @@ CORS(app, resources={r"/*": {"origins": [
     "http://127.0.0.1:*",
 ]}}, allow_private_network=True)
 
+
+@app.after_request
+def _add_pna_and_cors_headers(response):
+    """Ensure Chrome Private Network Access (PNA) preflights and CORS succeed on localhost."""
+    response.headers["Access-Control-Allow-Private-Network"] = "true"
+    origin = request.headers.get("Origin")
+    if origin:
+        response.headers.setdefault("Access-Control-Allow-Origin", origin)
+    else:
+        response.headers.setdefault("Access-Control-Allow-Origin", "*")
+    response.headers.setdefault("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    response.headers.setdefault("Access-Control-Allow-Headers", "Content-Type, Authorization")
+    return response
+
+
+_mock_hardware_state = None  # Populated only when NUMISTA_TEST_MODE=1
+
+_PHONE_VIRTUAL_KEYWORDS = (
+    "phone link",
+    "link to windows",
+    "windows virtual",
+    "cross device",
+    "continuity",
+    "droidcam",
+    "iriun",
+    "epoccam",
+    "obs virtual",
+    "ir camera",
+    "windows hello",
+    "infrared",
+)
+
+_USB_MICROSCOPE_KEYWORDS = (
+    "microscope",
+    "jiusion",
+    "tomlov",
+    "plugable",
+    "celestron",
+    "andostar",
+    "hayear",
+    "usb2.0 pc camera",
+    "usb 2.0 camera",
+    "uvc camera",
+    "usb video device",
+    "usb#vid_",
+)
+
+_INTEGRATED_WEBCAM_KEYWORDS = (
+    "integrated",
+    "built-in",
+    "front",
+    "facetime",
+    "hd user facing",
+    "ov9734",
+    "realtek",
+)
+
+
+def classify_camera_device(name: str, device_path: str = "") -> dict:
+    """Deterministic 3-tier DirectShow camera classifier (MF-1)."""
+    combined = f"{name or ''} {device_path or ''}".strip().lower()
+    if any(kw in combined for kw in _PHONE_VIRTUAL_KEYWORDS):
+        return {"kind": "phone_virtual", "blocked": True, "is_recommended": False}
+    if any(kw in combined for kw in _USB_MICROSCOPE_KEYWORDS):
+        return {"kind": "usb_microscope", "blocked": False, "is_recommended": True}
+    if any(kw in combined for kw in _INTEGRATED_WEBCAM_KEYWORDS):
+        return {"kind": "integrated_webcam", "blocked": False, "is_recommended": False}
+    return {"kind": "integrated_webcam", "blocked": False, "is_recommended": False}
+
+
+def enumerate_dshow_devices_fallback() -> list[tuple[str, str]]:
+    """Lightweight pure-comtypes DirectShow CLSID_VideoInputDeviceCategory fallback."""
+    if os.name != "nt":
+        return []
+    try:
+        import comtypes
+        import comtypes.client
+
+        comtypes.CoInitialize()
+        try:
+            from pygrabber.dshow_graph import FilterGraph
+            names = FilterGraph().get_input_devices()
+            return [(str(n), "") for n in (names or [])]
+        except Exception:
+            return []
+        finally:
+            try:
+                comtypes.CoUninitialize()
+            except Exception:
+                pass
+    except Exception as exc:
+        logging.debug(f"[CAMERA] DirectShow COM fallback unavailable: {exc}")
+        return []
+
+
+def enumerate_dshow_camera_names() -> list[tuple[str, str]]:
+    """Return [(FriendlyName, DevicePath), ...] in exact DirectShow CAP_DSHOW index order."""
+    if _mock_hardware_state and isinstance(_mock_hardware_state.get("cameras"), list):
+        return [
+            (str(cam.get("name", f"Camera {cam.get('index', idx)}")), str(cam.get("device_path", "")))
+            for idx, cam in enumerate(_mock_hardware_state["cameras"])
+        ]
+    try:
+        from pygrabber.dshow_graph import FilterGraph
+        devices = FilterGraph().get_input_devices() or []
+        if devices:
+            return [(str(name), "") for name in devices]
+    except Exception as exc:
+        logging.debug(f"[CAMERA] pygrabber FilterGraph failed, trying fallback: {exc}")
+    return enumerate_dshow_devices_fallback()
+
+
+def build_camera_discovery_order(
+    camera_details: list[dict],
+    preferred_idx: int | None = None,
+) -> list[int]:
+    """Build probe order hard-excluding phone_virtual devices and preferring usb_microscope."""
+    non_blocked = [c for c in camera_details if not c.get("blocked")]
+    non_blocked_by_idx = {int(c["index"]): c for c in non_blocked if "index" in c}
+    order: list[int] = []
+    if preferred_idx is not None and preferred_idx in non_blocked_by_idx:
+        order.append(preferred_idx)
+    for c in non_blocked:
+        idx = int(c["index"])
+        if c.get("kind") == "usb_microscope" and idx not in order:
+            order.append(idx)
+    for c in non_blocked:
+        idx = int(c["index"])
+        if idx not in order:
+            order.append(idx)
+    return order
+
+
+def discover_cameras(probe_max: int = 4) -> dict:
+    """Return backward-compatible camera list + DirectShow-classified camera_details."""
+    global active_camera_idx
+    if _mock_hardware_state and isinstance(_mock_hardware_state.get("cameras"), list):
+        details = []
+        for idx, cam in enumerate(_mock_hardware_state["cameras"]):
+            c_idx = int(cam.get("index", idx))
+            name = str(cam.get("name", f"Camera {c_idx}"))
+            path = str(cam.get("device_path", ""))
+            cls = classify_camera_device(name, path)
+            details.append({
+                "index": c_idx,
+                "name": name,
+                "kind": cam.get("kind", cls["kind"]),
+                "is_recommended": bool(cam.get("is_recommended", cls["is_recommended"])),
+                "blocked": bool(cam.get("blocked", cls["blocked"])),
+            })
+        allowed = [c["index"] for c in details if not c["blocked"]]
+        rec = next((c for c in details if not c["blocked"] and c["is_recommended"]), None)
+        chosen = _mock_hardware_state.get("active")
+        if chosen is None or chosen not in allowed:
+            chosen = rec["index"] if rec else (allowed[0] if allowed else -1)
+        active_name = next((c["name"] for c in details if c["index"] == chosen), "")
+        return {
+            "cameras": allowed,
+            "camera_details": details,
+            "active": chosen,
+            "active_name": active_name,
+        }
+
+    dshow_names = enumerate_dshow_camera_names()
+    total = max(probe_max, len(dshow_names)) if dshow_names else probe_max
+    details: list[dict] = []
+    available: list[int] = []
+
+    for idx in range(total):
+        if idx < len(dshow_names):
+            raw_name, dev_path = dshow_names[idx]
+            cls = classify_camera_device(raw_name, dev_path)
+            if cls["blocked"]:
+                details.append({
+                    "index": idx,
+                    "name": raw_name,
+                    "kind": cls["kind"],
+                    "is_recommended": False,
+                    "blocked": True,
+                })
+                continue
+
+        is_open = active_camera_idx == idx
+        if not is_open:
+            try:
+                temp = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+                if temp.isOpened():
+                    ret, _ = temp.read()
+                    if ret:
+                        is_open = True
+                temp.release()
+            except Exception as e:
+                logging.warning(f"[CAMERA] Probing camera index {idx} failed: {e}")
+
+        if is_open:
+            raw_name, dev_path = dshow_names[idx] if idx < len(dshow_names) else (f"Camera {idx}", "")
+            cls = classify_camera_device(raw_name, dev_path)
+            if not cls["blocked"]:
+                available.append(idx)
+            details.append({
+                "index": idx,
+                "name": raw_name,
+                "kind": cls["kind"],
+                "is_recommended": cls["is_recommended"],
+                "blocked": cls["blocked"],
+            })
+
+    rec = next((c for c in details if not c["blocked"] and c["is_recommended"]), None)
+    effective_active = active_camera_idx if active_camera_idx in available else (
+        rec["index"] if rec else (available[0] if available else -1)
+    )
+    active_name = next((c["name"] for c in details if c["index"] == effective_active), "")
+    return {
+        "cameras": available,
+        "camera_details": details,
+        "active": effective_active,
+        "active_name": active_name,
+    }
+
 # Live preview frame store (thread-safe)
 import threading as _threading
 _frame_lock = _threading.Lock()
@@ -200,7 +419,7 @@ def _idle_preview_worker():
         time.sleep(1.0)
 
 def capture_worker():
-    global capture_status, _latest_frame_jpg
+    global capture_status, _latest_frame_jpg, active_camera_idx
     # Signal the idle preview to yield the camera before we open it
     _idle_pause_event.set()
     _idle_stopped_event.clear()  # will be set by idle thread when it releases
@@ -231,13 +450,14 @@ def capture_worker():
         successful_idx = -1
         default_res = (640, 480)
         
-        # Try USB indices (1, 2) before the integrated webcam (0)
-        search_order = [preferred_camera_idx] if preferred_camera_idx is not None else [1, 2, 0]
-        if preferred_camera_idx is not None:
-            fallback = [1, 2, 0]
-            if preferred_camera_idx in fallback:
-                fallback.remove(preferred_camera_idx)
-            search_order.extend(fallback)
+        # Discover cameras in DirectShow order and exclude Phone Link / virtual cameras (MF-1)
+        discovery = discover_cameras()
+        search_order = build_camera_discovery_order(
+            discovery.get("camera_details", []),
+            preferred_idx=preferred_camera_idx,
+        )
+        if not search_order:
+            search_order = [preferred_camera_idx] if preferred_camera_idx is not None else [1, 2, 0]
 
         for idx in search_order:
             logging.info(f"[CAP] Probing camera index {idx}...")
@@ -248,6 +468,7 @@ def capture_worker():
                 if ret:
                     cap = temp_cap
                     successful_idx = idx
+                    active_camera_idx = idx
                     default_res = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
                     logging.info(f"SUCCESS: Connected to camera at index {idx} (Default: {default_res[0]}x{default_res[1]})")
                     break
@@ -760,34 +981,47 @@ def pair_agent_route():
     return jsonify({"status": "error", "message": "Email not provided"}), 400
 
 _camera_list_lock = _threading.Lock()
-_cached_camera_data = {"cameras": [], "active": -1, "ts": 0.0}
+_cached_camera_data = {"cameras": [], "camera_details": [], "active": -1, "active_name": "", "ts": 0.0}
 
-@app.route('/list-cameras', methods=['GET'])
+@app.route('/list-cameras', methods=['GET', 'OPTIONS'])
 def list_cameras_route():
+    if request.method == 'OPTIONS':
+        return '', 204
     now = time.time()
     with _camera_list_lock:
-        if now - _cached_camera_data["ts"] < 5.0 and _cached_camera_data["cameras"]:
-            return jsonify({"cameras": _cached_camera_data["cameras"], "active": active_camera_idx})
+        if _mock_hardware_state is None and now - _cached_camera_data["ts"] < 5.0 and _cached_camera_data["cameras"]:
+            return jsonify({
+                "cameras": _cached_camera_data["cameras"],
+                "camera_details": _cached_camera_data.get("camera_details", []),
+                "active": _cached_camera_data.get("active", active_camera_idx),
+                "active_name": _cached_camera_data.get("active_name", ""),
+            })
 
-        available = []
-        for idx in range(4):
-            if active_camera_idx == idx:
-                available.append(idx)
-                continue
-            try:
-                temp = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
-                if temp.isOpened():
-                    ret, _ = temp.read()
-                    if ret:
-                        available.append(idx)
-                temp.release()
-            except Exception as e:
-                logging.warning(f"[CAMERA] Probing camera index {idx} failed: {e}")
+        result = discover_cameras()
+        if result["active"] != -1 and preferred_camera_idx is None:
+            _set_default = result["active"]
+            logging.info(f"[CAMERA] Recommended active camera index={_set_default} ({result['active_name']})")
 
-        _cached_camera_data["cameras"] = available
-        _cached_camera_data["active"] = active_camera_idx
+        _cached_camera_data["cameras"] = result["cameras"]
+        _cached_camera_data["camera_details"] = result["camera_details"]
+        _cached_camera_data["active"] = result["active"]
+        _cached_camera_data["active_name"] = result["active_name"]
         _cached_camera_data["ts"] = now
-        return jsonify({"cameras": available, "active": active_camera_idx})
+        return jsonify(result)
+
+
+@app.route('/test/mock-hardware-state', methods=['POST'])
+def test_mock_hardware_state_route():
+    """Test-only endpoint (NUMISTA_TEST_MODE=1) for Grok Bot deterministic hardware simulation."""
+    if os.environ.get("NUMISTA_TEST_MODE") != "1":
+        return jsonify({"error": "Not available outside NUMISTA_TEST_MODE=1"}), 404
+    global _mock_hardware_state
+    payload = request.get_json(silent=True) or {}
+    if payload.get("clear") is True:
+        _mock_hardware_state = None
+        return jsonify({"status": "cleared"})
+    _mock_hardware_state = payload
+    return jsonify({"status": "updated", "mock_state": _mock_hardware_state})
 
 @app.route('/set-camera', methods=['POST', 'OPTIONS'])
 def set_camera_route():
