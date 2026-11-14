@@ -10,6 +10,7 @@ class SignedStorageImage extends StatefulWidget {
   final BoxFit fit;
   final double? width;
   final double? height;
+  final Key? imageKey;
   final WidgetBuilder? placeholderBuilder;
   final WidgetBuilder? errorBuilder;
   final Future<String?> Function(String? url)? resolver;
@@ -20,6 +21,7 @@ class SignedStorageImage extends StatefulWidget {
     this.fit = BoxFit.cover,
     this.width,
     this.height,
+    this.imageKey,
     this.placeholderBuilder,
     this.errorBuilder,
     this.resolver,
@@ -101,6 +103,7 @@ class _SignedStorageImageState extends State<SignedStorageImage> {
   Widget _buildNetworkImage(BuildContext context, String resolvedUrl) {
     return Image.network(
       resolvedUrl,
+      key: widget.imageKey,
       fit: widget.fit,
       width: widget.width,
       height: widget.height,

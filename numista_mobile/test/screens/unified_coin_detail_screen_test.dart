@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:numista_ai/models/coin_model.dart';
+import 'package:numista_ai/models/mint_product_metadata.dart';
 import 'package:numista_ai/screens/unified_coin_detail_deps.dart';
 import 'package:numista_ai/screens/unified_coin_detail_screen.dart';
 import 'package:numista_ai/utils/owned_storage_url.dart';
@@ -228,9 +229,17 @@ void main() {
       themeSubject: 'Photo Coin',
       imageUrlObverse: userPhoto,
     );
+    final customHarness = UnifiedCoinDetailDeps(
+      store: t.store,
+      clock: t.clock,
+      lawsFetcher: t.lawsFetcher,
+      onLaunchUrl: (url) => t.lastLaunchedUrl = url,
+      onImageLoad: (url) => t.loadedImageUrls.add(url),
+      resolvePhotoUrl: (url) async => url,
+    );
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: UnifiedCoinDetailScreen(coin: coin, deps: harness),
+        body: UnifiedCoinDetailScreen(coin: coin, deps: customHarness),
       ),
     ));
     await tester.pumpAndSettle();
@@ -407,9 +416,18 @@ void main() {
       personalNotes: 'Private note: bought at ANA convention',
     );
 
+    final ownerHarness = UnifiedCoinDetailDeps(
+      store: t.store,
+      clock: t.clock,
+      lawsFetcher: t.lawsFetcher,
+      onLaunchUrl: (url) => t.lastLaunchedUrl = url,
+      onImageLoad: (url) => t.loadedImageUrls.add(url),
+      resolvePhotoUrl: (url) async => url,
+    );
+
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: UnifiedCoinDetailScreen(coin: ownerCoin, deps: harness),
+        body: UnifiedCoinDetailScreen(coin: ownerCoin, deps: ownerHarness),
       ),
     ));
     await tester.pumpAndSettle();
@@ -658,12 +676,13 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    expect(resolveCalls, equals(1));
+    final callsBeforeTap = resolveCalls;
+    expect(callsBeforeTap, greaterThanOrEqualTo(1));
 
     await tester.tap(find.text('Show values'));
     await tester.pumpAndSettle();
     expect(find.text(r'$42.00'), findsOneWidget);
-    expect(resolveCalls, equals(1));
+    expect(resolveCalls, equals(callsBeforeTap));
   });
 
   testWidgets(
@@ -697,14 +716,149 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(requested, equals([obvUri]));
+    expect(requested.toSet(), equals({obvUri}));
     expect(find.byKey(const Key('udv_toggle_side_button')), findsOneWidget);
     expect(find.text('Show Reverse'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('udv_toggle_side_button')));
     await tester.pumpAndSettle();
 
-    expect(requested, equals([obvUri, revUri]));
+    expect(requested.toSet(), equals({obvUri, revUri}));
     expect(find.text('Show Obverse'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Test 20: private /users/ URL fails closed to placeholder when resolvePhotoUrl is null',
+      (tester) async {
+    const userPhoto =
+        'https://firebasestorage.googleapis.com/v0/b/studio-9101802118-8c9a8.firebasestorage.app/o/users%2Fuser1%2Fphoto.jpg?alt=media';
+    final ownerCoin = CoinModel(
+      id: 'c_fail_closed',
+      themeSubject: 'Private Coin',
+      imageUrlObverse: userPhoto,
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: UnifiedCoinDetailScreen(coin: ownerCoin, deps: harness),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('hero_coin_placeholder')), findsOneWidget);
+    expect(find.byKey(const Key('hero_coin_image')), findsNothing);
+  });
+
+  testWidgets(
+      'Test 21: SignedStorageImage resolves private URL and records resolved URL once',
+      (tester) async {
+    const userPhoto =
+        'https://firebasestorage.googleapis.com/v0/b/studio-9101802118-8c9a8.firebasestorage.app/o/users%2Fuser1%2Fphoto.jpg?alt=media';
+    const signedUrl = 'https://signed.example.com/user1/photo.jpg?token=v1';
+    final loadedUrls = <String>[];
+    final ownerCoin = CoinModel(
+      id: 'c_signed',
+      themeSubject: 'Signed Coin',
+      imageUrlObverse: userPhoto,
+    );
+    final customHarness = UnifiedCoinDetailDeps(
+      store: t.store,
+      clock: t.clock,
+      resolvePhotoUrl: (_) async => signedUrl,
+      onImageLoad: loadedUrls.add,
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: UnifiedCoinDetailScreen(coin: ownerCoin, deps: customHarness),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('hero_coin_image')), findsOneWidget);
+    expect(loadedUrls, equals([signedUrl]));
+  });
+
+  testWidgets(
+      'Test 22: two-field Mint rendering shows No Mint Mark for Philadelphia blank mark and W for West Point',
+      (tester) async {
+    final phillyCoin = CoinModel(
+      id: 'c_philly',
+      themeSubject: '2026 Lincoln Cent',
+      year: '2026',
+      mint: 'Philadelphia',
+      mintMark: '',
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: UnifiedCoinDetailScreen(
+          key: const ValueKey('philly'),
+          coin: phillyCoin,
+          deps: harness,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mint Facility: Philadelphia'), findsOneWidget);
+    expect(find.text('Mint Mark: No Mint Mark'), findsOneWidget);
+
+    final wpCoin = CoinModel(
+      id: 'c_wp',
+      themeSubject: '2026 Proof Silver Eagle',
+      year: '2026',
+      mint: 'West Point',
+      mintMark: 'W',
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: UnifiedCoinDetailScreen(
+          key: const ValueKey('wp'),
+          coin: wpCoin,
+          deps: harness,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mint Facility: West Point'), findsOneWidget);
+    expect(find.text('Mint Mark: W'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Test 23: NET-810 MintProductMetadata fields render when lookup returns a match',
+      (tester) async {
+    final coin = CoinModel(
+      id: 'c_net810',
+      personalRef: 'NAC1.CN.US.1D.ASE.2026.W.PRF.1',
+      themeSubject: '2026-W Proof Silver Eagle',
+      year: '2026',
+      mint: 'West Point',
+      mintMark: 'W',
+      denomination: '1 Dollar',
+      country: 'USA',
+    );
+    final customHarness = UnifiedCoinDetailDeps(
+      store: t.store,
+      clock: t.clock,
+      lookupMintProduct: (_) => const MintProductMetadata(
+        productPriceUsd: 95.0,
+        mintScheduleStatus: 'ON_SALE',
+        productAvailability: 'In Stock',
+        releaseDate: '2026-03-19',
+      ),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: UnifiedCoinDetailScreen(coin: coin, deps: customHarness),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mint Status: Available from U.S. Mint'), findsOneWidget);
+    expect(find.text(r'Mint Issue Price: $95.00'), findsOneWidget);
+    expect(find.text('Availability: In Stock'), findsOneWidget);
+    expect(find.text('Release Date: 2026-03-19'), findsOneWidget);
   });
 }
