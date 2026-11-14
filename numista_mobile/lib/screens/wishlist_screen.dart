@@ -1,1024 +1,1581 @@
 import 'dart:convert';
-import '../services/http_auth_client.dart';
-import '../utils/numista_error_helper.dart';
-import '../constants.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../services/wishlist_service.dart';
-import '../services/epn_service.dart';
-import '../services/coin_programs_data.dart';
-import '../services/reference_service.dart';
-import '../services/reference_seed_service.dart';
-import '../services/auth_service.dart';
+
+import '../constants.dart';
 import '../models/coin_model.dart';
 import '../models/program_model.dart';
-import '../widgets/common/ref_image_widget.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/auth_service.dart';
 import '../services/beta_checklist_service.dart';
-// import 'deals_screen.dart'; // Temporarily unused while Deal Spotter is hidden (REQ-023H)
+import '../services/epn_service.dart';
+import '../services/http_auth_client.dart';
+import '../services/reference_service.dart';
+import '../services/set_expansion_helper.dart';
+import '../services/wishlist_service.dart';
+import '../utils/mint_helpers.dart';
+import '../utils/numista_error_helper.dart';
+import '../utils/program_goal_helper.dart';
 
+/// Senior-friendly Wish List screen (`SPEC_v2.1` daylight palette, >=18px text, >=56px touch targets).
 class WishlistScreen extends StatefulWidget {
-  const WishlistScreen({super.key});
+  final WishlistAutoFillPrefs? initialPrefsForTest;
+  final List<AutoFilledProgramGroup>? initialAutoGroupsForTest;
+  final List<WishlistItem>? initialManualItemsForTest;
+  final bool? isGuestForTest;
+
+  const WishlistScreen({
+    super.key,
+    this.initialPrefsForTest,
+    this.initialAutoGroupsForTest,
+    this.initialManualItemsForTest,
+    this.isGuestForTest,
+  });
 
   @override
   State<WishlistScreen> createState() => _WishlistScreenState();
 }
 
 class _WishlistScreenState extends State<WishlistScreen> {
-  // ── Auto-wishlist from collection ────────────────────────────────────────
-  List<Map<String, dynamic>> _userCoins = [];
-  bool _coinsLoaded = false;
-  String? _expandedProgramId; // which program card is open
+  // SPEC_v2.1 Senior Daylight Palette
+  static const Color _bg = Color(0xFFEEF3F8);
+  static const Color _cardBg = Colors.white;
+  static const Color _border = Color(0xFFD5DEEA);
+  static const Color _ink = Color(0xFF0B1A2E);
+  static const Color _inkMuted = Color(0xFF334155);
+  static const Color _primaryBlue = Color(0xFF1D4F91);
+  static const Color _gold = Color(0xFFC9A400);
+  static const Color _emerald = Color(0xFF0F766E);
 
-  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  final TextEditingController _recipientController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
+
+  List<Map<String, dynamic>> _expandedCoins = [];
+  Map<String, Map<String, dynamic>> _programPreferences = {};
+  bool _inventoryLoaded = false;
+  bool _isSendingEmail = false;
+  bool _isCreatingShare = false;
+  bool _recipientSeededFromPrefs = false;
+  final Set<String> _markingSlotKeys = {};
+
+  bool get _hasFirebaseApp =>
+      widget.initialAutoGroupsForTest == null && Firebase.apps.isNotEmpty;
+
+  bool get _isGuest {
+    if (widget.isGuestForTest != null) return widget.isGuestForTest!;
+    if (!_hasFirebaseApp) return true;
+    return AuthService.isAnonymousUser ||
+        AuthService.userEmail == 'guest' ||
+        AuthService.userEmail.isEmpty;
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadUserCoins();
+    if (widget.initialPrefsForTest != null &&
+        widget.initialPrefsForTest!.lastRecipientEmail.isNotEmpty) {
+      _recipientController.text =
+          widget.initialPrefsForTest!.lastRecipientEmail;
+      _recipientSeededFromPrefs = true;
+    }
+    if (_hasFirebaseApp) {
+      _loadInventoryAndPrefs();
+    } else {
+      _inventoryLoaded = true;
+    }
   }
 
-  Future<void> _loadUserCoins() async {
+  @override
+  void dispose() {
+    _recipientController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadInventoryAndPrefs() async {
+    if (!_hasFirebaseApp) {
+      if (mounted) setState(() => _inventoryLoaded = true);
+      return;
+    }
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection(AuthService.coinsPath)
-          .limit(2000)
+      final db = FirebaseFirestore.instance;
+      final primarySnap =
+          await db.collection(AuthService.coinsPath).limit(2000).get();
+      final Map<String, Map<String, dynamic>> mergedDocs = {};
+      for (final d in primarySnap.docs) {
+        mergedDocs[d.id] = d.data();
+      }
+
+      // Cross-path merge if primary email path is empty and user has a UID path.
+      final authUser = FirebaseAuth.instance.currentUser;
+      if (mergedDocs.isEmpty &&
+          authUser != null &&
+          !authUser.isAnonymous &&
+          AuthService.coinsPath != 'users/${authUser.uid}/coins') {
+        final uidSnap = await db
+            .collection('users/${authUser.uid}/coins')
+            .limit(2000)
+            .get();
+        for (final d in uidSnap.docs) {
+          mergedDocs[d.id] = d.data();
+        }
+      }
+
+      final docIds = mergedDocs.keys.toList();
+      final docMaps = docIds.map((id) => mergedDocs[id]!).toList();
+      final expansionResult = expandCollection(docMaps, docIds);
+
+      final prefSnap = await db
+          .doc(AuthService.userDocPath)
+          .collection('program_preferences')
           .get();
+      final prefsMap = <String, Map<String, dynamic>>{};
+      for (final d in prefSnap.docs) {
+        prefsMap[d.id] = d.data();
+      }
+
       if (mounted) {
         setState(() {
-          _userCoins = snapshot.docs
-              .map((d) => d.data())
-              .toList();
-          _coinsLoaded = true;
+          _expandedCoins = expansionResult.allItems;
+          _programPreferences = prefsMap;
+          _inventoryLoaded = true;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _coinsLoaded = true);
+      if (mounted) setState(() => _inventoryLoaded = true);
     }
   }
 
-  /// Returns true if a Firestore coin doc belongs to the given program.
-  bool _coinBelongsToProgram(Map<String, dynamic> coin, CoinProgram program) {
-    final series = (coin['Program/Series']?.toString() ?? '');
-    return program.matchesDbSeries(series);
+  String _userHash() {
+    final id = _hasFirebaseApp ? AuthService.userIdentifier : 'guest';
+    return id.hashCode.toUnsigned(32).toRadixString(16).padLeft(8, '0');
   }
 
-  /// Returns true if the user already owns at least one coin matching [pc] in [program].
-  bool _userHasProgramCoin(CoinProgram program, ProgramCoin pc) {
-    final pcName = pc.name.toLowerCase();
-    return _userCoins.any((c) {
-      if (!_coinBelongsToProgram(c, program)) return false;
-      final theme = (c['Theme/Subject']?.toString() ?? '').toLowerCase();
-      final year  = c['Year']?.toString() ?? '';
-      return theme.contains(pcName) ||
-             pcName.contains(theme) ||
-             (pc.year != null && pc.year!.isNotEmpty && pc.year == year);
-    });
-  }
+  List<Map<String, dynamic>> _buildUnifiedSharePayload(
+    List<AutoFilledProgramGroup> autoGroups,
+    List<WishlistItem> manualItems,
+  ) {
+    final items = <Map<String, dynamic>>[];
 
-  /// Programs where the user has collected ≥1 coin.
-  List<CoinProgram> _getTrackedPrograms(Map<String, List<CoinProgram>> allProgramsMap) {
-    final result = <CoinProgram>[];
-    for (final list in allProgramsMap.values) {
-      for (final program in list) {
-        if (_userCoins.any((c) => _coinBelongsToProgram(c, program))) {
-          result.add(program);
-        }
-      }
-    }
-    return result;
-  }
-
-  // ── Program Tracker UI ────────────────────────────────────────────────────
-
-  Future<void> _handleShareWishlist(BuildContext context) async {
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
-      );
-
-      final userEmail = AuthService.userEmail;
-      final items = <Map<String, dynamic>>[];
-
-      // Export missing coins from tracked in-progress programs
-      final trackedPrograms = _getTrackedPrograms(CoinProgramsData.usPrograms);
-      for (final prog in trackedPrograms) {
-        for (final pc in prog.coins) {
-          if (!_userHasProgramCoin(prog, pc)) {
-            items.add({
-              'title': '${prog.name}: ${pc.name}${pc.year != null && pc.year!.isNotEmpty ? " (${pc.year})" : ""}',
-              'program_id': prog.id,
-              'program_name': prog.name,
-              'coin_id': pc.id,
-              'coin_name': pc.name,
-              'year': pc.year ?? '',
-              'target_grade': 'Uncirculated / AU',
-              'max_price': 'Market Value',
-            });
-          }
-        }
-      }
-
-      if (items.isEmpty) {
+    for (final group in autoGroups) {
+      for (final slot in group.missingSlots) {
+        final year = slot.coinSlot.year ?? '';
         items.add({
-          'title': '1921 Morgan Silver Dollar',
-          'target_grade': 'MS65',
-          'max_price': 'Market',
+          'title':
+              '${group.program.name}: ${slot.coinSlot.name}${year.isNotEmpty ? " ($year)" : ""} - ${slot.varietyLabel}',
+          'program_id': group.program.id,
+          'program_name': group.program.name,
+          'coin_id': slot.coinSlot.id,
+          'coin_name': slot.coinSlot.name,
+          'year': year,
+          'mint_mark': slot.mintMark,
+          'variety_id': slot.variety.id,
+          'variety_label': slot.varietyLabel,
+          'target_grade': 'Uncirculated / AU',
+          'max_price': 'Market Value',
+          'ebay_query': slot.ebayQuery,
+          'ebay_url': slot.ebayUrl,
         });
       }
+    }
+
+    for (int i = 0; i < manualItems.length; i++) {
+      final item = manualItems[i];
+      if (item.type != 'individual' || item.coin == null) continue;
+      final c = item.coin!;
+      final mm = MintHelpers.readMintMark({'mint_mark': c.mintMark});
+      final titleName =
+          c.themeSubject.isNotEmpty ? c.themeSubject : c.denomination;
+      final queryParts = [
+        if (c.year.isNotEmpty) c.year,
+        if (mm.isNotEmpty) mm,
+        if (c.programSeries.isNotEmpty) c.programSeries,
+        if (titleName.isNotEmpty) titleName,
+        'coin',
+      ];
+      final ebayQuery = queryParts.join(' ').trim();
+      final ebayUrl = EpnService.buildSearchUrlFromQuery(
+        ebayQuery,
+        customId: '${_userHash()}_manual_$i',
+      );
+      items.add({
+        'title': '${c.year} $titleName'.trim(),
+        'program_id': '',
+        'program_name': 'Individual Wanted Coins',
+        'coin_id': item.id,
+        'coin_name': titleName,
+        'year': c.year,
+        'mint_mark': mm,
+        'variety_id': mm,
+        'variety_label':
+            MintHelpers.formatMintFacilityAndMark(c.mint, mm).isNotEmpty
+                ? MintHelpers.formatMintFacilityAndMark(c.mint, mm)
+                : 'Any Mint',
+        'target_grade': c.condition.isNotEmpty ? c.condition : 'Any Grade',
+        'max_price': 'Market Value',
+        'ebay_query': ebayQuery,
+        'ebay_url': ebayUrl,
+      });
+    }
+
+    return items;
+  }
+
+  Future<void> _sendWishlistEmail(
+    List<AutoFilledProgramGroup> autoGroups,
+    List<WishlistItem> manualItems,
+  ) async {
+    if (_isGuest) return;
+    final recipient = _recipientController.text.trim();
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(recipient)) {
+      _showSnack('Please enter a valid family email address.');
+      return;
+    }
+
+    final items = _buildUnifiedSharePayload(autoGroups, manualItems);
+    if (items.isEmpty) {
+      _showSnack('Add at least one coin to your Wish List first.');
+      return;
+    }
+
+    setState(() => _isSendingEmail = true);
+    try {
+      await WishlistService.saveRecipientEmail(recipient);
+      final userEmail = AuthService.userEmail;
+      final alias = AuthService.displayName.isNotEmpty
+          ? AuthService.displayName
+          : userEmail.split('@').first;
 
       final response = await HttpAuthClient.post(
-        Uri.parse('$kApiBaseUrl/api/wishlist/create-share'),
+        Uri.parse('$kApiBaseUrl/api/wishlist/send-email'),
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_email': userEmail,
-          'owner_alias': userEmail.split('@').first,
+          'owner_alias': alias,
+          'recipient_email': recipient,
+          'personal_note': _noteController.text.trim(),
           'items': items,
         }),
       );
 
-      if (context.mounted) Navigator.pop(context);
-
+      if (!mounted) return;
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final shareUrl = data['share_url'] as String;
         BetaChecklistService.autoCompleteTask('task_15_public_wishlist');
+        _showSnack(
+          'Sent! Your Wish List of ${items.length} coins was emailed to $recipient.',
+          backgroundColor: _emerald,
+        );
+      } else if (response.statusCode == 503) {
+        _showSnack(
+          'Email service is currently unavailable — please tap Copy / Share Link instead.',
+        );
+      } else {
+        _showSnack(NumistaErrorHelper.toUserFriendly(response.body, statusCode: response.statusCode));
+      }
+    } catch (_) {
+      if (mounted) {
+        _showSnack(
+          'Could not send email right now. Try Copy / Share Link instead.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSendingEmail = false);
+    }
+  }
 
-        if (context.mounted) {
-          showDialog(
+  Future<void> _handleCopyShareLink(
+    List<AutoFilledProgramGroup> autoGroups,
+    List<WishlistItem> manualItems,
+  ) async {
+    if (_isGuest) {
+      _showSnack('Please sign in to create a shareable Wish List link.');
+      return;
+    }
+    final items = _buildUnifiedSharePayload(autoGroups, manualItems);
+    if (items.isEmpty) {
+      _showSnack('Add at least one coin before sharing.');
+      return;
+    }
+
+    setState(() => _isCreatingShare = true);
+    try {
+      final userEmail = AuthService.userEmail;
+      final alias = AuthService.displayName.isNotEmpty
+          ? AuthService.displayName
+          : userEmail.split('@').first;
+
+      final response = await HttpAuthClient.post(
+        Uri.parse('$kApiBaseUrl/api/wishlist/create-share'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_email': userEmail,
+          'owner_alias': alias,
+          'items': items,
+        }),
+      );
+
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final shareUrl = data['share_url']?.toString() ?? '';
+        BetaChecklistService.autoCompleteTask('task_15_public_wishlist');
+        if (shareUrl.isNotEmpty) {
+          await Clipboard.setData(ClipboardData(text: shareUrl));
+          if (!mounted) return;
+          await showDialog<void>(
             context: context,
-            builder: (_) => AlertDialog(
-              backgroundColor: _isDark ? const Color(0xFF161B27) : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Row(
-                children: [
-                  const Icon(Icons.share, color: Color(0xFF10B981)),
-                  const SizedBox(width: 10),
-                  Text("Share Wish List", style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A))),
-                ],
+            builder: (ctx) => AlertDialog(
+              backgroundColor: Colors.white,
+              title: const Text(
+                'Share Wish List Link',
+                style: TextStyle(
+                  color: _ink,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Your read-only public wish list link is ready:", style: TextStyle(color: _isDark ? Colors.white70 : const Color(0xFF5A5C69))),
+                  const Text(
+                    'Link copied to your clipboard! Send this link to family or friends:',
+                    style: TextStyle(color: _inkMuted, fontSize: 18),
+                  ),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: _isDark ? const Color(0xFF0E1117) : const Color(0xFFF4F4F2),
+                      color: _bg,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _isDark ? const Color(0xFF2A3045) : const Color(0xFFE2E8F0)),
+                      border: Border.all(color: _border),
                     ),
-                    child: SelectableText(shareUrl, style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+                    child: SelectableText(
+                      shareUrl,
+                      style: const TextStyle(
+                        color: _primaryBlue,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text("Close", style: TextStyle(color: _isDark ? Colors.white54 : const Color(0xFF64748B))),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 56),
+                  child: TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Close', style: TextStyle(fontSize: 18)),
+                  ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Share.share("Check out my Numista.AI coin wish list: $shareUrl");
-                  },
-                  icon: const Icon(Icons.send, size: 16),
-                  label: const Text("Share Link"),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 56),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      Share.share(
+                        'Here is my coin Wish List: $shareUrl',
+                        subject: 'My Coin Wish List',
+                      );
+                    },
+                    icon: const Icon(Icons.share),
+                    label: const Text(
+                      'Share',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primaryBlue,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 56),
+                    ),
+                  ),
                 ),
               ],
             ),
           );
         }
+      } else {
+        _showSnack(NumistaErrorHelper.toUserFriendly(response.body, statusCode: response.statusCode));
       }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not share wish list. Please try again.'))),
+    } catch (_) {
+      if (mounted) _showSnack('Unable to create share link right now.');
+    } finally {
+      if (mounted) setState(() => _isCreatingShare = false);
+    }
+  }
+
+  Future<void> _markAutoSlotAsGotIt(MissingProgramSlot slot) async {
+    if (!_hasFirebaseApp) return;
+    setState(() => _markingSlotKeys.add(slot.slotKey));
+    try {
+      final rawYear = slot.coinSlot.year ?? '';
+      final upperVar = slot.variety.id.toUpperCase();
+      final resolvedMint = MintHelpers.resolveTwoFieldMint(
+        rawMintMark: slot.mintMark,
+        year: rawYear,
+        series: slot.program.name,
+        denomination: slot.program.category,
+        variety: upperVar == 'EU' ? 'Enhanced Uncirculated' : '',
+        strikeType: upperVar.contains('REVERSE-PROOF')
+            ? 'Reverse Proof'
+            : (upperVar.contains('PROOF') || upperVar == 'S-CLAD'
+                ? 'Proof'
+                : ''),
+        metalContent: upperVar.contains('SILVER') ? '90% Silver' : '',
+      );
+
+      final payload = {
+        'idempotency_key':
+            '${slot.slotKey}_${DateTime.now().millisecondsSinceEpoch}',
+        'program_id': slot.program.id,
+        'program_name': slot.program.name,
+        'user_email': AuthService.userEmail,
+        'slots': [
+          {
+            'coin_name': slot.coinSlot.name,
+            'year': rawYear,
+            'mint': resolvedMint.mint,
+            'mint_mark': resolvedMint.mintMark,
+            'denomination': slot.program.category,
+            'variety_id': slot.variety.id,
+            'quantity': 1,
+            'Quantity': 1,
+          }
+        ],
+      };
+
+      final response = await HttpAuthClient.post(
+        Uri.parse('$kApiBaseUrl/api/checklist/add_coins'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+      if (response.statusCode == 200) {
+        await _loadInventoryAndPrefs();
+        if (mounted) {
+          _showSnack(
+            'Added ${slot.coinSlot.name} to your Collection!',
+            backgroundColor: _emerald,
+          );
+        }
+      } else if (mounted) {
+        _showSnack(NumistaErrorHelper.toUserFriendly(response.body, statusCode: response.statusCode));
+      }
+    } catch (_) {
+      if (mounted) {
+        _showSnack('Could not mark coin as collected right now.');
+      }
+    } finally {
+      if (mounted) setState(() => _markingSlotKeys.remove(slot.slotKey));
+    }
+  }
+
+  Future<void> _markManualItemAsGotIt(WishlistItem item) async {
+    if (item.coin == null) return;
+    final coin = item.coin!;
+    try {
+      await FirebaseFirestore.instance.collection(AuthService.coinsPath).add({
+        ...coin.toFirestore(),
+        'Timestamp': FieldValue.serverTimestamp(),
+      });
+      await WishlistService.removeFromWishlist(item.id);
+      await _loadInventoryAndPrefs();
+      if (mounted) {
+        _showSnack(
+          'Moved ${coin.themeSubject.isNotEmpty ? coin.themeSubject : coin.denomination} to your Collection!',
+          backgroundColor: _emerald,
         );
       }
+    } catch (_) {
+      if (mounted) _showSnack('Could not save coin to Collection.');
     }
   }
 
-  Widget _buildAutoMissingSection(Map<String, List<CoinProgram>> allProgramsMap) {
-    if (!_coinsLoaded) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: CircularProgressIndicator(color: Color(0xFFF63366))),
-      );
+  Future<void> _openUrl(String rawUrl) async {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-    final programs = _getTrackedPrograms(allProgramsMap);
-    if (programs.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildGiftActivityBanner(),
-        const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Coin Programs',
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF1E293B))),
-            ElevatedButton.icon(
-              onPressed: () => _handleShareWishlist(context),
-              icon: const Icon(Icons.share, size: 15),
-              label: const Text('Share Wish List'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Tap a program to see your full checklist and shop for missing coins.',
-          style: TextStyle(color: Color(0xFF64748B), fontSize: 13, height: 1.4),
-        ),
-        const SizedBox(height: 16),
-        ...programs.map((p) => _buildProgramRow(p)),
-        const SizedBox(height: 32),
-      ],
-    );
   }
 
-  Widget _buildProgramRow(CoinProgram program) {
-    final isExpanded = _expandedProgramId == program.id;
-    final total = program.coins.length;
-    final ownedCount =
-        program.coins.where((pc) => _userHasProgramCoin(program, pc)).length;
-    final missingCount = total - ownedCount;
-    final progress = total > 0 ? ownedCount / total : 0.0;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(7),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+  void _showSnack(String message, {Color backgroundColor = _primaryBlue}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: backgroundColor,
+        content: Text(
+          message,
+          style: const TextStyle(
+            fontSize: 18,
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // ── Collapsed header ──
-          InkWell(
-            borderRadius: BorderRadius.vertical(
-              top: const Radius.circular(14),
-              bottom: isExpanded ? Radius.zero : const Radius.circular(14),
-            ),
-            onTap: () => setState(() =>
-                _expandedProgramId = isExpanded ? null : program.id),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              child: Row(
-                children: [
-                  _buildMiniProgress(progress, ownedCount, total),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(program.name,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: Color(0xFF1E293B))),
-                        const SizedBox(height: 2),
-                        Text(
-                          missingCount == 0
-                              ? 'Complete! All $total coins collected ✓'
-                              : '$ownedCount of $total collected · $missingCount missing',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: missingCount == 0
-                                  ? const Color(0xFF22C55E)
-                                  : const Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                    color: const Color(0xFF94A3B8),
-                    size: 22,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Expanded coin list ──
-          if (isExpanded) ...[
-            const Divider(height: 1, color: Color(0xFFF1F5F9)),
-            ...program.coins.asMap().entries.map((entry) {
-              final isLast = entry.key == program.coins.length - 1;
-              return _buildCoinRow(program, entry.value, isLast: isLast);
-            }),
-            const SizedBox(height: 4),
-          ],
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildCoinRow(CoinProgram program, ProgramCoin pc, {bool isLast = false}) {
-    final isOwned = _userHasProgramCoin(program, pc);
-    final query =
-        '${program.name} ${pc.name}${pc.year != null && pc.year!.isNotEmpty ? " ${pc.year}" : ""}';
-    final url = EpnService.buildSearchUrlFromQuery(query);
+  Future<void> _openAddCoinModal() async {
+    List<Map<String, dynamic>> catalogItems = [];
+    try {
+      final rawJson =
+          await rootBundle.loadString('assets/catalog/catalog_public_v1.json');
+      final decoded = jsonDecode(rawJson);
+      if (decoded is Map && decoded['items'] is List) {
+        catalogItems = List<Map<String, dynamic>>.from(decoded['items'] as List);
+      } else if (decoded is List) {
+        catalogItems = List<Map<String, dynamic>>.from(decoded);
+      }
+    } catch (_) {
+      catalogItems = [];
+    }
+    if (!mounted) return;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isOwned ? const Color(0xFFF0FDF4) : Colors.white,
-        border: isLast
-            ? null
-            : const Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
-        borderRadius: isLast
-            ? const BorderRadius.vertical(bottom: Radius.circular(14))
-            : null,
+    final searchCtrl = TextEditingController();
+    final nameCtrl = TextEditingController();
+    final yearCtrl = TextEditingController();
+    final notesCtrl = TextEditingController();
+    String selectedMint = '';
+    int activeTab = 0; // 0 = Type by hand, 1 = Search Catalog
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
-        child: Row(
-          children: [
-            Icon(
-              isOwned ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-              color: isOwned ? const Color(0xFF22C55E) : const Color(0xFFCBD5E1),
-              size: 20,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final q = searchCtrl.text.trim().toLowerCase();
+          final filteredCatalog = catalogItems
+              .where((it) {
+                final name = (it['name'] ?? '').toString().toLowerCase();
+                final year = (it['year'] ?? '').toString().toLowerCase();
+                final series = (it['series'] ?? '').toString().toLowerCase();
+                return q.isEmpty ||
+                    name.contains(q) ||
+                    year.contains(q) ||
+                    series.contains(q);
+              })
+              .take(25)
+              .toList();
+
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              MediaQuery.of(ctx).viewInsets.bottom + 24,
             ),
-            const SizedBox(width: 12),
-            Expanded(
+            child: SingleChildScrollView(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    pc.name,
+                  const Text(
+                    'Add a Coin to My Wish List',
                     style: TextStyle(
-                      fontSize: 13,
-                      fontWeight:
-                          isOwned ? FontWeight.w600 : FontWeight.normal,
-                      color: isOwned
-                          ? const Color(0xFF166534)
-                          : const Color(0xFF1E293B),
+                      color: _ink,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (pc.year != null && pc.year!.isNotEmpty)
-                    Text(pc.year!,
-                        style: const TextStyle(
-                            fontSize: 11, color: Color(0xFF94A3B8))),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 56),
+                        child: ElevatedButton(
+                          onPressed: () => setModalState(() => activeTab = 0),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(0, 56),
+                            backgroundColor:
+                                activeTab == 0 ? _primaryBlue : _bg,
+                            foregroundColor:
+                                activeTab == 0 ? Colors.white : _ink,
+                          ),
+                          child: const Text(
+                            'Type Coin by Hand',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 56),
+                        child: ElevatedButton(
+                          onPressed: () => setModalState(() => activeTab = 1),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(0, 56),
+                            backgroundColor:
+                                activeTab == 1 ? _primaryBlue : _bg,
+                            foregroundColor:
+                                activeTab == 1 ? Colors.white : _ink,
+                          ),
+                          child: const Text(
+                            'Search Catalog',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (activeTab == 0) ...[
+                    TextField(
+                      controller: nameCtrl,
+                      style: const TextStyle(fontSize: 20, color: _ink),
+                      decoration: const InputDecoration(
+                        labelText: 'Coin Name (e.g. Morgan Silver Dollar)',
+                        labelStyle: TextStyle(fontSize: 18),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: yearCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(fontSize: 20, color: _ink),
+                      decoration: const InputDecoration(
+                        labelText: 'Year (optional)',
+                        labelStyle: TextStyle(fontSize: 18),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Mint Mark',
+                      style: TextStyle(
+                        color: _ink,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ['Any', 'P', 'D', 'S', 'W', 'CC', 'O'].map((m) {
+                        final val = m == 'Any' ? '' : m;
+                        return ChoiceChip(
+                          label: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              m,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          selected: selectedMint == val,
+                          onSelected: (_) =>
+                              setModalState(() => selectedMint = val),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: notesCtrl,
+                      style: const TextStyle(fontSize: 18, color: _ink),
+                      decoration: const InputDecoration(
+                        labelText: 'Notes (optional)',
+                        labelStyle: TextStyle(fontSize: 18),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 56),
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final coinName = nameCtrl.text.trim();
+                            if (coinName.isEmpty) return;
+                            final resolved = MintHelpers.resolveTwoFieldMint(
+                              rawMintMark: selectedMint,
+                              year: yearCtrl.text.trim(),
+                              series: coinName,
+                            );
+                            final coin = CoinModel(
+                              id: 'wish_${DateTime.now().millisecondsSinceEpoch}',
+                              year: yearCtrl.text.trim(),
+                              mint: resolved.mint,
+                              mintMark: resolved.mintMark,
+                              themeSubject: coinName,
+                              programSeries: coinName,
+                              personalNotes: notesCtrl.text.trim(),
+                            );
+                            await WishlistService.addToWishlist(coin);
+                            if (ctx.mounted) Navigator.of(ctx).pop();
+                            _showSnack('Added "$coinName" to your Wish List!');
+                          },
+                          icon: const Icon(Icons.favorite),
+                          label: const Text(
+                            'Save to My Wish List',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(0, 56),
+                            backgroundColor: _primaryBlue,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    TextField(
+                      controller: searchCtrl,
+                      onChanged: (_) => setModalState(() {}),
+                      style: const TextStyle(fontSize: 20, color: _ink),
+                      decoration: const InputDecoration(
+                        labelText: 'Search catalog coins...',
+                        labelStyle: TextStyle(fontSize: 18),
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (filteredCatalog.isEmpty)
+                      const Text(
+                        'No catalog matches found. Try typing by hand instead.',
+                        style: TextStyle(fontSize: 18, color: _inkMuted),
+                      )
+                    else
+                      ...filteredCatalog.map((item) {
+                        final title =
+                            '${item['year'] ?? ''} ${item['name'] ?? ''}'.trim();
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: _ink,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(minHeight: 56),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () async {
+                                      final resolved =
+                                          MintHelpers.resolveTwoFieldMint(
+                                        rawMintMark:
+                                            item['mint_mark']?.toString() ?? '',
+                                        year: item['year']?.toString() ?? '',
+                                        series:
+                                            item['series']?.toString() ?? '',
+                                        denomination:
+                                            item['denomination']?.toString() ??
+                                                '',
+                                      );
+                                      await WishlistService.addToWishlist(
+                                        CoinModel(
+                                          id: 'cat_${DateTime.now().millisecondsSinceEpoch}',
+                                          year: item['year']?.toString() ?? '',
+                                          mint: resolved.mint,
+                                          mintMark: resolved.mintMark,
+                                          denomination:
+                                              item['denomination']?.toString() ??
+                                                  '',
+                                          programSeries:
+                                              item['series']?.toString() ?? '',
+                                          themeSubject:
+                                              item['name']?.toString() ?? '',
+                                        ),
+                                      );
+                                      if (ctx.mounted) Navigator.of(ctx).pop();
+                                      _showSnack(
+                                          'Added "$title" to your Wish List!');
+                                    },
+                                    icon: const Icon(Icons.add),
+                                    label: const Text(
+                                      'Add',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      minimumSize: const Size(0, 56),
+                                      backgroundColor: _primaryBlue,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                  ],
                 ],
               ),
             ),
-            if (isOwned)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text('Collected',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF16A34A),
-                        fontWeight: FontWeight.w600)),
-              )
-            else
-              TextButton.icon(
-                onPressed: () async {
-                  final uri = Uri.parse(url);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri,
-                        mode: LaunchMode.externalApplication);
-                  }
-                },
-                icon: const Icon(Icons.open_in_new_rounded,
-                    size: 13, color: Color(0xFFE65100)),
-                label: const Text('Buy on eBay',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFE65100),
-                        fontWeight: FontWeight.w600)),
-                style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMiniProgress(double progress, int owned, int total) {
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CircularProgressIndicator(
-            value: progress,
-            strokeWidth: 4,
-            backgroundColor: const Color(0xFFF1F5F9),
-            valueColor: AlwaysStoppedAnimation<Color>(
-              progress >= 1.0
-                  ? const Color(0xFF22C55E)
-                  : const Color(0xFF3B82F6),
-            ),
-          ),
-          Center(
-            child: Text(
-              '${(progress * 100).toInt()}%',
-              style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildArbitrageDealsCard(BuildContext context) {
-    // Hidden until eBay results are wired to secure server lookup (REQ-023H)
-    return const SizedBox.shrink();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F6),
-      appBar: AppBar(
-        title: const Text('My Wishlist', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF31333F))),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share, color: Color(0xFFF63366)),
-            onPressed: _shareWishlist,
-            tooltip: 'Share Gift List',
-          ),
-          IconButton(
-            icon: const Icon(Icons.cloud_upload_outlined, color: Color(0xFF64748B)),
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              await ReferenceSeedService.seedGlobalPrograms();
-              if (mounted) {
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Expert Reference Library Migrated to Cloud')),
-                );
-              }
-            },
-            tooltip: 'Professional Migration',
-          ),
-        ],
-      ),
-      body: StreamBuilder<Map<String, List<CoinProgram>>>(
-        stream: ReferenceService.getGroupedProgramsStream(),
-        builder: (context, refSnapshot) {
-          final allProgramsMap = refSnapshot.data ?? CoinProgramsData.usPrograms;
-          
-          return StreamBuilder<List<WishlistItem>>(
-            stream: WishlistService.getWishlistStream(),
-            builder: (context, snapshot) {
-              final items = snapshot.data ?? [];
-              final individualItems = items.where((i) => i.type == 'individual').toList();
-              final programs = items.where((i) => i.type == 'program').toList();
-              final trackedPrograms = _getTrackedPrograms(allProgramsMap);
-
-              if (items.isEmpty && trackedPrograms.isEmpty && _coinsLoaded) {
-                return _buildEmptyState();
-              }
-
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth > 900) {
-                    // PREMIUM WEB LAYOUT: Two columns
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: ListView(
-                            padding: const EdgeInsets.all(24),
-                            children: [
-                              _buildArbitrageDealsCard(context),
-                              _buildAutoMissingSection(allProgramsMap),
-                              if (programs.isNotEmpty) ...[
-                                const Text('Collector Programs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
-                                const SizedBox(height: 24),
-                                ...programs.map((item) => _buildExpertProgramCard(item, allProgramsMap)),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const VerticalDivider(width: 1),
-                        Expanded(
-                          flex: 1,
-                          child: ListView(
-                            padding: const EdgeInsets.all(24),
-                            children: [
-                              if (individualItems.isNotEmpty) ...[
-                                const Text('Watchlist Specimens', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                                const SizedBox(height: 16),
-                                ...individualItems.map(_buildIndividualCard),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  } else {
-                    // MOBILE LAYOUT: Single column
-                    return ListView(
-                      padding: const EdgeInsets.all(24),
-                      children: [
-                        _buildArbitrageDealsCard(context),
-                        _buildAutoMissingSection(allProgramsMap),
-                        if (programs.isNotEmpty) ...[
-                          const Text('Collector Programs', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                          const SizedBox(height: 16),
-                          ...programs.map((item) => _buildExpertProgramCard(item, allProgramsMap)),
-                          const SizedBox(height: 32),
-                        ],
-                        if (individualItems.isNotEmpty) ...[
-                          const Text('Individual Specimens', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                          const SizedBox(height: 16),
-                          ...individualItems.map(_buildIndividualCard),
-                        ],
-                      ],
-                    );
-                  }
-                },
-              );
-            },
           );
         },
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80, height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF63366).withAlpha(20),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.favorite_border_rounded,
-                  size: 44, color: const Color(0xFFF63366).withAlpha(200)),
-            ),
-            const SizedBox(height: 20),
-            Text('Your Wish List is Empty',
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: _isDark ? Colors.white : const Color(0xFF0F172A))),
-            const SizedBox(height: 8),
-            const Text(
-              'Tap ♥ Wish List on any coin in\nMy Collection to save it here.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: Color(0xFF94A3B8), fontSize: 14, height: 1.5),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Or browse Programs to track full sets.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  @override
+  Widget build(BuildContext context) {
+    if (widget.initialAutoGroupsForTest != null) {
+      return _buildScaffold(
+        prefs: widget.initialPrefsForTest ?? const WishlistAutoFillPrefs(),
+        autoGroups: widget.initialAutoGroupsForTest!,
+        manualItems: widget.initialManualItemsForTest ?? const [],
+      );
+    }
 
-  Widget _buildExpertProgramCard(WishlistItem item, Map<String, List<CoinProgram>> allProgramsMap) {
-    CoinProgram? program;
-    for (var list in allProgramsMap.values) {
-      for (var p in list) {
-        if (p.id == item.programId) {
-          program = p;
-          break;
+    if (!_hasFirebaseApp) {
+      return _buildScaffold(
+        prefs: widget.initialPrefsForTest ?? const WishlistAutoFillPrefs(),
+        autoGroups: const [],
+        manualItems: const [],
+      );
+    }
+
+    return StreamBuilder<WishlistAutoFillPrefs>(
+      stream: WishlistService.getWishlistPrefsStream(),
+      builder: (context, prefsSnap) {
+        final prefs = prefsSnap.data ?? const WishlistAutoFillPrefs();
+        if (!_recipientSeededFromPrefs &&
+            prefs.lastRecipientEmail.isNotEmpty &&
+            _recipientController.text.isEmpty) {
+          _recipientSeededFromPrefs = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _recipientController.text.isEmpty) {
+              _recipientController.text = prefs.lastRecipientEmail;
+            }
+          });
         }
-      }
-    }
 
-    if (program == null) return const SizedBox.shrink();
+        return StreamBuilder<Map<String, List<CoinProgram>>>(
+          stream: ReferenceService.getGroupedProgramsStream(),
+          builder: (context, progSnap) {
+            final allProgramsMap = progSnap.data ?? const {};
+            final autoGroups = _inventoryLoaded
+                ? WishlistService.computeAutoMissingPrograms(
+                    allProgramsMap: allProgramsMap,
+                    expandedCoins: _expandedCoins,
+                    programPreferences: _programPreferences,
+                    wishlistPrefs: prefs,
+                    userHash: _userHash(),
+                  )
+                : <AutoFilledProgramGroup>[];
 
-    final activeProgram = program; // Promotion for null-safety inside closures
-
-    // Expertise Progress Calculation
-    int totalVarieties = 0;
-    int foundTotal = 0;
-    for (var coin in program.coins) {
-      totalVarieties += coin.varieties.length;
-      foundTotal += (item.foundVarieties[coin.id]?.length ?? 0);
-    }
-    
-    final progress = totalVarieties > 0 ? foundTotal / totalVarieties : 0.0;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF63366).withAlpha(20),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.stars, color: Color(0xFFF63366)),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(program.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF31333F))),
-                      const SizedBox(height: 4),
-                      Text('$foundTotal of $totalVarieties varieties found', style: const TextStyle(color: Color(0xFF64748B))),
-                    ],
-                  ),
-                ),
-                _buildProgressDonut(progress),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          // Scrollable List of Coins (Sub-checklist)
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 400),
-            child: ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: program.coins.length,
-              separatorBuilder: (context, index) => const Divider(height: 1, indent: 20, endIndent: 20),
-              itemBuilder: (context, index) {
-                final coin = activeProgram.coins[index];
-                final coinFoundVarieties = item.foundVarieties[coin.id] ?? [];
-                final isYearComplete = coinFoundVarieties.length == coin.varieties.length;
-
-                return ExpansionTile(
-                  key: PageStorageKey(coin.id),
-                  leading: isYearComplete 
-                    ? const Icon(Icons.check_circle, color: Color(0xFF00C853))
-                    : const Icon(Icons.circle_outlined, color: Colors.grey),
-                  title: Text(coin.name, style: TextStyle(
-                    fontWeight: isYearComplete ? FontWeight.bold : FontWeight.normal,
-                    color: const Color(0xFF1E293B)
-                  )),
-                  subtitle: Text('${coinFoundVarieties.length}/${coin.varieties.length} varieties', style: const TextStyle(fontSize: 12)),
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      color: const Color(0xFFF8FAFC),
-                      child: GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 2.2,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                        ),
-                        itemCount: coin.varieties.length,
-                        itemBuilder: (context, vIndex) {
-                          final v = coin.varieties[vIndex];
-                          final isVFound = coinFoundVarieties.contains(v.id);
-                          
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: isVFound ? const Color(0xFF00C853).withAlpha(20) : Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isVFound ? const Color(0xFF00C853) : Colors.grey.withAlpha(50),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                RefImageWidget(
-                                  variety: v,
-                                  programCoin: coin,
-                                  width: 14,
-                                  height: 14,
-                                  shape: BoxShape.circle,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(v.id, style: TextStyle(
-                                  fontSize: 10, 
-                                  fontWeight: FontWeight.bold,
-                                  color: isVFound ? const Color(0xFF00C853) : const Color(0xFF64748B)
-                                )),
-                                if (isVFound) ...[
-                                  const SizedBox(width: 2),
-                                  const Icon(Icons.check_circle, size: 8, color: Color(0xFF00C853)),
-                                ],
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+            return StreamBuilder<List<WishlistItem>>(
+              stream: WishlistService.getWishlistStream(),
+              builder: (context, wishSnap) {
+                final manualItems = wishSnap.data ?? const <WishlistItem>[];
+                return _buildScaffold(
+                  prefs: prefs,
+                  autoGroups: autoGroups,
+                  manualItems: manualItems,
                 );
               },
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
-  Widget _buildProgressDonut(double percent) {
-    return Container(
-      width: 48,
-      height: 48,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CircularProgressIndicator(
-            value: percent,
-            strokeWidth: 4,
-            backgroundColor: Colors.white,
-            color: const Color(0xFFF63366),
-          ),
-          Center(
-            child: Text('${(percent * 100).toInt()}%', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildScaffold({
+    required WishlistAutoFillPrefs prefs,
+    required List<AutoFilledProgramGroup> autoGroups,
+    required List<WishlistItem> manualItems,
+  }) {
+    final individualItems = manualItems
+        .where((i) => i.type == 'individual' && i.coin != null)
+        .toList();
+    final hasHidden =
+        prefs.dismissedSlots.isNotEmpty || prefs.dismissedPrograms.isNotEmpty;
 
-  Widget _buildIndividualCard(WishlistItem item) {
-    final coin = item.coin!;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            title: Text('${coin.year} ${coin.denomination}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            subtitle: Text('${coin.country} • ${coin.condition}${coin.purchaseCost != '\$0.00' && coin.purchaseCost.isNotEmpty ? ' • Target: ${coin.purchaseCost}' : ''}'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+    return Scaffold(
+      backgroundColor: _bg,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: _ink,
+        elevation: 0,
+        toolbarHeight: 68,
+        title: const Text(
+          'My Wish List',
+          style: TextStyle(
+            color: _ink,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: _border),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFFF63366)),
-                  onPressed: () => _launchEbaySearch(coin),
-                  tooltip: 'Search eBay',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                  onPressed: () => _confirmRemove(item),
-                  tooltip: 'Remove from Wish List',
-                ),
-              ],
-            ),
-          ),
-          // "I Found It!" action row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.check_circle_outline, size: 16),
-                label: const Text('I Found It! → Add to Collection'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF22C55E),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                onPressed: () => _onFoundIt(item),
-              ),
-            ),
-          ),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: EpnService.fetchEbayResults(coin),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox.shrink();
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const SizedBox.shrink();
-              }
-              final results = snapshot.data!;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Reference Listings on eBay:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                _buildSendToFamilyCard(prefs, autoGroups, manualItems),
+                const SizedBox(height: 16),
+                if (!_isGuest && _hasFirebaseApp) ...[
+                  _buildGiftActivityBanner(),
+                  const SizedBox(height: 16),
+                ],
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 56),
+                  child: ElevatedButton.icon(
+                    key: const Key('wishlist_add_coin_button'),
+                    onPressed: _hasFirebaseApp ? _openAddCoinModal : null,
+                    icon: const Icon(Icons.add_circle_outline, size: 24),
+                    label: const Text(
+                      '+ Add a Coin to My Wish List',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 56),
+                      backgroundColor: _primaryBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                  SizedBox(
-                    height: 120,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.all(12),
-                      itemCount: results.length,
-                      itemBuilder: (context, index) {
-                        final res = results[index];
-                        final img = res['image']?['imageUrl'] ?? res['thumbnailImages']?[0]?['imageUrl'] ?? '';
-                        final price = '${res['price']['currency']} ${res['price']['value']}';
-                        return GestureDetector(
-                          onTap: () async {
-                            final settings = await EpnService.getSettings();
-                            final mkrid = settings['rotationId'] ?? '711-53200-19255-0';
-                            final campId = settings['campaignId'] ?? '';
-                            final url = '${res['itemWebUrl']}&mkevt=1&mkcid=1&mkrid=$mkrid&campid=$campId&toolid=10001';
-                            if (await canLaunchUrl(Uri.parse(url))) { await launchUrl(Uri.parse(url)); }
-                          },
-                          child: Container(
-                            width: 100,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: Colors.grey.withAlpha(50)),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              children: [
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                                    child: img.isNotEmpty
-                                      ? Image.network(img, fit: BoxFit.cover, width: double.infinity)
-                                      : const Icon(Icons.image_not_supported, size: 20),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
-                                  child: Text(price, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF00C853))),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Coins Needed to Complete My Sets (Auto-Added)',
+                  style: TextStyle(
+                    color: _ink,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (autoGroups.isEmpty)
+                  _buildEmptyAutoCard()
+                else
+                  ...autoGroups.map(_buildProgramGroupCard),
+                const SizedBox(height: 24),
+                const Text(
+                  "Individual Coins I'm Wishing For",
+                  style: TextStyle(
+                    color: _ink,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (individualItems.isEmpty)
+                  _buildEmptyManualCard()
+                else
+                  ...individualItems.map(_buildManualCoinCard),
+                if (hasHidden) ...[
+                  const SizedBox(height: 16),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 56),
+                    child: ElevatedButton.icon(
+                      key: const Key('wishlist_restore_hidden_button'),
+                      onPressed: _hasFirebaseApp
+                          ? () => WishlistService.restoreAllHidden()
+                          : null,
+                      icon: const Icon(Icons.restore),
+                      label: const Text(
+                        'Restore Hidden Coins / Programs',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(0, 56),
+                        backgroundColor: Colors.white,
+                        foregroundColor: _primaryBlue,
+                        side: const BorderSide(color: _primaryBlue, width: 1.5),
+                      ),
                     ),
                   ),
                 ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Confirm remove dialog.
-  void _confirmRemove(WishlistItem item) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Remove from Wish List?'),
-        content: Text('${item.coin?.year ?? ''} ${item.coin?.denomination ?? ''} will be removed.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () { Navigator.pop(context); WishlistService.removeFromWishlist(item.id); },
-            child: const Text('Remove', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// "I Found It!" — prompts for condition, then moves coin to collection and removes from wish list.
-  Future<void> _onFoundIt(WishlistItem item) async {
-    if (item.coin == null) return;
-    String condition = 'Circulated';
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSt) => AlertDialog(
-          title: const Text('Add to My Collection'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('${item.coin!.year} ${item.coin!.denomination}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: condition,
-                decoration: const InputDecoration(labelText: 'Condition', border: OutlineInputBorder()),
-                items: ['Poor','Good','Fine','Very Fine','Extremely Fine','About Unc.','MS-60','MS-63','MS-65','MS-67','Proof','Circulated','Uncirculated']
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                onChanged: (v) => setSt(() => condition = v ?? condition),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22C55E)),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Add to Collection', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 32),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
-    if (confirmed != true || !mounted) return;
-    try {
-      final coin = item.coin!;
-      final email = AuthService.userEmail;
-      await FirebaseFirestore.instance
-        .collection('users').doc(email).collection('coins')
-        .add({
-          ...coin.toFirestore(),
-          'Condition': condition,
-          'source': 'wish_list_found',
-          'added_at': DateTime.now().toIso8601String(),
-        });
-      await WishlistService.removeFromWishlist(item.id);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('\u2705 Moved to My Collection!'),
-        backgroundColor: Color(0xFF22C55E),
-      ));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Couldn\'t move coin to collection. Please try again.'),
-        backgroundColor: Colors.red));
-    }
   }
 
-  Future<void> _launchEbaySearch(CoinModel coin) async {
-    final url = await EpnService.generateSearchUrl(coin, soldOnly: false);
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url));
-    }
+  Widget _buildSendToFamilyCard(
+    WishlistAutoFillPrefs prefs,
+    List<AutoFilledProgramGroup> autoGroups,
+    List<WishlistItem> manualItems,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Send My Wish List to Family',
+            style: TextStyle(
+              color: _ink,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_isGuest) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _gold, width: 1.5),
+              ),
+              child: const Text(
+                'Please sign in with your email account to email your Wish List to family.',
+                style: TextStyle(
+                  color: _ink,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ] else ...[
+            if (prefs.savedRecipientEmails.isNotEmpty) ...[
+              const Text(
+                'Saved Family Emails:',
+                style: TextStyle(
+                  color: _inkMuted,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: prefs.savedRecipientEmails.map((email) {
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 56),
+                    child: ActionChip(
+                      backgroundColor: _bg,
+                      side: const BorderSide(color: _primaryBlue),
+                      label: Text(
+                        email,
+                        style: const TextStyle(
+                          color: _ink,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      onPressed: () {
+                        setState(() => _recipientController.text = email);
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+            ],
+            TextField(
+              controller: _recipientController,
+              keyboardType: TextInputType.emailAddress,
+              style: const TextStyle(fontSize: 20, color: _ink),
+              decoration: const InputDecoration(
+                labelText: 'Family Member Email',
+                hintText: 'eric@example.com',
+                labelStyle: TextStyle(fontSize: 18, color: _inkMuted),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _noteController,
+              style: const TextStyle(fontSize: 18, color: _ink),
+              decoration: const InputDecoration(
+                labelText: 'Personal Note (Optional)',
+                hintText: 'Ideas for Christmas or my Birthday!',
+                labelStyle: TextStyle(fontSize: 18, color: _inkMuted),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  key: const Key('wishlist_send_email_button'),
+                  onPressed: (_isGuest || _isSendingEmail)
+                      ? null
+                      : () => _sendWishlistEmail(autoGroups, manualItems),
+                  icon: _isSendingEmail
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.email_outlined, size: 22),
+                  label: Text(
+                    _isSendingEmail ? 'Sending...' : 'Send Wish List Email',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: _primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  key: const Key('wishlist_copy_share_button'),
+                  onPressed: (_isGuest || _isCreatingShare)
+                      ? null
+                      : () => _handleCopyShareLink(autoGroups, manualItems),
+                  icon: const Icon(Icons.link, size: 22),
+                  label: Text(
+                    _isCreatingShare ? 'Creating Link...' : 'Copy / Share Link',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: Colors.white,
+                    foregroundColor: _primaryBlue,
+                    side: const BorderSide(color: _primaryBlue, width: 1.5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
+  Widget _buildProgramGroupCard(AutoFilledProgramGroup group) {
+    final bool isCirculationOnly =
+        group.effectiveGoal == ProgramGoalHelper.defaultAutoFillGoal;
 
-  void _shareWishlist() {
-    // Dynamically generate the share text from the current stream snapshot.
-    // We read it once synchronously from the last known state.
-    WishlistService.getWishlistStream().first.then((items) {
-      final buffer = StringBuffer('My Numista.AI Coin Wish List:\n\n');
-      for (final item in items) {
-        if (item.type == 'individual' && item.coin != null) {
-          buffer.writeln('• ${item.coin!.year} ${item.coin!.denomination} (${item.coin!.mintMark.isEmpty ? 'P' : item.coin!.mintMark}-mint)');
-        } else if (item.type == 'program' && item.programId != null) {
-          buffer.writeln('• Program: ${item.programId}');
-        }
-      }
-      buffer.writeln('\nTracked with Numista.AI — the smart coin collection app.');
-      Share.share(buffer.toString(), subject: 'My Coin Wish List');
-    });
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            group.program.name,
+            style: const TextStyle(
+              color: _ink,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'You have ${group.ownedCount} of ${group.targetCount} coins • ${group.missingSlots.length} missing',
+            style: const TextStyle(
+              color: _inkMuted,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton(
+                  onPressed: _hasFirebaseApp
+                      ? () => WishlistService.setProgramGoalOverride(
+                            group.program.id,
+                            ProgramGoalHelper.defaultAutoFillGoal,
+                          )
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: isCirculationOnly ? _primaryBlue : _bg,
+                    foregroundColor: isCirculationOnly ? Colors.white : _ink,
+                  ),
+                  child: const Text(
+                    'P & D Circulation Strikes',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton(
+                  onPressed: _hasFirebaseApp
+                      ? () => WishlistService.setProgramGoalOverride(
+                            group.program.id,
+                            'Full Master Set',
+                          )
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: !isCirculationOnly ? _primaryBlue : _bg,
+                    foregroundColor: !isCirculationOnly ? Colors.white : _ink,
+                  ),
+                  child: const Text(
+                    'All Mint Marks (Include S Proofs)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  onPressed: _hasFirebaseApp
+                      ? () => WishlistService.dismissAutoProgram(group.program.id)
+                      : null,
+                  icon: const Icon(Icons.visibility_off_outlined),
+                  label: const Text(
+                    'Hide Program',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: Colors.white,
+                    foregroundColor: _inkMuted,
+                    side: const BorderSide(color: _border, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...group.missingSlots.map(_buildMissingSlotRow),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMissingSlotRow(MissingProgramSlot slot) {
+    final isMarking = _markingSlotKeys.contains(slot.slotKey);
+    final yearText = (slot.coinSlot.year ?? '').trim();
+    final title = yearText.isNotEmpty
+        ? '$yearText ${slot.coinSlot.name}'
+        : slot.coinSlot.name;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: _ink,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _gold, width: 1.5),
+            ),
+            child: Text(
+              slot.varietyLabel,
+              style: const TextStyle(
+                color: _ink,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  onPressed: () => _openUrl(slot.ebayUrl),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text(
+                    'Buy on eBay',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: _primaryBlue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  onPressed: isMarking || !_hasFirebaseApp
+                      ? null
+                      : () => _markAutoSlotAsGotIt(slot),
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: Text(
+                    isMarking ? 'Saving...' : 'I Got It!',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: _emerald,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  onPressed: _hasFirebaseApp
+                      ? () => WishlistService.dismissAutoSlot(slot.slotKey)
+                      : null,
+                  icon: const Icon(Icons.close),
+                  label: const Text(
+                    'Remove',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: Colors.white,
+                    foregroundColor: _inkMuted,
+                    side: const BorderSide(color: _border, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManualCoinCard(WishlistItem item) {
+    final coin = item.coin!;
+    final title = [
+      if (coin.year.trim().isNotEmpty) coin.year.trim(),
+      coin.themeSubject.isNotEmpty ? coin.themeSubject : coin.denomination,
+    ].join(' ');
+    final mintText =
+        MintHelpers.formatMintFacilityAndMark(coin.mint, coin.mintMark);
+    final query = [
+      if (coin.year.isNotEmpty) coin.year,
+      if (coin.mintMark.isNotEmpty) coin.mintMark,
+      if (coin.programSeries.isNotEmpty) coin.programSeries,
+      coin.themeSubject.isNotEmpty ? coin.themeSubject : coin.denomination,
+      'coin',
+    ].join(' ');
+    final ebayUrl = EpnService.buildSearchUrlFromQuery(
+      query,
+      customId: '${_userHash()}_${item.id}',
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title.isEmpty ? 'Wanted Coin' : title,
+            style: const TextStyle(
+              color: _ink,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (mintText.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              mintText,
+              style: const TextStyle(
+                color: _inkMuted,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  onPressed: () => _openUrl(ebayUrl),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text(
+                    'Buy on eBay',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: _primaryBlue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  onPressed: _hasFirebaseApp
+                      ? () => _markManualItemAsGotIt(item)
+                      : null,
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text(
+                    'I Got It!',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: _emerald,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  onPressed: _hasFirebaseApp
+                      ? () => WishlistService.removeFromWishlist(item.id)
+                      : null,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text(
+                    'Remove',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    backgroundColor: Colors.white,
+                    foregroundColor: _inkMuted,
+                    side: const BorderSide(color: _border, width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyAutoCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border),
+      ),
+      child: const Text(
+        'Missing coins from your coin sets will appear here automatically once you add a coin from any program.',
+        style: TextStyle(color: _inkMuted, fontSize: 18),
+      ),
+    );
+  }
+
+  Widget _buildEmptyManualCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border),
+      ),
+      child: const Text(
+        'Tap "+ Add a Coin to My Wish List" above or tap Wish List from the Catalog, Coin Search, or Ask Morgan.',
+        style: TextStyle(color: _inkMuted, fontSize: 18),
+      ),
+    );
   }
 
   Widget _buildGiftActivityBanner() {
@@ -1032,72 +1589,84 @@ class _WishlistScreenState extends State<WishlistScreen> {
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return _buildBannerCard(0, []);
+          return _buildBannerCard(0, const []);
         }
-
         final doc = snapshot.data!.docs.first.data() as Map<String, dynamic>;
         final reservedIndices = List<int>.from(doc['reserved_items'] ?? []);
-        final detailsMap = Map<String, dynamic>.from(doc['reservation_details'] ?? {});
+        final detailsMap =
+            Map<String, dynamic>.from(doc['reservation_details'] ?? {});
         final items = List<Map<String, dynamic>>.from(doc['items'] ?? []);
-
-        final reservedCount = reservedIndices.length;
         final reservedDetailsList = <Map<String, String>>[];
 
-        for (var idx in reservedIndices) {
-          final title = idx < items.length ? (items[idx]['title'] ?? 'Coin Item') : 'Wishlist Item';
+        for (final idx in reservedIndices) {
+          final title = idx < items.length
+              ? (items[idx]['title']?.toString() ?? 'Coin Item')
+              : 'Wishlist Item';
           final detail = detailsMap[idx.toString()] as Map<String, dynamic>?;
-          final by = detail?['reserved_by'] ?? 'Family Member';
-          reservedDetailsList.add({
-            'title': title,
-            'reserved_by': by,
-          });
+          final by = detail?['reserved_by']?.toString() ?? 'Family Member';
+          reservedDetailsList.add({'title': title, 'reserved_by': by});
         }
-
-        return _buildBannerCard(reservedCount, reservedDetailsList);
+        return _buildBannerCard(reservedIndices.length, reservedDetailsList);
       },
     );
   }
 
-  Widget _buildBannerCard(int reservedCount, List<Map<String, String>> details) {
+  Widget _buildBannerCard(
+    int reservedCount,
+    List<Map<String, String>> details,
+  ) {
     final isReserved = reservedCount > 0;
     return Container(
       decoration: BoxDecoration(
-        color: isReserved ? (_isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7)) : (_isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
+        color: isReserved ? const Color(0xFFDCFCE7) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isReserved ? const Color(0xFF10B981) : (_isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+          color: isReserved ? _emerald : _border,
+          width: 1.5,
         ),
       ),
       child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Icon(
           isReserved ? Icons.card_giftcard : Icons.card_giftcard_outlined,
-          color: isReserved ? const Color(0xFF34D399) : (_isDark ? Colors.white54 : const Color(0xFF64748B)),
+          color: isReserved ? _emerald : _inkMuted,
+          size: 28,
         ),
         title: Text(
           isReserved
-              ? "🎁 $reservedCount Wish List Items Reserved by Relatives ✓"
-              : "🎁 0 items currently reserved by family members",
+              ? '$reservedCount Wish List Items Reserved by Relatives'
+              : '0 items currently reserved by family members',
           style: TextStyle(
-            color: isReserved ? (_isDark ? Colors.white : const Color(0xFF064E3B)) : (_isDark ? Colors.white70 : const Color(0xFF475569)),
-            fontSize: 14,
+            color: isReserved ? _emerald : _ink,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         subtitle: Text(
           isReserved
-              ? "Tap to view gift items family members marked as bought"
-              : "Share your gift list to let family members reserve items for holidays",
-          style: TextStyle(color: _isDark ? Colors.white54 : const Color(0xFF64748B), fontSize: 11),
+              ? 'Tap to view gift items family members marked as bought'
+              : 'Email or share your Wish List so family can mark gifts they buy',
+          style: const TextStyle(color: _inkMuted, fontSize: 18),
         ),
-        children: details.isEmpty
-            ? []
-            : details.map((d) => ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.check_circle_outline, color: Color(0xFF34D399), size: 18),
-                  title: Text(d['title']!, style: TextStyle(color: _isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: Text("Reserved by ${d['reserved_by']}", style: const TextStyle(color: Color(0xFF34D399), fontSize: 11)),
-                )).toList(),
+        children: details
+            .map(
+              (d) => ListTile(
+                leading: const Icon(Icons.check_circle_outline, color: _emerald),
+                title: Text(
+                  d['title']!,
+                  style: const TextStyle(
+                    color: _ink,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  'Reserved by ${d['reserved_by']}',
+                  style: const TextStyle(color: _emerald, fontSize: 18),
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }

@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/coin_model.dart';
 import '../services/mint_product_lookup_service.dart';
 import '../services/signed_photo_url_service.dart';
+import '../services/wishlist_service.dart';
 import '../utils/mint_helpers.dart';
 import '../utils/owned_storage_url.dart';
 import '../widgets/signed_storage_image.dart';
@@ -784,6 +785,36 @@ class _UnifiedCoinDetailScreenState extends State<UnifiedCoinDetailScreen>
             Text(
               '\$${(double.tryParse(coin.purchaseCost.replaceAll(r'$', '')) ?? 0.0).toStringAsFixed(2)}',
             ),
+        ],
+        if (coin != null) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: ElevatedButton.icon(
+                key: const Key('udv_add_wishlist_button'),
+                onPressed: () async {
+                  final handler = _deps.onAddToWishlist ?? WishlistService.addToWishlist;
+                  await handler(coin);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Added to your Wish List!')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.favorite_border),
+                label: const Text(
+                  'Add to My Wish List',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1D4F91),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ),
         ],
         if (!isPublic) ...[
           if (coin?.storageLocation.isNotEmpty ?? false)

@@ -67,6 +67,16 @@ class AuthService {
     return rawEmail.trim().toLowerCase();
   }
 
+  static bool get isAnonymousUser => _auth.currentUser?.isAnonymous == true;
+
+  static String get userIdentifier {
+    final user = _auth.currentUser;
+    if (user == null) return 'unknown';
+    if (user.isAnonymous) return user.uid;
+    final email = user.email?.trim().toLowerCase() ?? '';
+    return email.isNotEmpty ? email : user.uid;
+  }
+
   static String get displayName {
     final user = _auth.currentUser;
     if (user?.isAnonymous == true) return 'Guest';

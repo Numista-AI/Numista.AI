@@ -1,7 +1,86 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
 import 'beta_checklist_service.dart';
+import 'epn_service.dart';
 import '../models/coin_model.dart';
+import '../models/program_model.dart';
+import '../utils/mint_helpers.dart';
+import '../utils/program_goal_helper.dart';
+import '../utils/slot_resolver.dart';
+
+class WishlistAutoFillPrefs {
+  final Set<String> dismissedSlots;
+  final Set<String> dismissedPrograms;
+  final Set<String> pinnedPrograms;
+  final Map<String, String> goalOverrides;
+  final String lastRecipientEmail;
+  final List<String> savedRecipientEmails;
+
+  const WishlistAutoFillPrefs({
+    this.dismissedSlots = const {},
+    this.dismissedPrograms = const {},
+    this.pinnedPrograms = const {},
+    this.goalOverrides = const {},
+    this.lastRecipientEmail = '',
+    this.savedRecipientEmails = const [],
+  });
+
+  factory WishlistAutoFillPrefs.fromMap(Map<String, dynamic>? data) {
+    if (data == null) return const WishlistAutoFillPrefs();
+    return WishlistAutoFillPrefs(
+      dismissedSlots: Set<String>.from(data['dismissed_slots'] ?? const []),
+      dismissedPrograms:
+          Set<String>.from(data['dismissed_programs'] ?? const []),
+      pinnedPrograms: Set<String>.from(data['pinned_programs'] ?? const []),
+      goalOverrides:
+          Map<String, String>.from(data['goal_overrides'] ?? const {}),
+      lastRecipientEmail:
+          (data['last_recipient_email'] ?? '').toString().trim(),
+      savedRecipientEmails:
+          List<String>.from(data['saved_recipient_emails'] ?? const []),
+    );
+  }
+}
+
+class MissingProgramSlot {
+  final String slotKey;
+  final CoinProgram program;
+  final ProgramCoin coinSlot;
+  final ChecklistVariety variety;
+  final String mintMark;
+  final String varietyLabel;
+  final String ebayQuery;
+  final String ebayUrl;
+
+  const MissingProgramSlot({
+    required this.slotKey,
+    required this.program,
+    required this.coinSlot,
+    required this.variety,
+    required this.mintMark,
+    required this.varietyLabel,
+    required this.ebayQuery,
+    required this.ebayUrl,
+  });
+}
+
+class AutoFilledProgramGroup {
+  final CoinProgram program;
+  final String effectiveGoal;
+  final int ownedCount;
+  final int targetCount;
+  final int hiddenSlotCount;
+  final List<MissingProgramSlot> missingSlots;
+
+  const AutoFilledProgramGroup({
+    required this.program,
+    required this.effectiveGoal,
+    required this.ownedCount,
+    required this.targetCount,
+    required this.hiddenSlotCount,
+    required this.missingSlots,
+  });
+}
 
 class WishlistItem {
   final String id;
@@ -41,7 +120,9 @@ class WishlistItem {
       coin: data['coin'] != null ? CoinModel.fromMap(data['coin'], doc.id) : null,
       addedCoins: List<String>.from(data['addedCoins'] ?? []),
       foundVarieties: convertedVarieties,
-      timestamp: (data['timestamp'] as Timestamp).toDate(),
+      timestamp: (data['timestamp'] is Timestamp)
+          ? (data['timestamp'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 
@@ -60,13 +141,182 @@ class WishlistItem {
 class WishlistService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  static DocumentReference get _userDoc => _db.doc(AuthService.userDocPath);
+
   static CollectionReference get _wishlistRef =>
-      _db.collection('users').doc(AuthService.userEmail).collection('wishlist');
+      _userDoc.collection('wishlist');
+
+  static DocumentReference get _prefsDocRef =>
+      _userDoc.collection('wishlist_preferences').doc('config');
 
   static Stream<List<WishlistItem>> getWishlistStream() {
     return _wishlistRef.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => WishlistItem.fromFirestore(doc)).toList();
     });
+  }
+
+  static Stream<WishlistAutoFillPrefs> getWishlistPrefsStream() {
+    return _prefsDocRef.snapshots().map((doc) {
+      if (!doc.exists) return const WishlistAutoFillPrefs();
+      return WishlistAutoFillPrefs.fromMap(doc.data() as Map<String, dynamic>?);
+    });
+  }
+
+  static Future<WishlistAutoFillPrefs> getWishlistPrefs() async {
+    final doc = await _prefsDocRef.get();
+    if (!doc.exists) return const WishlistAutoFillPrefs();
+    return WishlistAutoFillPrefs.fromMap(doc.data() as Map<String, dynamic>?);
+  }
+
+  static Future<void> dismissAutoSlot(String slotKey) async {
+    await _prefsDocRef.set({
+      'dismissed_slots': FieldValue.arrayUnion([slotKey]),
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> restoreAutoSlot(String slotKey) async {
+    await _prefsDocRef.set({
+      'dismissed_slots': FieldValue.arrayRemove([slotKey]),
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> dismissAutoProgram(String programId) async {
+    await _prefsDocRef.set({
+      'dismissed_programs': FieldValue.arrayUnion([programId]),
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> restoreAllHidden() async {
+    await _prefsDocRef.set({
+      'dismissed_slots': <String>[],
+      'dismissed_programs': <String>[],
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> setProgramGoalOverride(
+      String programId, String goal) async {
+    await _prefsDocRef.set({
+      'goal_overrides': {programId: goal},
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> pinProgramToWishlist(String programId) async {
+    await _prefsDocRef.set({
+      'pinned_programs': FieldValue.arrayUnion([programId]),
+      'dismissed_programs': FieldValue.arrayRemove([programId]),
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> saveRecipientEmail(String email) async {
+    final normalized = email.trim().toLowerCase();
+    if (normalized.isEmpty) return;
+    await _prefsDocRef.set({
+      'last_recipient_email': normalized,
+      'saved_recipient_emails': FieldValue.arrayUnion([normalized]),
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static List<AutoFilledProgramGroup> computeAutoMissingPrograms({
+    required Map<String, List<CoinProgram>> allProgramsMap,
+    required List<Map<String, dynamic>> expandedCoins,
+    required Map<String, Map<String, dynamic>> programPreferences,
+    required WishlistAutoFillPrefs wishlistPrefs,
+    required String userHash,
+  }) {
+    final allPrograms = allProgramsMap.values.expand((list) => list).toList();
+    final groups = <AutoFilledProgramGroup>[];
+
+    for (final program in allPrograms) {
+      if (programPreferences[program.id]?['is_manually_completed'] == true) {
+        continue;
+      }
+      if (wishlistPrefs.dismissedPrograms.contains(program.id)) {
+        continue;
+      }
+
+      final inventory = SlotResolver.resolveProgramInventory(
+        program: program,
+        coins: expandedCoins,
+      );
+      final hasOwned = inventory.values.any((r) => r.isOwned);
+      final isPinned = wishlistPrefs.pinnedPrograms.contains(program.id);
+      if (!hasOwned && !isPinned) continue;
+
+      final effectiveGoal = wishlistPrefs.goalOverrides[program.id] ??
+          programPreferences[program.id]?['goal']?.toString() ??
+          ProgramGoalHelper.defaultAutoFillGoal;
+
+      int targetCount = 0;
+      int ownedCount = 0;
+      int hiddenSlotCount = 0;
+      final missingSlots = <MissingProgramSlot>[];
+
+      for (final coinSlot in program.coins) {
+        if (coinSlot.name.contains('Pending')) continue;
+        for (final variety in coinSlot.varieties) {
+          if (variety.label.contains('Pending')) continue;
+          if (!ProgramGoalHelper.goalAllowsVariety(variety, effectiveGoal)) {
+            continue;
+          }
+
+          final slotKey = '${program.id}_${coinSlot.id}_${variety.id}';
+          targetCount++;
+
+          if (inventory[slotKey]?.isOwned == true) {
+            ownedCount++;
+            continue;
+          }
+          if (wishlistPrefs.dismissedSlots.contains(slotKey)) {
+            hiddenSlotCount++;
+            continue;
+          }
+
+          final ebayQuery = ProgramGoalHelper.buildEbayQuery(
+            program: program,
+            coinSlot: coinSlot,
+            variety: variety,
+          );
+          final ebayUrl = EpnService.buildSearchUrlFromQuery(
+            ebayQuery,
+            customId: '${userHash}_${program.id}',
+          );
+
+          missingSlots.add(
+            MissingProgramSlot(
+              slotKey: slotKey,
+              program: program,
+              coinSlot: coinSlot,
+              variety: variety,
+              mintMark: ProgramGoalHelper.extractRawMintMark(variety),
+              varietyLabel: ProgramGoalHelper.describeVarietyForSenior(variety),
+              ebayQuery: ebayQuery,
+              ebayUrl: ebayUrl,
+            ),
+          );
+        }
+      }
+
+      if (missingSlots.isNotEmpty || hiddenSlotCount > 0) {
+        groups.add(
+          AutoFilledProgramGroup(
+            program: program,
+            effectiveGoal: effectiveGoal,
+            ownedCount: ownedCount,
+            targetCount: targetCount,
+            hiddenSlotCount: hiddenSlotCount,
+            missingSlots: missingSlots,
+          ),
+        );
+      }
+    }
+    return groups;
   }
 
   static Future<void> addToWishlist(CoinModel coin) async {
@@ -108,49 +358,33 @@ class WishlistService {
     await _wishlistRef.doc(id).update(updateData);
   }
 
-  /// Logic to determine which variety a found coin belongs to
-  static String? _getVarietyIdForCoin(CoinModel coin) {
-    final mint = coin.mintMark.toUpperCase();
-    final strike = coin.strikeType.toLowerCase();
-    final metal = coin.metalContent.toLowerCase();
-
-    if (strike.contains('satin')) return 'S-SATIN';
-    if (mint == 'S' && metal.contains('silver')) return 'S-SILVER';
-    if (mint == 'S' && strike.contains('proof')) return 'S-CLAD';
-    if (mint == 'D') return 'D-UNC';
-    if (mint == 'P') return 'P-UNC';
-    
-    return null;
-  }
-
   /// Checks if a newly added/found coin matches anything in the wishlist.
   static Future<WishlistItem?> checkMatchAndMarkAsFound(CoinModel foundCoin) async {
     final snapshot = await _wishlistRef.get();
+    final foundYear = foundCoin.year.trim();
+    final foundDenom = foundCoin.denomination.trim().toLowerCase();
+    final foundMm = MintHelpers.readMintMark({'mint_mark': foundCoin.mintMark});
+    final foundTheme = foundCoin.themeSubject.trim().toLowerCase();
+
     for (var doc in snapshot.docs) {
       final item = WishlistItem.fromFirestore(doc);
-      
+
       if (item.type == 'individual' && item.coin != null) {
-        if (item.coin!.year == foundCoin.year && 
-            item.coin!.denomination == foundCoin.denomination &&
-            item.coin!.mintMark == foundCoin.mintMark) {
+        final wish = item.coin!;
+        final wishYear = wish.year.trim();
+        final wishDenom = wish.denomination.trim().toLowerCase();
+        final wishMm = MintHelpers.readMintMark({'mint_mark': wish.mintMark});
+        final wishTheme = wish.themeSubject.trim().toLowerCase();
+
+        final yearMatch = wishYear.isEmpty || wishYear == foundYear;
+        final denomMatch = wishDenom.isEmpty || wishDenom == foundDenom;
+        final mintMatch = wishMm.isEmpty || wishMm == foundMm;
+        final themeMatch = wishTheme.isEmpty ||
+            foundTheme.contains(wishTheme) ||
+            wishTheme.contains(foundTheme);
+
+        if (yearMatch && denomMatch && mintMatch && themeMatch) {
           return item;
-        }
-      } else if (item.type == 'program' && item.programId != null) {
-        // Expertise Logic: Matching Varieties
-        if (item.programId == '5state' && foundCoin.programSeries == '50 State Quarters Program') {
-          final coinId = foundCoin.themeSubject.toLowerCase().replaceAll(' ', '_');
-          final varietyId = _getVarietyIdForCoin(foundCoin);
-          
-          if (coinId.isNotEmpty && varietyId != null) {
-            final currentVarieties = Map<String, List<String>>.from(item.foundVarieties);
-            final coinVarieties = List<String>.from(currentVarieties[coinId] ?? []);
-            
-            if (!coinVarieties.contains(varietyId)) {
-              coinVarieties.add(varietyId);
-              currentVarieties[coinId] = coinVarieties;
-              await updateProgramProgress(item.id, varieties: currentVarieties);
-            }
-          }
         }
       }
     }
@@ -159,15 +393,6 @@ class WishlistService {
 
   /// Seeds the initial wishlist for testing as requested by the user.
   static Future<void> seedInitialWishlist() async {
-    await addProgramToWishlist('50state', initialAdded: [
-      'New York', 
-      'New Jersey', 
-      'Alaska', 
-      'Virginia', 
-      'Colorado', 
-      'Louisiana', 
-      'Pennsylvania', 
-      'North Carolina'
-    ]);
+    await pinProgramToWishlist('50state');
   }
 }

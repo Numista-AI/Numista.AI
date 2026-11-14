@@ -8,6 +8,8 @@ import '../services/auth_service.dart';
 import '../services/coin_programs_data.dart';
 import '../services/reference_service.dart';
 import '../models/program_model.dart';
+import '../services/wishlist_service.dart';
+import '../utils/program_goal_helper.dart';
 import 'package:uuid/uuid.dart';
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -261,40 +263,8 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
 
   /// Returns true if [variety] counts toward [goal].
   /// Empty variety.id (variety-less coin slots) always count.
-  bool _goalAllowsVariety(ChecklistVariety variety, String goal) {
-    final id = variety.id.toUpperCase().trim();
-    if (id.isEmpty) return true; // variety-less slots (single denomination, no mint split)
-
-    switch (goal) {
-      // ── Circulation Only: P and D business strikes only ─────────────────
-      case 'Circulation Only':
-        return _isCirculationVariety(id);
-
-      // ── Standard Set: P, D, and S clad proofs ───────────────────────────
-      case 'Standard Set':
-        if (_isCirculationVariety(id)) return true;
-        // S clad proof only — NOT silver proof, NOT satin, NOT bullion
-        return id == 'S-CLAD' ||            // 50 State Quarters, DC Territories, ATB
-               id == 'S-PROOF' ||           // WJNS, America250, most modern programs
-               id.startsWith('S-PROOF-');   // compound: S-PROOF-T1, S-PROOF-T2 (Ike)
-
-      // ── Full Master Set: everything counts (existing behaviour) ─────────
-      case 'Full Master Set':
-      default:
-        return true;
-    }
-  }
-
-  /// True for P and D business-strike variety ids.
-  /// Explicit allowlist — does NOT include P-SATIN, P-REVERSE-PROOF,
-  /// P-PROOF-CONG, or P-VDB (all Full Master only).
-  bool _isCirculationVariety(String id) {
-    if (id == 'P' || id == 'D') return true;                                             // bare (WJNS, Innovation, Trump, classic)
-    if (id == 'P-UNC' || id == 'D-UNC') return true;                                    // uncirculated (50SQ, ATB, America250)
-    if (id == 'P-T1' || id == 'P-T2' || id == 'D-T1' || id == 'D-T2') return true;    // type splits (Morgan, Ike)
-    if (id.startsWith('P-PRIVY-') || id.startsWith('D-PRIVY-')) return true;            // privy P/D (America250)
-    return false;
-  }
+  bool _goalAllowsVariety(ChecklistVariety variety, String goal) =>
+      ProgramGoalHelper.goalAllowsVariety(variety, goal);
 
   Future<void> _loadTotalReferenceCount() async {
     final authUser = FirebaseAuth.instance.currentUser;
@@ -1671,24 +1641,59 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              height: 52,
-              child: _isSavingCoins
-                  ? const SizedBox(
-                      height: 52,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : ElevatedButton.icon(
-                      onPressed: _confirmAddSelectedCoins,
-                      icon: const Icon(Icons.add_task),
-                      label: Text('Add ${_selectedToAdd.length} Selected Coins to Wishlist / Collection'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: const Color(0xFF3B82F6),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: _isSavingCoins
+                    ? const SizedBox(
+                        height: 56,
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : ElevatedButton.icon(
+                        onPressed: _confirmAddSelectedCoins,
+                        icon: const Icon(Icons.add_task),
+                        label: Text(
+                          'Save ${_selectedToAdd.length} Selected to My Collection',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: const Color(0xFF3B82F6),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  onPressed: _isSavingCoins ? null : _addSelectedToWishlist,
+                  icon: const Icon(Icons.favorite_border),
+                  label: Text(
+                    'Add ${_selectedToAdd.length} Selected to My Wish List',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: const Color(0xFF1D4F91),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    textStyle: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 8),
             Builder(
@@ -2058,6 +2063,88 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
       );
       await _addSelectedCoins();
     }
+  }
+
+  Future<void> _addSelectedToWishlist() async {
+    if (_selectedProgram == null || _selectedToAdd.isEmpty) return;
+
+    final authUser = FirebaseAuth.instance.currentUser;
+    final isRealUser = authUser != null && !authUser.isAnonymous;
+    if (!isRealUser || GuestSeedService.isBrowseDemoMode) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: _floatingSnackBarMargin(context),
+            content: const Text('Please sign in to save coins to your Wish List.'),
+            backgroundColor: const Color(0xFFF59E0B),
+          ),
+        );
+      }
+      return;
+    }
+
+    final program = _selectedProgram!;
+    final selectedList = List<String>.from(_selectedToAdd);
+    bool needsStandard = false;
+    bool needsMaster = false;
+
+    await WishlistService.pinProgramToWishlist(program.id);
+
+    for (final coinKey in selectedList) {
+      final parts = coinKey.split('||');
+      final parsedYear = parts.isNotEmpty ? parts[0] : '';
+      final varietyId = parts.length > 1 ? parts[1] : '';
+      final seriesName = parts.length > 2 ? parts[2] : coinKey;
+      final upperVar = varietyId.toUpperCase().trim();
+
+      if (upperVar.isNotEmpty &&
+          !ProgramGoalHelper.goalAllowsVariety(
+            ChecklistVariety(id: varietyId, label: varietyId),
+            'Circulation Only',
+          )) {
+        if (ProgramGoalHelper.goalAllowsVariety(
+          ChecklistVariety(id: varietyId, label: varietyId),
+          'Standard Set',
+        )) {
+          needsStandard = true;
+        } else {
+          needsMaster = true;
+        }
+      }
+
+      for (final coinSlot in program.coins) {
+        final sameYear = (coinSlot.year ?? '') == parsedYear || parsedYear.isEmpty;
+        final sameName = seriesName.toLowerCase().contains(coinSlot.name.toLowerCase());
+        if (sameYear || sameName) {
+          for (final v in coinSlot.varieties) {
+            if (varietyId.isEmpty || v.id == varietyId) {
+              await WishlistService.restoreAutoSlot('${program.id}_${coinSlot.id}_${v.id}');
+            }
+          }
+        }
+      }
+    }
+
+    if (needsMaster) {
+      await WishlistService.setProgramGoalOverride(program.id, 'Full Master Set');
+    } else if (needsStandard) {
+      await WishlistService.setProgramGoalOverride(program.id, 'Standard Set');
+    }
+
+    if (!mounted) return;
+    setState(() => _selectedToAdd.clear());
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: _floatingSnackBarMargin(context),
+        backgroundColor: const Color(0xFF1D4F91),
+        content: Text(
+          'Added ${selectedList.length} selected coin(s) from ${program.name} to your Wish List!',
+          style: const TextStyle(fontSize: 16),
+        ),
+      ),
+    );
   }
 
   Future<void> _addSelectedCoins() async {

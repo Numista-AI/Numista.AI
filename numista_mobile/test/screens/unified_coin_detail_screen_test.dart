@@ -861,4 +861,44 @@ void main() {
     expect(find.text('Availability: In Stock'), findsOneWidget);
     expect(find.text('Release Date: 2026-03-19'), findsOneWidget);
   });
+
+  testWidgets(
+      'Test 24: Add to My Wish List button invokes injected onAddToWishlist callback',
+      (tester) async {
+    final coin = CoinModel(
+      id: 'c_wish_seam',
+      themeSubject: '1921 Morgan Silver Dollar',
+      year: '1921',
+      mint: 'Philadelphia',
+      mintMark: 'P',
+      denomination: '1 Dollar',
+      country: 'USA',
+    );
+    CoinModel? capturedCoin;
+    final wishlistDeps = UnifiedCoinDetailDeps(
+      store: t.store,
+      clock: t.clock,
+      onAddToWishlist: (c) async {
+        capturedCoin = c;
+      },
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: UnifiedCoinDetailScreen(coin: coin, deps: wishlistDeps),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final btnFinder = find.byKey(const Key('udv_add_wishlist_button'));
+    expect(btnFinder, findsOneWidget);
+    expect(tester.getSize(btnFinder).height >= 56.0, isTrue);
+
+    await tester.ensureVisible(btnFinder);
+    await tester.tap(btnFinder);
+    await tester.pumpAndSettle();
+
+    expect(capturedCoin?.id, equals('c_wish_seam'));
+    expect(find.text('Added to your Wish List!'), findsOneWidget);
+  });
 }

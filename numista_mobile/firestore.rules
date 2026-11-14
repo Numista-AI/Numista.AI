@@ -107,12 +107,12 @@ service cloud.firestore {
     // server-only subcollections are excluded so writes are blocked.
     match /users/{email}/{sub}/{docId} {
       allow read, write: if isOwner(email)
-        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency']);
+        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency', 'wishlist_email_logs']);
     }
     // Nested docs within writable subcollections
     match /users/{email}/{sub}/{docId}/{rest=**} {
       allow read, write: if isOwner(email)
-        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency']);
+        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency', 'wishlist_email_logs']);
     }
     // Server-only subcollections — owner may read but NOT write (server SA only)
     match /users/{email}/settings/{docId} {

@@ -2010,6 +2010,17 @@
     ]
   },
   {
+    "path": "/api/wishlist/send-email",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_send_wishlist_email",
+    "tags": [],
+    "dependencies": [
+      "require_registered_user"
+    ]
+  },
+  {
     "path": "/docs",
     "methods": [
       "GET",

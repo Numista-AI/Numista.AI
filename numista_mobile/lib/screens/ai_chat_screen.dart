@@ -9,8 +9,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:http_parser/http_parser.dart';
+import '../models/coin_model.dart';
 import '../services/set_grouping_service.dart';
 import '../services/auth_service.dart';
+import '../services/wishlist_service.dart';
 import '../services/morgan_prefs.dart';
 import '../services/morgan_chat_context.dart';
 import '../services/tts_voice_service.dart';
@@ -1007,6 +1009,129 @@ class _AiChatScreenState extends State<AiChatScreen> {
               _buildGroupProposalCard(payload),
             if (payload != null && payload['action'] == 'group_photo_success')
               _buildGroupSuccessCard(payload),
+            if (!isUser) ...[
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: OutlinedButton.icon(
+                  key: const Key('chat_add_wishlist_button'),
+                  onPressed: () => _showAddCoinFromChatDialog(context, suggestedText: content),
+                  icon: const Icon(Icons.favorite_border, color: Color(0xFF1D4F91)),
+                  label: const Text(
+                    'Add a Coin to My Wish List',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAddCoinFromChatDialog(BuildContext context, {String suggestedText = ''}) async {
+    final yearMatch = RegExp(r'\b(1[789]\d{2}|20[0-2]\d)\b').firstMatch(suggestedText);
+    final nameCtrl = TextEditingController();
+    final yearCtrl = TextEditingController(text: yearMatch?.group(1) ?? '');
+    final notesCtrl = TextEditingController();
+    String selectedMint = '';
+    const mintChoices = ['Any', 'P', 'D', 'S', 'W', 'CC', 'O'];
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text(
+            'Add a Coin to My Wish List',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  style: const TextStyle(fontSize: 18),
+                  decoration: const InputDecoration(
+                    labelText: 'Coin Name (e.g. Morgan Silver Dollar)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: yearCtrl,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(fontSize: 18),
+                  decoration: const InputDecoration(
+                    labelText: 'Year (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Mint Mark:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: mintChoices.map((label) {
+                    final value = label == 'Any' ? '' : label;
+                    final isSelected = selectedMint == value;
+                    return ChoiceChip(
+                      label: Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      selected: isSelected,
+                      onSelected: (_) => setDialogState(() => selectedMint = value),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesCtrl,
+                  style: const TextStyle(fontSize: 18),
+                  decoration: const InputDecoration(
+                    labelText: 'Notes (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel', style: TextStyle(fontSize: 18)),
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final coinName = nameCtrl.text.trim();
+                  if (coinName.isEmpty) return;
+                  final coin = CoinModel(
+                    id: 'chat_wish_${DateTime.now().millisecondsSinceEpoch}',
+                    year: yearCtrl.text.trim(),
+                    mintMark: selectedMint,
+                    themeSubject: coinName,
+                    programSeries: coinName,
+                    personalNotes: notesCtrl.text.trim(),
+                  );
+                  await WishlistService.addToWishlist(coin);
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                  if (mounted) {
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      SnackBar(content: Text('Added "$coinName" to your Wish List!')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.favorite),
+                label: const Text('Save to Wish List', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+            ),
           ],
         ),
       ),
