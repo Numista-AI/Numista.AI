@@ -42,6 +42,13 @@ import '../services/feedback_trigger_observer.dart';
 import '../services/beta_feedback_service.dart' show FeedbackTriggerReason;
 import '../widgets/morgan_guide_flow.dart';
 import '../widgets/morgan_chat_popout.dart';
+import '../services/morgan_screen_state_registry.dart';
+import '../services/morgan_action_bus.dart';
+import '../services/morgan_proactive_rescue_observer.dart';
+import '../widgets/morgan_spotlight_overlay.dart';
+import '../widgets/morgan_privacy_mask.dart';
+import '../widgets/morgan_settings_panel.dart'
+    show MorganSettingsService, showMorganConsentModalIfNeeded;
 import 'coin_detail_screen.dart';
 import 'upcoming_releases_screen.dart';
 import '../theme/numista_theme.dart';
@@ -70,6 +77,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   String? _addCoinsInitialTabName;
   String? _programManagerInitialId;
   bool _isMorganPopoutOpen = false;
+  bool _isMorganDocked = true;
   String? _popoutInitialQuery;
   bool _isSidebarCollapsed = false;
   bool _desktopHotkeysEnabled = true;
@@ -91,15 +99,9 @@ class _BaseLayoutState extends State<BaseLayout> {
     );
   }
 
-  // ── Show Morgan overlay — re-opens guide or shows greeter dialog ───────────
+  // ── Show Morgan overlay — opens unified Morgan Co-Pilot window ───────────
   void _showMorganDialog() {
     final gs = MorganGuideService.current.value;
-    if (gs != null) {
-      // A guide is already active — just un-collapse it if needed.
-      if (gs.collapsed) MorganGuideService.toggleCollapsed();
-      return;
-    }
-
     if (MediaQuery.of(context).size.width < 800) {
       // Mobile: Switch tab to AI Deepdive
       setState(() {
@@ -108,13 +110,16 @@ class _BaseLayoutState extends State<BaseLayout> {
       return;
     }
 
-    // Desktop: Toggle resizable/draggable popout!
+    // Desktop: Always open/toggle the SINGLE unified Morgan Co-Pilot window
     setState(() {
-      _isMorganPopoutOpen = !_isMorganPopoutOpen;
+      _isMorganPopoutOpen = gs != null ? true : !_isMorganPopoutOpen;
       if (_isMorganPopoutOpen) {
         _popoutInitialQuery = null;
       }
     });
+    if (_isMorganPopoutOpen) {
+      showMorganConsentModalIfNeeded(context);
+    }
   }
 
   // ── Morgan inline search — called by MorganGuidePanel ─────────────────────
@@ -208,11 +213,34 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
   }
 
+  void _onMorganGuideStateChanged() {
+    if (!mounted) return;
+    if (MorganGuideService.current.value != null &&
+        morganGuideUnifiedWithCopilot &&
+        MediaQuery.of(context).size.width >= 800 &&
+        !_isMorganPopoutOpen) {
+      setState(() => _isMorganPopoutOpen = true);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _loadDefaultTab();
     _loadDesktopPrefs();
+
+    MorganScreenStateRegistry.instance.repaintBoundaryKey = _repaintKey;
+    MorganActionBus.instance.onNavigateToRoute = (route, {subTab}) async {
+      _navigateTo(route);
+    };
+    MorganGuideService.current.addListener(_onMorganGuideStateChanged);
+    MorganSettingsService.instance.load().then((_) {
+      if (mounted) {
+        setState(() {
+          _isMorganDocked = MorganSettingsService.instance.dockToSide;
+        });
+      }
+    });
  
     // ── Morgan deep-link: if the user tapped a tile in the greeter,
     // navigate directly to that screen instead of Home Dashboard.
@@ -248,6 +276,17 @@ class _BaseLayoutState extends State<BaseLayout> {
         (route) => setState(() => _activeRoute = route),
       );
     }
+
+    MorganScreenStateRegistry.instance.markScreenHydrated(
+      route: _activeRoute,
+      hydrated: _activeRoute != 'Microscope Scanner',
+    );
+  }
+
+  @override
+  void dispose() {
+    MorganGuideService.current.removeListener(_onMorganGuideStateChanged);
+    super.dispose();
   }
 
   void _loadDefaultTab() async {
@@ -294,6 +333,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   }
 
   void _navigateTo(String route) {
+    MorganProactiveRescueObserver.instance.recordUserActivity();
     if (route == 'AI Deepdive' && MediaQuery.of(context).size.width >= 800) {
       setState(() {
         _isMorganPopoutOpen = true;
@@ -304,10 +344,12 @@ class _BaseLayoutState extends State<BaseLayout> {
       });
       return;
     }
+    String resolvedRoute = route;
     setState(() {
       if (route.startsWith('Coin Programs:')) {
         final parts = route.split(':');
         _programManagerInitialId = parts[1];
+        resolvedRoute = 'Coin Programs';
         _activeRoute = 'Coin Programs';
         // ITEM 5: push resolved route name for history
         if (_routeHistory.isEmpty || _routeHistory.last != 'Coin Programs') {
@@ -321,19 +363,27 @@ class _BaseLayoutState extends State<BaseLayout> {
         }
       }
     });
+    MorganScreenStateRegistry.instance.markScreenHydrated(
+      route: resolvedRoute,
+      hydrated: resolvedRoute != 'Microscope Scanner',
+    );
   }
 
   Widget _buildBody() {
+    Widget bodyWidget;
     // Phase A: alt site variant check
-    if (UiVariantService.current == UiVariant.alt) {
+    if (UiVariantService.current == UiVariant.alt && _activeRoute == 'Home Dashboard') {
       // For now Phase A is in place — alt shows a banner indicating alt mode.
       // Full alt screens are Phase B/C (need Eric's YES).
       // We insert a thin info banner at the top of Home Dashboard only.
-      if (_activeRoute == 'Home Dashboard') {
-        return _AltSiteBanner(child: _buildBodyForRoute());
-      }
+      bodyWidget = _AltSiteBanner(child: _buildBodyForRoute());
+    } else {
+      bodyWidget = _buildBodyForRoute();
     }
-    return _buildBodyForRoute();
+    if (MorganPrivacyMask.isRouteSensitive(_activeRoute)) {
+      return MorganPrivacyMask(reason: _activeRoute, child: bodyWidget);
+    }
+    return bodyWidget;
   }
 
   Widget _buildBodyForRoute() {
@@ -1071,42 +1121,75 @@ class _BaseLayoutState extends State<BaseLayout> {
 
           // ─── Main Content ───────────────────────────────────────────────
           Expanded(
-            child: Stack(
-              children: [
-                Column(
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (_) =>
+                  MorganProactiveRescueObserver.instance.recordUserActivity(),
+              child: RepaintBoundary(
+                key: _repaintKey,
+                child: Stack(
                   children: [
-                    if (widget.isDemoMode || GuestSeedService.isBrowseDemoMode)
-                      _DemoBanner(onTryFree: () {
-                        GuestSeedService.deactivateBrowseDemo();
+                    Column(
+                      children: [
+                        if (widget.isDemoMode || GuestSeedService.isBrowseDemoMode)
+                          _DemoBanner(onTryFree: () {
+                            GuestSeedService.deactivateBrowseDemo();
+                            AuthGate.navigateTo(context, initialAuthTab: 1);
+                          }),
+                        if (!widget.isDemoMode && AuthService.isGuest) _GuestBanner(),
+                        Expanded(child: _wrapBodyWithMaxWidth(_buildBody(), _activeRoute)),
+                      ],
+                    ),
+                    WizardOverlay(
+                      onCreateAccount: () {
                         AuthGate.navigateTo(context, initialAuthTab: 1);
-                      }),
-                    if (!widget.isDemoMode && AuthService.isGuest) _GuestBanner(),
-                    Expanded(child: _wrapBodyWithMaxWidth(_buildBody(), _activeRoute)),
+                      },
+                    ),
+                    // Morgan guide panel — unified into single Morgan Co-Pilot window
+                    MorganGuidePanel(
+                      onSearch: _onMorganSearch,
+                      onSearchResultTap: _handleMorganSearchResultTap,
+                    ),
+                    // WCAG AAA High-Contrast Spotlight Overlay
+                    MorganSpotlightOverlay(
+                      controller: MorganSpotlightController.instance,
+                      reducedMotionOverride:
+                          MorganSettingsService.instance.reduceMotion,
+                    ),
+                    BetaFeedbackWidget(
+                      currentRoute: _activeRoute,
+                      pageTitle: _activeRoute,
+                    ),
+                    if (_isMorganPopoutOpen &&
+                        (!_isMorganDocked || MediaQuery.sizeOf(context).width < 1024))
+                      MorganChatPopout(
+                        initialQuery: _popoutInitialQuery,
+                        isDocked: false,
+                        onToggleDock: () {
+                          setState(() => _isMorganDocked = true);
+                          MorganSettingsService.instance.setDockToSide(true);
+                        },
+                        onClose: () => setState(() => _isMorganPopoutOpen = false),
+                        onNavigateToCollection: () => _navigateTo('My Collection'),
+                      ),
                   ],
                 ),
-                WizardOverlay(
-                  onCreateAccount: () {
-                    AuthGate.navigateTo(context, initialAuthTab: 1);
-                  },
-                ),
-                // Morgan guide panel — floats above screen when a guide is active
-                MorganGuidePanel(
-                  onSearch: _onMorganSearch,
-                  onSearchResultTap: _handleMorganSearchResultTap,
-                ),
-                BetaFeedbackWidget(
-                  currentRoute: _activeRoute,
-                  pageTitle: _activeRoute,
-                ),
-                if (_isMorganPopoutOpen)
-                  MorganChatPopout(
-                    initialQuery: _popoutInitialQuery,
-                    onClose: () => setState(() => _isMorganPopoutOpen = false),
-                    onNavigateToCollection: () => _navigateTo('My Collection'),
-                  ),
-              ],
+              ),
             ),
           ),
+          if (_isMorganPopoutOpen &&
+              _isMorganDocked &&
+              MediaQuery.sizeOf(context).width >= 1024)
+            MorganChatPopout(
+              initialQuery: _popoutInitialQuery,
+              isDocked: true,
+              onToggleDock: () {
+                setState(() => _isMorganDocked = false);
+                MorganSettingsService.instance.setDockToSide(false);
+              },
+              onClose: () => setState(() => _isMorganPopoutOpen = false),
+              onNavigateToCollection: () => _navigateTo('My Collection'),
+            ),
         ],
       ),
     );

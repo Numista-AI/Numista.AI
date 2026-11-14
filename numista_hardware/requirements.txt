@@ -9,3 +9,5 @@ google-cloud-storage
 pystray
 Pillow
 requests
+pygrabber>=0.2
+comtypes>=1.4.0

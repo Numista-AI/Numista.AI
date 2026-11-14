@@ -25,6 +25,8 @@ import '../constants.dart';
 import '../theme/numista_theme.dart';
 import '../services/http_auth_client.dart';
 import '../utils/platform_gate.dart';
+import '../services/hardware_service.dart';
+import '../services/morgan_screen_state_registry.dart';
 import '../services/camera_recovery_service.dart';
 import '../services/guest_seed_service.dart';
 import '../utils/numista_error_helper.dart';
@@ -290,6 +292,24 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
+    MorganScreenStateRegistry.instance.markScreenHydrated(
+      route: 'Add New Coins',
+      hydrated: true,
+      targets: [
+        MorganUiTarget(
+          id: 'btn_open_bulk_import',
+          label: 'Upload an invoice or bulk file',
+          isEnabled: true,
+          onInvoke: ([_]) async => _launchBulkImporter(),
+        ),
+        MorganUiTarget(
+          id: 'open_file_picker',
+          label: 'Pick invoice or photo file',
+          isEnabled: true,
+          onInvoke: ([_]) async => _launchBulkImporter(),
+        ),
+      ],
+    );
     if (widget.initialCamError != null) {
       _camError = widget.initialCamError;
     }
@@ -975,6 +995,20 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         label: 'Upload an invoice',
         onTap: _launchBulkImporter,
       ),
+      if (!isNativePhone)
+        Semantics(
+          identifier: 'morgan_add_coins_microscope_card',
+          button: true,
+          label: 'USB Microscope Scanner',
+          child: _QuickAddCard(
+            icon: Icons.biotech_rounded,
+            label: 'USB Microscope Scanner',
+            onTap: () {
+              HardwareService.setMicroscopeConfigured(true);
+              widget.onNavigate?.call('Microscope Scanner');
+            },
+          ),
+        ),
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Center(

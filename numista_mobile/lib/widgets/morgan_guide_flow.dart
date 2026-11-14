@@ -239,6 +239,9 @@ class _MorganGuidePanelState extends State<MorganGuidePanel> {
 
   @override
   Widget build(BuildContext context) {
+    if (morganGuideUnifiedWithCopilot) {
+      return const SizedBox.shrink();
+    }
     return ValueListenableBuilder<GuideState?>(
       valueListenable: MorganGuideService.current,
       builder: (context, state, _) {
@@ -876,3 +879,7 @@ class _MiniOwl extends StatelessWidget {
     );
   }
 }
+
+/// When true, active guides from `MorganGuideService` are rendered inside the
+/// unified Morgan Co-Pilot window instead of a duplicate floating speech bubble.
+bool morganGuideUnifiedWithCopilot = true;

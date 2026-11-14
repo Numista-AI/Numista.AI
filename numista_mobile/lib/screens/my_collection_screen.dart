@@ -38,6 +38,7 @@ import '../services/estate_profile_service.dart';
 import '../models/estate_models.dart';
 import 'coin_detail_screen.dart';
 import '../widgets/morgan_guide_flow.dart'; // Morgan guide step advancement
+import '../services/morgan_screen_state_registry.dart';
 import '../widgets/header_stats_bar.dart';
 import '../services/set_expansion_helper.dart';
 import '../services/set_grouping_service.dart';
@@ -258,6 +259,30 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     super.initState();
     _loadDefaultTab();
     _loadSortPreferences();
+    MorganScreenStateRegistry.instance.markScreenHydrated(
+      route: 'My Collection',
+      hydrated: true,
+      contextPatch: {
+        'activeSearchQuery': _searchQuery,
+      },
+      targets: [
+        MorganUiTarget(
+          id: 'apply_collection_filter',
+          label: 'Filter collection',
+          isEnabled: true,
+          onInvoke: ([params]) async {
+            final q = params?['query']?.toString() ?? '';
+            if (mounted) {
+              _searchCtrl.text = q;
+              setState(() => _searchQuery = q.toLowerCase());
+              MorganScreenStateRegistry.instance.updateContextData({
+                'activeSearchQuery': q.toLowerCase(),
+              });
+            }
+          },
+        ),
+      ],
+    );
 
     // Listen to Firebase Auth state before binding collection stream
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {

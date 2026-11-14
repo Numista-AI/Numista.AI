@@ -2,17 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/ai_chat_screen.dart';
+import '../services/morgan_action_bus.dart';
+import '../widgets/morgan_settings_panel.dart';
 
 class MorganChatPopout extends StatefulWidget {
   final String? initialQuery;
+  final bool isDocked;
   final VoidCallback onClose;
+  final VoidCallback? onToggleDock;
   final VoidCallback? onNavigateToCollection;
+  final Widget? childOverride;
 
   const MorganChatPopout({
     super.key,
     this.initialQuery,
+    this.isDocked = false,
     required this.onClose,
+    this.onToggleDock,
     this.onNavigateToCollection,
+    this.childOverride,
   });
 
   @override
@@ -20,6 +28,7 @@ class MorganChatPopout extends StatefulWidget {
 }
 
 class _MorganChatPopoutState extends State<MorganChatPopout> {
+  final GlobalKey _popoutKey = GlobalKey();
   double _width = 380;
   double _height = 550;
   double _top = 100;
@@ -28,10 +37,62 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
   bool _isMinimized = false;
   double _restoredHeight = 550;
 
+  late final Rect? Function() _rectProvider = _computePopoutRect;
+
   @override
   void initState() {
     super.initState();
     _loadState();
+    _bindActionBusHooks();
+  }
+
+  Rect? _computePopoutRect() {
+    if (widget.isDocked || _isMinimized || !mounted) return null;
+    final ro = _popoutKey.currentContext?.findRenderObject();
+    if (ro is RenderBox && ro.hasSize) {
+      return ro.localToGlobal(Offset.zero) & ro.size;
+    }
+    return Rect.fromLTWH(_left, _top, _width, _height);
+  }
+
+  void _bindActionBusHooks() {
+    MorganActionBus.instance.popoutRectProvider = _rectProvider;
+    MorganActionBus.instance.onSpotlightPositioned = _autoDodgeSpotlight;
+  }
+
+  void _autoDodgeSpotlight(Rect spotlightRect) {
+    if (!mounted || widget.isDocked || _isMinimized) return;
+    final popRect = Rect.fromLTWH(_left, _top, _width, _height);
+    if (!popRect.overlaps(spotlightRect.inflate(16))) return;
+
+    final screenSize = MediaQuery.sizeOf(context);
+    final spotCenter = spotlightRect.center;
+    final double targetLeft = spotCenter.dx < screenSize.width / 2
+        ? (screenSize.width - _width - 20).clamp(16.0, screenSize.width - 120)
+        : 20.0;
+    final double targetTop = spotCenter.dy < screenSize.height / 2
+        ? (screenSize.height - _height - 20).clamp(16.0, screenSize.height - 120)
+        : 20.0;
+
+    setState(() {
+      _left = targetLeft;
+      _top = targetTop;
+    });
+    _saveState();
+  }
+
+  @override
+  void dispose() {
+    if (identical(MorganActionBus.instance.popoutRectProvider, _rectProvider)) {
+      MorganActionBus.instance.popoutRectProvider = null;
+    }
+    if (identical(
+      MorganActionBus.instance.onSpotlightPositioned,
+      _autoDodgeSpotlight,
+    )) {
+      MorganActionBus.instance.onSpotlightPositioned = null;
+    }
+    super.dispose();
   }
 
   Future<void> _loadState() async {
@@ -99,14 +160,59 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
     }
 
     final screenSize = MediaQuery.of(context).size;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final reduceMotion = MorganSettingsService.instance.reduceMotion ||
+        MediaQuery.disableAnimationsOf(context);
+
+    // Docked Desktop Side-Panel Mode (zero occlusion over buttons/camera feeds).
+    if (widget.isDocked) {
+      return Semantics(
+        identifier: 'morgan_docked_sidebar',
+        container: true,
+        child: CallbackShortcuts(
+          bindings: <ShortcutActivator, VoidCallback>{
+            const SingleActivator(LogicalKeyboardKey.escape): widget.onClose,
+          },
+          child: Container(
+            key: _popoutKey,
+            width: 380,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0B1220) : const Color(0xFFF4F4F2),
+              border: Border(
+                left: BorderSide(
+                  color: const Color(0xFF2DD4BF).withValues(alpha: 0.45),
+                  width: 2,
+                ),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.16),
+                  blurRadius: 16,
+                  offset: const Offset(-4, 0),
+                ),
+              ],
+            ),
+            child: widget.childOverride ??
+                AiChatScreen(
+                  initialQuery: widget.initialQuery,
+                  isPopout: true,
+                  isMinimized: false,
+                  isDocked: true,
+                  onToggleDock: widget.onToggleDock,
+                  onClose: widget.onClose,
+                  onNavigateToCollection: widget.onNavigateToCollection,
+                ),
+          ),
+        ),
+      );
+    }
 
     // Check boundary constraints on screenSize changes
     _top = _top.clamp(0.0, (screenSize.height - 100).clamp(0.0, screenSize.height));
     _left = _left.clamp(0.0, (screenSize.width - 100).clamp(0.0, screenSize.width));
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final popoutCard = Container(
+      key: _popoutKey,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF0B1220) : const Color(0xFFF4F4F2), // matching AiChatScreen deep navy background
         borderRadius: BorderRadius.circular(16),
@@ -129,21 +235,24 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
           children: [
             // Embedded Chat Screen
             Positioned.fill(
-              child: AiChatScreen(
-                initialQuery: widget.initialQuery,
-                isPopout: true,
-                isMinimized: _isMinimized,
-                onMinimize: _toggleMinimize,
-                onClose: widget.onClose,
-                onNavigateToCollection: widget.onNavigateToCollection,
-                onDragUpdate: (details) {
-                  setState(() {
-                    _top = (_top + details.delta.dy).clamp(0.0, screenSize.height - 100);
-                    _left = (_left + details.delta.dx).clamp(0.0, screenSize.width - 100);
-                  });
-                },
-                onDragEnd: _saveState,
-              ),
+              child: widget.childOverride ??
+                  AiChatScreen(
+                    initialQuery: widget.initialQuery,
+                    isPopout: true,
+                    isMinimized: _isMinimized,
+                    isDocked: false,
+                    onToggleDock: widget.onToggleDock,
+                    onMinimize: _toggleMinimize,
+                    onClose: widget.onClose,
+                    onNavigateToCollection: widget.onNavigateToCollection,
+                    onDragUpdate: (details) {
+                      setState(() {
+                        _top = (_top + details.delta.dy).clamp(0.0, screenSize.height - 100);
+                        _left = (_left + details.delta.dx).clamp(0.0, screenSize.width - 100);
+                      });
+                    },
+                    onDragEnd: _saveState,
+                  ),
             ),
 
             // Diagonal Resize handle in the bottom-right corner
@@ -172,7 +281,9 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
       ),
     );
 
-    return Positioned(
+    return AnimatedPositioned(
+      duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
       top: _top,
       left: _left,
       width: _width,

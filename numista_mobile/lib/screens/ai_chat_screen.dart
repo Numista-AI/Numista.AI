@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../services/http_auth_client.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -16,7 +16,13 @@ import '../services/wishlist_service.dart';
 import '../services/morgan_prefs.dart';
 import '../services/morgan_chat_context.dart';
 import '../services/tts_voice_service.dart';
+import '../services/stt_voice_service.dart';
+import '../services/morgan_action_bus.dart';
+import '../services/morgan_screen_state_registry.dart';
+import '../services/morgan_proactive_rescue_observer.dart';
+import '../services/morgan_voice_confirmation_parser.dart';
 import '../widgets/morgan_settings_panel.dart';
+import '../widgets/morgan_copilot_cards.dart';
 import '../services/beta_checklist_service.dart';
 import '../constants.dart';
 
@@ -54,8 +60,10 @@ class AiChatScreen extends StatefulWidget {
   final String? initialQuery;
   final bool isPopout;
   final bool isMinimized;
+  final bool isDocked;
   final VoidCallback? onClose;
   final VoidCallback? onMinimize;
+  final VoidCallback? onToggleDock;
   final ValueChanged<DragUpdateDetails>? onDragUpdate;
   final VoidCallback? onDragEnd;
   final VoidCallback? onNavigateToCollection;
@@ -65,8 +73,10 @@ class AiChatScreen extends StatefulWidget {
     this.initialQuery,
     this.isPopout = false,
     this.isMinimized = false,
+    this.isDocked = false,
     this.onClose,
     this.onMinimize,
+    this.onToggleDock,
     this.onDragUpdate,
     this.onDragEnd,
     this.onNavigateToCollection,
@@ -89,21 +99,22 @@ class _AiChatScreenState extends State<AiChatScreen> {
   MorganCollectionContext? _ctx;
   String _displayName = 'there';
 
-  // Group photo state
+  // Group photo & Co-Pilot gate state
   Uint8List? _pendingPhotoBytes;
   String? _pendingPhotoName;
   bool _isIdentifyingPhoto = false;
   bool _isUndoingGroup = false;
+  MorganGateProposal? _activeGateProposal;
 
-  // ── Morgan colour palette ────────────────────────────────────────────────
+  // ── Morgan colour palette (WCAG AA/AAA >= 4.5:1 / >= 7.0:1) ───────────────
   Color get _bg => Theme.of(context).brightness == Brightness.dark ? Color(0xFF0B1220) : Color(0xFFF4F4F2);
   Color get _surf => Theme.of(context).brightness == Brightness.dark ? Color(0xFF162033) : Colors.white;
   Color get _teal => Color(0xFF2DD4BF);
   static const _gold  = Color(0xFFD4A843);   // Morgan gold
-  Color get _sub => Theme.of(context).brightness == Brightness.dark ? Color(0xFF94A3B8) : Color(0xFF5A5C69);
+  Color get _sub => Theme.of(context).brightness == Brightness.dark ? Color(0xFFCBD5E1) : Color(0xFF475569);
   Color get _userBubble => Theme.of(context).brightness == Brightness.dark ? Color(0xFF1E4D4D) : Color(0xFFE0F2F1);
   Color get _aiBubble => Theme.of(context).brightness == Brightness.dark ? Color(0xFF162033) : Color(0xFFF0F4F8);
-  Color get _textPrimary => Theme.of(context).brightness == Brightness.dark ? Colors.white : Color(0xFF0F172A);
+  Color get _textPrimary => Theme.of(context).brightness == Brightness.dark ? Color(0xFFF8FAFC) : Color(0xFF0F172A);
 
   // ── Firestore session path (Keyed strictly by Auth UID) ────────────────────
   CollectionReference? get _sessionsRef {
@@ -123,12 +134,65 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void initState() {
     super.initState();
     _focusNode = FocusNode();
+    SttVoiceService.instance.addListener(_onSttServiceChanged);
+    MorganActionBus.instance.onProposeConfirmation =
+        (actionType, summaryText, payload) async {
+      if (!mounted) return;
+      setState(() {
+        _activeGateProposal = MorganGateProposal(
+          actionType: actionType,
+          summaryText: summaryText,
+          payload: payload,
+        );
+      });
+    };
     _loadEverything();
     if (widget.isPopout) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
       });
     }
+  }
+
+  void _onSttServiceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _executeGateProposalConfirm(MorganGateProposal proposal) async {
+    final token = proposal.payload['confirm_token']?.toString();
+    if (token != null && token.isNotEmpty) {
+      try {
+        final resp = await HttpAuthClient.post(
+          Uri.parse('$kApiBaseUrl/api/morgan/confirm'),
+          body: jsonEncode({
+            'confirm_token': token,
+            'action_type': proposal.actionType,
+            'payload': proposal.payload,
+          }),
+        );
+        if (!mounted) return;
+        setState(() {
+          _activeGateProposal = null;
+          _messages.add({
+            'role': 'assistant',
+            'content': resp.statusCode == 200
+                ? 'All saved! Your collection has been updated.'
+                : formatChatErrorResponse(resp.statusCode, resp.body),
+          });
+        });
+        _scrollToBottom();
+        return;
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    setState(() {
+      _activeGateProposal = null;
+      _messages.add({
+        'role': 'assistant',
+        'content': 'Confirmed! That step is complete.',
+      });
+    });
+    _scrollToBottom();
   }
 
   Future<void> _loadEverything() async {
@@ -237,6 +301,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   void dispose() {
+    SttVoiceService.instance.removeListener(_onSttServiceChanged);
     _controller.dispose();
     _scrollCtrl.dispose();
     _focusNode.dispose();
@@ -379,8 +444,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
   }
 
   Future<void> _send(String query) async {
-    final rawQuery = query.trim();
+    final normalizedInput =
+        MorganVoiceConfirmationParser.normalizeNumismaticTranscript(query);
+    final rawQuery = normalizedInput.trim();
     if (rawQuery.isEmpty) return;
+
+    MorganProactiveRescueObserver.instance.recordUserActivity();
 
     // Check if previous assistant message was a clarifying question (e.g., asking for mint mark)
     String effectiveQuery = rawQuery;
@@ -426,16 +495,30 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
 
     try {
-      final response = await HttpAuthClient.post(
-        Uri.parse('$kApiBaseUrl/api/deep_dive'),
+      http.Response response = await HttpAuthClient.post(
+        Uri.parse('$kApiBaseUrl/api/morgan/copilot'),
         body: jsonEncode({
           'user_email':          AuthService.userEmail,
           'query':               effectiveQuery,
           'chat_history':        recentHistory,
           'collection_context':  _ctx?.systemPrompt ?? '',
           'user_name':           _displayName,
+          'screen_state':        MorganScreenStateRegistry.instance.toCompactJson(),
         }),
       );
+
+      if (response.statusCode == 404 || response.statusCode == 501) {
+        response = await HttpAuthClient.post(
+          Uri.parse('$kApiBaseUrl/api/deep_dive'),
+          body: jsonEncode({
+            'user_email':          AuthService.userEmail,
+            'query':               effectiveQuery,
+            'chat_history':        recentHistory,
+            'collection_context':  _ctx?.systemPrompt ?? '',
+            'user_name':           _displayName,
+          }),
+        );
+      }
       if (!mounted) return;
 
       String replyText;
@@ -447,6 +530,28 @@ class _AiChatScreenState extends State<AiChatScreen> {
             !(data['action_payload'] is Map &&
                 data['action_payload']['status'] == 'rate_limited')) {
           actionPayloadJson = jsonEncode(data['action_payload']);
+        }
+        if (data is Map && data['actions'] is List && (data['actions'] as List).isNotEmpty) {
+          final cmds = (data['actions'] as List)
+              .whereType<Map>()
+              .map((m) => MorganActionCommand.fromJson(Map<String, dynamic>.from(m)))
+              .toList(growable: false);
+          if (cmds.isNotEmpty) {
+            await MorganActionBus.instance.executeTurn(
+              commands: cmds,
+              tierUsed: (data['tier_used'] as int?) ?? 1,
+              tokensBilled: (data['tokens_billed'] as int?) ?? 0,
+              costUsd: (data['estimated_cost_usd'] as num?)?.toDouble() ?? 0.0,
+            );
+          }
+        }
+        if (data is Map && data['proposal'] is Map) {
+          final prop = Map<String, dynamic>.from(data['proposal'] as Map);
+          _activeGateProposal = MorganGateProposal(
+            actionType: prop['action_type']?.toString() ?? 'add_coin',
+            summaryText: prop['summary_text']?.toString() ?? replyText,
+            payload: prop,
+          );
         }
         if (data is Map &&
             data['error'] == null &&
@@ -573,27 +678,44 @@ class _AiChatScreenState extends State<AiChatScreen> {
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: _bg,
-      child: Column(
-        children: [
-          _buildHeader(),
-          if (!widget.isMinimized) ...[
-            if (_isLoadingHistory || _isLoadingContext)
-              LinearProgressIndicator(
-                color: _teal, backgroundColor: _surf, minHeight: 2),
+    return Semantics(
+      identifier: 'morgan_chat_panel',
+      container: true,
+      label: 'Morgan AI Co-Pilot',
+      child: FocusTraversalGroup(
+        policy: OrderedTraversalPolicy(),
+        child: Container(
+          color: _bg,
+          child: Column(
+            children: [
+              _buildHeader(),
+              if (!widget.isMinimized) ...[
+                if (_isLoadingHistory || _isLoadingContext)
+                  LinearProgressIndicator(
+                    color: _teal, backgroundColor: _surf, minHeight: 2),
 
-            // Suggestion pills (empty state)
-            if (_messages.isEmpty && !_isLoadingHistory && !_isLoadingContext)
-              _buildSuggestions(),
+                // Unified Step Guide, Proactive Rescue & Senior Confirmation Gate Host
+                MorganCopilotBannerHost(
+                  activeProposal: _activeGateProposal,
+                  onConfirmProposal: _executeGateProposalConfirm,
+                  onCancelProposal: () {
+                    setState(() => _activeGateProposal = null);
+                  },
+                ),
 
-            // Message list
-            Expanded(child: _buildMessageList()),
+                // Suggestion pills (empty state)
+                if (_messages.isEmpty && !_isLoadingHistory && !_isLoadingContext)
+                  _buildSuggestions(),
 
-            // Input bar
-            _buildInputBar(),
-          ],
-        ],
+                // Message list
+                Expanded(child: _buildMessageList()),
+
+                // Input bar
+                _buildInputBar(),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -708,6 +830,38 @@ class _AiChatScreenState extends State<AiChatScreen> {
               icon: Icon(Icons.add_comment_outlined, color: _sub, size: 20),
               tooltip: 'New chat',
               onPressed: _isLoading ? null : _onNewChat,
+            ),
+          // Co-Pilot Privacy & Voice Controls
+          if (!widget.isMinimized)
+            Semantics(
+              identifier: 'morgan_privacy_settings_btn',
+              button: true,
+              label: 'Morgan Privacy and Voice Controls',
+              child: IconButton(
+                icon: Icon(Icons.shield_outlined, color: _sub, size: 20),
+                tooltip: 'Co-Pilot Privacy & Voice',
+                onPressed: () => showMorganCopilotPrivacySettingsDialog(context),
+              ),
+            ),
+          // 1-Tap Side-Dock / Float Toggle
+          if (widget.isPopout && widget.onToggleDock != null)
+            Semantics(
+              identifier: 'morgan_dock_toggle',
+              button: true,
+              label: widget.isDocked
+                  ? 'Undock Morgan into floating window'
+                  : 'Dock Morgan to right side',
+              child: IconButton(
+                icon: Icon(
+                  widget.isDocked
+                      ? Icons.open_in_new_rounded
+                      : Icons.dock_rounded,
+                  color: _sub,
+                  size: 20,
+                ),
+                tooltip: widget.isDocked ? 'Float window' : 'Dock to right side',
+                onPressed: widget.onToggleDock,
+              ),
             ),
           if (widget.isPopout && widget.onMinimize != null)
             IconButton(
@@ -999,9 +1153,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
             Text(
               content,
               style: TextStyle(
-                  fontSize: 15,
-                  color: isUser ? _textPrimary : _textPrimary.withAlpha(230),
-                  height: 1.55),
+                  fontSize: 16,
+                  color: _textPrimary,
+                  height: 1.5),
             ),
             if (payload != null && payload['action'] == 'add_coin')
               _buildConfirmationCard(payload),
@@ -1961,10 +2115,57 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 ),
               ),
             Row(children: [
-              IconButton(
-                icon: Icon(Icons.attach_file, color: _sub),
-                onPressed: _isLoading || _isIdentifyingPhoto ? null : _pickGroupPhoto,
+              Semantics(
+                identifier: 'morgan_attach_file_btn',
+                button: true,
+                label: 'Attach coin photo or receipt',
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 56),
+                  child: IconButton(
+                    icon: Icon(Icons.attach_file, color: _textPrimary),
+                    tooltip: 'Attach coin photo or invoice',
+                    onPressed: _isLoading || _isIdentifyingPhoto ? null : _pickGroupPhoto,
+                  ),
+                ),
               ),
+              if (SttVoiceService.instance.isSupported)
+                Semantics(
+                  identifier: 'morgan_mic_button',
+                  button: true,
+                  label: SttVoiceService.instance.isSpeakingLocked
+                      ? 'Morgan is speaking — microphone paused'
+                      : SttVoiceService.instance.isListening
+                          ? 'Stop voice listening'
+                          : 'Speak to Morgan',
+                  child: ConstrainedBox(
+                    constraints:
+                        const BoxConstraints(minWidth: 48, minHeight: 56),
+                    child: IconButton(
+                      icon: Icon(
+                        SttVoiceService.instance.isListening
+                            ? Icons.mic_rounded
+                            : Icons.mic_none_rounded,
+                        color: SttVoiceService.instance.isSpeakingLocked
+                            ? _sub
+                            : SttVoiceService.instance.isListening
+                                ? const Color(0xFFDC2626)
+                                : _textPrimary,
+                      ),
+                      tooltip: SttVoiceService.instance.isSpeakingLocked
+                          ? 'Paused while Morgan speaks'
+                          : 'Voice input',
+                      onPressed: () async {
+                        await showMorganConsentModalIfNeeded(context);
+                        final stt = SttVoiceService.instance;
+                        if (stt.isListening) {
+                          stt.stopListening();
+                        } else {
+                          stt.startListening();
+                        }
+                      },
+                    ),
+                  ),
+                ),
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1979,10 +2180,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     spellCheckConfiguration: const SpellCheckConfiguration(),
                     autocorrect: true,
                     enableSuggestions: true,
-                    style: TextStyle(color: _textPrimary, fontSize: 15),
+                    style: TextStyle(color: _textPrimary, fontSize: 16),
                     decoration: InputDecoration(
-                      hintText: 'Ask Morgan about your collection…',
-                      hintStyle: TextStyle(color: _sub.withAlpha(160), fontSize: 14),
+                      hintText: SttVoiceService.instance.isPausedForTts
+                          ? 'Morgan is speaking…'
+                          : 'Ask Morgan or type here…',
+                      hintStyle: TextStyle(color: _sub, fontSize: 16),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 13),
                     ),
