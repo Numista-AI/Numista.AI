@@ -153,16 +153,28 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
     );
   }
 
-  Future<void> _openEbaySearch(String query, {double? estimatedValue, String? programId}) async {
-    final ownerEmail = _wishlistData?['owner_email'] ?? 'guest';
-    final userHash = ownerEmail.split('@').first;
-    final customId = '${userHash}_${programId ?? "gift_list"}';
+  Future<void> _openEbaySearch(
+    String query, {
+    double? estimatedValue,
+    String? programId,
+    String? prebuiltUrl,
+  }) async {
+    String urlString;
+    if (prebuiltUrl != null &&
+        prebuiltUrl.startsWith('https://www.ebay.com/sch/i.html') &&
+        prebuiltUrl.contains('campid=5339148752')) {
+      urlString = prebuiltUrl;
+    } else {
+      final ownerEmail = _wishlistData?['owner_email'] ?? 'guest';
+      final userHash = ownerEmail.split('@').first;
+      final customId = '${userHash}_${programId ?? "gift_list"}';
 
-    final urlString = EpnService.buildSearchUrlFromQuery(
-      query,
-      estimatedValue: estimatedValue,
-      customId: customId,
-    );
+      urlString = EpnService.buildSearchUrlFromQuery(
+        query,
+        estimatedValue: estimatedValue,
+        customId: customId,
+      );
+    }
 
     final url = Uri.parse(urlString);
     if (await canLaunchUrl(url)) {
@@ -296,37 +308,83 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Items Grid / List
+              // Items grouped visually by program_name while preserving flat originalIndex
               if (items.isEmpty)
                 const Center(
                   child: Padding(
                     padding: EdgeInsets.all(40),
                     child: Text(
                       "No items currently in this wish list.",
-                      style: TextStyle(color: Colors.white54, fontSize: 16),
+                      style: TextStyle(color: Colors.white54, fontSize: 18),
                     ),
                   ),
                 )
-              else if (isDesktop)
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 2.2,
-                  ),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) => _buildGiftCard(items[index], index),
-                )
               else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) => _buildGiftCard(items[index], index),
-                ),
+                ...() {
+                  final Map<String, List<({int originalIndex, Map<String, dynamic> item})>>
+                      grouped = {};
+                  for (int i = 0; i < items.length; i++) {
+                    final groupName =
+                        (items[i]['program_name']?.toString().trim().isNotEmpty ?? false)
+                            ? items[i]['program_name'].toString().trim()
+                            : 'Individual Wanted Coins';
+                    grouped
+                        .putIfAbsent(groupName, () => [])
+                        .add((originalIndex: i, item: items[i]));
+                  }
+
+                  return grouped.entries.map((entry) {
+                    final cards = entry.value;
+                    final List<Widget> groupChildren = [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12, bottom: 10),
+                        child: Text(
+                          "${entry.key} (${cards.length})",
+                          style: const TextStyle(
+                            color: Color(0xFF10B981),
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ];
+                    if (isDesktop) {
+                      for (int i = 0; i < cards.length; i += 2) {
+                        groupChildren.add(
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: _buildGiftCard(
+                                  cards[i].item,
+                                  cards[i].originalIndex,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              if (i + 1 < cards.length)
+                                Expanded(
+                                  child: _buildGiftCard(
+                                    cards[i + 1].item,
+                                    cards[i + 1].originalIndex,
+                                  ),
+                                )
+                              else
+                                const Expanded(child: SizedBox.shrink()),
+                            ],
+                          ),
+                        );
+                      }
+                    } else {
+                      for (final c in cards) {
+                        groupChildren.add(_buildGiftCard(c.item, c.originalIndex));
+                      }
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: groupChildren,
+                    );
+                  }).toList();
+                }(),
             ],
           ),
         );
@@ -371,11 +429,17 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
   }
 
   Widget _buildGiftCard(Map<String, dynamic> item, int index) {
-    final title = item['title'] ?? item['name'] ?? 'Numismatic Coin Item';
+    final title =
+        item['title'] ?? item['coin_name'] ?? item['name'] ?? 'Numismatic Coin Item';
+    final year = (item['year'] ?? '').toString().trim();
+    final varietyLabel =
+        (item['variety_label'] ?? item['mint_mark'] ?? '').toString().trim();
     final targetGrade = item['target_grade'] ?? item['grade'] ?? 'Any Grade';
     final maxPrice = item['max_price'] != null ? "\$${item['max_price']}" : "Market";
     final programId = item['program_id'] as String?;
-    final estimatedValue = item['estimated_value'] != null ? (item['estimated_value'] as num).toDouble() : null;
+    final prebuiltEbayUrl = item['ebay_url']?.toString();
+    final estimatedValue =
+        item['estimated_value'] != null ? (item['estimated_value'] as num).toDouble() : null;
 
     final isReserved = _reservedIndices.contains(index);
 
@@ -410,26 +474,47 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    title,
+                    year.isNotEmpty && !title.toString().startsWith(year)
+                        ? '$year $title'
+                        : title.toString(),
                     style: TextStyle(
                       color: isReserved ? const Color(0xFF10B981) : Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                      fontSize: 18,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  if (varietyLabel.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFC9A400)),
+                      ),
+                      child: Text(
+                        varietyLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 6),
                   Text(
                     "Target Grade: $targetGrade • Est. Budget: $maxPrice",
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                   if (isReserved)
                     const Padding(
                       padding: EdgeInsets.only(top: 4),
                       child: Text(
                         "✓ Marked as Gifted / Reserved",
-                        style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: Color(0xFF10B981), fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                     ),
                 ],
@@ -439,36 +524,48 @@ class _PublicWishlistViewScreenState extends State<PublicWishlistViewScreen> {
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ElevatedButton.icon(
-                  onPressed: isReserved
-                      ? null
-                      : () => _openEbaySearch("$title $targetGrade", estimatedValue: estimatedValue, programId: programId),
-                  icon: Icon(isReserved ? Icons.check_circle : Icons.open_in_new, size: 14),
-                  label: Text(
-                    isReserved ? "Reserved ✓" : "Find on eBay",
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isReserved ? Colors.grey.withAlpha(50) : const Color(0xFF3B82F6),
-                    foregroundColor: isReserved ? Colors.white38 : Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: ElevatedButton.icon(
+                    onPressed: isReserved
+                        ? null
+                        : () => _openEbaySearch(
+                              (item['ebay_query']?.toString().isNotEmpty ?? false)
+                                  ? item['ebay_query'].toString()
+                                  : "$title $targetGrade",
+                              estimatedValue: estimatedValue,
+                              programId: programId,
+                              prebuiltUrl: prebuiltEbayUrl,
+                            ),
+                    icon: Icon(isReserved ? Icons.check_circle : Icons.open_in_new, size: 16),
+                    label: Text(
+                      isReserved ? "Reserved ✓" : "Buy on eBay",
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isReserved ? Colors.grey.withAlpha(50) : const Color(0xFF1D4F91),
+                      foregroundColor: isReserved ? Colors.white38 : Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 6),
-                OutlinedButton(
-                  onPressed: () => _showReservationDialog(index, isReserved),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    side: BorderSide(color: isReserved ? const Color(0xFF10B981) : Colors.white38),
-                  ),
-                  child: Text(
-                    isReserved ? "Reserved ✓" : "I Bought This",
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isReserved ? const Color(0xFF10B981) : Colors.white70,
+                const SizedBox(height: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: OutlinedButton(
+                    onPressed: () => _showReservationDialog(index, isReserved),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      side: BorderSide(color: isReserved ? const Color(0xFF10B981) : Colors.white54),
+                    ),
+                    child: Text(
+                      isReserved ? "Reserved ✓" : "I Bought This",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isReserved ? const Color(0xFF10B981) : Colors.white,
+                      ),
                     ),
                   ),
                 ),

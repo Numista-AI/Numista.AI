@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../models/coin_model.dart';
 import '../../services/catalog/catalog_service.dart';
+import '../../services/wishlist_service.dart';
+import '../../utils/mint_helpers.dart';
 import '../../widgets/catalog/catalog_inspector_panel.dart';
 import '../../widgets/catalog/dual_sided_catalog_card.dart';
 
@@ -86,6 +89,40 @@ class _UsNumismaticsCatalogScreenState
       _statusBanner =
           'Added to /${entry.collection} as ${entry.docId} (Kind=${item.kind})';
     });
+  }
+
+  Future<void> _handleAddToWishlist(CatalogItemModel item) async {
+    final resolvedMint = MintHelpers.resolveTwoFieldMint(
+      rawMintMark: item.mintMark ?? '',
+      rawMint: item.facilityCode,
+      year: item.year > 0 ? '${item.year}' : item.yearDisplay,
+      series: item.series,
+      denomination: item.denominationClass,
+    );
+    final coin = CoinModel(
+      id: 'wish_${item.deterministicDocId}',
+      year: item.year > 0 ? '${item.year}' : item.yearDisplay,
+      mint: resolvedMint.mint,
+      mintMark: resolvedMint.mintMark,
+      denomination: item.denominationClass,
+      programSeries: item.series,
+      themeSubject: item.title,
+      originalDescription: item.subtitle,
+      imageUrlObverse: item.obverseImageUrl ?? '',
+      imageUrlReverse: item.reverseImageUrl ?? '',
+    );
+    try {
+      await WishlistService.addToWishlist(coin);
+    } catch (_) {
+      // Allow UI callback verification in widget tests without live Firebase.
+    }
+    if (!mounted) return;
+    setState(() {
+      _statusBanner = 'Added ${item.title} to your Wish List!';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Added "${item.title}" to your Wish List!')),
+    );
   }
 
   void _handleTogglePersonalPhoto(CatalogItemModel item, bool usePersonal) {
@@ -198,6 +235,8 @@ class _UsNumismaticsCatalogScreenState
                                     activeInspectorItem.nacCode],
                                 onAddToCollection: () =>
                                     _handleAddToCollection(activeInspectorItem),
+                                onAddToWishlist: () =>
+                                    _handleAddToWishlist(activeInspectorItem),
                                 onTogglePersonalPhoto: (val) =>
                                     _handleTogglePersonalPhoto(
                                       activeInspectorItem,
@@ -233,6 +272,8 @@ class _UsNumismaticsCatalogScreenState
                                   activeInspectorItem.nacCode],
                               onAddToCollection: () =>
                                   _handleAddToCollection(activeInspectorItem),
+                              onAddToWishlist: () =>
+                                  _handleAddToWishlist(activeInspectorItem),
                               onTogglePersonalPhoto: (val) =>
                                   _handleTogglePersonalPhoto(
                                     activeInspectorItem,

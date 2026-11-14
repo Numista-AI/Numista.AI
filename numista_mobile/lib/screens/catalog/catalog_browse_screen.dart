@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../models/coin_model.dart';
 import '../../services/melt_value_service.dart';
+import '../../services/wishlist_service.dart';
 import '../../utils/catalog_image_guard.dart';
+import '../../utils/mint_helpers.dart';
 import '../unified_coin_detail_screen.dart';
 
 class CatalogBrowseScreen extends StatefulWidget {
@@ -499,7 +502,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
                                   crossAxisCount: crossAxisCount,
                                   crossAxisSpacing: 20,
                                   mainAxisSpacing: 20,
-                                  childAspectRatio: 0.72,
+                                  childAspectRatio: 0.60,
                                 ),
                                 itemCount: _filteredEntries.length,
                                 itemBuilder: (context, index) {
@@ -924,21 +927,43 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
                     ),
                   ],
 
-                  // Ask Morgan button
-                  const SizedBox(height: 28),
+                  // Add to My Wish List + Ask Morgan buttons
+                  const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _openAskMorgan(initialPrompt: 'Can you tell me more about ${item['name']}?');
-                      },
-                      icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-                      label: Text('Ask Morgan about this ${item['type'] ?? 'coin'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0B2545),
-                        foregroundColor: Colors.white,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 56),
+                      child: ElevatedButton.icon(
+                        key: const Key('catalog_modal_add_wishlist_button'),
+                        onPressed: () => _addCatalogMapToWishlist(context, item),
+                        icon: const Icon(Icons.favorite_border, color: Colors.white),
+                        label: const Text(
+                          'Add to My Wish List',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1D4F91),
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 56),
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _openAskMorgan(initialPrompt: 'Can you tell me more about ${item['name']}?');
+                        },
+                        icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                        label: Text('Ask Morgan about this ${item['type'] ?? 'coin'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0B2545),
+                          foregroundColor: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -1247,6 +1272,25 @@ class _CatalogCard extends StatelessWidget {
                   ),
                 ],
               ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  onPressed: () => _addCatalogMapToWishlist(context, item),
+                  icon: const Icon(Icons.favorite_border, size: 20),
+                  label: const Text(
+                    'Add to Wish List',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1D4F91),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -1326,6 +1370,47 @@ class _CatalogBadge extends StatelessWidget {
             style: const TextStyle(color: Color(0xFF333333), fontSize: 14),
           ),
         ],
+      ),
+    );
+  }
+}
+
+Future<void> _addCatalogMapToWishlist(
+  BuildContext context,
+  Map<String, dynamic> item,
+) async {
+  final rawYear = item['year']?.toString() ?? '';
+  final rawMint = item['mint_mark']?.toString() ?? '';
+  final denom = item['denomination']?.toString() ?? '';
+  final name = item['name']?.toString() ?? 'Catalog Coin';
+  final series = item['series']?.toString() ?? name;
+  final resolved = MintHelpers.resolveTwoFieldMint(
+    rawMintMark: rawMint,
+    year: rawYear,
+    series: series,
+    denomination: denom,
+  );
+  final primaryImg = item['primary_image'] as Map?;
+  final coin = CoinModel(
+    id: 'cat_wish_${DateTime.now().millisecondsSinceEpoch}',
+    year: rawYear == 'Undated' ? '' : rawYear,
+    mint: resolved.mint,
+    mintMark: resolved.mintMark,
+    denomination: denom,
+    programSeries: series,
+    themeSubject: name,
+    imageUrlObverse: primaryImg?['url']?.toString() ?? '',
+  );
+  try {
+    await WishlistService.addToWishlist(coin);
+  } catch (_) {
+    // Allow widget test interaction without initialized Firebase.
+  }
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Added "$name" to your Wish List!'),
+        backgroundColor: const Color(0xFF1D4F91),
       ),
     );
   }

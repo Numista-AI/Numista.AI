@@ -4,6 +4,7 @@ import '../models/coin_model.dart';
 import '../models/mint_product_metadata.dart';
 import '../services/mint_product_lookup_service.dart';
 import '../services/signed_photo_url_service.dart';
+import '../services/wishlist_service.dart';
 
 abstract class CoinDocStore {
   int get writeCount;
@@ -22,6 +23,7 @@ typedef ImageLoadRecorder = void Function(String url);
 typedef PhotoUrlResolver = Future<String?> Function(String url);
 typedef MintCatalogInitializer = Future<void> Function();
 typedef MintProductLookup = MintProductMetadata? Function(CoinModel coin);
+typedef WishlistAddHandler = Future<void> Function(CoinModel coin);
 
 class UnifiedCoinDetailDeps {
   final CoinDocStore store;
@@ -32,6 +34,7 @@ class UnifiedCoinDetailDeps {
   final PhotoUrlResolver? resolvePhotoUrl;
   final MintCatalogInitializer? ensureMintCatalogInitialized;
   final MintProductLookup? lookupMintProduct;
+  final WishlistAddHandler? onAddToWishlist;
 
   const UnifiedCoinDetailDeps({
     required this.store,
@@ -42,6 +45,7 @@ class UnifiedCoinDetailDeps {
     this.resolvePhotoUrl,
     this.ensureMintCatalogInitialized,
     this.lookupMintProduct,
+    this.onAddToWishlist,
   });
 
   factory UnifiedCoinDetailDeps.production(
@@ -54,6 +58,7 @@ class UnifiedCoinDetailDeps {
         ensureMintCatalogInitialized:
             MintProductLookupService.instance.ensureInitialized,
         lookupMintProduct: MintProductLookupService.instance.lookupForCoin,
+        onAddToWishlist: WishlistService.addToWishlist,
       );
 }
 

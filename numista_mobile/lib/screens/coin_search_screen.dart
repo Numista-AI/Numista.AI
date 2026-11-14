@@ -896,11 +896,24 @@ class _CoinResultCard extends StatelessWidget {
                         ),
                       )
                     else
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline, color: Color(0xFFF63366), size: 22),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => _addToWishlistWithEbay(context),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 56),
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.favorite_border, color: Color(0xFFF63366), size: 22),
+                          label: const Text(
+                            'Wish List',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFFF63366), width: 1.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          ),
+                          onPressed: () => _addToWishlistWithEbay(context),
+                        ),
                       ),
                   ],
                 ),

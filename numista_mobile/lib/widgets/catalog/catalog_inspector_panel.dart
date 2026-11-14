@@ -16,6 +16,7 @@ class CatalogInspectorPanel extends StatelessWidget {
   final bool isAuthenticated;
   final CollectionEntryState? collectionEntry;
   final VoidCallback onAddToCollection;
+  final VoidCallback? onAddToWishlist;
   final ValueChanged<bool>? onTogglePersonalPhoto;
   final VoidCallback? onRequestImageDownload;
 
@@ -25,6 +26,7 @@ class CatalogInspectorPanel extends StatelessWidget {
     this.isAuthenticated = false,
     this.collectionEntry,
     required this.onAddToCollection,
+    this.onAddToWishlist,
     this.onTogglePersonalPhoto,
     this.onRequestImageDownload,
   });
@@ -223,6 +225,26 @@ class CatalogInspectorPanel extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: ElevatedButton.icon(
+                  key: const Key('inspector_add_wishlist_button'),
+                  onPressed: onAddToWishlist,
+                  icon: const Icon(Icons.favorite_border),
+                  label: const Text(
+                    'Add to Wish List',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1D4F91),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
 

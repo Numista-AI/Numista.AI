@@ -41,6 +41,14 @@ from services.mint_helpers import (
 from services.document_classifier_service import classify_document_bytes
 from services.us_mint_catalog_service import enrich_us_mint_item, expand_us_mint_truncation
 from set_pricing import get_set_valuation
+from wishlist_email_service import (
+    EMAIL_REGEX,
+    EmailProviderNotConfiguredError,
+    build_wishlist_email_html,
+    build_wishlist_email_text,
+    ensure_epn_affiliate_url,
+    send_wishlist_email,
+)
 logger = get_logger(__name__)
 
 # Morgan's coin knowledge base RAG lookup
@@ -12848,6 +12856,44 @@ class WishlistShareRequest(BaseModel):
     owner_alias: Optional[str] = "Numista Collector"
     items: List[dict]
 
+
+class WishlistSendEmailRequest(BaseModel):
+    user_email: str
+    owner_alias: Optional[str] = "Numista Collector"
+    recipient_email: str
+    personal_note: Optional[str] = ""
+    items: List[dict]
+
+
+def _create_public_wishlist_snapshot(
+    *,
+    target_owner: str,
+    owner_alias: Optional[str],
+    items: List[dict],
+) -> Dict[str, Any]:
+    token = f"wishlist_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    snapshot = {
+        "token": token,
+        "owner_email": target_owner,
+        "owner_alias": owner_alias or "Numista Collector",
+        "items": items,
+        "created_at": now.isoformat(),
+        "snapshot_date_display": now.strftime("%B %d, %Y"),
+        "item_count": len(items),
+    }
+
+    # Write to public_wishlists collection using Admin SDK
+    db.collection("public_wishlists").document(token).set(snapshot)
+    logger.info(f"[Wishlist Share] Generated token {token} for {target_owner}")
+
+    return {
+        "token": token,
+        "share_url": f"https://numista.ai/wishlist/{token}",
+        "snapshot_date_display": snapshot["snapshot_date_display"],
+    }
+
+
 @app.post("/api/wishlist/create-share")
 async def api_create_wishlist_share(
     req: WishlistShareRequest,
@@ -12864,30 +12910,108 @@ async def api_create_wishlist_share(
     )
     target_owner = _resolve_target_owner(user, req.user_email, owner_key)
     try:
-        token = f"wishlist_{uuid.uuid4().hex[:12]}"
-        now = datetime.now(timezone.utc)
-        snapshot = {
-            "token": token,
-            "owner_email": target_owner,
-            "owner_alias": req.owner_alias or "Numista Collector",
-            "items": req.items,
-            "created_at": now.isoformat(),
-            "snapshot_date_display": now.strftime("%B %d, %Y"),
-            "item_count": len(req.items)
-        }
-        
-        # Write to public_wishlists collection using Admin SDK
-        db.collection("public_wishlists").document(token).set(snapshot)
-        logger.info(f"[Wishlist Share] Generated token {token} for {target_owner}")
-        
-        return {
-            "token": token,
-            "share_url": f"https://numista.ai/wishlist/{token}",
-            "snapshot_date_display": snapshot["snapshot_date_display"]
-        }
+        return _create_public_wishlist_snapshot(
+            target_owner=target_owner,
+            owner_alias=req.owner_alias,
+            items=req.items,
+        )
     except Exception as e:
         logger.exception("Wishlist share creation failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/wishlist/send-email")
+async def api_send_wishlist_email(
+    req: WishlistSendEmailRequest,
+    authorization: Optional[str] = Header(None),
+    user: Dict[str, Any] = Depends(require_registered_user),
+):
+    """
+    Generates a public gift-list snapshot with verified EPN affiliate links and
+    emails a senior-friendly HTML + plain-text copy to a chosen family member.
+    Fail-closed HTTP 503 if no email provider credentials are configured.
+    """
+    owner_key = _authenticate_request(
+        authorization, body_email=req.user_email, current_user=user
+    )
+    target_owner = _resolve_target_owner(user, req.user_email, owner_key)
+    recipient = req.recipient_email.strip()
+    if not EMAIL_REGEX.match(recipient):
+        raise HTTPException(
+            status_code=422, detail="Please enter a valid recipient email address."
+        )
+    if not req.items:
+        raise HTTPException(
+            status_code=422, detail="Wish list contains no items to send."
+        )
+
+    uid = (user.get("uid") or target_owner).strip()
+    _check_and_increment_rate_cap(
+        uid, "wishlist_email", 20, is_admin=user.get("admin") is True
+    )
+
+    normalized_items = []
+    user_hash = hashlib.sha256(target_owner.encode()).hexdigest()[:8]
+    for idx, item in enumerate(req.items):
+        copy_item = dict(item)
+        prog_id = str(copy_item.get("program_id") or "wishlist")
+        copy_item["ebay_url"] = ensure_epn_affiliate_url(
+            copy_item, f"{user_hash}_{prog_id}_{idx}"
+        )
+        normalized_items.append(copy_item)
+
+    share_meta = _create_public_wishlist_snapshot(
+        target_owner=target_owner,
+        owner_alias=req.owner_alias,
+        items=normalized_items,
+    )
+    alias = (req.owner_alias or "Numista Collector").strip()
+    html_body = build_wishlist_email_html(
+        owner_alias=alias,
+        personal_note=req.personal_note or "",
+        share_url=share_meta["share_url"],
+        items=normalized_items,
+    )
+    text_body = build_wishlist_email_text(
+        owner_alias=alias,
+        personal_note=req.personal_note or "",
+        share_url=share_meta["share_url"],
+        items=normalized_items,
+    )
+
+    try:
+        provider = await send_wishlist_email(
+            recipient_email=recipient,
+            subject=f"{alias}'s Coin Wish List ({len(normalized_items)} Coins)",
+            html_body=html_body,
+            text_body=text_body,
+        )
+    except EmailProviderNotConfiguredError as exc:
+        logger.warning("[Wishlist Email] No email provider configured: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Email delivery provider is not configured on this server. Please use Copy / Share Link.",
+        )
+
+    db.collection("users").document(target_owner).collection(
+        "wishlist_email_logs"
+    ).document(share_meta["token"]).set(
+        {
+            "recipient_email": recipient,
+            "item_count": len(normalized_items),
+            "provider": provider,
+            "share_url": share_meta["share_url"],
+            "sent_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+
+    return {
+        "status": "sent",
+        "provider": provider,
+        "recipient_email": recipient,
+        "item_count": len(normalized_items),
+        **share_meta,
+    }
 
 
 # 3. Secure GCS Signed Appraisal URL & Audit Logging
