@@ -20,9 +20,13 @@ import '../services/valuation_mode_service.dart';
 import '../services/market_news_service.dart';
 import '../widgets/portfolio_charts.dart';
 import '../widgets/beta_checklist_widget.dart';
+import '../widgets/collection_card_image.dart';
 import '../services/beta_checklist_service.dart';
+import '../services/coin_programs_data.dart';
+import '../models/program_model.dart';
 import '../utils/mint_helpers.dart';
 import '../utils/platform_gate.dart';
+import '../utils/slot_resolver.dart';
 import '../widgets/beta_welcome_dialog.dart';
 import 'ai_chat_screen.dart';
 import '../services/upcoming_releases_service.dart';
@@ -36,11 +40,26 @@ class HomeDashboard extends StatefulWidget {
   final void Function(String query)? onAskMorganWithQuery;
   /// Called to navigate to My Collection (e.g. to run AI Valuation).
   final VoidCallback? onNavigateToCollection;
+  final VoidCallback? onAddCoin;
+  final VoidCallback? onTakePhoto;
+  final VoidCallback? onOpenReview;
+  final VoidCallback? onOpenPrograms;
+  final int reviewQueueCount;
+  final bool isReviewCountLoading;
+  final Stream<CombinedDashboardData>? testStream;
+
   const HomeDashboard({
     super.key,
     this.onAskMorgan,
     this.onAskMorganWithQuery,
     this.onNavigateToCollection,
+    this.onAddCoin,
+    this.onTakePhoto,
+    this.onOpenReview,
+    this.onOpenPrograms,
+    this.reviewQueueCount = 0,
+    this.isReviewCountLoading = false,
+    this.testStream,
   });
 
   @override
@@ -150,12 +169,23 @@ class _HomeDashboardState extends State<HomeDashboard> {
   BatchValuationProgress _valuation = const BatchValuationProgress();
   StreamSubscription<BatchValuationProgress>? _valuationSub;
 
+  bool _showCollectionValue = false;
+  final TextEditingController _morganQueryCtrl = TextEditingController();
+  final FocusNode _morganFocusNode = FocusNode();
+  int _streamNonce = 0;
+
   // ── Upcoming Mint Releases future (stable — created once in initState) ──
   late final Future<List<UpcomingRelease>> _upcomingFuture;
 
   @override
   void initState() {
     super.initState();
+    if (widget.testStream != null) {
+      _upcomingFuture = Future.value(const <UpcomingRelease>[]);
+      _isLoadingPrices = false;
+      _isLoadingNews = false;
+      return;
+    }
     _upcomingFuture = UpcomingReleasesService.fetchUpcoming();
     _fetchSpotPrices();
     _fetchNews();
@@ -179,6 +209,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   @override
   void dispose() {
+    _morganQueryCtrl.dispose();
+    _morganFocusNode.dispose();
     _valuationSub?.cancel();
     super.dispose();
   }
@@ -306,43 +338,23 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return LayoutBuilder(
       builder: (context, outerConstraints) {
         return StreamBuilder<CombinedDashboardData>(
-          stream: _getCombinedStream(),
+          key: ValueKey(_streamNonce),
+          stream: widget.testStream ?? _getCombinedStream(),
           builder: (context, snapshot) {
-            // Only show the spinner on the very first load (no cached data).
-            // On subsequent Firestore updates keep showing the last known
-            // content so the widget tree is not blanked between updates.
             if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFF63366)));
+              return _buildLoadingHome();
             }
             if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: const [
-                    Icon(Icons.cloud_off_rounded, size: 48, color: Color(0xFFE53935)),
-                    SizedBox(height: 16),
-                    Text('Dashboard unavailable',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
-                            color: Color(0xFF31333F))),
-                    SizedBox(height: 8),
-                    Text('Check your connection and refresh the page.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFF5A5C69))),
-                  ]),
-                ),
-              );
+              return _buildErrorHome();
             }
 
             final coins = snapshot.data?.coins ?? [];
             final currency = snapshot.data?.currency ?? [];
             final worldItems = snapshot.data?.worldItems ?? [];
 
-            return FutureBuilder<bool>(
-              future: ValuationModeService.isAdvancedMode(),
-              builder: (context, modeSnap) {
-                // ignore: unused_local_variable (NET-372: bid/advanced mode removed)
-                final advanced = modeSnap.data ?? false;
+            return Builder(
+              builder: (context) {
+                final isNativePhone = outerConstraints.maxWidth < 800;
 
                 // ── Compute portfolio metrics ──────────────────────────────────
                 // Use expansion-aware counting (Dimes Bug v2.2)
@@ -477,7 +489,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             final effectiveCoinsVal = cpgTotal;
 
             // ── Portfolio snapshot (fire-and-forget) ───────────────────────
-            if (totalCoins > 0 || totalItems > 0) {
+            if (widget.testStream == null && (totalCoins > 0 || totalItems > 0)) {
               PortfolioSnapshotService.maybeTakeSnapshot(
                 totalCoins: totalCoins,
                 portfolioValue: portfolioValue,
@@ -509,796 +521,64 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
             final fmt = intl.NumberFormat.currency(symbol: '\$');
 
-            final mainContent = SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, isNativePhone ? 88 : 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Version badge ─────────────────────────────────────────
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: const Color(0xFF86EFAC)),
-                    ),
-                    child: Text('Numista.AI $kAppVersion',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                            color: Color(0xFF166534))),
-                  ),
-                  const SizedBox(height: 12),
-                  // ── Welcome Beta Tester Banner Card — shown only to qualifying beta accounts ──
-                  if (AuthService.isBetaTester)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.4)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+            final mainContent = Container(
+              color: const Color(0xFFEEF3F8),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(20, 20, 20, isNativePhone ? 32 : 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (isNativePhone) ...[
+                      ElevatedButton.icon(
+                        onPressed: widget.onAddCoin,
+                        icon: const Icon(Icons.add_circle_outline, size: 22),
+                        label: const Text(
+                          'Add to collection',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Flexible(
-                              child: isNativePhone
-                                  ? Wrap(
-                                      crossAxisAlignment: WrapCrossAlignment.center,
-                                      spacing: 8,
-                                      runSpacing: 4,
-                                      children: [
-                                        const Text('👋 Welcome Beta Tester!',
-                                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF166534),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: const Text('FOUNDING BETA ⭐ FREE FOREVER',
-                                              style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9, fontWeight: FontWeight.bold)),
-                                        ),
-                                      ],
-                                    )
-                                  : Row(
-                                      children: [
-                                        const Text('👋 Welcome Beta Tester!',
-                                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF166534),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: const Text('FOUNDING BETA ⭐ FREE FOREVER',
-                                              style: TextStyle(color: Color(0xFF86EFAC), fontSize: 9, fontWeight: FontWeight.bold)),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Thank you for helping us test Numista.AI! Please use our ${BetaChecklistService.allTasks.length}-step checklist to test coin scanning, cert lookups, and collection tools.',
-                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.4),
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 8,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: () => BetaWelcomeDialog.show(context),
-                              icon: const Icon(Icons.info_outline, size: 16),
-                              label: const Text('Read Beta Guide & Info'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2563EB),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const BetaChecklistWidget(),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Header: title + portfolio value ──────────────────────
-                  isNativePhone
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text('DASHBOARD',
-                                      style: TextStyle(
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.w900,
-                                          fontStyle: FontStyle.italic,
-                                          color: Color(0xFF31333F))),
-                                ),
-                                Text('AI POWERED COLLECTION MANAGER',
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF5A5C69))),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            FutureBuilder<bool>(
-                              future: ValuationModeService.isAdvancedMode(),
-                              builder: (context, modeSnap) {
-                                final advanced = modeSnap.data ?? false;
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _buildPortfolioValueSection(cpgTotal, fmt, totalCoins, advanced: advanced),
-                                    if (pendingValueCount > 0)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Text(
-                                          '($pendingValueCount item(s) pending valuation)',
-                                          style: const TextStyle(fontSize: 10, color: Color(0xFFE53935), fontStyle: FontStyle.italic),
-                                        ),
-                                      ),
-                                  ],
-                                );
-                              },
-                            ),
-                          ],
-                        )
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Flexible(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('DASHBOARD',
-                                      style: TextStyle(
-                                          fontSize: 26,
-                                          fontWeight: FontWeight.w900,
-                                          fontStyle: FontStyle.italic,
-                                          color: Color(0xFF31333F))),
-                                  Text('AI POWERED COLLECTION MANAGER',
-                                      style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF5A5C69))),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Flexible(
-                              child: FutureBuilder<bool>(
-                                future: ValuationModeService.isAdvancedMode(),
-                                builder: (context, modeSnap) {
-                                  final advanced = modeSnap.data ?? false;
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      _buildPortfolioValueSection(cpgTotal, fmt, totalCoins, advanced: advanced),
-                                      if (pendingValueCount > 0)
-                                        Padding(
-                                          padding: const EdgeInsets.only(top: 4),
-                                          child: Text(
-                                            '($pendingValueCount item(s) pending valuation)',
-                                            style: const TextStyle(fontSize: 10, color: Color(0xFFE53935), fontStyle: FontStyle.italic),
-                                          ),
-                                        ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                  const SizedBox(height: 24),
-
-                  // ── Category Breakdown ─────────────────────────────────────
-                  _buildCategoryBreakdown(effectiveCoinsVal, currencyVal, medalsVal, othersVal, fmt),
-                  const SizedBox(height: 24),
-
-                   // ── Metric cards ──────────────────────────────────────────
-                  LayoutBuilder(builder: (ctx, bc) {
-                    final profit = portfolioValue - acquisitionCost;
-                    final profitFmt = (profit >= 0 ? '+' : '') + fmt.format(profit);
-                    final profitColor = profit >= 0
-                        ? const Color(0xFF0F9D58)
-                        : const Color(0xFFE53935);
-                    final narrow = bc.maxWidth < 480;
-                    if (narrow) {
-                      return Column(children: [
-                        Row(children: [
-                          Expanded(child: _metricCard('Total Coins', totalCoins.toString())),
-                          const SizedBox(width: 10),
-                          Expanded(child: _metricCard('Acq. Cost', fmt.format(acquisitionCost))),
-                        ]),
-                        const SizedBox(height: 10),
-                        Row(children: [
-                          Expanded(child: _metricCard('Melt Value', fmt.format(meltValue))),
-                          const SizedBox(width: 10),
-                          Expanded(child: _metricCard('Face Value', fmt.format(faceValue))),
-                        ]),
-                        const SizedBox(height: 10),
-                        _metricCard('Profit / Loss', profitFmt,
-                            valueColor: profitColor),
-                      ]);
-                    }
-                    return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        _metricCardFlex('Total Coins', totalCoins.toString()),
-                        _metricCardFlex('Acquisition Cost', fmt.format(acquisitionCost)),
-                        _metricCardFlex('Melt Value', fmt.format(meltValue)),
-                        _metricCardFlex('Face Value', fmt.format(faceValue)),
-                        _metricCardFlex('Profit / Loss', profitFmt,
-                            valueColor: profitColor),
-                      ],
-                    );
-                  }),
-                  const SizedBox(height: 24),
-
-                  // ── Portfolio Insights Charts ──────────────────────────────
-                  PortfolioChartsPanel(
-                    portfolioValue: portfolioValue,
-                    meltValue: meltValue,
-                    acquisitionCost: acquisitionCost,
-                    programValues: programValues,
-                    snapshots: _snapshots,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // ── Recently Added ────────────────────────────────────────
-                  const Text('Recently Added',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF31333F))),
-                  const SizedBox(height: 10),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE2E6E9)),
-                    ),
-                    child: last5.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text('No coins yet — add your first coin!',
-                                style: TextStyle(color: Color(0xFF5A5C69))))
-                        : Column(
-                            children: last5.asMap().entries.map((entry) {
-                              final data = entry.value;
-                              final year   = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ?? '';
-                              final mint   = MintHelpers.readMintMark(data);
-                              final denom  = data['Denomination']?.toString() ?? '';
-                              final series = data['Program/Series']?.toString() ?? '';
-                              final theme  = data['Theme/Subject']?.toString() ?? '';
-                              final coinCpg = _parseCurrency(data['cpgRetail']);
-                              final gVal = coinCpg;
-                              final estVal = gVal > 0 
-                                  ? fmt.format(gVal)
-                                  : (data['AI Estimated Value']?.toString() ?? '—');
-
-                              // Build a human-readable coin name
-                              // Priority: Program/Series > Theme/Subject > Denomination > fallback
-                              final cleanDenom = denom.replaceAll('Â£', '£').replaceAll('Â', '').trim();
-                              final denomFallback = cleanDenom.isNotEmpty && cleanDenom != 'Multiple'
-                                  ? (cleanDenom[0].toUpperCase() + cleanDenom.substring(1))
-                                      .replaceAll(r'$', '')
-                                      .trim()
-                                  : 'Coin';
-                              final coinName = series.isNotEmpty && series != 'Multiple'
-                                  ? series
-                                  : theme.isNotEmpty && theme != 'Multiple'
-                                      ? theme
-                                      : denomFallback;
-
-                              // Build year-mint label, normalise "Multiple" to "Various"
-                              final yearLabel = (year.isEmpty || year == 'Multiple') ? 'Various' : year;
-                              final mintLabel = (mint.isEmpty || mint == 'Multiple') ? '' : '-$mint';
-                              // Build denomination label — only prepend '$' if the
-                              // value is numeric (e.g. "1" → "$1") or already has it.
-                              // Word-form denominations (penny, nickel, dime, quarter) stay as-is.
-                              String fmtDenom(String d) {
-                                final cleanD = d.replaceAll('Â£', '£').replaceAll('Â', '').trim();
-                                if (cleanD.isEmpty || cleanD == 'Multiple') return '';
-                                if (cleanD.startsWith(r'$') || cleanD.startsWith('£') || cleanD.startsWith('€') || cleanD.startsWith('¥')) return cleanD;              // already has currency symbol
-                                final numeric = double.tryParse(
-                                    cleanD.replaceAll(RegExp(r'[^\d.]'), ''));
-                                if (numeric != null && cleanD.contains(RegExp(r'^[\d]'))) {
-                                  return '\$$cleanD';                              // numeric → add $
-                                }
-                                return cleanD[0].toUpperCase() + cleanD.substring(1);   // word → capitalise
-                              }
-                              final denomLabel = fmtDenom(denom);
-                              final condition = data['Condition']?.toString() ?? '';
-
-                              // When year is known → "2025-W  $1"
-                              // When year is Various (sets/lots) → use Theme + Condition to differentiate
-                              final String subtitle;
-                              if (yearLabel != 'Various') {
-                                final parts = [
-                                  '$yearLabel$mintLabel',
-                                  if (denomLabel.isNotEmpty) denomLabel,
-                                ].where((s) => s.isNotEmpty).toList();
-                                subtitle = parts.join(' · ');
-                              } else {
-                                // Year unknown — use theme + condition to distinguish
-                                final themeStr = theme.isNotEmpty && theme != 'Multiple' ? theme : '';
-                                final condStr = (condition.isNotEmpty && condition != 'Ungraded') ? condition : '';
-                                final parts = [
-                                  if (themeStr.isNotEmpty) themeStr,
-                                  if (condStr.isNotEmpty) condStr,
-                                  if (denomLabel.isNotEmpty) denomLabel,
-                                ];
-                                subtitle = parts.isEmpty ? 'Set / Lot' : parts.join(' · ');
-                              }
-
-                              return Column(children: [
-                                if (entry.key > 0)
-                                  const Divider(height: 1, color: Color(0xFFE2E6E9)),
-                                ListTile(
-                                  dense: true,
-                                  minVerticalPadding: 8,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 6),
-                                  leading: _CoinThumbnail(
-                                    imageUrl: data['image_url_obverse']?.toString()
-                                        ?? data['imageUrlObverse']?.toString(),
-                                  ),
-                                  title: Text(coinName,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF31333F))),
-                                  subtitle: Text(subtitle,
-                                      style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFF64748B))),
-                                  trailing: Text(estVal,
-                                      style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF0F9D58))),
-                                ),
-                              ]);
-                            }).toList(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1D4F91),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 56),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Morgan Widget ─────────────────────────────────────────
-                  _MorganDashboardCard(
-                    totalCoins: totalCoins,
-                    onAskMorgan: widget.onAskMorgan,
-                    onAskMorganWithQuery: widget.onAskMorganWithQuery,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // ── Live Spot Prices ──────────────────────────────────────
-                  Row(children: [
-                    const Icon(Icons.show_chart, size: 14, color: Color(0xFF0F9D58)),
-                    const SizedBox(width: 6),
-                    const Text('LIVE SPOT PRICES',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF64748B),
-                            letterSpacing: 0.5)),
-                    const SizedBox(width: 10),
-                    if (_pricesLastUpdated != null)
-                      Text(
-                        'Last updated: ${intl.DateFormat("dd MMM yyyy @ HHmm").format(_pricesLastUpdated!.toLocal())} · Source: metals-api.com',
-                        style: const TextStyle(
-                            fontSize: 9,
-                            color: Color(0xFF94A3B8)),
+                          elevation: 0,
+                        ),
                       ),
-                  ]),
-                  const SizedBox(height: 8),
-                  if (_isLoadingPrices)
-                    const SizedBox(height: 4,
-                        child: LinearProgressIndicator(color: Color(0xFF0F9D58)))
-                  else if (_spotPrices.isNotEmpty)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: _spotPrices.entries.map((e) =>
-                          Container(
-                            margin: const EdgeInsets.only(right: 10),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFE2E6E9)),
-                              boxShadow: [BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 4, offset: const Offset(0, 2))],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(e.key,
-                                    style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF64748B))),
-                                const SizedBox(height: 2),
-                                Text(fmt.format(e.value),
-                                    style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFF0F172A))),
-                              ],
-                            ),
-                          ),
-                        ).toList(),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Save a coin to your collection',
+                        style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
                       ),
-                    ),
-                  const SizedBox(height: 24),
-
-                  // ── System Updates & Release Notes ────────────────────────
-                  _ReleaseNotesPanel(),
-                  const SizedBox(height: 24),
-
-                  // ── Upcoming Mint Releases ────────────────────────
-                  FutureBuilder<List<UpcomingRelease>>(
-                    future: _upcomingFuture,
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox.shrink();
-                      final releases = snapshot.data!.take(3).toList();
-                      final isDark = Theme.of(context).brightness == Brightness.dark;
-                      final cardBg = isDark ? const Color(0xFF1E2937) : Colors.white;
-                      final textCol = isDark ? Colors.white : const Color(0xFF1E293B);
-
-                      return Column(
+                      const SizedBox(height: 16),
+                    ],
+                    _buildAskMorganCard(isNativePhone),
+                    const SizedBox(height: 16),
+                    if (isNativePhone) ...[
+                      _buildCollectionValueCard(totalCoins, portfolioValue),
+                      const SizedBox(height: 16),
+                      _buildCoinProgramCard(coins),
+                    ] else
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.new_releases_outlined, size: 15, color: Color(0xFFF63366)),
-                              const SizedBox(width: 6),
-                              const Text('UPCOMING MINT RELEASES',
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF64748B),
-                                      letterSpacing: 0.5)),
-                              const Spacer(),
-                              TextButton(
-                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpcomingReleasesScreen())),
-                                child: const Text('See All →', style: TextStyle(fontSize: 12, color: Color(0xFFF63366))),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: 140,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: releases.length,
-                              itemBuilder: (ctx, i) {
-                                final r = releases[i];
-                                return GestureDetector(
-                                  onTap: () => launchUrl(Uri.parse(r.productUrl)),
-                                  child: Container(
-                                    width: 250,
-                                    margin: const EdgeInsets.only(right: 12),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: cardBg,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: isDark ? const Color(0xFF2A3045) : const Color(0xFFE2E6E9)),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.03),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        )
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            if (r.imageUrl != null)
-                                              CachedNetworkImage(
-                                                imageUrl: r.imageUrl!,
-                                                width: 32,
-                                                height: 32,
-                                                fit: BoxFit.cover,
-                                                errorWidget: (c, u, e) => const Icon(Icons.image_not_supported, size: 24),
-                                              )
-                                            else
-                                              const Icon(Icons.image_not_supported, size: 32),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                r.status,
-                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: r.status == 'Available' ? Colors.green : Colors.amber),
-                                              ),
-                                            ),
-                                            Text(r.price, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-                                          ],
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          r.title,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textCol),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Releases: ${r.releaseDate}',
-                                          style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 24),
+                          Expanded(child: _buildCollectionValueCard(totalCoins, portfolioValue)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildCoinProgramCard(coins)),
                         ],
-                      );
-                    }
-                  ),
-
-                  // ── Market Intel / News feed (bottom) ─────────────────────
-                  Row(
-                    children: [
-                      const Icon(Icons.newspaper,
-                          size: 15, color: Color(0xFF3B82F6)),
-                      const SizedBox(width: 6),
-                      const Text('MARKET INTEL',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF64748B),
-                              letterSpacing: 0.5)),
-                      const Spacer(),
-                      if (!_isLoadingNews)
-                        IconButton(
-                          icon: const Icon(Icons.refresh,
-                              size: 16, color: Color(0xFF94A3B8)),
-                          tooltip: 'Refresh news',
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => _fetchNews(isRefresh: true),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (_isLoadingNews)
-                    const SizedBox(
-                      height: 4,
-                      child: LinearProgressIndicator(
-                          color: Color(0xFF3B82F6)))
-                  else if (_news.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 20, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE2E6E9)),
                       ),
-                      child: Column(children: const [
-                        Icon(Icons.wifi_off_outlined,
-                            size: 28, color: Color(0xFFCBD5E1)),
-                        SizedBox(height: 8),
-                        Text('Market news unavailable right now — check back shortly.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 12, color: Color(0xFF94A3B8))),
-                      ]),
-                    )
-                  else
-                    SizedBox(
-                      height: 158,
-                      child: Builder(builder: (context) {
-                        // Filter out dismissed articles client-side
-                        final visibleNews = _news
-                            .whereType<Map<String, dynamic>>()
-                            .where((item) {
-                          final link = item['link']?.toString() ?? '';
-                          // Simple hash: use the link URL as a stable ID
-                          final id = link.isNotEmpty
-                              ? _stableArticleId(link)
-                              : '';
-                          return id.isEmpty || !_dismissedNewsIds.contains(id);
-                        }).toList();
-                        return ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: visibleNews.length,
-                          itemBuilder: (ctx, i) {
-                            final item = visibleNews[i];
-                            final link = item['link']?.toString() ?? '';
-                            final articleId = link.isNotEmpty
-                                ? _stableArticleId(link)
-                                : '';
-                            return GestureDetector(
-                              onTap: link.isNotEmpty
-                                  ? () async {
-                                      final uri = Uri.parse(link);
-                                      if (await canLaunchUrl(uri)) {
-                                        await launchUrl(uri,
-                                            mode: LaunchMode
-                                                .externalApplication);
-                                      }
-                                    }
-                                  : null,
-                              child: MouseRegion(
-                                cursor: link.isNotEmpty
-                                    ? SystemMouseCursors.click
-                                    : MouseCursor.defer,
-                                child: Container(
-                                  width: 270,
-                                  margin: const EdgeInsets.only(right: 12),
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                        color: const Color(0xFFE2E6E9)),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.03),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      )
-                                    ],
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(children: [
-                                        Expanded(
-                                          child: Text(
-                                            item['source']?.toString() ?? 'News',
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF3B82F6)),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          item['published']?.toString() ?? '',
-                                          style: const TextStyle(
-                                              fontSize: 10,
-                                              color: Color(0xFF94A3B8)),
-                                        ),
-                                      ]),
-                                      const SizedBox(height: 5),
-                                      Text(
-                                        item['title']?.toString() ?? '',
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFF1E293B)),
-                                      ),
-                                      const SizedBox(height: 5),
-                                      Expanded(
-                                        child: Text(
-                                          item['summary']?.toString() ?? '',
-                                          maxLines: 3,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Color(0xFF64748B),
-                                              height: 1.4),
-                                        ),
-                                      ),
-                                      // ── Bottom row: Read more + 👎 Not relevant ──
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          if (link.isNotEmpty)
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: const [
-                                                Text('Read more',
-                                                    style: TextStyle(
-                                                        fontSize: 10,
-                                                        color: Color(0xFF3B82F6),
-                                                        fontWeight: FontWeight.w600)),
-                                                SizedBox(width: 2),
-                                                Icon(Icons.arrow_forward_ios,
-                                                    size: 9,
-                                                    color: Color(0xFF3B82F6)),
-                                              ],
-                                            )
-                                          else
-                                            const SizedBox.shrink(),
-                                          // 👎 Not relevant
-                                          if (articleId.isNotEmpty)
-                                            GestureDetector(
-                                              onTap: () => _dismissArticle(articleId),
-                                              child: const Tooltip(
-                                                message: 'Not relevant — hide this article',
-                                                child: Icon(
-                                                  Icons.thumb_down_outlined,
-                                                  size: 13,
-                                                  color: Color(0xFFCBD5E1),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      }),
-
-                    ),
-                  const SizedBox(height: 32),
-                ],
+                    const SizedBox(height: 16),
+                    _buildYourNextActionCard(totalCoins),
+                    const SizedBox(height: 16),
+                    _buildRecentlyAddedCard(last5, isNativePhone),
+                  ],
+                ),
               ),
             );
 
-            if (outerConstraints.maxWidth >= 800) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: mainContent,
-                  ),
-                  VerticalDivider(width: 1, color: _border, thickness: 1),
-                  Expanded(
-                    flex: 1,
-                    child: Container(
-                      color: _bg,
-                      child: const AiChatScreen(),
-                    ),
-                  ),
-                ],
-              );
-            } else {
-              return mainContent;
-            }
-          },
+            return mainContent;
+              },
             );
           },
         );
@@ -1306,6 +586,677 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
+  Widget _buildLoadingHome() {
+    return Container(
+      color: const Color(0xFFEEF3F8),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFFFF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF1D4F91), width: 1.5),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: Color(0xFF1D4F91),
+                        ),
+                      ),
+                      SizedBox(width: 14),
+                      Text(
+                        'Loading your home',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0B1A2E),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'This may take a moment.',
+                    style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 18,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD5DEEA),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 44,
+                    width: 160,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD5DEEA),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFFFF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFD5DEEA)),
+              ),
+              child: const Text(
+                'Recently added',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0B1A2E),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorHome() {
+    return Container(
+      color: const Color(0xFFEEF3F8),
+      padding: const EdgeInsets.all(20),
+      alignment: Alignment.topCenter,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF5F5),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF6B1A1A), width: 1.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "We couldn't load your home",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF6B1A1A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Please try again. Your coins are safe.',
+              style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+            ),
+            const SizedBox(height: 18),
+            ElevatedButton(
+              onPressed: () => setState(() => _streamNonce++),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1D4F91),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(140, 56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Try again',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAskMorganCard(bool isPhone) {
+    void submitQuery() {
+      final q = _morganQueryCtrl.text.trim();
+      if (q.isEmpty) {
+        widget.onAskMorgan?.call();
+      } else {
+        widget.onAskMorganWithQuery?.call(q);
+      }
+    }
+
+    final micBtn = OutlinedButton.icon(
+      onPressed: () {
+        _morganFocusNode.requestFocus();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Voice input coming soon — type your question above.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      },
+      icon: const Icon(Icons.mic_none, color: Color(0xFF0B1A2E), size: 22),
+      label: const Text(
+        'Microphone',
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0B1A2E)),
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(140, 56),
+        side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+
+    final photoBtn = OutlinedButton.icon(
+      onPressed: widget.onTakePhoto,
+      icon: const Icon(Icons.photo_camera_outlined, color: Color(0xFF0B1A2E), size: 22),
+      label: const Text(
+        'Photo',
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0B1A2E)),
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(120, 56),
+        side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+
+    final queryField = TextField(
+      controller: _morganQueryCtrl,
+      focusNode: _morganFocusNode,
+      onSubmitted: (_) => submitQuery(),
+      style: const TextStyle(fontSize: 18, color: Color(0xFF0B1A2E)),
+      decoration: InputDecoration(
+        hintText: 'Type or say your question...',
+        hintStyle: const TextStyle(fontSize: 18, color: Color(0xFF0B1A2E)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF1D4F91), width: 2),
+        ),
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1D4F91), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF1D4F91), width: 2),
+                ),
+                child: const Icon(Icons.psychology_outlined, color: Color(0xFF1D4F91), size: 30),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ask Morgan',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0B1A2E),
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Type a question, or use the buttons. Morgan will help.',
+                      style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (isPhone) ...[
+            queryField,
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(child: micBtn),
+                const SizedBox(width: 10),
+                Expanded(child: photoBtn),
+              ],
+            ),
+          ] else
+            Row(
+              children: [
+                Expanded(child: queryField),
+                const SizedBox(width: 10),
+                micBtn,
+                const SizedBox(width: 10),
+                photoBtn,
+              ],
+            ),
+          const SizedBox(height: 10),
+          const Text(
+            'Take a photo and Morgan will tell you what coin it is',
+            style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCollectionValueCard(int totalCoins, double portfolioValue) {
+    final formattedWords =
+        '${intl.NumberFormat('#,##0').format(portfolioValue.round())} dollars';
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F6FA),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1D4F91), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Collection value',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0B1A2E),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (totalCoins == 0)
+            const Text(
+              'No coins yet. Value stays hidden for your safety once you add some.',
+              style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+            )
+          else if (!_showCollectionValue) ...[
+            const Text(
+              'Hidden for your safety',
+              style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton(
+              onPressed: () => setState(() => _showCollectionValue = true),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(140, 56),
+                backgroundColor: const Color(0xFFFFFFFF),
+                side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Show value',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0B1A2E),
+                ),
+              ),
+            ),
+          ] else ...[
+            Text(
+              formattedWords,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0B1A2E),
+              ),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton(
+              onPressed: () => setState(() => _showCollectionValue = false),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(140, 56),
+                backgroundColor: const Color(0xFFFFFFFF),
+                side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Hide value',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0B1A2E),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  ({String name, int found, int total})? _computeActiveProgramProgress(
+    List<Map<String, dynamic>> coins,
+  ) {
+    if (coins.isEmpty) return null;
+    for (final list in CoinProgramsData.usPrograms.values) {
+      for (final prog in list) {
+        int found = 0;
+        int total = 0;
+        for (final pc in prog.coins) {
+          if (pc.name.contains('Pending')) continue;
+          final varieties = pc.varieties.isEmpty
+              ? [const ChecklistVariety(id: '', label: '')]
+              : pc.varieties;
+          for (final v in varieties) {
+            total++;
+            final owned = coins.any(
+              (c) => SlotResolver.isMatch(c, prog, pc) && SlotResolver.matchesVariety(c, v),
+            );
+            if (owned) found++;
+          }
+        }
+        if (found > 0 && total > 0) {
+          return (name: prog.name, found: found, total: total);
+        }
+      }
+    }
+    return null;
+  }
+
+  Widget _buildCoinProgramCard(List<Map<String, dynamic>> coins) {
+    final prog = _computeActiveProgramProgress(coins);
+    final ratio = prog == null ? 0.0 : (prog.found / prog.total).clamp(0.0, 1.0);
+
+    return InkWell(
+      onTap: widget.onOpenPrograms,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFFFF),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFD5DEEA), width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Coin program',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF0B1A2E),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              prog == null
+                  ? 'No program started yet. Programs help you track a set, like State Quarters.'
+                  : '${prog.name}: ${prog.found} of ${prog.total} found',
+              style: const TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+            ),
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: ratio,
+                minHeight: 16,
+                backgroundColor: const Color(0xFFD5DEEA),
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1D4F91)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildYourNextActionCard(int totalCoins) {
+    final bool hasReview = !widget.isReviewCountLoading && widget.reviewQueueCount > 0;
+    final String headline;
+    final String? subtitle;
+    final String buttonLabel;
+    final VoidCallback? onPressed;
+
+    if (hasReview) {
+      final n = widget.reviewQueueCount;
+      headline = '$n coin${n == 1 ? '' : 's'} ${n == 1 ? 'is' : 'are'} waiting for your OK';
+      subtitle = null;
+      buttonLabel = 'Review now';
+      onPressed = widget.onOpenReview;
+    } else if (totalCoins == 0) {
+      headline = 'Add your first coin';
+      subtitle = 'Start with one coin you have nearby.';
+      buttonLabel = 'Add to collection';
+      onPressed = widget.onAddCoin;
+    } else {
+      headline = 'Explore your collection';
+      subtitle = 'You have $totalCoins coin${totalCoins == 1 ? '' : 's'} saved. Open your collection or track a coin program.';
+      buttonLabel = 'My Collection';
+      onPressed = widget.onNavigateToCollection;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F0FB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1D4F91), width: 1.5),
+      ),
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 14,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Your next action',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0B1A2E),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                headline,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0B1A2E),
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+                ),
+              ],
+            ],
+          ),
+          ElevatedButton(
+            onPressed: onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1D4F91),
+              foregroundColor: Colors.white,
+              minimumSize: const Size(160, 56),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              buttonLabel,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentlyAddedCard(List<Map<String, dynamic>> last5, bool isPhone) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFD5DEEA), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Recently added',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0B1A2E),
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (last5.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF1D4F91), width: 1.5),
+              ),
+              child: const Text(
+                'No coins yet. Add your first coin to see it here.',
+                style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+              ),
+            )
+          else
+            LayoutBuilder(
+              builder: (context, bc) {
+                final cols = isPhone ? 2 : 5;
+                const spacing = 12.0;
+                final tileWidth = ((bc.maxWidth - spacing * (cols - 1)) / cols).clamp(130.0, 260.0);
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: last5.map((data) {
+                    final year = data['Year']?.toString().replaceAll(RegExp(r'\.0$'), '') ??
+                        data['year']?.toString().replaceAll(RegExp(r'\.0$'), '') ??
+                        '';
+                    final series = data['Program/Series']?.toString() ?? data['program_series']?.toString() ?? '';
+                    final theme = data['Theme/Subject']?.toString() ?? data['theme_subject']?.toString() ?? '';
+                    final denom = data['Denomination']?.toString() ?? data['denomination']?.toString() ?? '';
+                    final coinName = series.isNotEmpty && series != 'Multiple'
+                        ? series
+                        : theme.isNotEmpty && theme != 'Multiple'
+                            ? theme
+                            : (denom.isNotEmpty ? denom : 'Coin');
+                    return SizedBox(
+                      width: tileWidth,
+                      child: InkWell(
+                        onTap: widget.onNavigateToCollection,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7F9FC),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                width: 96,
+                                height: 96,
+                                child: CollectionCardImage(
+                                  data: data,
+                                  emptyPlaceholderBuilder: (_) => _buildNoPhotoYetTile(),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                coinName,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0B1A2E),
+                                ),
+                              ),
+                              if (year.isNotEmpty && year != 'Multiple') ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  year,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    color: Color(0xFF0B1A2E),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoPhotoYetTile() {
+    return Container(
+      width: 96,
+      height: 96,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFF1D4F91), width: 2),
+      ),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.no_photography_outlined, size: 22, color: Color(0xFF1D4F91)),
+          SizedBox(height: 4),
+          Text(
+            'No photo\nyet',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0B1A2E),
+              height: 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   // ── Portfolio value section with batch valuation progress ───────────────────
   Widget _buildPortfolioValueSection(
       double cpgTotal, intl.NumberFormat fmt, int totalCoins, {bool advanced = false}) {

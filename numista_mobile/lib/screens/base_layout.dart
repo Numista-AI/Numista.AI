@@ -74,6 +74,22 @@ class _BaseLayoutState extends State<BaseLayout> {
   bool _isSidebarCollapsed = false;
   bool _desktopHotkeysEnabled = true;
   FocusNode? _previousFocusNode;
+  String? _openAccordionGroup; // null | 'Research' | 'Estate & Transfers' | 'Settings & Help'
+  bool _isPhoneMenuOpen = false;
+  String? _phoneDrillGroup; // null | 'Research' | 'Estate & Transfers' | 'Settings & Help'
+  int _reviewQueueCount = 0;
+  bool _isReviewCountLoading = true;
+
+  void _openFeedbackAction() {
+    FeedbackTriggerObserver.instance.fire(
+      FeedbackTriggerEvent(
+        reason: FeedbackTriggerReason.manualFAB,
+        route: _activeRoute,
+        pageTitle: _activeRoute,
+        userName: AuthService.displayName,
+      ),
+    );
+  }
 
   // ── Show Morgan overlay — re-opens guide or shows greeter dialog ───────────
   void _showMorganDialog() {
@@ -342,6 +358,12 @@ class _BaseLayoutState extends State<BaseLayout> {
             }
           },
           onNavigateToCollection: () => _navigateTo('My Collection'),
+          onAddCoin: () => _navigateTo('Add New Coins'),
+          onTakePhoto: () => _navigateTo('Take a photo'),
+          onOpenReview: () => _navigateTo('Review Hub'),
+          onOpenPrograms: () => _navigateTo('Coin Programs'),
+          reviewQueueCount: _reviewQueueCount,
+          isReviewCountLoading: _isReviewCountLoading,
         );
       case 'My Collection':
         return MyCollectionScreen(
@@ -496,12 +518,27 @@ class _BaseLayoutState extends State<BaseLayout> {
         : (user?.email?.split('@').first ?? 'Collector');
     final email = user?.email ?? '';
 
-    final rootContent = LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 800;
-        return isMobile
-            ? _buildMobileLayout(email)
-            : _buildDesktopLayout(email, displayName);
+    final rootContent = StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: email.isNotEmpty
+          ? FirebaseFirestore.instance
+              .collection('users')
+              .doc(email)
+              .collection('review_queue')
+              .snapshots()
+          : const Stream.empty(),
+      builder: (context, reviewSnap) {
+        _isReviewCountLoading =
+            email.isNotEmpty && reviewSnap.connectionState == ConnectionState.waiting && !reviewSnap.hasData;
+        _reviewQueueCount = reviewSnap.data?.docs.length ?? 0;
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 800;
+            return isMobile
+                ? _buildMobileLayout(email, displayName)
+                : _buildDesktopLayout(email, displayName);
+          },
+        );
       },
     );
 
@@ -557,29 +594,12 @@ class _BaseLayoutState extends State<BaseLayout> {
     );
   }
 
-  // ─── Mobile layout: bottom nav bar ───────────────────────────────────────
-  Widget _buildMobileLayout(String email) {
-    // 5-tab mobile-first nav
-    // Add Coins is reachable via FAB on the Collection tab
-    final mobileRoutes = [
-      'Home Dashboard',
-      'Coin Programs',
-      'My Collection',
-      'AI Deepdive',
-      'Settings & Backup',
-    ];
-    int effectiveIndex = mobileRoutes.indexOf(_activeRoute);
-    if (effectiveIndex == -1) {
-      if (_activeRoute == 'Add New Coins') {
-        effectiveIndex = 2; // Map 'Add New Coins' to 'My Collection' tab
-      } else {
-        effectiveIndex = 0;
-      }
-    }
-    final currentIndex = effectiveIndex.clamp(0, 4);
+  // ─── Mobile layout: labeled Menu header + full-screen drill-in overlay ───
+  Widget _buildMobileLayout(String email, String displayName) {
+    final badgeCount = _isReviewCountLoading ? 0 : _reviewQueueCount;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFFEEF3F8),
       body: SafeArea(
         child: Stack(
           children: [
@@ -593,10 +613,87 @@ class _BaseLayoutState extends State<BaseLayout> {
                       AuthGate.navigateTo(context, initialAuthTab: 1);
                     }),
                   if (AuthService.isGuest) _GuestBanner(),
+                  // Phone top bar: Numista.Ai + labeled Menu button (>= 56px)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFFFFF),
+                      border: Border(bottom: BorderSide(color: Color(0xFFD5DEEA))),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        RichText(
+                          text: const TextSpan(
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0B1A2E),
+                            ),
+                            children: [
+                              TextSpan(text: 'Numista.'),
+                              TextSpan(
+                                text: 'Ai',
+                                style: TextStyle(color: Color(0xFF1D4F91)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => setState(() {
+                            _isPhoneMenuOpen = true;
+                            _phoneDrillGroup = null;
+                          }),
+                          icon: const Icon(Icons.menu, color: Color(0xFF0B1A2E), size: 22),
+                          label: const Text(
+                            'Menu',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0B1A2E),
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(110, 56),
+                            side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   Expanded(child: _buildBody()),
                 ],
               ),
             ),
+            if (_isPhoneMenuOpen)
+              Positioned.fill(
+                child: PhoneMenuOverlay(
+                  displayName: displayName,
+                  activeRoute: _activeRoute,
+                  reviewCount: badgeCount,
+                  isReviewLoading: _isReviewCountLoading,
+                  drillGroup: _phoneDrillGroup,
+                  isAdmin: AuthService.isAdmin,
+                  onClose: () => setState(() {
+                    _isPhoneMenuOpen = false;
+                    _phoneDrillGroup = null;
+                  }),
+                  onBack: () => setState(() => _phoneDrillGroup = null),
+                  onOpenGroup: (group) => setState(() => _phoneDrillGroup = group),
+                  onSelectRoute: (route) {
+                    setState(() {
+                      _isPhoneMenuOpen = false;
+                      _phoneDrillGroup = null;
+                    });
+                    if (route == '__SEND_FEEDBACK__') {
+                      _openFeedbackAction();
+                    } else {
+                      _navigateTo(route);
+                    }
+                  },
+                ),
+              ),
             WizardOverlay(
               onCreateAccount: () {
                 AuthGate.navigateTo(context, initialAuthTab: 1);
@@ -614,102 +711,58 @@ class _BaseLayoutState extends State<BaseLayout> {
           ],
         ),
       ),
-      // FAB column: Morgan owl (always) + Add Coins (Collection tab only)
-      // V8.7 FIX Item4: add bottom margin so Morgan FAB doesn't overlap Add button on phone
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (_activeRoute != 'Add New Coins') _MorganFab(onTap: _showMorganDialog),
-            if (_activeRoute == 'My Collection') ...[
-              const SizedBox(height: 12),
-              FloatingActionButton(
-                heroTag: 'fab_add_coins',
-                onPressed: () => setState(() => _activeRoute = 'Add New Coins'),
-                backgroundColor: const Color(0xFFF63366),
-                child: const Icon(Icons.add, color: Colors.white),
-              ),
-            ],
-          ],
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: (i) =>
-            setState(() => _activeRoute = mobileRoutes[i]),
-        backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0E1117) : Colors.white,
-        indicatorColor: const Color(0xFFF63366).withAlpha(40),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54),
-            selectedIcon: const Icon(Icons.dashboard, color: Color(0xFFF63366)),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54),
-            selectedIcon: const Icon(Icons.auto_awesome, color: Color(0xFFF63366)),
-            label: 'Programs',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.collections_bookmark_outlined, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54),
-            selectedIcon: const Icon(Icons.collections_bookmark, color: Color(0xFFF63366)),
-            label: 'Collection',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.psychology_outlined, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54),
-            selectedIcon: const Icon(Icons.psychology, color: Color(0xFFF63366)),
-            label: 'AI Chat',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54),
-            selectedIcon: const Icon(Icons.settings, color: Color(0xFFF63366)),
-            label: 'Settings',
-          ),
-        ],
-      ),
     );
   }
 
   // ─── Desktop/tablet layout: sidebar ──────────────────────────────────────
   Widget _buildDesktopLayout(String email, String displayName) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sidebarWidth = _isSidebarCollapsed ? 72.0 : 240.0;
+    final sidebarWidth = _isSidebarCollapsed ? 72.0 : 280.0;
+    final badgeCount = _isReviewCountLoading ? 0 : _reviewQueueCount;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFFEEF3F8),
       body: Row(
         children: [
           // ─── Sidebar ─────────────────────────────────────────────────────
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: sidebarWidth,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0E1117) : const Color(0xFFF8FAFC),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF7F9FC),
               border: Border(
-                right: BorderSide(
-                  color: isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(12),
-                ),
+                right: BorderSide(color: Color(0xFFD5DEEA)),
               ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 12),
-                // Sidebar header with collapse/expand toggle button
+                // Sidebar header: Numista.Ai + collapse toggle
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     mainAxisAlignment: _isSidebarCollapsed
                         ? MainAxisAlignment.center
                         : MainAxisAlignment.spaceBetween,
                     children: [
                       if (!_isSidebarCollapsed)
-                        Image.asset('assets/logo_owl.png',
-                            height: 48, fit: BoxFit.contain)
+                        RichText(
+                          text: const TextSpan(
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0B1A2E),
+                            ),
+                            children: [
+                              TextSpan(text: 'Numista.'),
+                              TextSpan(
+                                text: 'Ai',
+                                style: TextStyle(color: Color(0xFF1D4F91)),
+                              ),
+                            ],
+                          ),
+                        )
                       else
                         Image.asset('assets/logo_owl.png',
                             height: 36, fit: BoxFit.contain),
@@ -722,8 +775,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                             _isSidebarCollapsed
                                 ? Icons.chevron_right
                                 : Icons.chevron_left,
-                            color: isDark ? Colors.white70 : Colors.black54,
-                            size: 20,
+                            color: const Color(0xFF0B1A2E),
+                            size: 22,
                           ),
                           tooltip: _isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
                           onPressed: _toggleSidebar,
@@ -732,197 +785,152 @@ class _BaseLayoutState extends State<BaseLayout> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
                 if (!_isSidebarCollapsed) ...[
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(8),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                            color: isDark ? Colors.white.withAlpha(20) : Colors.black.withAlpha(20)),
+                    padding: const EdgeInsets.fromLTRB(12, 2, 12, 10),
+                    child: Text(
+                      'Hello, $displayName',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF0B1A2E),
                       ),
-                      child: Row(children: [
-                        const CircleAvatar(
-                          radius: 12,
-                          backgroundColor: Color(0xFFF63366),
-                          child: Icon(Icons.person, color: Colors.white, size: 14),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(displayName,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: NumistaTheme.textBodySm)),
-                              Text(email,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      color: Colors.blueAccent, fontSize: NumistaTheme.textCaption)),
-                            ],
-                          ),
-                        ),
-                      ]),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    child: ElevatedButton.icon(
+                      onPressed: () => _navigateTo('Add New Coins'),
+                      icon: const Icon(Icons.add_circle_outline, size: 22),
+                      label: const Text(
+                        'Add to collection',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1D4F91),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
                 ] else ...[
-                  Tooltip(
-                    message: '$displayName\n$email',
-                    child: const Center(
-                      child: CircleAvatar(
-                        radius: 14,
-                        backgroundColor: Color(0xFFF63366),
-                        child: Icon(Icons.person, color: Colors.white, size: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    child: Tooltip(
+                      message: 'Add to collection',
+                      child: IconButton(
+                        onPressed: () => _navigateTo('Add New Coins'),
+                        icon: const Icon(Icons.add_circle, color: Color(0xFF1D4F91), size: 28),
+                        constraints: const BoxConstraints(minWidth: 56, minHeight: 56),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
                 ],
 
                 Expanded(
-                  child: ValueListenableBuilder<WizardState?>(
-                    valueListenable: WizardService.state,
-                    builder: (context, ws, _) => ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      children: [
-                        _buildNavItem('Home Dashboard', icon: Icons.dashboard_outlined),
-                        WizardNavPulse(
-                          active: ws?.step.targetRoute == 'My Collection',
-                          child: _buildNavItem('My Collection', icon: Icons.collections_bookmark_outlined),
-                        ),
-                        WizardNavPulse(
-                          active: ws?.step.targetRoute == 'Add New Coins',
-                          child: _buildNavItem('Add new coins/notes/etc.', icon: Icons.add_circle_outline),
-                        ),
-                        WizardNavPulse(
-                          active: ws?.step.targetRoute == 'Coin Programs',
-                          child: _buildNavItem('Coin Programs', icon: Icons.auto_awesome_outlined),
-                        ),
-                        _buildNavMorganButton(),
-                        _MoreSection(
-                          isCollapsed: _isSidebarCollapsed,
-                          children: [
-                            _buildNavItem('Upcoming Releases', icon: Icons.new_releases_outlined),
-
-                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'MY COLLECTION'),
-                            WizardNavPulse(
-                              active: ws?.step.targetRoute == 'My Collection' && _myCollectionTab == 'All',
-                              child: _buildNavItem('All', icon: Icons.collections_bookmark_outlined, isSubItem: true, subItemKey: 'All'),
-                            ),
-                            _buildNavItem('Coins', icon: Icons.monetization_on_outlined, isSubItem: true, subItemKey: 'Coins'),
-                            _buildNavItem('Currency Collection', icon: Icons.money_outlined, isSubItem: true, subItemKey: 'Currency'),
-                            _buildNavItem('World and Specialty', icon: Icons.public_outlined, isSubItem: true, subItemKey: 'World & Specialty'),
-                            _buildNavItem('Inventory', icon: Icons.inventory_2_outlined, isSubItem: true),
-
-                            const SizedBox(height: 8),
-                            WizardNavPulse(
-                              active: ws?.step.targetRoute == 'My Wishlist',
-                              child: _buildNavItem('My Wishlist', icon: Icons.favorite_outline),
-                            ),
-
-                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'ASSET VAULT & TRANSFERS'),
-                            _buildNavItem('Estate Planning', icon: Icons.account_balance_outlined),
-                            _buildNavItem('Attorney Portal', icon: Icons.gavel_outlined),
-                            _buildNavItem('Lateral Transfer', icon: Icons.vpn_key_outlined),
-                            _buildNavItem('Claim Transfer', icon: Icons.download_for_offline_outlined),
-
-
-                            if (!_isSidebarCollapsed)
-                              // P7 FIX: Header is now clickable — navigates to AddCoinsHub
-                              Builder(builder: (context) {
-                                final isHeaderDark = Theme.of(context).brightness == Brightness.dark;
-                                return GestureDetector(
-                                  onTap: () => setState(() => _activeRoute = 'Add New Coins'),
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 8, top: 22, bottom: 6),
-                                    child: MouseRegion(
-                                      cursor: SystemMouseCursors.click,
-                                      child: Text(
-                                        'ADD NEW COINS/NOTES/ETC.',
-                                        style: TextStyle(
-                                          fontSize: NumistaTheme.textCaption,
-                                          fontWeight: FontWeight.bold,
-                                          color: isHeaderDark
-                                              ? const Color(0xFF38BDF8)
-                                              : const Color(0xFF2563EB),
-                                          letterSpacing: 0.8,
-                                          decoration: TextDecoration.underline,
-                                          decorationColor: isHeaderDark
-                                              ? const Color(0xFF38BDF8).withAlpha(120)
-                                              : const Color(0xFF2563EB).withAlpha(120),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
+                  child: Scrollbar(
+                    thumbVisibility: true,
+                    child: ValueListenableBuilder<WizardState?>(
+                      valueListenable: WizardService.state,
+                      builder: (context, ws, _) => ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        children: [
+                          _buildNavItem('Home Dashboard',
+                              displayLabel: 'Home', icon: Icons.home_outlined),
+                          WizardNavPulse(
+                            active: ws?.step.targetRoute == 'My Collection',
+                            child: _buildNavItem('My Collection',
+                                icon: Icons.layers_outlined),
+                          ),
+                          WizardNavPulse(
+                            active: ws?.step.targetRoute == 'Coin Programs',
+                            child: _buildNavItem('Coin Programs',
+                                icon: Icons.article_outlined),
+                          ),
+                          WizardNavPulse(
+                            active: ws?.step.targetRoute == 'My Wishlist',
+                            child: _buildNavItem('My Wishlist',
+                                displayLabel: 'Wishlist',
+                                icon: Icons.favorite_border),
+                          ),
+                          _buildNavItem('Review Hub',
+                              displayLabel: 'Review',
+                              icon: Icons.fact_check_outlined,
+                              badgeCount: badgeCount),
+                          const SizedBox(height: 6),
+                          if (!_isSidebarCollapsed) ...[
+                            SidebarAccordionGroup(
+                              title: 'Research',
+                              icon: Icons.search,
+                              isExpanded: _openAccordionGroup == 'Research',
+                              onToggle: () => setState(() {
+                                _openAccordionGroup =
+                                    _openAccordionGroup == 'Research' ? null : 'Research';
                               }),
-
-                            _buildNavItem('Take a photo', icon: Icons.camera_alt_outlined),
-                            _buildNavItem('Microscope Scanner', icon: Icons.biotech_outlined),
-                            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                              stream: email.isNotEmpty
-                                  ? FirebaseFirestore.instance
-                                      .collection('users')
-                                      .doc(email)
-                                      .collection('review_queue')
-                                      .snapshots()
-                                  : const Stream.empty(),
-                              builder: (context, snapshot) {
-                                final count = snapshot.data?.docs.length ?? 0;
-                                return _buildNavItem('Review Hub',
-                                    icon: Icons.fact_check_outlined,
-                                    badgeCount: count);
-                              },
+                              children: _kNavGroups['Research']!
+                                  .map((item) => _buildNavItem(item.route,
+                                      displayLabel: item.label, icon: item.icon))
+                                  .toList(),
                             ),
-
-                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'AI TRAINING'),
-                            _buildNavItem('AI Trainer Board', icon: Icons.how_to_vote_outlined),
-                            // Admin-only: Grade Flag & Beta Feedback Inbox
-                            if (AuthService.isAdmin) ...[ 
-                              _buildNavItem('Admin Grade Flags',
-                                  icon: Icons.admin_panel_settings_outlined),
-                              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                                stream: FirebaseFirestore.instance
-                                    .collection('beta_feedback')
-                                    .where('status', isEqualTo: 'OPEN')
-                                    .snapshots(),
-                                builder: (context, snapshot) {
-                                  final openCount = snapshot.data?.docs.length ?? 0;
-                                  return _buildNavItem(
-                                    'Beta Feedback Inbox',
-                                    icon: Icons.rate_review_outlined,
-                                    badgeCount: openCount,
-                                  );
-                                },
-                              ),
-                              _buildNavItem('Admin: Support Portal',
-                                  icon: Icons.support_agent_outlined),
-                            ],
-
-                            if (!_isSidebarCollapsed) const _SidebarSectionHeader(title: 'NUMISMATIC RESEARCH'),
-                            _buildNavItem('Error Library', icon: Icons.bug_report_outlined),
-                            _buildNavItem('Glossary Academy', icon: Icons.school_outlined),
-                            _buildNavItem('Coin Search', icon: Icons.manage_search_outlined),
-                            _buildNavItem('AI Deepdive', icon: Icons.psychology_outlined),
-
-                            const SizedBox(height: 8),
-                            _buildNavItem('Settings & Backup', icon: Icons.settings_outlined),
-                            const _SidebarDivider(),
-                            _buildNavItem('Our Team', icon: Icons.people_outline),
-                            _buildNavItem('Customer Service', icon: Icons.support_agent_outlined),
-                            _buildNavItem('My Tickets', icon: Icons.receipt_long_outlined),
-                            _buildNavItem('🔍 Numista Lookup', icon: Icons.search_outlined),
+                            SidebarAccordionGroup(
+                              title: 'Estate & Transfers',
+                              icon: Icons.description_outlined,
+                              isExpanded: _openAccordionGroup == 'Estate & Transfers',
+                              onToggle: () => setState(() {
+                                _openAccordionGroup =
+                                    _openAccordionGroup == 'Estate & Transfers'
+                                        ? null
+                                        : 'Estate & Transfers';
+                              }),
+                              children: _kNavGroups['Estate & Transfers']!
+                                  .map((item) => _buildNavItem(item.route,
+                                      displayLabel: item.label, icon: item.icon))
+                                  .toList(),
+                            ),
+                            SidebarAccordionGroup(
+                              title: 'Settings & Help',
+                              icon: Icons.settings_outlined,
+                              isExpanded: _openAccordionGroup == 'Settings & Help',
+                              onToggle: () => setState(() {
+                                _openAccordionGroup =
+                                    _openAccordionGroup == 'Settings & Help'
+                                        ? null
+                                        : 'Settings & Help';
+                              }),
+                              children: [
+                                ..._kNavGroups['Settings & Help']!.map((item) {
+                                  if (item.route == '__SEND_FEEDBACK__') {
+                                    return _buildNavItem(
+                                      item.route,
+                                      displayLabel: item.label,
+                                      icon: item.icon,
+                                      onCustomTap: _openFeedbackAction,
+                                    );
+                                  }
+                                  return _buildNavItem(item.route,
+                                      displayLabel: item.label, icon: item.icon);
+                                }),
+                                if (AuthService.isAdmin) ...[
+                                  const Divider(color: Color(0xFFD5DEEA)),
+                                  _buildNavItem('AI Trainer Board',
+                                      icon: Icons.how_to_vote_outlined),
+                                  _buildNavItem('Admin Grade Flags',
+                                      icon: Icons.admin_panel_settings_outlined),
+                                  _buildNavItem('Beta Feedback Inbox',
+                                      icon: Icons.rate_review_outlined),
+                                  _buildNavItem('Admin: Support Portal',
+                                      icon: Icons.support_agent_outlined),
+                                ],
+                              ],
+                            ),
                           ],
-                        ),
-
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1137,18 +1145,21 @@ class _BaseLayoutState extends State<BaseLayout> {
 
   // ─── Nav item builder ────────────────────────────────────────────────────
   Widget _buildNavItem(String title, {
+    String? displayLabel,
     IconData? icon,
     int badgeCount = 0,
     bool isSubItem = false,
     String? subItemKey,
+    VoidCallback? onCustomTap,
   }) {
+    final String label = displayLabel ?? title;
     final bool isActive = subItemKey != null
         ? (_activeRoute == 'My Collection' && _myCollectionTab == subItemKey)
         : (_activeRoute == title);
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Items without a backing screen are disabled
-    final bool isEnabled = subItemKey != null
+    final bool isEnabled = subItemKey != null || onCustomTap != null
         ? true
         : const {
             'Home Dashboard',
@@ -1166,6 +1177,7 @@ class _BaseLayoutState extends State<BaseLayout> {
             'Estate Planning',
             'Attorney Portal',
             'Lateral Transfer',
+            'Claim Transfer',
             'AI Deepdive',
             'Human AI Trainer Review Board',
             'AI Trainer Board',
@@ -1179,6 +1191,7 @@ class _BaseLayoutState extends State<BaseLayout> {
             'Inventory',
             'Error Library',
             'Glossary Academy',
+            'Upcoming Releases',
           }.contains(title == 'Add new coins/notes/etc.' ? 'Add New Coins' : (title == 'Admin Grade Flags' ? 'Admin: Grade Flags' : title));
 
     final IconData effectiveIcon = icon ?? Icons.circle_outlined;
@@ -1248,7 +1261,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       opacity: isEnabled ? 1.0 : 0.45,
       child: InkWell(
         onTap: isEnabled
-            ? () {
+            ? (onCustomTap ?? () {
                 if (subItemKey != null) {
                   setState(() {
                     _activeRoute = 'My Collection';
@@ -1276,26 +1289,25 @@ class _BaseLayoutState extends State<BaseLayout> {
                 } else {
                   setState(() => _activeRoute = title);
                 }
-              }
+              })
             : null,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(10),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: const BoxConstraints(minHeight: 56),
           alignment: Alignment.centerLeft,
-          padding: EdgeInsets.symmetric(vertical: 8, horizontal: isSubItem ? 16 : 8),
+          padding: EdgeInsets.symmetric(vertical: 10, horizontal: isSubItem ? 16 : 12),
           decoration: BoxDecoration(
-            color: isActive
-                ? (isDark ? Colors.white.withAlpha(20) : Colors.black.withAlpha(15))
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
+            color: isActive ? const Color(0xFFE8F0FB) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: isActive
+                ? const Border(left: BorderSide(color: Color(0xFFC9A400), width: 6))
+                : null,
           ),
           child: Row(children: [
             if (icon != null)
               Icon(icon,
-                  size: 17,
-                  color: isActive
-                      ? const Color(0xFFF63366)
-                      : (isDark ? Colors.white54 : Colors.black54))
+                  size: 22,
+                  color: const Color(0xFF0B1A2E))
             else
               Container(
                 width: 16,
@@ -1303,44 +1315,42 @@ class _BaseLayoutState extends State<BaseLayout> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isActive
-                      ? const Color(0xFFF63366)
+                      ? const Color(0xFF1D4F91)
                       : Colors.transparent,
                   border: Border.all(
                     color: isActive
-                        ? const Color(0xFFF63366)
-                        : (isDark ? Colors.white38 : Colors.black38),
+                        ? const Color(0xFF1D4F91)
+                        : const Color(0xFF0B1A2E),
                     width: isActive ? 4 : 1,
                   ),
                 ),
               ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
-                title,
+                label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: isActive
-                      ? (isDark ? Colors.white : const Color(0xFF0F172A))
-                      : (isDark ? Colors.white60 : const Color(0xFF475569)),
-                  fontSize: NumistaTheme.textBody,
+                  color: const Color(0xFF0B1A2E),
+                  fontSize: 18,
                   fontWeight:
-                      isActive ? FontWeight.w600 : FontWeight.normal,
+                      isActive ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ),
             if (badgeCount > 0) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF63366),
-                  borderRadius: BorderRadius.circular(10),
+                  color: const Color(0xFF1D4F91),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
                   badgeCount.toString(),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: NumistaTheme.textCaption,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1459,43 +1469,394 @@ class _SidebarDivider extends StatelessWidget {
       );
 }
 
-// ─── Desktop More Section (ExpansionTile) ────────────────────────────────────
-class _MoreSection extends StatelessWidget {
-  final List<Widget> children;
-  final bool isCollapsed;
+class _NavEntry {
+  final String route;
+  final String label;
+  final IconData icon;
+  const _NavEntry({
+    required this.route,
+    required this.label,
+    required this.icon,
+  });
+}
 
-  const _MoreSection({
+const List<_NavEntry> _kTopLevelNavItems = [
+  _NavEntry(route: 'Home Dashboard', label: 'Home', icon: Icons.home_outlined),
+  _NavEntry(route: 'My Collection', label: 'My Collection', icon: Icons.layers_outlined),
+  _NavEntry(route: 'Coin Programs', label: 'Coin Programs', icon: Icons.article_outlined),
+  _NavEntry(route: 'My Wishlist', label: 'Wishlist', icon: Icons.favorite_border),
+  _NavEntry(route: 'Review Hub', label: 'Review', icon: Icons.fact_check_outlined),
+];
+
+const Map<String, List<_NavEntry>> _kNavGroups = {
+  'Research': [
+    _NavEntry(route: 'Coin Search', label: 'Coin Search', icon: Icons.manage_search_outlined),
+    _NavEntry(route: '🔍 Numista Lookup', label: 'Numista Lookup', icon: Icons.search_outlined),
+    _NavEntry(route: 'AI Deepdive', label: 'AI Deepdive', icon: Icons.auto_awesome_outlined),
+    _NavEntry(route: 'Glossary Academy', label: 'Glossary Academy', icon: Icons.menu_book_outlined),
+    _NavEntry(route: 'Error Library', label: 'Error Library', icon: Icons.error_outline),
+    _NavEntry(route: 'Upcoming Releases', label: 'Upcoming Releases', icon: Icons.calendar_today_outlined),
+  ],
+  'Estate & Transfers': [
+    _NavEntry(route: 'Estate Planning', label: 'Estate Planning', icon: Icons.description_outlined),
+    _NavEntry(route: 'Attorney Portal', label: 'Attorney Portal', icon: Icons.balance_outlined),
+    _NavEntry(route: 'Lateral Transfer', label: 'Lateral Transfer', icon: Icons.swap_horiz_outlined),
+    _NavEntry(route: 'Claim Transfer', label: 'Claim Transfer', icon: Icons.check_box_outlined),
+  ],
+  'Settings & Help': [
+    _NavEntry(route: 'Settings & Backup', label: 'Settings & Backup', icon: Icons.settings_outlined),
+    _NavEntry(route: 'Customer Service', label: 'Customer Service', icon: Icons.headset_mic_outlined),
+    _NavEntry(route: 'My Tickets', label: 'My Tickets', icon: Icons.confirmation_number_outlined),
+    _NavEntry(route: 'Our Team', label: 'Our Team', icon: Icons.people_outline),
+    _NavEntry(route: '__SEND_FEEDBACK__', label: 'Send Feedback', icon: Icons.feedback_outlined),
+  ],
+};
+
+// ─── Desktop Single-Open Accordion Group ─────────────────────────────────────
+class SidebarAccordionGroup extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+  final List<Widget> children;
+
+  const SidebarAccordionGroup({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.isExpanded,
+    required this.onToggle,
     required this.children,
-    this.isCollapsed = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (isCollapsed) {
-      return Tooltip(
-        message: 'More',
-        child: ExpansionTile(
-          leading: const Icon(Icons.more_horiz),
-          title: const SizedBox.shrink(),
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-          childrenPadding: EdgeInsets.zero,
-          children: children,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          onTap: onToggle,
+          borderRadius: BorderRadius.circular(10),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(icon, size: 22, color: const Color(0xFF0B1A2E)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: isExpanded ? FontWeight.w700 : FontWeight.w500,
+                        color: const Color(0xFF0B1A2E),
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    isExpanded ? Icons.keyboard_arrow_down : Icons.chevron_right,
+                    size: 22,
+                    color: const Color(0xFF0B1A2E),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-      );
-    }
-    return ExpansionTile(
-      leading: const Icon(Icons.more_horiz),
-      title: const Text(
-        'More',
-        style: TextStyle(fontSize: NumistaTheme.textBody),
-      ),
-      childrenPadding: EdgeInsets.zero,
-      children: children,
+        if (isExpanded)
+          Padding(
+            padding: const EdgeInsets.only(left: 14),
+            child: Column(children: children),
+          ),
+      ],
     );
   }
 }
 
-typedef MoreNavSection = _MoreSection;
+// ─── Phone Full-Screen Menu Overlay with Group Drill-In ──────────────────────
+class PhoneMenuOverlay extends StatelessWidget {
+  final String displayName;
+  final String activeRoute;
+  final int reviewCount;
+  final bool isReviewLoading;
+  final String? drillGroup;
+  final bool isAdmin;
+  final VoidCallback onClose;
+  final VoidCallback onBack;
+  final ValueChanged<String> onOpenGroup;
+  final ValueChanged<String> onSelectRoute;
+
+  const PhoneMenuOverlay({
+    super.key,
+    required this.displayName,
+    required this.activeRoute,
+    required this.reviewCount,
+    required this.isReviewLoading,
+    required this.drillGroup,
+    required this.isAdmin,
+    required this.onClose,
+    required this.onBack,
+    required this.onOpenGroup,
+    required this.onSelectRoute,
+  });
+
+  Widget _buildMenuRow({
+    required String label,
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+    int badgeCount = 0,
+    bool showChevron = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFE8F0FB) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: isActive
+              ? const Border(left: BorderSide(color: Color(0xFFC9A400), width: 6))
+              : null,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: const Color(0xFF0B1A2E)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  color: const Color(0xFF0B1A2E),
+                ),
+              ),
+            ),
+            if (badgeCount > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1D4F91),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  badgeCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            if (showChevron)
+              const Icon(Icons.chevron_right, size: 22, color: Color(0xFF0B1A2E)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildTopLevelItems() {
+    final badge = isReviewLoading ? 0 : reviewCount;
+    return [
+      Text(
+        'Hello, $displayName',
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF0B1A2E),
+        ),
+      ),
+      const SizedBox(height: 12),
+      ElevatedButton.icon(
+        onPressed: () => onSelectRoute('Add New Coins'),
+        icon: const Icon(Icons.add_circle_outline, size: 22),
+        label: const Text(
+          'Add to collection',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF1D4F91),
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 56),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 0,
+        ),
+      ),
+      const SizedBox(height: 8),
+      const Text(
+        'Save a coin to your collection',
+        style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+      ),
+      const SizedBox(height: 12),
+      ..._kTopLevelNavItems.map((item) => _buildMenuRow(
+            label: item.label,
+            icon: item.icon,
+            isActive: activeRoute == item.route,
+            badgeCount: item.route == 'Review Hub' ? badge : 0,
+            onTap: () => onSelectRoute(item.route),
+          )),
+      const SizedBox(height: 6),
+      _buildMenuRow(
+        label: 'Research',
+        icon: Icons.search,
+        isActive: false,
+        showChevron: true,
+        onTap: () => onOpenGroup('Research'),
+      ),
+      _buildMenuRow(
+        label: 'Estate & Transfers',
+        icon: Icons.description_outlined,
+        isActive: false,
+        showChevron: true,
+        onTap: () => onOpenGroup('Estate & Transfers'),
+      ),
+      _buildMenuRow(
+        label: 'Settings & Help',
+        icon: Icons.settings_outlined,
+        isActive: false,
+        showChevron: true,
+        onTap: () => onOpenGroup('Settings & Help'),
+      ),
+    ];
+  }
+
+  List<Widget> _buildGroupChildren(String groupName) {
+    final items = _kNavGroups[groupName] ?? const [];
+    return [
+      ...items.map((item) => _buildMenuRow(
+            label: item.label,
+            icon: item.icon,
+            isActive: activeRoute == item.route,
+            onTap: () => onSelectRoute(item.route),
+          )),
+      if (groupName == 'Settings & Help' && isAdmin) ...[
+        const Divider(color: Color(0xFFD5DEEA)),
+        _buildMenuRow(
+          label: 'AI Trainer Board',
+          icon: Icons.how_to_vote_outlined,
+          isActive: activeRoute == 'AI Trainer Board',
+          onTap: () => onSelectRoute('AI Trainer Board'),
+        ),
+        _buildMenuRow(
+          label: 'Admin: Grade Flags',
+          icon: Icons.admin_panel_settings_outlined,
+          isActive: activeRoute == 'Admin: Grade Flags',
+          onTap: () => onSelectRoute('Admin: Grade Flags'),
+        ),
+        _buildMenuRow(
+          label: 'Beta Feedback Inbox',
+          icon: Icons.rate_review_outlined,
+          isActive: activeRoute == 'Beta Feedback Inbox',
+          onTap: () => onSelectRoute('Beta Feedback Inbox'),
+        ),
+        _buildMenuRow(
+          label: 'Admin: Support Portal',
+          icon: Icons.support_agent_outlined,
+          isActive: activeRoute == 'Admin: Support Portal',
+          onTap: () => onSelectRoute('Admin: Support Portal'),
+        ),
+      ],
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFF7F9FC),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFFFFF),
+                border: Border(bottom: BorderSide(color: Color(0xFFD5DEEA))),
+              ),
+              child: Row(
+                children: [
+                  if (drillGroup != null) ...[
+                    OutlinedButton.icon(
+                      onPressed: onBack,
+                      icon: const Icon(Icons.chevron_left, color: Color(0xFF0B1A2E)),
+                      label: const Text(
+                        'Back',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0B1A2E),
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 56),
+                        side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        drillGroup!,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0B1A2E),
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    const Expanded(
+                      child: Text(
+                        'Menu',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0B1A2E),
+                        ),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onClose,
+                      icon: const Icon(Icons.close, color: Color(0xFF0B1A2E)),
+                      label: const Text(
+                        'Close',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0B1A2E),
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 56),
+                        side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: drillGroup == null
+                    ? _buildTopLevelItems()
+                    : _buildGroupChildren(drillGroup!),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 // ─── Sidebar section header ──────────────────────────────────────────────────
 class _SidebarSectionHeader extends StatelessWidget {
