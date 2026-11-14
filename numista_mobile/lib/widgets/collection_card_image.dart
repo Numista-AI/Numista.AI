@@ -87,11 +87,13 @@ class _Selection {
 class CollectionCardImage extends StatefulWidget {
   final Map<String, dynamic> data;
   final ImageFetcherFn? imageFetcher;
+  final WidgetBuilder? emptyPlaceholderBuilder;
 
   const CollectionCardImage({
     super.key,
     required this.data,
     this.imageFetcher,
+    this.emptyPlaceholderBuilder,
   });
 
   @override
@@ -213,6 +215,9 @@ class _CollectionCardImageState extends State<CollectionCardImage> {
   }
 
   Widget _buildPlaceholder() {
+    if (widget.emptyPlaceholderBuilder != null) {
+      return widget.emptyPlaceholderBuilder!(context);
+    }
     return const Center(
       child: Icon(Icons.image_not_supported_outlined, size: 36, color: Color(0xFF8B92B4)),
     );
