@@ -3,11 +3,15 @@ Ingestion Configuration & Calibrated Calibration Weights
 Numista.AI System of Record
 """
 
+import os
+
+from config import GEMINI_FLASH_MODEL, GEMINI_LITE_MODEL, GEMINI_PRO_MODEL
+
 # Mandatory Model Policy (2026 Production Active Models - Gemini 4 Tiered)
-CLASSIFIER_MODEL = "gemini-4-hydrogen"
-EXTRACTION_MODEL = "gemini-4-argon"
-FALLBACK_FLASH_MODEL = "gemini-4-hydrogen"
-FALLBACK_PRO_MODEL = "gemini-4-hydrogen"
+CLASSIFIER_MODEL = os.getenv("CLASSIFIER_MODEL", GEMINI_FLASH_MODEL)
+EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", GEMINI_PRO_MODEL)
+FALLBACK_FLASH_MODEL = os.getenv("FALLBACK_FLASH_MODEL", GEMINI_LITE_MODEL)
+FALLBACK_PRO_MODEL = os.getenv("FALLBACK_PRO_MODEL", GEMINI_FLASH_MODEL)
 
 # Prompt and Processing Versions
 CHECKLIST_PROMPT_VERSION = "checklist_v7_20260815"

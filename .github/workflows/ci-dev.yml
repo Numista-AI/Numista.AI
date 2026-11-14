@@ -90,8 +90,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install ruff
-          # Install only lightweight deps needed for import checks
-          pip install -r requirements.txt --quiet 2>/dev/null || true
+          pip install -r requirements.txt --quiet
 
       - name: Run ruff linter
         working-directory: numista_backend
@@ -114,8 +113,15 @@ jobs:
           python -m py_compile auto_resolve_audit.py 2>/dev/null && echo "✅ auto_resolve_audit.py OK" || echo "⚠️  auto_resolve_audit.py not yet present"
         continue-on-error: false
 
+      - name: Assert FastAPI route & auth parity
+        working-directory: numista_backend
+        env:
+          ASSERT_ROUTE_PARITY_OFFLINE: "1"
+        run: python -B scripts/assert_route_parity.py --diff
+        continue-on-error: false
+
       - name: Post lint summary
         if: always()
         run: |
           echo "## Python Lint Results" >> $GITHUB_STEP_SUMMARY
-          echo "Ruff and syntax checks completed. See step logs for details." >> $GITHUB_STEP_SUMMARY
+          echo "Ruff, syntax, and FastAPI route parity checks completed. See step logs for details." >> $GITHUB_STEP_SUMMARY

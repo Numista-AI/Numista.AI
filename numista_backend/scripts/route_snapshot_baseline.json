@@ -15,7 +15,9 @@
     ],
     "name": "approve_brain_suggestion",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/admin/brain/knowledge",
@@ -24,7 +26,9 @@
     ],
     "name": "get_brain_knowledge",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/admin/brain/reprocess",
@@ -33,7 +37,9 @@
     ],
     "name": "reprocess_knowledge",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/admin/brain/suggestions",
@@ -42,7 +48,9 @@
     ],
     "name": "get_brain_suggestions",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/admin/brain/suggestions/bulk",
@@ -51,7 +59,9 @@
     ],
     "name": "bulk_approve_suggestions",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/admin/brain/suggestions/rescore",
@@ -60,7 +70,9 @@
     ],
     "name": "rescore_unscored_suggestions",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/admin/brain/sync_canon",
@@ -69,7 +81,9 @@
     ],
     "name": "sync_brain_canon_to_gcp",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/admin/grade_flags",
@@ -77,8 +91,12 @@
       "GET"
     ],
     "name": "admin_grade_flags",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "Human AI Trainer & Community Grade Reviews"
+    ],
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/admin/grade_flags/{flag_id}/resolve",
@@ -86,8 +104,127 @@
       "POST"
     ],
     "name": "resolve_grade_flag",
+    "tags": [
+      "Human AI Trainer & Community Grade Reviews"
+    ],
+    "dependencies": [
+      "require_admin_user"
+    ]
+  },
+  {
+    "path": "/api/admin/set_ui_variant",
+    "methods": [
+      "POST"
+    ],
+    "name": "set_ui_variant",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
+  },
+  {
+    "path": "/api/ai/chat",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_ai_chat",
+    "tags": [
+      "Numismatic AI Chat & Deep Dives"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/ai/essay",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_generate_essay",
+    "tags": [
+      "Numismatic AI Chat & Deep Dives"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/ai/profile",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_get_collector_profile",
+    "tags": [
+      "Numismatic AI Chat & Deep Dives"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/ai/profile",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_update_collector_profile",
+    "tags": [
+      "Numismatic AI Chat & Deep Dives"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/ai/profile",
+    "methods": [
+      "PUT"
+    ],
+    "name": "api_update_collector_profile",
+    "tags": [
+      "Numismatic AI Chat & Deep Dives"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/ai/sessions",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_list_sessions",
+    "tags": [
+      "Numismatic AI Chat & Deep Dives"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/ai/sessions/{session_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "api_delete_session",
+    "tags": [
+      "Numismatic AI Chat & Deep Dives"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/ai/sessions/{session_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_get_session_messages",
+    "tags": [
+      "Numismatic AI Chat & Deep Dives"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/analyze/grade-coin",
@@ -96,7 +233,9 @@
     ],
     "name": "analyze_grade_coin",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/analyze_binder_scan",
@@ -105,7 +244,9 @@
     ],
     "name": "analyze_binder_scan",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/analyze_checklist",
@@ -114,7 +255,44 @@
     ],
     "name": "analyze_checklist",
     "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/attorney/issue",
+    "methods": [
+      "POST"
+    ],
+    "name": "issue_attorney_token",
+    "tags": [
+      "Attorney Portal"
+    ],
     "dependencies": []
+  },
+  {
+    "path": "/api/attorney/revoke",
+    "methods": [
+      "POST"
+    ],
+    "name": "revoke_attorney_token",
+    "tags": [
+      "Attorney Portal"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/attorney/snapshot",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_attorney_snapshot",
+    "tags": [
+      "Attorney Portal"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/binder_scans/{user_email}",
@@ -123,7 +301,9 @@
     ],
     "name": "list_binder_scans",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/binder_scans/{user_email}/{binder_id}",
@@ -132,7 +312,59 @@
     ],
     "name": "get_binder_detail",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/cert_exists",
+    "methods": [
+      "GET"
+    ],
+    "name": "check_cert_exists",
+    "tags": [
+      "Certification Lookup"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/cert_lookup",
+    "methods": [
+      "POST"
+    ],
+    "name": "cert_lookup",
+    "tags": [
+      "Certification Lookup"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/cert_save",
+    "methods": [
+      "POST"
+    ],
+    "name": "cert_save",
+    "tags": [
+      "Certification Lookup"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/checklist/add_coins",
+    "methods": [
+      "POST"
+    ],
+    "name": "checklist_add_coins",
+    "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/coin_crop",
@@ -141,7 +373,9 @@
     ],
     "name": "get_coin_crop",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/coin_search",
@@ -153,13 +387,28 @@
     "dependencies": []
   },
   {
+    "path": "/api/coins/restore/{coin_id}",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_restore_coin",
+    "tags": [
+      "Morgan AI Proposals & Safe Operations"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
     "path": "/api/collection/clear",
     "methods": [
       "POST"
     ],
     "name": "collection_clear",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/collection/completion_stats",
@@ -168,7 +417,9 @@
     ],
     "name": "collection_completion_stats",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/collection/count",
@@ -176,6 +427,17 @@
       "GET"
     ],
     "name": "collection_count",
+    "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/commit_group_photo",
+    "methods": [
+      "POST"
+    ],
+    "name": "commit_group_photo",
     "tags": [],
     "dependencies": []
   },
@@ -186,7 +448,9 @@
     ],
     "name": "update_greysheet_credentials",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/config/release-lock",
@@ -195,7 +459,9 @@
     ],
     "name": "release_scraper_lock",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/config/usmint-cookies",
@@ -204,7 +470,9 @@
     ],
     "name": "update_usmint_cookies",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/confirm_binder_scan",
@@ -212,6 +480,17 @@
       "POST"
     ],
     "name": "confirm_binder_scan",
+    "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/convert_heic",
+    "methods": [
+      "POST"
+    ],
+    "name": "convert_heic_endpoint",
     "tags": [],
     "dependencies": []
   },
@@ -222,7 +501,9 @@
     ],
     "name": "get_weekly_audits",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/cron/campaigns",
@@ -231,7 +512,9 @@
     ],
     "name": "get_active_campaigns",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/cron/reports",
@@ -240,7 +523,9 @@
     ],
     "name": "get_scraper_reports",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/cron/run-audit",
@@ -249,7 +534,9 @@
     ],
     "name": "trigger_nightly_audit",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/cron/scrape-gaps",
@@ -258,7 +545,20 @@
     ],
     "name": "scrape_gaps_cron",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
+  },
+  {
+    "path": "/api/cron/sync-mint-releases",
+    "methods": [
+      "POST"
+    ],
+    "name": "trigger_sync_mint_releases",
+    "tags": [],
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/dedup_sweep",
@@ -267,7 +567,9 @@
     ],
     "name": "dedup_sweep",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/dedup_sweep/auto_clean",
@@ -276,7 +578,9 @@
     ],
     "name": "dedup_auto_clean",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/deep_dive",
@@ -293,17 +597,25 @@
       "POST"
     ],
     "name": "dismiss_news",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "US Mint & Numismatic News Feed"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
-    "path": "/api/dismissed_news/{user_email}",
+    "path": "/api/dismissed_news",
     "methods": [
       "GET"
     ],
     "name": "get_dismissed_news",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "US Mint & Numismatic News Feed"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/ebay/search",
@@ -330,7 +642,9 @@
     ],
     "name": "api_generate_estate_appraisal_url",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/estimate_value_general",
@@ -339,7 +653,9 @@
     ],
     "name": "estimate_value_general",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/estimate_value_text",
@@ -348,7 +664,9 @@
     ],
     "name": "estimate_value_text",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/export/appraisal-pdf",
@@ -360,13 +678,30 @@
     "dependencies": []
   },
   {
+    "path": "/api/feedback/callable",
+    "methods": [
+      "POST"
+    ],
+    "name": "feedback_callable",
+    "tags": [
+      "MORGAN Feedback Callable"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
     "path": "/api/grade_review/image/{review_id}",
     "methods": [
       "GET"
     ],
     "name": "get_grade_review_image",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "Human AI Trainer & Community Grade Reviews"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/grade_review/queue",
@@ -374,8 +709,12 @@
       "GET"
     ],
     "name": "grade_review_queue",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "Human AI Trainer & Community Grade Reviews"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/grade_review/stats",
@@ -383,8 +722,12 @@
       "GET"
     ],
     "name": "grade_review_stats",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "Human AI Trainer & Community Grade Reviews"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/grade_review/submit",
@@ -392,8 +735,38 @@
       "POST"
     ],
     "name": "submit_grade_review",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "Human AI Trainer & Community Grade Reviews"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/greysheet/admin/allowlist/promote",
+    "methods": [
+      "POST"
+    ],
+    "name": "promote_to_allowlist",
+    "tags": [
+      "greysheet-admin"
+    ],
+    "dependencies": [
+      "require_admin_user"
+    ]
+  },
+  {
+    "path": "/api/greysheet/admin/seed-node-map",
+    "methods": [
+      "POST"
+    ],
+    "name": "seed_node_map",
+    "tags": [
+      "greysheet-admin"
+    ],
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/greysheet/batch",
@@ -402,7 +775,9 @@
     ],
     "name": "execute_batch_valuation",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/greysheet/batch-refresh",
@@ -411,7 +786,9 @@
     ],
     "name": "batch_refresh_greysheet_prices",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/greysheet/batch-resolve",
@@ -420,7 +797,9 @@
     ],
     "name": "batch_resolve_greysheet_coins",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/greysheet/cac",
@@ -438,7 +817,9 @@
     ],
     "name": "get_greysheet_config",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/greysheet/deals",
@@ -447,7 +828,9 @@
     ],
     "name": "get_arbitrage_deals",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/greysheet/deals/refresh",
@@ -456,7 +839,35 @@
     ],
     "name": "refresh_arbitrage_deals",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/greysheet/known-errors",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_known_errors",
+    "tags": [
+      "greysheet-errors"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/greysheet/known-errors/{gsid}/price",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_known_error_price",
+    "tags": [
+      "greysheet-errors"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/greysheet/pricing/{gsid}",
@@ -483,7 +894,9 @@
     ],
     "name": "refresh_greysheet_coin_price",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/greysheet/resolve",
@@ -492,7 +905,9 @@
     ],
     "name": "resolve_greysheet_coin",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/identify-world-item",
@@ -500,6 +915,17 @@
       "POST"
     ],
     "name": "identify_world_item",
+    "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/identify_coin_photo",
+    "methods": [
+      "OPTIONS"
+    ],
+    "name": "identify_coin_photo_preflight",
     "tags": [],
     "dependencies": []
   },
@@ -510,7 +936,20 @@
     ],
     "name": "identify_coin_photo",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/identify_group_photo",
+    "methods": [
+      "POST"
+    ],
+    "name": "identify_group_photo",
+    "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/import/littleton_sync",
@@ -519,7 +958,9 @@
     ],
     "name": "littleton_sync",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/import/process",
@@ -528,7 +969,9 @@
     ],
     "name": "import_process",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/import/start",
@@ -537,7 +980,9 @@
     ],
     "name": "import_start",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/import/status/{session_id}",
@@ -545,6 +990,17 @@
       "GET"
     ],
     "name": "import_status",
+    "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/import/upload",
+    "methods": [
+      "OPTIONS"
+    ],
+    "name": "import_upload_preflight",
     "tags": [],
     "dependencies": []
   },
@@ -555,7 +1011,9 @@
     ],
     "name": "import_upload",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/import_spreadsheet",
@@ -563,8 +1021,12 @@
       "POST"
     ],
     "name": "import_spreadsheet",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "Spreadsheet & Document Bulk Ingestion"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/ingestion/batch_async",
@@ -573,7 +1035,9 @@
     ],
     "name": "start_parallel_batch_ingestion",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/ingestion/jobs",
@@ -594,13 +1058,85 @@
     "dependencies": []
   },
   {
+    "path": "/api/mint-releases/all",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_all_mint_releases",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/mint-releases/upcoming",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_upcoming_mint_releases",
+    "tags": [],
+    "dependencies": []
+  },
+  {
     "path": "/api/mint_news",
     "methods": [
       "GET"
     ],
     "name": "get_mint_news",
-    "tags": [],
+    "tags": [
+      "US Mint & Numismatic News Feed"
+    ],
     "dependencies": []
+  },
+  {
+    "path": "/api/morgan/confirm",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_morgan_confirm",
+    "tags": [
+      "Morgan AI Proposals & Safe Operations"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/morgan/propose",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_morgan_propose",
+    "tags": [
+      "Morgan AI Proposals & Safe Operations"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/morgan/web_lookup",
+    "methods": [
+      "POST"
+    ],
+    "name": "morgan_web_lookup_endpoint",
+    "tags": [
+      "Morgan AI Proposals & Safe Operations"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/morgan/web_lookup/quota",
+    "methods": [
+      "GET"
+    ],
+    "name": "morgan_web_lookup_quota_endpoint",
+    "tags": [
+      "Morgan AI Proposals & Safe Operations"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/news/feed",
@@ -608,7 +1144,9 @@
       "GET"
     ],
     "name": "api_get_numismatic_news",
-    "tags": [],
+    "tags": [
+      "US Mint & Numismatic News Feed"
+    ],
     "dependencies": []
   },
   {
@@ -636,7 +1174,9 @@
     ],
     "name": "submit_nickname",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/nicknames/{doc_id}/vote",
@@ -645,7 +1185,9 @@
     ],
     "name": "vote_nickname",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/normalize_backfill",
@@ -654,7 +1196,9 @@
     ],
     "name": "normalize_backfill",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/pcgs/cert/{cert_no}",
@@ -662,8 +1206,12 @@
       "GET"
     ],
     "name": "pcgs_cert_lookup",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "PCGS Certification Lookup"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/portfolio/snapshot",
@@ -672,7 +1220,9 @@
     ],
     "name": "get_portfolio_snapshot_history",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/portfolio/snapshot/daily",
@@ -680,6 +1230,17 @@
       "POST"
     ],
     "name": "create_daily_portfolio_snapshot",
+    "tags": [],
+    "dependencies": [
+      "require_admin_user"
+    ]
+  },
+  {
+    "path": "/api/preview_cost_split",
+    "methods": [
+      "POST"
+    ],
+    "name": "preview_cost_split",
     "tags": [],
     "dependencies": []
   },
@@ -690,7 +1251,9 @@
     ],
     "name": "process_invoice",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/provenance/verify/{passport_id}",
@@ -708,7 +1271,20 @@
     ],
     "name": "list_receipts",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/receipts/{user_email}/{receipt_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "delete_receipt",
+    "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/receipts/{user_email}/{receipt_id}/stream",
@@ -717,7 +1293,9 @@
     ],
     "name": "receipt_stream",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/receipts/{user_email}/{receipt_id}/view_url",
@@ -726,7 +1304,9 @@
     ],
     "name": "receipt_view_url",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/reference/db_update_check",
@@ -762,7 +1342,9 @@
     ],
     "name": "reference_search",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/reference/search",
@@ -783,13 +1365,41 @@
     "dependencies": []
   },
   {
+    "path": "/api/review/abort_session",
+    "methods": [
+      "POST"
+    ],
+    "name": "abort_session",
+    "tags": [
+      "Document Ingestion & Review Hub"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
     "path": "/api/review/break_up_set",
     "methods": [
       "POST"
     ],
     "name": "break_up_set",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/review/bulk_condition",
+    "methods": [
+      "POST"
+    ],
+    "name": "bulk_condition",
+    "tags": [
+      "Document Ingestion & Review Hub"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/review/bulk_update",
@@ -798,7 +1408,9 @@
     ],
     "name": "bulk_update_reviews",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/review/commit",
@@ -807,7 +1419,33 @@
     ],
     "name": "commit_reviews",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/review/commit_session",
+    "methods": [
+      "POST"
+    ],
+    "name": "commit_session",
+    "tags": [
+      "Document Ingestion & Review Hub"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/review/delete_items",
+    "methods": [
+      "POST"
+    ],
+    "name": "delete_review_items",
+    "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/review/keep_set_as_is",
@@ -816,7 +1454,48 @@
     ],
     "name": "keep_set_as_is",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/review/resume_session",
+    "methods": [
+      "POST"
+    ],
+    "name": "resume_session",
+    "tags": [
+      "Document Ingestion & Review Hub"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/sandbox/clear",
+    "methods": [
+      "POST"
+    ],
+    "name": "sandbox_clear",
+    "tags": [
+      "Sandbox"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/scan_cert_number_upload",
+    "methods": [
+      "POST"
+    ],
+    "name": "scan_cert_number_upload",
+    "tags": [
+      "Certification Lookup"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/scraper/scrape-url",
@@ -825,7 +1504,9 @@
     ],
     "name": "scrape_url_endpoint",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_admin_user"
+    ]
   },
   {
     "path": "/api/spot_prices",
@@ -833,7 +1514,9 @@
       "GET"
     ],
     "name": "get_live_metal_prices",
-    "tags": [],
+    "tags": [
+      "Live Metal Spot Prices & Portfolio Valuation"
+    ],
     "dependencies": []
   },
   {
@@ -851,8 +1534,12 @@
       "POST"
     ],
     "name": "api_stripe_checkout",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "Stripe Payments & Subscriptions"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/stripe/create-customer-portal",
@@ -860,8 +1547,25 @@
       "POST"
     ],
     "name": "api_stripe_customer_portal",
-    "tags": [],
-    "dependencies": []
+    "tags": [
+      "Stripe Payments & Subscriptions"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/stripe/subscription-status",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_subscription_status",
+    "tags": [
+      "Stripe Payments & Subscriptions"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/stripe/webhook",
@@ -869,8 +1573,23 @@
       "POST"
     ],
     "name": "api_stripe_webhook",
-    "tags": [],
+    "tags": [
+      "Stripe Payments & Subscriptions"
+    ],
     "dependencies": []
+  },
+  {
+    "path": "/api/telemetry/silent-error",
+    "methods": [
+      "POST"
+    ],
+    "name": "silent_error",
+    "tags": [
+      "Beta Telemetry"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/template",
@@ -888,7 +1607,9 @@
     ],
     "name": "api_claim_transfer",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_registered_user"
+    ]
   },
   {
     "path": "/api/transfer/initiate",
@@ -897,7 +1618,9 @@
     ],
     "name": "api_initiate_transfer",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_registered_user"
+    ]
   },
   {
     "path": "/api/transfer/passport-pdf/{transfer_id}",
@@ -906,7 +1629,9 @@
     ],
     "name": "api_get_passport_pdf",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/transfer/recall",
@@ -915,16 +1640,191 @@
     ],
     "name": "api_recall_transfer",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "require_registered_user"
+    ]
   },
   {
-    "path": "/api/v1/coa/parse",
+    "path": "/api/transfer/sell-direct",
     "methods": [
       "POST"
     ],
-    "name": "api_parse_coa",
+    "name": "api_sell_direct",
     "tags": [],
     "dependencies": []
+  },
+  {
+    "path": "/api/transfer/sold-items/{user_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_get_sold_items",
+    "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/transfer/undo-sale",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_undo_sale",
+    "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/api/upload_document",
+    "methods": [
+      "POST"
+    ],
+    "name": "upload_document",
+    "tags": [
+      "Document Ingestion & Review Hub"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/user/ui_variant",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_ui_variant",
+    "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/v1/affiliate/search_url",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_affiliate_search_url",
+    "tags": [
+      "Affiliate & Shareable Public Wishlists"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/catalog",
+    "methods": [
+      "GET"
+    ],
+    "name": "browse_catalog",
+    "tags": [
+      "US Numismatics Catalog (public)"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/catalog/resolve",
+    "methods": [
+      "GET"
+    ],
+    "name": "resolve_slug",
+    "tags": [
+      "US Numismatics Catalog (public)"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/catalog/{nac_code}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_by_nac",
+    "tags": [
+      "US Numismatics Catalog (public)"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/catalog/{nac_code}/image-download",
+    "methods": [
+      "GET"
+    ],
+    "name": "download_catalog_image",
+    "tags": [
+      "US Numismatics Catalog (public)"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/collection/catalog-add",
+    "methods": [
+      "POST"
+    ],
+    "name": "catalog_add",
+    "tags": [
+      "US Numismatics Catalog (collection add)"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/v1/collection/catalog-photo-toggle",
+    "methods": [
+      "PATCH"
+    ],
+    "name": "catalog_photo_toggle",
+    "tags": [
+      "US Numismatics Catalog (collection add)"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/v1/estate/attorney-report/{token}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_attorney_report",
+    "tags": [
+      "Estate Planning & Attorney Portal"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/estate/attorney-report/{token}/pdf",
+    "methods": [
+      "GET"
+    ],
+    "name": "stream_attorney_pdf",
+    "tags": [
+      "Estate Planning & Attorney Portal"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/api/v1/estate/generate-attorney-link",
+    "methods": [
+      "POST"
+    ],
+    "name": "generate_attorney_link",
+    "tags": [
+      "Estate Planning & Attorney Portal"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/v1/estate/revoke-attorney-link",
+    "methods": [
+      "POST"
+    ],
+    "name": "revoke_attorney_link",
+    "tags": [
+      "Estate Planning & Attorney Portal"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/v1/family/subaccounts",
@@ -935,7 +1835,9 @@
     "tags": [
       "family_subaccounts"
     ],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/v1/family/subaccounts",
@@ -946,7 +1848,9 @@
     "tags": [
       "family_subaccounts"
     ],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/v1/family/subaccounts/{child_id}",
@@ -957,7 +1861,48 @@
     "tags": [
       "family_subaccounts"
     ],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/v1/hardware/installer_url",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_hardware_installer_url",
+    "tags": [
+      "Hardware Agent"
+    ],
+    "dependencies": [
+      "require_registered_user"
+    ]
+  },
+  {
+    "path": "/api/v1/import/commit_batch",
+    "methods": [
+      "POST"
+    ],
+    "name": "commit_batch",
+    "tags": [
+      "Spreadsheet & Document Bulk Ingestion"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/v1/import/get_upload_url",
+    "methods": [
+      "POST"
+    ],
+    "name": "get_upload_url",
+    "tags": [
+      "Spreadsheet & Document Bulk Ingestion"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/v1/photos/signed_url",
@@ -966,9 +1911,11 @@
     ],
     "name": "create_signed_photo_urls",
     "tags": [
-      "photos"
+      "User Photo Signed URLs"
     ],
-    "dependencies": []
+    "dependencies": [
+      "require_registered_user"
+    ]
   },
   {
     "path": "/api/v1/rag/query",
@@ -977,7 +1924,46 @@
     ],
     "name": "rag_query_endpoint",
     "tags": [],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/v1/wishlist/reserve",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "unreserve_item",
+    "tags": [
+      "Affiliate & Shareable Public Wishlists"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/v1/wishlist/reserve",
+    "methods": [
+      "POST"
+    ],
+    "name": "reserve_item",
+    "tags": [
+      "Affiliate & Shareable Public Wishlists"
+    ],
     "dependencies": []
+  },
+  {
+    "path": "/api/v1/wishlist/share",
+    "methods": [
+      "POST"
+    ],
+    "name": "share_wishlist",
+    "tags": [
+      "Affiliate & Shareable Public Wishlists"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/variety/detect",
@@ -986,7 +1972,9 @@
     ],
     "name": "api_detect_variety",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/wishlist/create-share",
@@ -995,7 +1983,9 @@
     ],
     "name": "api_create_wishlist_share",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/wishlist/deals/check",
@@ -1004,7 +1994,9 @@
     ],
     "name": "check_wishlist_deals",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/api/wishlist/deals/{user_email}",
@@ -1013,7 +2005,9 @@
     ],
     "name": "get_user_wishlist_deals",
     "tags": [],
-    "dependencies": []
+    "dependencies": [
+      "get_current_user"
+    ]
   },
   {
     "path": "/docs",
@@ -1053,6 +2047,145 @@
     ],
     "name": "redoc_html",
     "tags": [],
+    "dependencies": []
+  },
+  {
+    "path": "/support/expire-grants",
+    "methods": [
+      "GET"
+    ],
+    "name": "expire_grants",
+    "tags": [
+      "support"
+    ],
+    "dependencies": []
+  },
+  {
+    "path": "/support/tickets",
+    "methods": [
+      "GET"
+    ],
+    "name": "list_support_tickets",
+    "tags": [
+      "support"
+    ],
+    "dependencies": [
+      "require_admin"
+    ]
+  },
+  {
+    "path": "/support/tickets/{ticket_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_support_ticket_view",
+    "tags": [
+      "support"
+    ],
+    "dependencies": [
+      "require_admin"
+    ]
+  },
+  {
+    "path": "/support/tickets/{ticket_id}/messages",
+    "methods": [
+      "POST"
+    ],
+    "name": "support_post_message",
+    "tags": [
+      "support"
+    ],
+    "dependencies": [
+      "require_admin"
+    ]
+  },
+  {
+    "path": "/support/tickets/{ticket_id}/status",
+    "methods": [
+      "PATCH"
+    ],
+    "name": "support_update_status",
+    "tags": [
+      "support"
+    ],
+    "dependencies": [
+      "require_admin"
+    ]
+  },
+  {
+    "path": "/tickets",
+    "methods": [
+      "GET"
+    ],
+    "name": "list_my_tickets",
+    "tags": [
+      "support"
+    ],
+    "dependencies": [
+      "get_current_uid"
+    ]
+  },
+  {
+    "path": "/tickets",
+    "methods": [
+      "POST"
+    ],
+    "name": "create_ticket",
+    "tags": [
+      "support"
+    ],
+    "dependencies": [
+      "get_current_uid"
+    ]
+  },
+  {
+    "path": "/tickets/{ticket_id}",
+    "methods": [
+      "PATCH"
+    ],
+    "name": "update_ticket",
+    "tags": [
+      "support"
+    ],
+    "dependencies": [
+      "get_current_uid"
+    ]
+  },
+  {
+    "path": "/tickets/{ticket_id}/grant",
+    "methods": [
+      "POST"
+    ],
+    "name": "create_grant",
+    "tags": [
+      "support"
+    ],
+    "dependencies": [
+      "get_current_uid"
+    ]
+  },
+  {
+    "path": "/tickets/{ticket_id}/messages",
+    "methods": [
+      "POST"
+    ],
+    "name": "post_message",
+    "tags": [
+      "support"
+    ],
+    "dependencies": [
+      "get_current_uid"
+    ]
+  },
+  {
+    "path": "/tickets/{ticket_id}/revoke",
+    "methods": [
+      "POST"
+    ],
+    "name": "revoke_grant",
+    "tags": [
+      "support"
+    ],
     "dependencies": []
   }
 ]

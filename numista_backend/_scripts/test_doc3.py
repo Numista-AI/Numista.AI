@@ -45,7 +45,7 @@ schema = {
 
 try:
     response = client.models.generate_content(
-        model="gemini-3.5-flash",
+        model=os.getenv("GEMINI_FLASH_MODEL", "gemini-4-hydrogen"),
         contents=prompt,
         config=genai_types.GenerateContentConfig(
             response_mime_type="application/json", response_schema=schema, temperature=0.0)

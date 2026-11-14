@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException, File, UploadFile, Form, Depends, R
 from pydantic import BaseModel, Field
 from google.cloud import firestore
 
-from config import DEFAULT_VISION_MODEL, FALLBACK_VISION_MODEL
+from config import DEFAULT_VISION_MODEL
 from config.ingestion_config import (
     CLASSIFIER_MODEL,
     EXTRACTION_MODEL,

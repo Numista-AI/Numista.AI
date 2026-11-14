@@ -144,75 +144,43 @@ def test_all_routes_require_auth_garbage_token(client):
     assert tested > 50, f"Expected to test > 50 non-public routes, only tested {tested}"
 
 
-# Reviewed list of routes that do not have get_current_user / require_admin_user
-# in their FastAPI dependency tree, but are protected by handler-auth (_authenticate_request / deep_dive)
-# or are non-guarded routes protected exclusively by the default-deny outer gate.
+# Reviewed list of routes that have at least one non-public method without
+# get_current_user / require_admin_user in its FastAPI dependency tree, and are
+# protected by handler-level auth (_authenticate_request / X-Cron-Secret / deep_dive),
+# CORS OPTIONS preflight handling, or the outer default-deny auth middleware.
 REVIEWED_NON_GUARDED_ROUTES = {
-    "/api/analyze/grade-coin",
-    "/api/analyze_checklist",
     "/api/attorney/issue",
     "/api/attorney/revoke",
-    "/api/attorney/snapshot",
-    "/api/binder_scans/{user_email}",
-    "/api/binder_scans/{user_email}/{binder_id}",
-    "/api/coin_crop",
-    "/api/collection/count",
     "/api/commit_group_photo",
     "/api/convert_heic",
     "/api/deep_dive",
     "/api/ebay/search",
     "/api/epn/normalize-search",
-    "/api/estate/generate-appraisal-url",
-    "/api/estimate_value_general",
-    "/api/estimate_value_text",
     "/api/export/appraisal-pdf",
     "/api/greysheet/cac",
     "/api/greysheet/pricing/{gsid}",
     "/api/greysheet/quota",
-    "/api/greysheet/refresh",
-    "/api/greysheet/resolve",
-    "/api/identify-world-item",
-    "/api/identify_coin_photo",
-    "/api/identify_group_photo",
-    "/api/import/process",
-    "/api/import/start",
-    "/api/import/status/{session_id}",
-    "/api/import/upload",
+    "/api/identify_coin_photo",          # OPTIONS preflight unguarded; POST uses Depends(get_current_user)
+    "/api/import/upload",                # OPTIONS preflight unguarded; POST uses Depends(get_current_user)
     "/api/ingestion/jobs",
     "/api/ingestion/status/{job_id}",
     "/api/mint_news",
     "/api/news/feed",
     "/api/nicknames",
     "/api/nicknames/stats",
-    "/api/nicknames/submit",
-    "/api/nicknames/{doc_id}/vote",
-    "/api/portfolio/snapshot",
     "/api/preview_cost_split",
-    "/api/process_invoice",
-    "/api/receipts/{user_email}",
-    "/api/receipts/{user_email}/{receipt_id}",
-    "/api/receipts/{user_email}/{receipt_id}/stream",
-    "/api/receipts/{user_email}/{receipt_id}/view_url",
     "/api/reference/db_update_check",
     "/api/reference/glossary",
     "/api/reference/grade/{grade_code}",
-    "/api/reference/search",
-    "/api/review/break_up_set",
-    "/api/review/keep_set_as_is",
+    "/api/reference/search",             # POST unguarded (default-deny); GET uses Depends(get_current_user)
     "/api/stats/gaps",
-    "/api/stripe/subscription-status",
     "/api/template",
     "/api/transfer/sell-direct",
-    "/api/transfer/sold-items/{user_id}",
     "/api/transfer/undo-sale",
     "/api/v1/affiliate/search_url",
     "/api/v1/estate/attorney-report/{token}",
     "/api/v1/estate/attorney-report/{token}/pdf",
-    "/api/v1/wishlist/reserve",
-    "/api/variety/detect",
-    "/api/wishlist/create-share",
-    "/api/wishlist/deals/check",
-    "/api/wishlist/deals/{user_email}",
+    "/api/v1/wishlist/reserve",          # POST unguarded (default-deny); DELETE uses Depends(get_current_user)
     "/support/expire-grants",
     "/tickets/{ticket_id}/revoke",
 }

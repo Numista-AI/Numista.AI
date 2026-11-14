@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 from main import app
+from routes.deps import get_current_user
 import services.greysheet_service as gs_module
 
 client = TestClient(app)
@@ -40,11 +41,22 @@ def mock_external_services(monkeypatch):
     
     # Mock resolve_gsid_hybrid to return a valid mapping for Lincoln Cent test payload
     orig_resolve = gs_module.GreysheetService.resolve_gsid_hybrid
-    def mock_resolve(self, coin_data, genai_client=None, primary_model="gemini-3.8-flash"):
+    def mock_resolve(self, coin_data, genai_client=None, primary_model="gemini-4-hydrogen"):
         if coin_data.get("item_type") == "paper_currency":
             return None
         return (429, "Lincoln Cents (1909-1958)")
     monkeypatch.setattr(gs_module.GreysheetService, "resolve_gsid_hybrid", mock_resolve)
+
+    # /api/greysheet/resolve requires get_current_user after security hardening
+    prev_override = app.dependency_overrides.get(get_current_user)
+    app.dependency_overrides[get_current_user] = lambda: {"email": "test@numista.ai", "uid": "test-uid"}
+    try:
+        yield
+    finally:
+        if prev_override is None:
+            app.dependency_overrides.pop(get_current_user, None)
+        else:
+            app.dependency_overrides[get_current_user] = prev_override
 
 def test_resolve_greysheet_raw():
     # Test resolving Lincoln Cent VDB

@@ -310,7 +310,7 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
     super.dispose();
   }
 
-  // ── AI Insight (Gemini 3.8 Flash — direct via firebase_ai) ────────────────
+  // ── AI Insight (Gemini 4 Hydrogen — direct via firebase_ai) ───────────────
   Future<void> _loadAiInsight() async {
     if (_aiLoading || _aiLoaded) return;
     setState(() { _aiLoading = true; _aiError = null; _aiInsight = ''; });

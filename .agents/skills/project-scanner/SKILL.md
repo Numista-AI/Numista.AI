@@ -88,10 +88,11 @@ Cross-reference with the project list in the config — if only `setup` and
 
 ## 6. Model & Program Registry
 
-- **Primary flash model:** `gemini-3.8-flash`
-- **Pro model:** `gemini-3.1-pro-preview`
+- **Primary flash model:** `gemini-4-hydrogen`
+- **Pro model:** `gemini-4-argon`
 - **Lite model:** `gemini-3.5-flash-lite`
 - **Image model:** `gemini-3.1-flash-image`
+- **Image pro model:** `gemini-3-pro-image`
 - **Embedding model:** `gemini-embedding-2`
 - **Program count:** 35 official US Mint & Treasury programs
   (source: `master_coin_programs.json`)

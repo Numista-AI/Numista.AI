@@ -23,14 +23,20 @@ try:
     load_dotenv(encoding="utf-8-sig")
 except UnicodeDecodeError:
     load_dotenv(encoding="cp1252")
-PROJECT_ID = "studio-9101802118-8c9a8"
-LOCATION = "us-central1"
+PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "studio-9101802118-8c9a8")
+LOCATION = os.environ.get("GCP_REGION", "global")
+
+def _resolve_sa_key_path() -> str:
+    env_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    if env_path and Path(env_path).is_file():
+        return env_path
+    return str(Path(_BACKEND_ROOT) / "serviceAccountKey.json")
 
 def test_model_with_sa(model_name):
     print(f"\n==========================================")
     print(f"TESTING: {model_name} in {LOCATION}")
     try:
-        key_path = "serviceAccountKey.json.json"
+        key_path = _resolve_sa_key_path()
         creds = service_account.Credentials.from_service_account_file(key_path)
         client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION, credentials=creds)
         

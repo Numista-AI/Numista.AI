@@ -19,15 +19,11 @@ from google import genai
 from google.genai import types as genai_types
 
 # ── Config ────────────────────────────────────────────────────────────────────
-# Deprecation chain (Gemini Deprecation Schedule, Apr 14 2026):
-#   gemini-3.5-flash-001 → shutdown Jun  1 2026 → replaced by gemini-3.5-flash
-#   gemini-3.5-flash     → shutdown Jun 17 2026 → replaced by gemini-3.5-flash
-#   gemini-3.5-flash = current recommended model (Public Preview, no shutdown listed)
-#   IMPORTANT: post-Jun-2025 preview models require location='global' on Vertex AI
+#   IMPORTANT: Gemini 4 models require location='global' on Vertex AI
 PROJECT_ID  = "studio-9101802118-8c9a8"
-LOCATION    = "global"           # required for gemini-3.5-flash
+LOCATION    = "global"           # required for Gemini 4 endpoints
 # MANDATORY: Before changing this model ID, you MUST read the latest deprecation schedule in: C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules
-MODEL       = "gemini-3.5-flash"
+MODEL       = os.getenv("GEMINI_FLASH_MODEL", "gemini-4-hydrogen")
 MASTER_JSON = pathlib.Path(__file__).parent / "master_coin_programs.json"
 
 # ── Prompt template ───────────────────────────────────────────────────────────
