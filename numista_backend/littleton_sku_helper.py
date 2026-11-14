@@ -318,7 +318,7 @@ def resolve_sku(
 
         Layer 1 → SQLite static seed (sub-ms, zero network)
         Layer 2 → Firestore shared cache (covers runtime discoveries)
-        Layer 3 → Gemini 3.5-flash (new SKU; result written back to Firestore)
+        Layer 3 → Gemini 4 Hydrogen (new SKU; result written back to Firestore)
 
     Parameters
     ──────────
@@ -327,7 +327,7 @@ def resolve_sku(
     conn         : sqlite3.Connection to numista.db (caller manages lifecycle).
     db           : google.cloud.firestore.Client from main.py.
     genai_client : google.genai.Client from main.py.
-    model        : Model name constant (e.g. PRIMARY_MODEL = "gemini-3.5-flash").
+    model        : Model name constant (e.g. GEMINI_FLASH_MODEL = "gemini-4-hydrogen").
 
     Returns
     ───────

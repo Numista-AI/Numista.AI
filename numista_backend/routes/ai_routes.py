@@ -44,7 +44,7 @@ class CollectorProfileUpdateRequest(BaseModel):
 # ── Helper for Vision/Text Model Invocation with Resilient Fallback ───────────
 
 def call_chat_model_with_fallback(system_prompt: str, user_query: str) -> str:
-    """Invokes Gemini 3.6 Flash with automatic fallback to Gemini 3.5 Flash."""
+    """Invokes DEFAULT_CHAT_MODEL (gemini-4-hydrogen) with automatic fallback to FALLBACK_CHAT_MODEL."""
     if not genai_client:
         return "I am currently unable to connect to Vertex AI services. Please try again shortly."
 

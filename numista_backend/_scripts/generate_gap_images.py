@@ -24,7 +24,6 @@ PROJECT    = 'studio-9101802118-8c9a8'
 LOCATION   = 'global'
 BUCKET     = 'numista-uploads-studio-9101802118-8c9a8'
 USER_EMAIL = 'jseaman1204@gmail.com'
-MODEL_ID   = 'gemini-3-pro-image'  # Primary via image_model_router (100/mo cap -> gemini-3.1-flash-image)
 
 # Year -> likely series for blank-series coins (1860s-1900s are Barber/Liberty Seated era)
 def guess_series(year_str: str, denom: str) -> str:

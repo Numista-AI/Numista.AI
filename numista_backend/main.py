@@ -6790,7 +6790,7 @@ async def analyze_grade_coin(
     FastAPI endpoint for multi-modal Sheldon coin grading advisor.
     Accepts obverse and reverse images, and optional coin_id/doc_id.
     Safely queries local cache reference pricing and Sheldon scale guidelines,
-    and runs Gemini 3.5 vision analysis.
+    and runs Gemini 4 Hydrogen vision analysis.
     """
     _enforce_vision_rate_cap(user, "analyze_grade_coin", daily_limit=100)
     from numista_scraper.grading_advisor import analyze_coin_grade, lookup_coin_price_guide

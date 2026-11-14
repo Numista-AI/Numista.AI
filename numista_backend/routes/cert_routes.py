@@ -545,7 +545,7 @@ async def scan_cert_number_upload(
     """
     NET-093: OCR a grading slab photo to extract the cert number and grader.
     Accepts multipart/form-data with field 'file' (JPEG/PNG/WEBP).
-    Uses Gemini Vision (gemini-3.8-flash) via Vertex AI + ADC.
+    Uses Gemini Vision (gemini-4-hydrogen) via Vertex AI + ADC.
     Returns {cert_number, grader, confidence, message}.
 
     Grader detection rules (same as auto-detect in Flutter):

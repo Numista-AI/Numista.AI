@@ -36,8 +36,10 @@ sys.path.insert(0, str(_BACKEND_DIR))
 
 try:
     import config
+    from config import ingestion_config
 except ImportError:
     config = None
+    ingestion_config = None
 
 
 def find_latest_schedule_pdf() -> Path:
@@ -100,7 +102,7 @@ def parse_schedule_pdf(pdf_path: Path) -> dict:
     return models
 
 
-def audit_models(pdf_path: Path, auto_update: bool = False):
+def audit_models(pdf_path: Path, auto_update: bool = False, allow_unparsed: bool = False):
     print("================================================================================")
     print(" GEMINI MODEL LIFECYCLE AUDITOR (AGENTS.md Rule 6)")
     print("================================================================================")
@@ -113,6 +115,16 @@ def audit_models(pdf_path: Path, auto_update: bool = False):
     except Exception as e:
         print(f"❌ FAIL CLOSED: Could not parse deprecation PDF: {e}")
         sys.exit(1)
+
+    if not parsed_models:
+        msg = (
+            f"0 model entries parsed from {pdf_path.name} "
+            "(image-only PDF or unrecognized table format)."
+        )
+        if not allow_unparsed:
+            print(f"❌ FAIL CLOSED: {msg}")
+            sys.exit(1)
+        print(f"⚠️ WARNING: {msg}")
         
     if not config:
         print("❌ FAIL CLOSED: Could not import numista_backend/config.py")
@@ -123,13 +135,22 @@ def audit_models(pdf_path: Path, auto_update: bool = False):
         "GEMINI_PRO_MODEL": config.GEMINI_PRO_MODEL,
         "GEMINI_LITE_MODEL": config.GEMINI_LITE_MODEL,
         "GEMINI_IMAGE_MODEL": config.GEMINI_IMAGE_MODEL,
+        "GEMINI_IMAGE_PRO_MODEL": config.GEMINI_IMAGE_PRO_MODEL,
+        "GEMINI_EMBEDDING_MODEL": config.GEMINI_EMBEDDING_MODEL,
     }
+    if ingestion_config is not None:
+        configured_models.update({
+            "INGESTION_CLASSIFIER_MODEL": ingestion_config.CLASSIFIER_MODEL,
+            "INGESTION_EXTRACTION_MODEL": ingestion_config.EXTRACTION_MODEL,
+            "INGESTION_FALLBACK_FLASH_MODEL": ingestion_config.FALLBACK_FLASH_MODEL,
+            "INGESTION_FALLBACK_PRO_MODEL": ingestion_config.FALLBACK_PRO_MODEL,
+        })
     
     updates_proposed = {}
     has_warnings = False
     
-    print(f"{'Role Variable':<22} | {'Configured Model':<24} | {'Shutdown Date':<26} | {'Status'}")
-    print("-" * 90)
+    print(f"{'Role Variable':<30} | {'Configured Model':<24} | {'Shutdown Date':<26} | {'Status'}")
+    print("-" * 98)
     
     for var_name, current_model in configured_models.items():
         if current_model in parsed_models:
@@ -150,7 +171,7 @@ def audit_models(pdf_path: Path, auto_update: bool = False):
             shutdown_str = "Unknown (Not in PDF table)"
             status = "⚪ OK (Custom / Unlisted Model)"
             
-        print(f"{var_name:<22} | {current_model:<24} | {shutdown_str:<26} | {status}")
+        print(f"{var_name:<30} | {current_model:<24} | {shutdown_str:<26} | {status}")
 
     print("\n--------------------------------------------------------------------------------")
     
@@ -182,7 +203,12 @@ def audit_models(pdf_path: Path, auto_update: bool = False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Audit project Gemini models against official deprecation schedules.")
     parser.add_argument("--auto-update", action="store_true", help="Automatically apply safe model updates to .env")
+    parser.add_argument(
+        "--allow-unparsed",
+        action="store_true",
+        help="Warn instead of failing closed when pypdf extracts 0 model rows from an image-based PDF",
+    )
     args = parser.parse_args()
     
     latest_pdf = find_latest_schedule_pdf()
-    audit_models(latest_pdf, auto_update=args.auto_update)
+    audit_models(latest_pdf, auto_update=args.auto_update, allow_unparsed=args.allow_unparsed)

@@ -1,4 +1,4 @@
-"""Diagnose gemini-3.5-flash JSON response format and test the full agent pipeline."""
+"""Diagnose Gemini 4 Hydrogen JSON response format and test the full agent pipeline."""
 import os, json, logging, time
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
 
@@ -10,11 +10,12 @@ from google.genai import types
 
 client = genai.Client(api_key=os.getenv('GOOGLE_API_KEY'))
 
-# ── Test 1: Can gemini-3.5-flash return structured JSON? ─────────────────────
-print("=== Test 1: gemini-3.5-flash JSON mode ===")
+# ── Test 1: Can gemini-4-hydrogen return structured JSON? ───────────────────
+FLASH_MODEL = os.getenv('GEMINI_FLASH_MODEL', 'gemini-4-hydrogen')
+print(f"=== Test 1: {FLASH_MODEL} JSON mode ===")
 img = client.files.upload(file='captures/2023_Roosevelt_Dime_D_Obverse_20260523_1322.jpg')
 resp = client.models.generate_content(
-    model='gemini-3.5-flash',
+    model=FLASH_MODEL,
     contents=['Describe this image in JSON with key "description".', img],
     config=types.GenerateContentConfig(response_mime_type='application/json')
 )
