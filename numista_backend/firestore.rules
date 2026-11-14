@@ -38,30 +38,93 @@ service cloud.firestore {
       allow write: if false;           // backend SA only
     }
 
+    // ── ADDENDUM B: Field-level rules for protected demo/sandbox keys ─────────
+    // These more-specific match blocks are evaluated BEFORE the wildcard
+    // /users/{email}/{document=**} block below.
+    //
+    // Allowed on create: is_demo: false only (never is_demo: true).
+    //   Client may explicitly stamp is_demo: false and is_demo_cleared: false on
+    //   new real-coin creates (Option 1 of the ITEM 6 coding constraint).
+    //   This keeps real coins visible once the WHERE is_demo == false filter ships.
+    // Blocked on update: client may never change is_demo or is_demo_cleared on
+    //   existing documents. Only Admin SDK / backend service account may do so.
+    // Admin SDK bypasses all rules (standard Firestore behavior).
+    match /users/{email}/coins/{coinId} {
+      // Owner reads their own coins (list + get)
+      allow read: if isOwner(email);
+
+      // Owner deletes their own coins (soft-archive is done server-side;
+      // hard delete is not used in this sprint, but not blocked at rules level)
+      allow delete: if isOwner(email);
+
+      // Owner creates a new coin:
+      //   - is_demo MUST be present in the document AND explicitly false.
+      //     get('is_demo', false) != true would allow omitting the field entirely;
+      //     the display filter WHERE is_demo == false would then hide that coin.
+      //   - is_demo_cleared MUST be present AND explicitly false.
+      //   Admin SDK / Cloud Run creators bypass these rules and must write both
+      //   fields in the payload (enforced by server-side payload unit tests).
+      allow create: if isOwner(email)
+                    && request.resource.data.keys().hasAll(['is_demo', 'is_demo_cleared'])
+                    && request.resource.data.is_demo == false
+                    && request.resource.data.is_demo_cleared == false;
+
+      // Owner updates an existing coin:
+      //   - may not change is_demo (any direction)
+      //   - may not change is_demo_cleared (any direction)
+      allow update: if isOwner(email)
+                    && !request.resource.data.diff(resource.data)
+                          .affectedKeys()
+                          .hasAny(['is_demo', 'is_demo_cleared']);
+    }
+
+    // NOTE: match /users/{email}/profile was removed (13 Oct 2026).
+    //   The app does not use a profile subcollection directly.
+    //   sandbox_cleared, is_lifetime_family_estate, is_ai_qc_account, and
+    //   beta_tester all live on the users/{email} doc itself and are guarded
+    //   by _serverOnlyKeys() / _noEntitlementChange() below.
+
     // ── Settings (ui_variant, etc. — server-only writes via Admin SDK) ─────────
     match /users/{email}/settings/{doc} {
       allow read: if request.auth != null && request.auth.token.email == email;
       allow write: if false;  // server-only writes via Admin SDK
     }
 
-
-    // ── User data (coins, wishlist, reviews, etc.) ────────────────────────────
-    // Narrowed wildcard: excludes server-only subcollections that must not be
-    // client-writable (settings, estate_reports, morgan_action_log, trash, audit_log).
-    // This fixes the T3b ITERATE issue where the broad {document=**} wildcard
-    // silently overrode the more-specific settings/write:false rule above.
-    match /users/{email} {
-      allow read, write: if isOwner(email);
+    // Server-only entitlement fields — owner MUST NOT be able to set these.
+    // The server (Admin SDK) sets them; any client write that touches them is denied.
+    // On create: those fields must be absent (or default false/null).
+    // On update: the diff must not include any of these keys.
+    function _serverOnlyKeys() {
+      return ['tier', 'stripe_tier', 'beta_tester', 'is_lifetime_family_estate',
+              'is_ai_qc_account', 'is_bot_account', 'sandbox_cleared', 'admin'];
     }
-    // Subcollections the owner CAN read+write (coins, review_queue, etc.)
+    function _noEntitlementChange() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(_serverOnlyKeys());
+    }
+    function _noEntitlementOnCreate() {
+      return !request.resource.data.keys().hasAny(_serverOnlyKeys());
+    }
+
+    match /users/{email} {
+      allow read: if isOwner(email);
+      // Owner may create their own user doc only if entitlement fields are absent.
+      allow create: if isOwner(email) && _noEntitlementOnCreate();
+      // Owner may update only if they don't touch any entitlement field.
+      allow update: if isOwner(email) && _noEntitlementChange();
+      // Deletes not allowed from client (would lose all data).
+      allow delete: if false;
+    }
+    // Subcollections the owner CAN read+write (wishlist, review_queue, etc.)
+    // coins and profile are excluded because they have more-specific blocks above.
+    // server-only subcollections are excluded so writes are blocked.
     match /users/{email}/{sub}/{docId} {
       allow read, write: if isOwner(email)
-        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency']);
+        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency', 'wishlist_email_logs']);
     }
-    // Nested docs within writable subcollections (e.g. coins/{id}/images/{img})
+    // Nested docs within writable subcollections
     match /users/{email}/{sub}/{docId}/{rest=**} {
       allow read, write: if isOwner(email)
-        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency']);
+        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency', 'wishlist_email_logs']);
     }
     // Server-only subcollections — owner may read but NOT write (server SA only)
     match /users/{email}/settings/{docId} {
@@ -111,26 +174,12 @@ service cloud.firestore {
       allow write: if false;  // backend service account only
     }
 
-    // ── Greysheet cache (Cloud Run service account only — no client access) ──────
-    // Pre-computed error collectible lists and pricing per denomination/year/GSID.
-    // Clients receive this data via the Cloud Run HTTP route only, never directly.
-    match /greysheet_cache/{doc} {
-      allow read, write: if false; // Cloud Run service account only
+    // ── Coins reference (reference library — public read, no writes from client) ─
+    match /coins_reference/{document=**} {
+      allow get, list: if true;
+      allow write: if false;  // backend service account only
     }
 
-    // ── Greysheet error config (admin read only — no client writes) ───────────
-    // greysheet_error_keywords: versioned keyword set + attribution_label field.
-    // greysheet_error_gsid_allowlist: human-curated GSID → error_type mapping.
-    // Both are read by Cloud Run only on the request path; admin reads in console.
-    match /config/greysheet_error_keywords {
-      allow read: if request.auth != null && request.auth.token.admin == true;
-      allow write: if false; // Cloud Run service account only
-    }
-
-    match /config/greysheet_error_gsid_allowlist {
-      allow read: if request.auth != null && request.auth.token.admin == true;
-      allow write: if false; // Cloud Run service account only
-    }
 
     // ── Config (PCGS token, NewsAPI key, eBay public config, etc.) ─────────────
     // Read access needed by the Flutter client to fetch non-sensitive platform config.
@@ -162,6 +211,14 @@ service cloud.firestore {
       allow write: if false;  // backend service account only
     }
 
+    // ── Mint Error Library (reference data — authenticated read) ──────────────
+    // Public-facing error encyclopedia populated by the backend ingestion pipeline.
+    // Any signed-in user may read; client writes are forbidden (backend SA only).
+    match /mint_errors/{errorId} {
+      allow read:  if isAuthenticated();
+      allow write: if false;  // backend service account only
+    }
+
     // ── Backend-managed collections ───────────────────────────────────────────
     match /pending_items/{document=**} {
       allow read, write: if false; // backend service account only
@@ -175,12 +232,6 @@ service cloud.firestore {
       allow read, write: if false; // backend service account only
     }
 
-    // ── Mint Errors (reference library — public read) ─────────────────────────
-    match /mint_errors/{document=**} {
-      allow read: if true;
-      allow write: if false;  // backend service account only
-    }
-
     // ── Microscope / Hardware Agent Commands ──────────────────────────────────
     match /commands/{email}/pending/{commandId} {
       allow create: if isOwner(email);
@@ -192,24 +243,26 @@ service cloud.firestore {
       allow write: if false; // Only agent (SA) writes
     }
 
-    // ── Public Wishlists (public read, owner create/update/delete, backend reservation) ─
+    // ── Beta Feedback ─────────────────────────────────────────────────────────
+    // ALL writes (create, update, delete) go through the Cloud Run callable.
+    // The callable uses the Firebase Admin SDK (bypasses these rules).
+    // Admin reads are done via service account; tester reads blocked.
+    // Clients may read their own submissions (status tracking).
+    match /beta_feedback/{feedbackId} {
+      // Tester: read own submission only (for post-submit correction check)
+      allow get: if request.auth != null
+                 && resource.data.user_id == request.auth.uid;
+      // Admin or owner: list own submissions (via Admin SDK — bypasses rules; kept as belt-and-suspenders)
+      allow list: if request.auth != null && (request.auth.token.admin == true || resource.data.user_id == request.auth.uid);
+      // ALL writes: callable / Admin SDK only; client writes blocked
+      allow create, update, delete: if false;
+    }
+
+    // ── Public Wishlists (family gift reservations) ───────────────────────────
     match /public_wishlists/{token} {
-      allow read: if true;
-      allow create: if request.auth != null
-                    && request.resource.data.owner_uid == request.auth.uid
-                    && request.resource.data.token == token
-                    && request.resource.data.reserved_items == {};
-      allow update: if request.auth != null
-                    && request.auth.uid == resource.data.owner_uid
-                    && request.resource.data.owner_uid == resource.data.owner_uid
-                    && request.resource.data.token == resource.data.token
-                    && (
-                      request.resource.data.reserved_items == resource.data.reserved_items
-                      ||
-                      request.resource.data.reserved_items.keys().hasOnly(resource.data.reserved_items.keys())
-                    );
-      allow delete: if request.auth != null
-                    && request.auth.uid == resource.data.owner_uid;
+      allow get: if true;
+      allow create: if request.auth != null;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasAny(['reserved_items', 'reservation_details']);
     }
 
     // ── Estate Reports / Attorney Portal Tokens (Public Token Read, Hardened Owner Update) ────
@@ -222,22 +275,83 @@ service cloud.firestore {
       }
     }
 
+    // ── Attorney Portal Tokens (ITEM B — B5) ─────────────────────────────────
+    // SHA-256 hashes of raw attorney tokens.
+    // All reads and writes go through Cloud Run (POST /api/attorney/issue,
+    // GET /api/attorney/snapshot, POST /api/attorney/revoke).
+    // No client SDK may read or write this collection directly —
+    // including the authenticated owner.
+    // Admin SDK bypasses these rules (standard Firestore behavior).
+    match /attorney_tokens/{tokenHash} {
+      allow read, write: if false;  // Cloud Run + Admin SDK only
+    }
+
     // ── Family Sub-Account Resource Groups (authenticated member access) ──────
     match /family_groups/{familyGroupId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == resource.data.primary_owner_uid;
     }
 
-    // ── Stripe Webhook Idempotency Events (backend-only read/write) ───────────
-    match /stripe_events/{eventId} {
-      allow read, write: if false; // backend service account only
+    // ── Help Tickets ──────────────────────────────────────────────────────────
+    // Base document: no grant token, no diagnostic data — safe for admin queue read.
+    // Sensitive sub-document (private/grant_and_diag): allow read, write: if false
+    // → backend service account only (Admin SDK bypasses rules).
+    match /tickets/{ticket_id} {
+      // User creates their own ticket; grant_active must be false on create
+      allow create: if isAuthenticated()
+                    && request.resource.data.user_id == request.auth.uid
+                    && request.resource.data.get('grant_active', false) == false;
+
+      // User reads own tickets; admin reads all (base doc only — no sensitive fields here)
+      allow read: if isAuthenticated()
+                  && (resource.data.user_id == request.auth.uid
+                      || request.auth.token.admin == true);
+
+      // User may update subject/description/status only while no grant is active
+      allow update: if isAuthenticated()
+                    && resource.data.user_id == request.auth.uid
+                    && resource.data.get('grant_active', false) == false;
+
+      allow delete: if false;
+
+      // ── Sensitive private sub-document ─────────────────────────────────────
+      // Contains support_grant (token_hash) and diagnostic_package.
+      // ONLY the backend service account (Admin SDK) may read or write this.
+      match /private/{doc} {
+        allow read, write: if false;
+      }
+
+      // ── Messages ────────────────────────────────────────────────────────────
+      // User posts and reads their own ticket messages.
+      // Support posts and reads via backend Admin SDK only (not direct Firestore).
+      match /messages/{message_id} {
+        allow create: if isAuthenticated()
+                      && get(/databases/$(database)/documents/tickets/$(ticket_id))
+                           .data.user_id == request.auth.uid;
+        allow read:   if isAuthenticated()
+                      && get(/databases/$(database)/documents/tickets/$(ticket_id))
+                           .data.user_id == request.auth.uid;
+        allow update, delete: if false;
+      }
     }
 
-    // ── Beta Feedback (testers can create documents; admin reads via SA) ──────
-    match /beta_feedback/{feedbackId} {
-      allow create: if request.auth != null
-                   || (request.resource.data.keys().hasAll(['ratings', 'comment', 'created_at']));
-      allow read, update, delete: if false;
+    // ── Support Access Audit Log ──────────────────────────────────────────────
+    // Backend service account writes. Admin may read for audit review.
+    // Clients cannot write audit log entries.
+    match /support_access_logs/{log_id} {
+      allow read:  if request.auth != null && request.auth.token.admin == true;
+      allow write: if false;  // backend service account only via Admin SDK
+    }
+
+    // NET-748: read-only SKU dictionary lookups for Add by SKU.
+    // Named docs only. {skuId} is a single-segment variable, NOT recursive.
+    match /global_metadata/usmint_sku_dictionary/skus/{skuId} {
+      allow get: if isAuthenticated();
+      allow list, write: if false;
+    }
+    match /global_metadata/littleton_sku_dictionary/skus/{skuId} {
+      allow get: if isAuthenticated();
+      allow list, write: if false;
     }
 
     // ── Deny everything else ──────────────────────────────────────────────────

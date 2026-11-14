@@ -21,7 +21,7 @@ def test_format_financial_details_dual_valuation():
     fin_html = format_financial_details(item)
     assert "<b>Qty:</b> 2" in fin_html
     assert "<b>Cost:</b> $70.00" in fin_html
-    assert "<b>Wholesale (Bid):</b> $85.00" in fin_html
+    assert "<b>Wholesale (Bid):</b>" not in fin_html
     assert "<b>Retail (CPG):</b> $110.00" in fin_html
 
 def test_format_financial_details_ukn_cost_and_missing_guide():
@@ -35,7 +35,7 @@ def test_format_financial_details_ukn_cost_and_missing_guide():
     }
     fin_html = format_financial_details(item)
     assert "<b>Cost:</b> UKN" in fin_html
-    assert "<b>Wholesale (Bid):</b> —" in fin_html
+    assert "<b>Wholesale (Bid):</b>" not in fin_html
     assert "<b>Retail (CPG):</b> —" in fin_html
 
 def test_generate_passport_pdf_success():

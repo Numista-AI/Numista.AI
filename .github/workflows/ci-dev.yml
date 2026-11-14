@@ -51,7 +51,10 @@ jobs:
       - name: Analyze Dart code
         working-directory: numista_mobile
         run: flutter analyze --no-fatal-infos
-        continue-on-error: true  # Treat analysis warnings as non-blocking
+
+      - name: Run Flutter unit and widget tests
+        working-directory: numista_mobile
+        run: flutter test --no-pub --concurrency=2
 
       - name: Build Flutter Web (release)
         working-directory: numista_mobile
@@ -102,7 +105,6 @@ jobs:
             --select E,F,W \
             --ignore E501 \
             --output-format github
-        continue-on-error: true   # Lint warnings are advisory during vacation
 
       - name: Check key script imports (syntax check)
         working-directory: numista_backend
@@ -119,6 +121,10 @@ jobs:
           ASSERT_ROUTE_PARITY_OFFLINE: "1"
         run: python -B scripts/assert_route_parity.py --diff
         continue-on-error: false
+
+      - name: Run backend pytest suite
+        working-directory: numista_backend
+        run: pytest tests/ -q --tb=short
 
       - name: Post lint summary
         if: always()
