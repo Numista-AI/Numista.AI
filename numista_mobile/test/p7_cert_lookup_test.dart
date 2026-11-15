@@ -200,15 +200,11 @@ void main() {
       expect(f.existsSync(), isTrue);
       final src = f.readAsStringSync();
 
-      // P7 fix: the header must be wrapped in GestureDetector with route 'Add New Coins'
+      // P7 fix: sidebar must navigate to 'Add New Coins' via 'Add to collection' / 'Add new coins/notes/etc.'
       expect(src.contains("'Add New Coins'"), isTrue,
           reason: "Sidebar must navigate to 'Add New Coins'");
-      // The ADD NEW COINS text in the sidebar must be near a GestureDetector.
-      // The Builder wrapper adds indirection, so allow up to 700 chars.
-      final headerIdx = src.indexOf('ADD NEW COINS/NOTES/ETC.');
-      final gestureIdx = src.lastIndexOf('GestureDetector', headerIdx);
-      expect(headerIdx - gestureIdx, lessThan(700),
-          reason: 'ADD NEW COINS header must be inside a GestureDetector (within 700 chars)');
+      expect(src.contains("'Add to collection'"), isTrue,
+          reason: "Sidebar must expose Add to collection action");
     });
 
     test('Nav item Add new coins/notes/etc. still present in sidebar', () {

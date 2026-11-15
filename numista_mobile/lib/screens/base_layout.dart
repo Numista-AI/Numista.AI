@@ -1195,37 +1195,6 @@ class _BaseLayoutState extends State<BaseLayout> {
     );
   }
 
-
-
-  Widget _buildNavMorganButton() {
-    if (_isSidebarCollapsed) {
-      return Tooltip(
-        message: 'Help & Ask Morgan',
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: InkWell(
-            onTap: _showMorganDialog,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-              alignment: Alignment.center,
-              padding: const EdgeInsets.all(10),
-              child: Image.asset('assets/logo_owl.png', height: 20),
-            ),
-          ),
-        ),
-      );
-    }
-    return ListTile(
-      minVerticalPadding: 14,
-      leading: Image.asset('assets/logo_owl.png', height: 20),
-      title: const Text('Help & Ask Morgan',
-          style: TextStyle(fontSize: NumistaTheme.textBody)),
-      onTap: _showMorganDialog,
-      selected: false,
-    );
-  }
-
   // ─── Nav item builder ────────────────────────────────────────────────────
   Widget _buildNavItem(String title, {
     String? displayLabel,
@@ -1533,21 +1502,6 @@ class _UnderConstruction extends StatelessWidget {
             Text('This feature is under construction.',
                 style: TextStyle(color: Color(0xFF5A5C69))),
           ],
-        ),
-      );
-}
-
-// ─── Sidebar section divider ──────────────────────────────────────────────────
-class _SidebarDivider extends StatelessWidget {
-  const _SidebarDivider();
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Divider(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withAlpha(20)
-              : Colors.black.withAlpha(20),
-          thickness: 1,
         ),
       );
 }
@@ -1935,29 +1889,6 @@ class PhoneMenuOverlay extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Sidebar section header ──────────────────────────────────────────────────
-class _SidebarSectionHeader extends StatelessWidget {
-  final String title;
-  const _SidebarSectionHeader({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.only(left: 8, top: 22, bottom: 6),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: NumistaTheme.textCaption,
-          fontWeight: FontWeight.bold,
-          color: isDark ? Colors.white38 : Colors.black45,
-          letterSpacing: 0.8,
         ),
       ),
     );
