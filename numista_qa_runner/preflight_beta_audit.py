@@ -26,14 +26,28 @@ def run_preflight_audit():
 
 
     # Test 1: Model Policy Check
-    from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL
-    print(f"[1/6] Model Policy Check:")
-    print(f"  - Flash Model: {GEMINI_FLASH_MODEL}")
-    print(f"  - Pro Model:   {GEMINI_PRO_MODEL}")
-    print(f"  - Lite Model:  {GEMINI_LITE_MODEL}")
-    print(f"  - Image Model: {GEMINI_IMAGE_MODEL}")
-    assert any(v in GEMINI_FLASH_MODEL for v in ("gemini-3", "gemini-4")), "Invalid Flash model"
-    print("  --> PASS: 100% compliant active 2026 Gemini stack.")
+    from config import (
+        GEMINI_FLASH_MODEL,
+        GEMINI_PRO_MODEL,
+        GEMINI_LITE_MODEL,
+        GEMINI_IMAGE_MODEL,
+        GEMINI_IMAGE_PRO_MODEL,
+        GEMINI_EMBEDDING_MODEL,
+    )
+    print("[1/6] Model Policy Check:")
+    print(f"  - Flash Model:     {GEMINI_FLASH_MODEL}")
+    print(f"  - Pro Model:       {GEMINI_PRO_MODEL}")
+    print(f"  - Lite Model:      {GEMINI_LITE_MODEL}")
+    print(f"  - Image Model:     {GEMINI_IMAGE_MODEL}")
+    print(f"  - Image Pro Model: {GEMINI_IMAGE_PRO_MODEL}")
+    print(f"  - Embedding Model: {GEMINI_EMBEDDING_MODEL}")
+    assert GEMINI_FLASH_MODEL == "gemini-4-hydrogen", f"Invalid Flash model: {GEMINI_FLASH_MODEL}"
+    assert GEMINI_PRO_MODEL == "gemini-4-argon", f"Invalid Pro model: {GEMINI_PRO_MODEL}"
+    assert GEMINI_LITE_MODEL == "gemini-3.5-flash-lite", f"Invalid Lite model: {GEMINI_LITE_MODEL}"
+    assert GEMINI_IMAGE_MODEL == "gemini-3.1-flash-image", f"Invalid Image model: {GEMINI_IMAGE_MODEL}"
+    assert GEMINI_IMAGE_PRO_MODEL == "gemini-3-pro-image", f"Invalid Image Pro model: {GEMINI_IMAGE_PRO_MODEL}"
+    assert GEMINI_EMBEDDING_MODEL == "gemini-embedding-2", f"Invalid Embedding model: {GEMINI_EMBEDDING_MODEL}"
+    print("  --> PASS: 100% compliant active Gemini 4 stack.")
 
     # Test 2: Sub-Account Tier Limit Logic
     from routes.subaccount_routes import create_subaccount, SubAccountCreateRequest

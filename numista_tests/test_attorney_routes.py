@@ -64,12 +64,18 @@ _mock_db   = MagicMock()
 _mock_log  = MagicMock()
 
 # Patch routes.deps so the router imports a controllable db and logger.
+_prev_deps = sys.modules.get("routes.deps")
 _deps_stub = types.SimpleNamespace(db=_mock_db, logger=_mock_log)
 sys.modules["routes.deps"] = _deps_stub
 
 import routes.attorney_routes as ar          # noqa: E402  (import after stubs)
 import importlib
 importlib.reload(ar)                          # pick up the patched deps
+
+if _prev_deps is not None:
+    sys.modules["routes.deps"] = _prev_deps
+else:
+    sys.modules.pop("routes.deps", None)
 
 # ── App ───────────────────────────────────────────────────────────────────────
 

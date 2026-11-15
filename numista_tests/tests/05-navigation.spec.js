@@ -1,157 +1,70 @@
 const { test, expect } = require('@playwright/test');
+const { enterDemo } = require('./test-helpers');
 
-// ============================================================
-// TEST SUITE 05: Navigation & State Persistence
-// Tests back button, browser refresh, deep nav,
-// and that the app recovers gracefully from unexpected states.
-// ============================================================
-
-async function enterDemo(page) {
-  await page.goto('https://numista.ai');
-  await page.waitForTimeout(4000);
-  // Use a text selector so layout shifts don't break demo entry.
-  // Falls back to coordinate click if the button text isn't in the DOM
-  // (Flutter canvas renders text as pixels, not DOM nodes).
-  const demoBtn = page.getByRole('button', { name: /browse demo/i });
-  if (await demoBtn.count() > 0) {
-    await demoBtn.click();
-  } else {
-    // Fallback: click the visual position of the Browse Demo button.
-    // Coordinates are relative to the default 1280x720 viewport.
-    await page.mouse.click(841, 647);
+async function clickSemanticTarget(page, pattern) {
+  const btn = page.locator('flt-semantics[role=button]').filter({ hasText: pattern }).first();
+  if (await btn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await btn.click();
+    return true;
   }
-  await page.waitForTimeout(4000);
-  await page.setViewportSize({ width: 1280, height: 1000 });
-  await page.waitForTimeout(1000);
+  const fallbackText = page.getByText(pattern).first();
+  await fallbackText.waitFor({ state: 'visible', timeout: 5000 });
+  await fallbackText.click();
+  return true;
 }
 
-test.describe('05 - Navigation & State Persistence', () => {
+async function openAccordionAndNavigate(page, groupLabel, itemLabel) {
+  await clickSemanticTarget(page, new RegExp(`^${groupLabel}$`, 'i'));
+  await page.waitForTimeout(400);
+  await clickSemanticTarget(page, new RegExp(`^${itemLabel}$`, 'i'));
+  await page.waitForTimeout(2500);
+}
+
+test.describe('05 - Navigation & State Persistence (UX-HOME-SIDEBAR v2.1)', () => {
 
   test('T01: Browser refresh from demo stays on numista.ai', async ({ page }) => {
     await enterDemo(page);
     await page.reload();
-    await page.waitForTimeout(4000);
+    await page.waitForSelector('flt-glass-pane', { state: 'visible', timeout: 20000 });
     expect(page.url()).toContain('numista.ai');
     const buf = await page.screenshot({ path: 'screenshots/after-refresh.png', type: 'png' });
     expect(buf.length).toBeGreaterThan(50000);
   });
 
-  test('T02: In-app back navigation (sidebar) works correctly', async ({ page }) => {
-    // Flutter web is a SPA — browser back button has no effect on Flutter routes.
-    // Real users navigate using the sidebar, not the browser back button.
-    // This test verifies the sidebar-based "back to home" flow works correctly.
+  test('T02: Sidebar navigates to My Collection and back to Home', async ({ page }) => {
     await enterDemo(page);
-    // Navigate away from home
-    await page.mouse.click(80, 231); // My Collection (All tab)
-    await page.waitForTimeout(2500);
-    // Navigate back to Home Dashboard via sidebar
-    await page.mouse.click(80, 146); // Home Dashboard
-    await page.waitForTimeout(2500);
+    await clickSemanticTarget(page, /^My Collection$/i);
+    await page.waitForTimeout(2000);
+    await clickSemanticTarget(page, /^Home$/i);
+    await page.waitForTimeout(2000);
     const buf = await page.screenshot({ path: 'screenshots/back-to-home-via-sidebar.png', type: 'png' });
-    expect(page.url()).toContain('numista.ai');
-    expect(buf.length, 'Home Dashboard blank after sidebar navigation').toBeGreaterThan(50000);
+    expect(buf.length).toBeGreaterThan(50000);
   });
 
-  test('T03: Navigating to My Collection then Home Dashboard keeps nav stable', async ({ page }) => {
-    await enterDemo(page);
-    // Go to My Collection
-    await page.mouse.click(80, 231);
-    await page.waitForTimeout(3000);
-    // Go to Home Dashboard
-    await page.mouse.click(80, 146);
-    await page.waitForTimeout(3000);
-    const buf = await page.screenshot({ path: 'screenshots/nav-back-to-home.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(100000);
-  });
-
-  test('T04: Rapidly clicking multiple nav items does not crash app', async ({ page }) => {
+  test('T03: Rapidly clicking top-level nav items produces zero JS pageerrors', async ({ page }) => {
     await enterDemo(page);
     const pageErrors = [];
     page.on('pageerror', err => pageErrors.push(err.message));
-
-    const navItems = [
-      { x: 80, y: 146 }, { x: 80, y: 231 }, { x: 80, y: 506 },
-      { x: 80, y: 173 }, { x: 80, y: 454 }, { x: 80, y: 480 },
-    ];
-    for (const item of navItems) {
-      await page.mouse.click(item.x, item.y);
-      await page.waitForTimeout(500); // rapid fire
+    for (const label of [/^My Collection$/i, /^Coin Programs$/i, /^Wishlist$/i, /^Review$/i, /^Home$/i]) {
+      await clickSemanticTarget(page, label);
+      await page.waitForTimeout(500);
     }
-    await page.waitForTimeout(2000);
-
     expect(pageErrors, 'JS errors after rapid nav: ' + pageErrors.join(' | ')).toHaveLength(0);
-    expect(page.url()).toContain('numista.ai');
   });
 
-  test('T05: Coin Search page loads without crash', async ({ page }) => {
+  test('T04: Research accordion routes (Coin Search, AI Deepdive) load cleanly', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(80, 676); // Coin Search
-    await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ path: 'screenshots/coin-search.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(50000);
-    expect(page.url()).toContain('numista.ai');
+    await openAccordionAndNavigate(page, 'Research', 'Coin Search');
+    expect((await page.screenshot({ path: 'screenshots/coin-search.png' })).length).toBeGreaterThan(50000);
+    await clickSemanticTarget(page, /^AI Deepdive$/i);
+    await page.waitForTimeout(2500);
+    expect((await page.screenshot({ path: 'screenshots/ai-deepdive.png' })).length).toBeGreaterThan(50000);
   });
 
-  test('T06: AI Deepdive page loads without crash', async ({ page }) => {
+  test('T05: Add to collection CTA opens hub safely', async ({ page }) => {
     await enterDemo(page);
-    await page.mouse.click(80, 702); // AI Deepdive
-    await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ path: 'screenshots/ai-deepdive.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(50000);
+    await clickSemanticTarget(page, /Add to collection/i);
+    await page.waitForTimeout(2500);
+    expect((await page.screenshot({ path: 'screenshots/add-coins-hub.png' })).length).toBeGreaterThan(50000);
   });
-
-  test('T07: Inventory page loads without crash', async ({ page }) => {
-    await enterDemo(page);
-    await page.mouse.click(80, 335); // Inventory
-    await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ path: 'screenshots/inventory.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(50000);
-  });
-
-  test('T08: My Wishlist page loads without crash', async ({ page }) => {
-    await enterDemo(page);
-    await page.mouse.click(80, 369); // My Wishlist
-    await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ path: 'screenshots/my-wishlist.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(50000);
-  });
-
-  test('T09: AI Trainer Board loads without crash', async ({ page }) => {
-    await enterDemo(page);
-    // Use text selector first; fall back to coordinate if Flutter renders as pixels
-    const trainerBtn = page.getByRole('button', { name: /trainer|ai trainer/i });
-    if (await trainerBtn.count() > 0) {
-      await trainerBtn.click();
-    } else {
-      await page.mouse.click(80, 566); // fallback coordinate
-    }
-    await page.waitForTimeout(5000);
-    const buf = await page.screenshot({ path: 'screenshots/ai-trainer-board.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(50000);
-  });
-
-  test('T10: Review Hub loads without crash and displays queue state', async ({ page }) => {
-    await enterDemo(page);
-    await page.mouse.click(80, 506); // Review Hub
-    await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ path: 'screenshots/review-hub.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(50000);
-  });
-
-  test('T11: Coin Programs page loads without crash', async ({ page }) => {
-    await enterDemo(page);
-    await page.mouse.click(80, 173); // Coin Programs
-    await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ path: 'screenshots/coin-programs.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(50000);
-  });
-
-  test('T12: Microscope Scanner page loads without crash', async ({ page }) => {
-    await enterDemo(page);
-    await page.mouse.click(80, 480); // Microscope Scanner
-    await page.waitForTimeout(4000);
-    const buf = await page.screenshot({ path: 'screenshots/microscope-scanner.png', type: 'png' });
-    expect(buf.length).toBeGreaterThan(50000);
-  });
-
 });

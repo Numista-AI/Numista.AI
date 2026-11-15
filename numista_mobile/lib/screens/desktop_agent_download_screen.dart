@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/http_auth_client.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../constants.dart';
 import '../services/hardware_service.dart';
@@ -58,11 +58,10 @@ class _DesktopAgentDownloadScreenState
     }
     setState(() => _isRequestingDownload = true);
     try {
-      final idToken = await AuthService.currentUser?.getIdToken();
-      final resp = await http.get(
+      final resp = await HttpAuthClient.get(
         Uri.parse('$kApiBaseUrl/api/v1/hardware/installer_url'),
-        headers: {'Authorization': 'Bearer $idToken'},
-      ).timeout(const Duration(seconds: 15));
+        timeout: const Duration(seconds: 15),
+      );
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;

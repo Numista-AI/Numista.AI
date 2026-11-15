@@ -109,13 +109,27 @@ Write-Log "Fixtures OK."
 # ---- PRE-FLIGHT CHECK 5: Cloud Run secrets (WARNING - non-blocking) --------
 Write-Log "Checking Cloud Run secrets (non-blocking)..."
 try {
-    $gcResult = & gcloud run services describe numista-backend-568985927038 --region=us-central1 --format=json 2>&1
-    if ($LASTEXITCODE -eq 0) {
+    $gcResult = & gcloud run services describe numista-backend --region=us-central1 --project=studio-9101802118-8c9a8 --format=json 2>$null
+    if ($LASTEXITCODE -eq 0 -and $gcResult) {
         $gcJson = $gcResult | ConvertFrom-Json
-        $envVars = $gcJson.spec.template.spec.containers[0].env | ForEach-Object { $_.name }
-        $missing = @('GREYSHEET_API_KEY','GREYSHEET_API_TOKEN') | Where-Object { $_ -notin $envVars }
+        $envEntries = @($gcJson.spec.template.spec.containers[0].env)
+        $validEnvVars = @()
+        foreach ($entry in $envEntries) {
+            if ($null -eq $entry) { continue }
+            $hasLiteral = ($null -ne $entry.value) -and ($entry.value.ToString().Trim().Length -gt 0)
+            $secName = if ($null -ne $entry.valueFrom -and $null -ne $entry.valueFrom.secretKeyRef) { $entry.valueFrom.secretKeyRef.name } else { $null }
+            $hasSecretRef = ($null -ne $secName) -and ($secName.ToString().Trim().Length -gt 0)
+            if ($hasLiteral -or $hasSecretRef) {
+                $validEnvVars += $entry.name
+            }
+        }
+        $required = @(
+            'GREYSHEET_API_KEY', 'GREYSHEET_API_TOKEN', 'PCGS_BEARER_TOKEN',
+            'EBAY_CERT_ID', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'CRON_SECRET'
+        )
+        $missing = $required | Where-Object { $_ -notin $validEnvVars }
         if ($missing) {
-            Write-Log "WARN [CLOUD_RUN_SECRET_MISSING]: $($missing -join ', ') not found in Cloud Run env."
+            Write-Log "WARN [CLOUD_RUN_SECRET_MISSING]: $($missing -join ', ') not found in Cloud Run env/secretKeyRef."
         } else {
             Write-Log "Cloud Run secrets: present."
         }
@@ -128,7 +142,7 @@ try {
 
 # ---- PRE-FLIGHT CHECK 6: Deprecated Gemini model IDs (WARNING - non-blocking) ---
 Write-Log "Scanning for deprecated Gemini model IDs (non-blocking)..."
-$deprecatedPattern = 'gemini-(1\.5|2\.0|2\.5)'
+$deprecatedPattern = 'gemini-(?:1\.5|2\.0|2\.5|3\.0|3\.1-pro|3\.6|3\.7|3\.8)[\w-]*|gemini-3\.5-flash(?!-lite)'
 $searchPaths = @(
     (Join-Path $PROJECT_ROOT "numista_backend"),
     (Join-Path $PROJECT_ROOT "numista_mobile\lib")
