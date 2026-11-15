@@ -3073,7 +3073,7 @@ def _enforce_vision_rate_cap(
     if not rate_key:
         raise HTTPException(status_code=401, detail="Invalid user identity in token")
     is_admin = user.get("admin") is True
-    check_and_increment_rate_cap(
+    _check_and_increment_rate_cap(
         rate_key, endpoint_key, daily_limit=daily_limit, is_admin=is_admin
     )
 
