@@ -3,8 +3,10 @@ wikimedia_category_explorer.py
 Crawls Wikimedia Commons categories for US currency to find real filenames.
 Then matches them to our remaining types by denomination/year/keyword.
 """
-import urllib.request, urllib.parse, json, time, re
-from collections import defaultdict
+import json
+import time
+import urllib.parse
+import urllib.request
 
 HEADERS  = {'User-Agent': 'NumistaAI/1.0 (contact eric.seaman@yahoo.com)'}
 WIKI_API = 'https://commons.wikimedia.org/w/api.php'
