@@ -51,6 +51,16 @@ import '../widgets/set_contents_panel.dart';
 import '../utils/text_sanitizer.dart';
 
 // ─── Design tokens — theme-aware via BuildContext ───────────────────────────
+const List<String> kCoinDetailTabLabels = [
+  'Details',
+  'Financials',
+  'Provenance',
+  'AI Insights',
+  'History',
+  'Legislation',
+  'Known Errors',
+];
+
 const _kBrand    = Color(0xFFF63366);
 const _kGreen    = Color(0xFF28A745);
 const _kRed      = Color(0xFFDC3545);
@@ -790,14 +800,8 @@ Write in an engaging, authoritative style like a respected numismatic reference.
             indicatorColor: _kAccent(context),
             indicatorWeight: 2.5,
             labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            tabs: const [
-              Tab(text: 'Details'),
-              Tab(text: 'Financials'),
-              Tab(text: 'Provenance'),
-              Tab(text: 'AI Insights'),
-              Tab(text: 'History'),
-              Tab(text: 'Legislation'),
-              Tab(text: 'Known Errors'),
+            tabs: [
+              for (final label in kCoinDetailTabLabels) Tab(text: label),
             ],
           ),
         ),
