@@ -91,3 +91,38 @@ def test_bulk_update_email_mismatch_rejected(auth_client):
     response = auth_client.post("/api/review/bulk_update", json=payload)
     assert response.status_code == 403
     assert "Forbidden" in response.json()["detail"]
+
+
+def test_bulk_update_condition_dual_persist_and_validation_rejections(monkeypatch, auth_client):
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+    monkeypatch.setattr("main.db", mock_db)
+
+    ok_resp = auth_client.post("/api/review/bulk_update", json={
+        "user_email": "test@numista.ai",
+        "review_ids": ["doc_1"],
+        "updates": {"condition": "MS-65", "notes": "Checked", "status": "staged"},
+    })
+    assert ok_resp.status_code == 200
+    written = mock_batch.update.call_args[0][1]
+    assert written["condition"] == "MS-65"
+    assert written["Condition"] == "MS-65"
+    assert written["notes"] == "Checked"
+    assert written["status"] == "staged"
+
+    mock_batch.reset_mock()
+    for bad_updates in (
+        {"cost": None},
+        {"cost": "NaN"},
+        {"cost": "inf"},
+        {"storage_location": "   "},
+        {},
+    ):
+        bad_resp = auth_client.post("/api/review/bulk_update", json={
+            "user_email": "test@numista.ai",
+            "review_ids": ["doc_1"],
+            "updates": bad_updates,
+        })
+        assert bad_resp.status_code == 400, f"Expected 400 for {bad_updates!r}, got {bad_resp.status_code}"
+    assert mock_batch.update.call_count == 0
