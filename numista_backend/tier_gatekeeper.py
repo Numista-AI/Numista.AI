@@ -332,7 +332,7 @@ def check_and_enforce_coin_limit(user_identifier: str, success_url: str = "https
     user_profile = get_user_profile(user_identifier)
     tier = get_user_tier(user_profile)
 
-    if tier == "power_user" or user_profile.get("power_user") is True:
+    if tier == "power_user":
         return True
 
     coin_count = get_coin_count(user_identifier)
@@ -367,7 +367,7 @@ def check_and_increment_daily_usage(user_identifier: str, feature_type: str) -> 
     user_profile = get_user_profile(user_identifier)
     tier = get_user_tier(user_profile)
 
-    if tier == "power_user" or user_profile.get("power_user") is True:
+    if tier == "power_user":
         return True
 
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")

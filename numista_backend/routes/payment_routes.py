@@ -19,7 +19,6 @@ from tier_gatekeeper import (
     get_user_allowance,
     get_coin_count,
     TIER_COIN_LIMITS,
-    TIER_DAILY_ALLOWANCES,
     unlock_user_coins,
     lock_overflow_coins,
     AuthFactsUnavailable,

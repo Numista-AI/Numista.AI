@@ -23,7 +23,6 @@ from google.cloud import firestore
 from catalog_models import CollectionAddRequest, PhotoToggleRequest
 from catalog_nac1 import validate_nac1
 from catalog_service import (
-    FREE_TRIAL_ITEM_LIMIT,
     CatalogError,
     add_catalog_item_in_txn,
     check_guest_search_rate_limit,
@@ -142,16 +141,17 @@ def catalog_add(request: Request, body: CollectionAddRequest, user: dict = Depen
     if not uid:
         raise HTTPException(status_code=401, detail="Authentication token missing or invalid")
 
-    # Server-side entitlement (never trusted from the client)
-    from tier_gatekeeper import TIER_COIN_LIMITS, get_user_profile, get_user_tier
-    profile = get_user_profile(uid)
-    tier = get_user_tier(profile)
-    if tier == "power_user" or profile.get("power_user") is True:
-        limit = float("inf")
-    elif tier == "free":
-        limit = FREE_TRIAL_ITEM_LIMIT
-    else:
-        limit = TIER_COIN_LIMITS.get(tier, FREE_TRIAL_ITEM_LIMIT)
+    # Server-side entitlement (never trusted from the client). Same allowance as
+    # /subscription-status (payment_routes.py:149-153): Founding Beta from Firebase Auth
+    # creation time; None = unlimited; Auth failure = 503 (never a grant).
+    from tier_gatekeeper import AuthFactsUnavailable, get_user_allowance, get_user_profile
+    sign_in_provider = (user.get("firebase") or {}).get("sign_in_provider")
+    try:
+        profile = get_user_profile(uid, uid_for_auth=uid, sign_in_provider=sign_in_provider)
+    except AuthFactsUnavailable:
+        raise HTTPException(status_code=503, detail="Account check unavailable, try again")
+    coins = get_user_allowance(profile)["coins"]
+    limit = float("inf") if coins is None else coins
 
     idem_key = request.headers.get("Idempotency-Key") or body.idempotency_key
 

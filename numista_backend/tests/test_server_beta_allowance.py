@@ -542,3 +542,18 @@ def test_r13_eric_silver_example(fake_db, no_count):
     assert body["coin_limit"] is None
     assert body["unlimited"] is True
     assert body["daily_ai_allowance"] == {"deepdive": 1500, "invoice_scan": 750}
+
+
+def test_l8_power_user_flag_ignored_by_check_and_enforce_coin_limit():
+    with patch("tier_gatekeeper.get_user_profile", return_value={"power_user": True}), \
+         patch("tier_gatekeeper.get_coin_count", return_value=11):
+        with pytest.raises(HTTPException) as exc:
+            check_and_enforce_coin_limit("u1")
+        assert exc.value.status_code == 403
+
+
+def test_l9_power_user_flag_ignored_by_check_and_increment_daily_usage():
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    profile = {"power_user": True, "deepdive_count": 3, "last_usage_date": today_str}
+    with patch("tier_gatekeeper.get_user_profile", return_value=profile):
+        assert check_and_increment_daily_usage("u1", "deepdive") is False
