@@ -140,7 +140,7 @@ class TestTierGatekeeper(unittest.TestCase):
         allowed_deepdive = tier_gatekeeper.check_and_increment_daily_usage(self.test_email, "deepdive")
         self.assertFalse(allowed_deepdive)
         
-        print("[OK] Power User bypass verified successfully (No limits applied)!")
+        print("[OK] Stale power_user flag ignored for free tier (AMEND-A)!")
 
     @patch("stripe.checkout.Session.create")
     @patch("stripe.billing_portal.Session.create")

@@ -14,11 +14,7 @@ from catalog_service import (  # noqa: E402
     add_catalog_item_in_txn,
 )
 from tests.test_catalog_collection_routing import (  # noqa: E402
-    FUGIO,
-    MEDAL,
     MORGAN,
-    NOTE,
-    PHL1P,
     SPAN8R,
     FakeDb,
     FakeTx,

@@ -461,9 +461,6 @@ for (const [key, val] of [
   ["locked_pending_upgrade", false],
 ]) {
   test(`DENY: owner cannot set '${key}' on own user doc create (AMEND-A C-3)`, async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      try { await doc(context.firestore(), userDocPath).delete(); } catch (_) {}
-    });
     const db = ownerCtx.firestore();
     await assertFails(
       setDoc(doc(db, userDocPath), { display_name: "Alice", [key]: val })
