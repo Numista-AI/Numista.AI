@@ -4,6 +4,7 @@ import os
 from datetime import timedelta
 from typing import Any, Dict, Optional
 
+import google.auth
 from google.auth.transport import requests as google_auth_requests
 
 DEFAULT_SIGNER_SA = os.getenv(
@@ -13,6 +14,21 @@ DEFAULT_SIGNER_SA = os.getenv(
         "568985927038-compute@developer.gserviceaccount.com",
     ),
 )
+
+# IAM Credentials SignBlob needs a cloud-platform-scoped token; the storage
+# client's own token on Cloud Run is storage-scoped only (403 SCOPE_INSUFFICIENT).
+_IAM_SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
+
+_signing_creds = None
+
+
+def _get_signing_creds():
+    global _signing_creds
+    if _signing_creds is None:
+        _signing_creds, _ = google.auth.default(scopes=_IAM_SCOPES)
+    if not _signing_creds.valid:
+        _signing_creds.refresh(google_auth_requests.Request())
+    return _signing_creds
 
 
 def generate_v4_signed_url(
@@ -43,10 +59,11 @@ def generate_v4_signed_url(
 
     creds = getattr(storage_client, "_credentials", None)
     if creds is not None and not hasattr(creds, "sign_bytes"):
-        auth_req = google_auth_requests.Request()
-        creds.refresh(auth_req)
-        sa_email = getattr(creds, "service_account_email", None) or DEFAULT_SIGNER_SA
+        signing_creds = _get_signing_creds()
+        sa_email = getattr(signing_creds, "service_account_email", None)
+        if not sa_email or sa_email == "default":
+            sa_email = DEFAULT_SIGNER_SA
         sign_kwargs["service_account_email"] = sa_email
-        sign_kwargs["access_token"] = creds.token
+        sign_kwargs["access_token"] = signing_creds.token
 
     return blob.generate_signed_url(**sign_kwargs)

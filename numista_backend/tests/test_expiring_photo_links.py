@@ -208,16 +208,21 @@ def test_8_partial_batch_failure_preserves_valid_urls():
     assert bad_url in data["errors"]
 
 
-def test_9_iam_signblob_fallback_on_missing_private_key():
+def test_9_iam_signblob_fallback_on_missing_private_key(monkeypatch):
     mock_storage = MagicMock()
     mock_blob = MagicMock()
     mock_blob.generate_signed_url.return_value = "https://storage.googleapis.com/iam-signed"
     mock_storage.bucket.return_value.blob.return_value = mock_blob
 
-    fake_creds = MagicMock(spec=["refresh", "service_account_email", "token"])
+    fake_creds = MagicMock(spec=["refresh", "service_account_email", "token", "valid"])
     fake_creds.service_account_email = "sa@proj.iam.gserviceaccount.com"
     fake_creds.token = "tok_123"
+    fake_creds.valid = False
     mock_storage._credentials = fake_creds
+    # SIGN-FIX-1: the signing token now comes from cloud-platform-scoped ADC.
+    from services import gcs_signing_service as _gss
+    monkeypatch.setattr(_gss, "_signing_creds", None)
+    monkeypatch.setattr(_gss.google.auth, "default", MagicMock(return_value=(fake_creds, "proj")))
 
     url = generate_v4_signed_get_url(
         mock_storage,
