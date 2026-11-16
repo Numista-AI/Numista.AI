@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 import tier_gatekeeper
@@ -15,10 +16,12 @@ from tier_gatekeeper import (
     AuthFactsUnavailable,
     _bigger,
     auth_beta_facts,
+    check_and_enforce_coin_limit,
     check_and_increment_daily_usage,
     get_user_allowance,
     get_user_profile,
     get_user_tier,
+    within_limit,
 )
 
 
@@ -226,8 +229,12 @@ def test_p13_empty_profile():
 
 
 # ==============================================================================
-# L: Limits (L2, L3, L6, L7; L1, L4, L5 land in commit 2)
+# L: Limits (L1-L7)
 # ==============================================================================
+
+def test_l1_free_limit_is_10():
+    assert TIER_COIN_LIMITS["free"] == 10
+
 
 def test_l2_unlimited_coin_limits_are_none():
     assert TIER_COIN_LIMITS["founding_beta"] is None
@@ -245,6 +252,30 @@ def test_l3_daily_allowances_and_no_float_inf():
         for v in row.values():
             if isinstance(v, (int, float)):
                 assert not math.isinf(v)
+
+
+def test_l4_within_limit():
+    assert within_limit("free", 10) is True
+    assert within_limit("free", 11) is False
+    assert within_limit("founding_beta", 10**6) is True
+
+
+def test_l5_check_and_enforce_coin_limit():
+    with (
+        patch("tier_gatekeeper.get_user_profile", return_value={"beta_tester": True}),
+        patch("tier_gatekeeper.get_coin_count", return_value=5000),
+    ):
+        assert check_and_enforce_coin_limit("u1") is True
+
+    with (
+        patch("tier_gatekeeper.get_user_profile", return_value={}),
+        patch("tier_gatekeeper.get_coin_count", return_value=11),
+        patch("tier_gatekeeper.create_upgrade_checkout_session", return_value=None),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            check_and_enforce_coin_limit("u1")
+        assert exc.value.status_code == 403
+        assert exc.value.detail["stats"]["limit"] == 10
 
 
 def test_l6_cutoff_constant_est():

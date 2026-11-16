@@ -192,7 +192,7 @@ class TestTierGatekeeper(unittest.TestCase):
         
         # 2. Power user bypass limit check
         user_ref.set({"stripe_tier": "free", "power_user": True})
-        # Add more coins exceeding Free tier limit (limit = 20)
+        # Add more coins exceeding Free tier limit (limit = 10)
         for i in range(25):
             coins_ref.document(f"coin_{i}").set({"Year": "1921", "Denomination": "1 Dollar"})
             
@@ -207,7 +207,7 @@ class TestTierGatekeeper(unittest.TestCase):
         self.assertEqual(ctx.exception.status_code, 403)
         self.assertEqual(ctx.exception.detail["error"], "tier_limit_exceeded")
         self.assertEqual(ctx.exception.detail["stats"]["coin_count"], 26)
-        self.assertEqual(ctx.exception.detail["stats"]["limit"], 20)
+        self.assertEqual(ctx.exception.detail["stats"]["limit"], 10)
         self.assertEqual(ctx.exception.detail["stats"]["tier"], "free")
         self.assertEqual(ctx.exception.detail["stats"]["next_tier"], "hobbyist")
         self.assertEqual(ctx.exception.detail["upgrade_url"], "https://checkout.stripe.com/pay/test_session_123")

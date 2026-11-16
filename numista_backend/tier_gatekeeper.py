@@ -41,7 +41,7 @@ except Exception as e:
 # ==============================================================================
 
 TIER_COIN_LIMITS = {
-    "free": 20,
+    "free": 10,                 # Eric: Free 10 coins (1 Nov and 10 Nov 2026)
     "pro": 100,
     "numismatist": 250,
     "dealer": 500,
