@@ -453,7 +453,7 @@ async def update_ticket(ticket_id: str, body: dict, uid: str = Depends(get_curre
         private_doc = private_ref.get()
         if private_doc.exists:
             grant = (private_doc.to_dict() or {}).get("support_grant", {})
-            if grant and _grant_is_valid(grant):
+            if grant and _grant_is_active(ticket):
                 forbidden = {"allowed_coin_ids", "diagnostic_package", "selected_coin_ids"}
                 if forbidden & set(body.keys()):
                     raise HTTPException(423, "Cannot expand scope while a support grant is active")
