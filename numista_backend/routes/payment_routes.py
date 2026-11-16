@@ -16,11 +16,12 @@ from routes.deps import db, logger, get_current_user
 from tier_gatekeeper import (
     get_user_profile,
     get_user_tier,
+    get_user_allowance,
     get_coin_count,
     TIER_COIN_LIMITS,
-    TIER_DAILY_ALLOWANCES,
     unlock_user_coins,
     lock_overflow_coins,
+    AuthFactsUnavailable,
 )
 
 router = APIRouter(prefix="/api/stripe", tags=["Stripe Payments & Subscriptions"])
@@ -142,11 +143,18 @@ async def api_subscription_status(
         if uid.strip() != caller_uid and uid.strip().lower() != caller_email:
             raise HTTPException(status_code=403, detail="Forbidden")
     try:
-        profile = get_user_profile(uid)
+        is_own = uid.strip() == caller_uid or uid.strip().lower() == caller_email
+        auth_uid = caller_uid if is_own else (uid.strip() if "@" not in uid else None)
+        sign_in_provider = (_user.get("firebase") or {}).get("sign_in_provider") if is_own else None
+        try:
+            profile = get_user_profile(uid, uid_for_auth=auth_uid, sign_in_provider=sign_in_provider)
+        except AuthFactsUnavailable:
+            raise HTTPException(status_code=503, detail="Account check unavailable, try again")
         tier = get_user_tier(profile)
+        allowance = get_user_allowance(profile)
         coin_count = get_coin_count(uid)
-        coin_limit = TIER_COIN_LIMITS.get(tier, TIER_COIN_LIMITS["free"])
-        ai_allowance = TIER_DAILY_ALLOWANCES.get(tier, TIER_DAILY_ALLOWANCES["free"])
+        coin_limit = allowance["coins"]
+        ai_allowance = {"deepdive": allowance["deepdive"], "invoice_scan": allowance["invoice_scan"]}
 
         return {
             "uid": uid,
@@ -155,10 +163,13 @@ async def api_subscription_status(
             "grace_period_until": profile.get("grace_period_until"),
             "coin_count": coin_count,
             "coin_limit": coin_limit,
+            "unlimited": coin_limit is None,
             "daily_ai_allowance": ai_allowance,
             "deepdive_count": profile.get("deepdive_count", 0),
             "invoice_scan_count": profile.get("invoice_scan_count", 0),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Error getting subscription status")
         raise HTTPException(status_code=500, detail=str(e))

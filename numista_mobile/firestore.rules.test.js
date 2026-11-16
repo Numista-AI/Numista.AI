@@ -201,6 +201,34 @@ test("DENY: owner attempts to change sandbox_cleared on own user doc", async () 
   );
 });
 
+test("DENY: owner cannot update 'power_user' on own user doc (AMEND-A C-3)", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, `users/${ownerEmail}`), { power_user: true })
+  );
+});
+
+test("DENY: owner cannot update 'family_group_id' on own user doc (AMEND-A C-3)", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, `users/${ownerEmail}`), { family_group_id: "fg_other" })
+  );
+});
+
+test("ALLOW: owner set({default_sort_field:'year', default_sort_asc:true}, merge) on doc holding power_user & deepdive_count", async () => {
+  await seedUserDoc({ power_user: true, deepdive_count: 5 });
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    setDoc(
+      doc(db, `users/${ownerEmail}`),
+      { default_sort_field: "year", default_sort_asc: true },
+      { merge: true }
+    )
+  );
+});
+
 test("DENY: owner_cannot_self_grant_estate — is_lifetime_family_estate blocked on user doc", async () => {
   await seedUserDoc();
   const db = ownerCtx.firestore();
@@ -415,6 +443,30 @@ test("DENY: owner cannot set 'admin' on own user doc", async () => {
     setDoc(doc(db, userDocPath), { display_name: "Alice", admin: true })
   );
 });
+
+// ── AMEND-A C-3: DENY setDoc-create for every additional server-only key ─────
+for (const [key, val] of [
+  ["power_user", true],
+  ["family_group_id", "fg_123"],
+  ["deepdive_count", 0],
+  ["invoice_scan_count", 0],
+  ["last_usage_date", "2026-11-16"],
+  ["creation_timestamp", 0],
+  ["_auth_created_ms", 1],
+  ["_auth_is_anonymous", false],
+  ["stripe_customer_id", "cus_fake"],
+  ["stripe_subscription_id", "sub_fake"],
+  ["subscription_status", "active"],
+  ["grace_period_until", 9999999999],
+  ["locked_pending_upgrade", false],
+]) {
+  test(`DENY: owner cannot set '${key}' on own user doc create (AMEND-A C-3)`, async () => {
+    const db = ownerCtx.firestore();
+    await assertFails(
+      setDoc(doc(db, userDocPath), { display_name: "Alice", [key]: val })
+    );
+  });
+}
 
 test("ALLOW: owner can create own user doc without entitlement fields", async () => {
   // Clear any existing doc first via admin context

@@ -96,7 +96,13 @@ service cloud.firestore {
     // On update: the diff must not include any of these keys.
     function _serverOnlyKeys() {
       return ['tier', 'stripe_tier', 'beta_tester', 'is_lifetime_family_estate',
-              'is_ai_qc_account', 'is_bot_account', 'sandbox_cleared', 'admin'];
+              'is_ai_qc_account', 'is_bot_account', 'sandbox_cleared', 'admin',
+              // AMEND-A (16 Nov 2026): every other users/{id} field the server trusts
+              'power_user', 'family_group_id',
+              'deepdive_count', 'invoice_scan_count', 'last_usage_date',
+              'creation_timestamp', '_auth_created_ms', '_auth_is_anonymous',
+              'stripe_customer_id', 'stripe_subscription_id', 'subscription_status',
+              'grace_period_until', 'locked_pending_upgrade'];
     }
     function _noEntitlementChange() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(_serverOnlyKeys());
