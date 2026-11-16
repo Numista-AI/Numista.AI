@@ -13,7 +13,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/valuation_mode_service.dart';
 import 'currency_collection_screen.dart';
-import 'unified_coin_detail_screen.dart';
 import '../services/world_item_service.dart';
 import '../services/auth_service.dart';
 import '../models/coin_model.dart';
@@ -2763,19 +2762,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             final effectiveId = crw.isVirtualChild ? (crw.parentDocId ?? crw.id) : crw.id;
 
             void onTap() {
-              final parentDoc = crw.isVirtualChild
-                  ? _cachedCoinsDocs.where((d) => d.id == crw.parentDocId).firstOrNull
-                  : crw.snapshot;
-              final coinData = (parentDoc?.data() as Map<String, dynamic>?) ?? m;
-              UnifiedCoinDetailScreen.show(
-                context,
-                coin: CoinModel.fromMap(coinData, effectiveId),
-                snapshot: parentDoc,
-                initialParentIndex: resolveParentIndex(docs, effectiveId),
-                collectionRows: docs,
-                cachedCoinsDocs: _cachedCoinsDocs,
-                legacyOpen: () => _showCoinInspectorDialog(effectiveId, m),
-              );
+              if (crw.isVirtualChild) {
+                final parentDoc = _cachedCoinsDocs
+                    .where((d) => d.id == crw.parentDocId)
+                    .firstOrNull;
+                if (parentDoc == null) return;
+                final parentData = (parentDoc.data() as Map<String, dynamic>?) ?? {};
+                _openCoinDetailForRow(parentDoc.id, parentData);
+              } else {
+                _openCoinDetailForRow(crw.id, m);
+              }
             }
 
             // Actions cell (col 0)
@@ -2791,56 +2787,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _iconBtn(Icons.info_outline,
-                          crw.isVirtualChild ? 'View Parent Set' : 'View Details', () {
-                          // G-2: For virtual children, look up parent doc data.
-                          // If parent not in cache, skip navigation.
-                          if (crw.isVirtualChild) {
-                            final parentDoc = _cachedCoinsDocs
-                                .where((d) => d.id == crw.parentDocId)
-                                .firstOrNull;
-                            if (parentDoc == null) return; // parent missing — skip
-                            final parentData = (parentDoc.data() as Map<String, dynamic>?) ?? {};
-                            final coin = CoinModel.fromMap(parentData, parentDoc.id);
-                            UnifiedCoinDetailScreen.show(
-                              context,
-                              coin: coin,
-                              snapshot: parentDoc,
-                              initialParentIndex: resolveParentIndex(docs, parentDoc.id),
-                              collectionRows: docs,
-                              cachedCoinsDocs: _cachedCoinsDocs,
-                              legacyOpen: () => CoinDetailScreen.show(
-                                context,
-                                coin: coin,
-                                spotPrices: _spotPrices,
-                                onNavigateToAiChat: widget.onNavigateWithQuery != null
-                                    ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
-                                    : null,
-                                onDeleted: () => setState(() {}),
-                                onEdited: () => setState(() {}),
-                              ),
-                            );
-                          } else {
-                            final coin = CoinModel.fromMap(m, crw.id);
-                            UnifiedCoinDetailScreen.show(
-                              context,
-                              coin: coin,
-                              snapshot: crw.snapshot,
-                              initialParentIndex: resolveParentIndex(docs, crw.id),
-                              collectionRows: docs,
-                              cachedCoinsDocs: _cachedCoinsDocs,
-                              legacyOpen: () => CoinDetailScreen.show(
-                                context,
-                                coin: coin,
-                                spotPrices: _spotPrices,
-                                onNavigateToAiChat: widget.onNavigateWithQuery != null
-                                    ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
-                                    : null,
-                                onDeleted: () => setState(() {}),
-                                onEdited: () => setState(() {}),
-                              ),
-                            );
-                          }
-                        }),
+                          crw.isVirtualChild ? 'View Parent Set' : 'View Details', onTap),
+                        _iconBtn(Icons.photo_library_outlined, 'Photos & eBay',
+                            () => _showCoinInspectorDialog(effectiveId, m)),
                         if (canMutate) _iconBtn(Icons.edit_outlined, 'Edit',
                             () => _onEdit(crw.id, m)),
                         if (canMutate) _iconBtn(Icons.auto_stories, 'AI Deep Dive',
@@ -3093,19 +3042,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           child: InkWell(
             onTap: () {
               setState(() => _selectedCoinId = effectiveId);
-              final parentDoc = crw.isVirtualChild
-                  ? _cachedCoinsDocs.where((d) => d.id == crw.parentDocId).firstOrNull
-                  : crw.snapshot;
-              final coinData = (parentDoc?.data() as Map<String, dynamic>?) ?? m;
-              UnifiedCoinDetailScreen.show(
-                context,
-                coin: CoinModel.fromMap(coinData, effectiveId),
-                snapshot: parentDoc,
-                initialParentIndex: resolveParentIndex(docs, effectiveId),
-                collectionRows: docs,
-                cachedCoinsDocs: _cachedCoinsDocs,
-                legacyOpen: () => _showCoinInspectorDialog(effectiveId, m),
-              );
+              if (crw.isVirtualChild) {
+                final parentDoc = _cachedCoinsDocs
+                    .where((d) => d.id == crw.parentDocId)
+                    .firstOrNull;
+                if (parentDoc == null) return;
+                final parentData = (parentDoc.data() as Map<String, dynamic>?) ?? {};
+                _openCoinDetailForRow(parentDoc.id, parentData);
+              } else {
+                _openCoinDetailForRow(crw.id, m);
+              }
             },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
@@ -3171,6 +3117,25 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               ),
                             ),
                           ),
+                        Positioned(
+                          bottom: 4,
+                          right: 4,
+                          child: Material(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(4),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(4),
+                              onTap: () => _showCoinInspectorDialog(effectiveId, m),
+                              child: const Tooltip(
+                                message: 'Photos & eBay',
+                                child: Padding(
+                                  padding: EdgeInsets.all(4),
+                                  child: Icon(Icons.photo_library_outlined, size: 16, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -3183,16 +3148,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           final parentId = m['parent_set_id'].toString();
                           final parentDoc = _cachedCoinsDocs.where((d) => d.id == parentId).firstOrNull;
                           if (parentDoc != null) {
-                            final parentData = parentDoc.data();
-                            UnifiedCoinDetailScreen.show(
-                              context,
-                              coin: CoinModel.fromMap(parentData, parentDoc.id),
-                              snapshot: parentDoc,
-                              initialParentIndex: resolveParentIndex(docs, parentDoc.id),
-                              collectionRows: docs,
-                              cachedCoinsDocs: _cachedCoinsDocs,
-                              legacyOpen: () => _showCoinInspectorDialog(parentDoc.id, parentData),
-                            );
+                            final parentData = (parentDoc.data() as Map<String, dynamic>?) ?? {};
+                            _openCoinDetailForRow(parentDoc.id, parentData);
                           }
                         },
                         child: Container(
@@ -3495,6 +3452,21 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
+
+  void _openCoinDetailForRow(String coinId, Map<String, dynamic> data) {
+    setState(() => _selectedCoinId = coinId);
+    final coin = CoinModel.fromMap(data, coinId);
+    CoinDetailScreen.show(
+      context,
+      coin: coin,
+      spotPrices: _spotPrices,
+      onNavigateToAiChat: widget.onNavigateWithQuery != null
+          ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
+          : null,
+      onDeleted: () => setState(() {}),
+      onEdited: () => setState(() {}),
+    );
+  }
 
   // --- Coin Inspector Dialog ------------------------------------------------
   void _showCoinInspectorDialog(String coinId, Map<String, dynamic> data) {
@@ -6252,6 +6224,28 @@ class _GenerateReportDialogState extends State<_GenerateReportDialog> {
   }
 }
 
+/// Safely extracts 1D horizontal scroll metrics for [_TopScrollbarTrackWidget].
+/// Returns `null` when [controller] has no clients, multiple positions, no
+/// content dimensions, non-positive `maxScrollExtent`, or is attached to a 2D
+/// scroll position (which can throw on `.position` / `.offset` in Flutter web).
+({double maxExtent, double viewport, double offset})? safeHorizontalMetrics(
+    ScrollController controller) {
+  try {
+    if (!controller.hasClients ||
+        !controller.position.hasContentDimensions ||
+        controller.position.maxScrollExtent <= 0) {
+      return null;
+    }
+    final double maxExtent = controller.position.maxScrollExtent;
+    final double viewport = controller.position.viewportDimension;
+    final double offset = controller.offset.clamp(0.0, maxExtent);
+    return (maxExtent: maxExtent, viewport: viewport, offset: offset);
+  } catch (e) {
+    debugPrint('Top scrollbar track skipped (2D scroll position): $e');
+    return null;
+  }
+}
+
 // --- Custom Top Scrollbar Track Widget ----------------------------------------
 class _TopScrollbarTrackWidget extends StatefulWidget {
   final ScrollController controller;
@@ -6277,24 +6271,13 @@ class _TopScrollbarTrackWidgetState extends State<_TopScrollbarTrackWidget> {
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
-        // TableView attaches a 2D scroll position. Accessing .position as a
-        // 1D ScrollPosition can throw on Flutter web and gray-screen the tab.
-        late final double maxExtent;
-        late final double viewport;
-        late final double offset;
-        try {
-          if (!widget.controller.hasClients ||
-              !widget.controller.position.hasContentDimensions ||
-              widget.controller.position.maxScrollExtent <= 0) {
-            return const SizedBox.shrink();
-          }
-          maxExtent = widget.controller.position.maxScrollExtent;
-          viewport = widget.controller.position.viewportDimension;
-          offset = widget.controller.offset.clamp(0.0, maxExtent);
-        } catch (e) {
-          debugPrint('Top scrollbar track skipped (2D scroll position): $e');
+        final metrics = safeHorizontalMetrics(widget.controller);
+        if (metrics == null) {
           return const SizedBox.shrink();
         }
+        final double maxExtent = metrics.maxExtent;
+        final double viewport = metrics.viewport;
+        final double offset = metrics.offset;
 
         final double totalContent = maxExtent + viewport;
         final double thumbRatio = (viewport / totalContent).clamp(0.1, 0.9);
