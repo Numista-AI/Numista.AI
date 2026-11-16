@@ -269,15 +269,20 @@ def test_5_verify_firebase_bearer_token_ignores_query_param_token():
         mock_verify.assert_called_once_with("header_jwt")
 
 
-def test_6_shared_put_signed_url_iam_fallback_and_import_basename_sanitization():
+def test_6_shared_put_signed_url_iam_fallback_and_import_basename_sanitization(monkeypatch):
     mock_storage = MagicMock()
     mock_blob = MagicMock()
     mock_blob.generate_signed_url.return_value = "https://storage.googleapis.com/put-ok"
     mock_storage.bucket.return_value.blob.return_value = mock_blob
-    fake_creds = MagicMock(spec=["refresh", "service_account_email", "token"])
+    fake_creds = MagicMock(spec=["refresh", "service_account_email", "token", "valid"])
     fake_creds.service_account_email = "sa@proj.iam.gserviceaccount.com"
     fake_creds.token = "tok_put"
+    fake_creds.valid = False
     mock_storage._credentials = fake_creds
+    # SIGN-FIX-1: the signing token now comes from cloud-platform-scoped ADC.
+    from services import gcs_signing_service as _gss
+    monkeypatch.setattr(_gss, "_signing_creds", None)
+    monkeypatch.setattr(_gss.google.auth, "default", MagicMock(return_value=(fake_creds, "proj")))
 
     url = generate_v4_signed_url(
         mock_storage,
