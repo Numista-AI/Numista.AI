@@ -1,7 +1,9 @@
 import os
+import functools
+from typing import Optional
 import stripe
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, auth as firebase_auth
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from stripe_config import load_stripe_keys
@@ -45,8 +47,9 @@ TIER_COIN_LIMITS = {
     "dealer": 500,
     "estate": 1000,
     "family_estate": 2500,
-    "sovereign": float("inf"),
-    "power_user": float("inf"),
+    "founding_beta": None,       # unlimited (JSON-safe), NET-827 §4.5 convention (v1.10 L475 "estate": None); Eric 11 Nov 2026
+    "sovereign": None,
+    "power_user": None,
 }
 
 TIER_DAILY_ALLOWANCES = {
@@ -56,9 +59,59 @@ TIER_DAILY_ALLOWANCES = {
     "dealer": {"deepdive": 100, "invoice_scan": 50},
     "estate": {"deepdive": 500, "invoice_scan": 250},
     "family_estate": {"deepdive": 1500, "invoice_scan": 750},
+    "founding_beta": {"deepdive": 1500, "invoice_scan": 750},   # Eric, 11 Nov 2026 7:08 PM ET
     "sovereign": {"deepdive": 5000, "invoice_scan": 2500},
-    "power_user": {"deepdive": float("inf"), "invoice_scan": float("inf")}
+    "power_user": {"deepdive": None, "invoice_scan": None}
 }
+
+
+def within_limit(tier: str, count: int) -> bool:
+    limit = TIER_COIN_LIMITS.get(tier, TIER_COIN_LIMITS["free"])
+    return limit is None or count <= limit
+
+
+# ==============================================================================
+# 🎟️ FOUNDING BETA BY SIGNUP DATE (server-side, from Firebase Auth)
+# ==============================================================================
+
+# Accounts created before 15 Dec 2026 00:00:00 America/New_York (EST, UTC-5)
+# = 2026-12-15T05:00:00Z. 14 Dec 2026 23:59:59.999 ET is the last counted instant.
+BETA_SIGNUP_CUTOFF_MS = 1797310800000
+
+# Keys injected by the server only. Any copy read from a Firestore doc is discarded.
+_AUTH_KEYS = ("_auth_created_ms", "_auth_is_anonymous")
+
+
+class AuthFactsUnavailable(Exception):
+    """Firebase Auth lookup failed or gave no creation time.
+    Callers must answer 503: never grant a tier and never lock coins on this error."""
+
+
+@functools.lru_cache(maxsize=50000)
+def _auth_facts_by_uid(uid: str) -> tuple:
+    # Successful results are cached for the life of the instance (creation time never changes).
+    # Exceptions are NOT cached by lru_cache, so a failed lookup is retried on the next call.
+    rec = firebase_auth.get_user(uid)
+    created = rec.user_metadata.creation_timestamp  # int ms, or None
+    if created is None:
+        raise AuthFactsUnavailable("no creation time")
+    is_anonymous = len(rec.provider_data or []) == 0
+    return int(created), is_anonymous
+
+
+def auth_beta_facts(uid: str, sign_in_provider: Optional[str] = None) -> dict:
+    """Server-derived facts for get_user_tier. Raises AuthFactsUnavailable on any failure."""
+    if not uid or "@" in uid:
+        raise AuthFactsUnavailable("a Firebase uid is required")
+    try:
+        created, is_anonymous = _auth_facts_by_uid(uid)
+    except AuthFactsUnavailable:
+        raise
+    except Exception as e:
+        raise AuthFactsUnavailable(type(e).__name__) from e
+    if sign_in_provider == "anonymous":
+        is_anonymous = True
+    return {"_auth_created_ms": created, "_auth_is_anonymous": is_anonymous}
 
 # ==============================================================================
 # 🔄 LEGACY MIGRATION & USER PROFILE LOGIC
@@ -109,52 +162,96 @@ def migrate_legacy_collection_chunked(legacy_email: str, new_uid: str):
         print(f"[Tier Gatekeeper] Error during legacy migration for {legacy_email}: {e}")
 
 
-def get_user_profile(user_identifier: str) -> dict:
+def get_user_profile(user_identifier: str, uid_for_auth: Optional[str] = None,
+                     sign_in_provider: Optional[str] = None) -> dict:
     """
     Reads the user document from Firestore.
     Checks users/{uid} first. If missing or email-like, checks users/{email} fallback.
+    When uid_for_auth is given, adds server-derived Firebase Auth facts (Founding Beta by
+    signup date); that lookup raises AuthFactsUnavailable on failure (callers answer 503).
     """
+    profile = {}
     try:
         doc_ref = db.collection("users").document(user_identifier)
         doc = doc_ref.get()
         if doc.exists:
-            return doc.to_dict() or {}
-
-        if "@" in user_identifier:
-            return {}
-
-        return {}
+            profile = doc.to_dict() or {}
     except Exception as e:
         print(f"[Tier Gatekeeper] Error reading profile for {user_identifier}: {e}")
-        return {}
+        profile = {}
+    for k in _AUTH_KEYS:          # never trust a stored copy of a server-only key
+        profile.pop(k, None)
+    if uid_for_auth:
+        profile.update(auth_beta_facts(uid_for_auth, sign_in_provider))
+    return profile
+
+
+_ALLOWANCE_ITEMS = ("coins", "deepdive", "invoice_scan")
+
+
+def _coin_rank(tier: str) -> float:
+    """Coin allowance used for ranking; None (unlimited, NET-827 §4.5) and float('inf') rank highest."""
+    limit = TIER_COIN_LIMITS.get(tier, TIER_COIN_LIMITS["free"])
+    return float("inf") if limit is None else float(limit)
+
+
+def _item_limit(tier: str, item: str):
+    """One allowance item for one tier; None = unlimited. Unknown tiers use 'free' (as today)."""
+    if item == "coins":
+        return TIER_COIN_LIMITS.get(tier, TIER_COIN_LIMITS["free"])
+    daily = TIER_DAILY_ALLOWANCES.get(tier, TIER_DAILY_ALLOWANCES["free"])
+    return daily.get(item, 0)
+
+
+def _bigger(a, b):
+    """None (unlimited) beats any number."""
+    if a is None or b is None:
+        return None
+    return max(a, b)
+
+
+def _tier_candidates(user_profile: dict) -> list:
+    """Paid (stripe_tier -> tier), comp (lifetime / AI QC -> family_estate) and Founding Beta
+    (beta_tester flag, or a non-anonymous Firebase Auth account created before
+    BETA_SIGNUP_CUTOFF_MS -> founding_beta), in tie-break order: paid first.
+    The Auth facts are injected only by get_user_profile(uid_for_auth=...); the
+    client-writable 'creation_timestamp' Firestore field is not read (closes NET-827
+    open risk 14 for tier resolution). Beta never expires on the server."""
+    paid = user_profile.get("stripe_tier") or user_profile.get("tier")
+    paid = str(paid).lower().strip() if paid else None
+    comp = None
+    if user_profile.get("is_lifetime_family_estate") or user_profile.get("is_ai_qc_account"):
+        comp = "family_estate"
+    created_ms = user_profile.get("_auth_created_ms")
+    date_beta = (isinstance(created_ms, int) and not isinstance(created_ms, bool)
+                 and user_profile.get("_auth_is_anonymous") is False
+                 and created_ms < BETA_SIGNUP_CUTOFF_MS)
+    beta = "founding_beta" if (user_profile.get("beta_tester") or date_beta) else None
+    return [c for c in (paid, comp, beta) if c]
 
 
 def get_user_tier(user_profile: dict) -> str:
-    """Resolves subscription tier (stripe_tier -> tier -> beta/lifetime flags -> 'free').
+    """Tier NAME for reports: the candidate with the largest coin allowance; ties go to the
+    paid tier (Eric, 11 Nov 2026). Allowance values come from get_user_allowance."""
+    best = None
+    for candidate in _tier_candidates(user_profile):
+        if best is None or _coin_rank(candidate) > _coin_rank(best):
+            best = candidate
+    return best or "free"
 
-    Beta access NEVER expires on the server — the cutoff (accounts created before
-    2026-11-26T05:00Z) is enforced on the client by account creationTime.
-    The server treats beta_tester=True as permanent family_estate regardless of any
-    beta_access_expires field written by the Aug 2026 backfill script.
-    """
-    if user_profile.get("is_lifetime_family_estate") or user_profile.get("is_ai_qc_account"):
-        return "family_estate"
-    if user_profile.get("beta_tester"):
-        return "family_estate"  # permanent — do NOT check beta_access_expires
 
-    # Also grant beta tier if account was created before the Facebook ad launch (1795669200000 ms epoch)
-    creation_ts = user_profile.get('creation_timestamp')
-    if creation_ts is not None:
-        try:
-            if int(creation_ts) < 1795669200000:
-                return 'family_estate'
-        except (ValueError, TypeError):
-            pass
-
-    tier = user_profile.get("stripe_tier") or user_profile.get("tier")
-    if tier:
-        return str(tier).lower().strip()
-    return "free"
+def get_user_allowance(user_profile: dict) -> dict:
+    """Item-by-item bigger allowance over every candidate (Eric, 11 Nov 2026 7:08 PM ET):
+    coins, deep dives and invoice scans are each compared on their own; None (unlimited)
+    beats any number. No candidate -> 'free'."""
+    candidates = _tier_candidates(user_profile) or ["free"]
+    out = {}
+    for item in _ALLOWANCE_ITEMS:
+        value = _item_limit(candidates[0], item)
+        for candidate in candidates[1:]:
+            value = _bigger(value, _item_limit(candidate, item))
+        out[item] = value
+    return out
 
 
 def get_coin_count(user_identifier: str) -> int:
@@ -241,7 +338,7 @@ def check_and_enforce_coin_limit(user_identifier: str, success_url: str = "https
     coin_count = get_coin_count(user_identifier)
     limit = TIER_COIN_LIMITS.get(tier, TIER_COIN_LIMITS["free"])
 
-    if coin_count > limit:
+    if not within_limit(tier, coin_count):
         tier_order = ["free", "pro", "numismatist", "dealer", "estate", "family_estate", "sovereign"]
         try:
             current_idx = tier_order.index(tier)
@@ -312,7 +409,7 @@ def check_and_increment_daily_usage(user_identifier: str, feature_type: str) -> 
     limit = allowance.get(feature_type, 0)
     current_count = user_profile.get(f"{feature_type}_count", 0)
 
-    if current_count >= limit:
+    if limit is not None and current_count >= limit:
         return False
 
     target_ref.update({
