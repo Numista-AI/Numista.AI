@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from numista_backend.services import gcs_signing_service as gss
+from services import gcs_signing_service as gss
 
 CLOUD_PLATFORM = ["https://www.googleapis.com/auth/cloud-platform"]
 
@@ -67,11 +67,12 @@ def test_t1_uses_cloud_platform_token_not_storage_token(monkeypatch):
     fake.refresh.assert_not_called()
 
 
-def test_t2_default_email_falls_back_to_signer_sa(monkeypatch):
+@pytest.mark.parametrize("sa_email", ["default", None, ""])
+def test_t2_default_email_falls_back_to_signer_sa(monkeypatch, sa_email):
     fake = MagicMock()
     fake.token = "tok-cp"
     fake.valid = True
-    fake.service_account_email = "default"
+    fake.service_account_email = sa_email
     _fake_default(monkeypatch, fake)
     storage, blob = _storage(_storage_creds_without_sign_bytes())
 

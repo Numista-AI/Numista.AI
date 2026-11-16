@@ -1,6 +1,7 @@
 """Leaf GCS V4 signed-URL helper with Cloud Run IAM signBlob fallback."""
 
 import os
+import threading
 from datetime import timedelta
 from typing import Any, Dict, Optional
 
@@ -20,15 +21,17 @@ DEFAULT_SIGNER_SA = os.getenv(
 _IAM_SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
 _signing_creds = None
+_signing_lock = threading.Lock()
 
 
 def _get_signing_creds():
     global _signing_creds
-    if _signing_creds is None:
-        _signing_creds, _ = google.auth.default(scopes=_IAM_SCOPES)
-    if not _signing_creds.valid:
-        _signing_creds.refresh(google_auth_requests.Request())
-    return _signing_creds
+    with _signing_lock:
+        if _signing_creds is None:
+            _signing_creds, _ = google.auth.default(scopes=_IAM_SCOPES)
+        if not _signing_creds.valid:
+            _signing_creds.refresh(google_auth_requests.Request())
+        return _signing_creds
 
 
 def generate_v4_signed_url(
