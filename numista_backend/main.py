@@ -3073,7 +3073,7 @@ def _enforce_vision_rate_cap(
     if not rate_key:
         raise HTTPException(status_code=401, detail="Invalid user identity in token")
     is_admin = user.get("admin") is True
-    check_and_increment_rate_cap(
+    _check_and_increment_rate_cap(
         rate_key, endpoint_key, daily_limit=daily_limit, is_admin=is_admin
     )
 
@@ -3964,16 +3964,11 @@ async def bulk_update_reviews(request: BulkUpdateRequest, _user: dict = Depends(
             raise HTTPException(status_code=400, detail=f"Invalid update field: {k}")
         canonical_updates[canonical_k] = v
 
-    # Dual-persist storage_location and Storage Location for compatibility
-    final_updates = dict(canonical_updates)
-    if "storage_location" in canonical_updates:
-        final_updates["Storage Location"] = canonical_updates["storage_location"]
-
-    if not raw_updates:
+    if not canonical_updates:
         raise HTTPException(status_code=400, detail="No updates provided")
 
     normalized_updates: Dict[str, Any] = {}
-    for k, v in raw_updates.items():
+    for k, v in canonical_updates.items():
         if k == "cost":
             if isinstance(v, bool) or v is None:
                 raise HTTPException(status_code=400, detail="Invalid cost value")
@@ -4029,7 +4024,7 @@ async def bulk_update_reviews(request: BulkUpdateRequest, _user: dict = Depends(
         batch = db.batch()
         batch_op_count = 0
         for doc_id in request.review_ids:
-            batch.update(queue_ref.document(doc_id), final_updates)
+            batch.update(queue_ref.document(doc_id), normalized_updates)
             batch_op_count += 1
             if batch_op_count >= 490:
                 batch.commit()

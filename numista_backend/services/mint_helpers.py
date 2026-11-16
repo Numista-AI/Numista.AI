@@ -8,7 +8,7 @@ PLAN_TWO_FIELD_MINT_MODEL_v3.0.md (§2.3, §3.2).
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Optional
 
 _DIRTY_PLACEHOLDERS = frozenset({"none", "(none)", "null", "n/a", "nan"})
 _PHILLY_TEXT_ALIASES = frozenset({"nmm", "no mint mark", "philadelphia"})
