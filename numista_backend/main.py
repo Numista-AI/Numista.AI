@@ -24,6 +24,7 @@ from google.cloud import documentai
 from google import genai
 from google.genai import types as genai_types
 import feedparser
+import functools
 import re
 import sqlite3
 from pathlib import Path
@@ -9889,6 +9890,47 @@ def collection_completion_stats(request: Request, current_user: Dict[str, Any] =
         raise HTTPException(status_code=500, detail=str(e))
 
 
+_DEFINITIVE_REFERENCE_BASE_COLS = (
+    "doc_id",
+    "year",
+    "denomination",
+    "mint_mark",
+    "variety",
+    "note",
+    "series",
+    "category",
+)
+_DEFINITIVE_REFERENCE_OPTIONAL_COLS = (
+    ("image_url_obverse", "''"),
+    ("image_url_reverse", "''"),
+    ("price_guide", "''"),
+    ("population_total", "0"),
+    ("apr_history", "''"),
+)
+
+
+@functools.lru_cache(maxsize=8)
+def _get_definitive_reference_select_clause(db_path: str, mtime_ns: int) -> str:
+    """Build and cache a deterministic SELECT column list for definitive_reference."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info(definitive_reference)")
+        existing_cols = {row[1] for row in cur.fetchall()}
+    finally:
+        conn.close()
+
+    cols = list(_DEFINITIVE_REFERENCE_BASE_COLS)
+    for col, default_sql in _DEFINITIVE_REFERENCE_OPTIONAL_COLS:
+        cols.append(col if col in existing_cols else f"{default_sql} AS {col}")
+    return ", ".join(cols)
+
+
+def _definitive_reference_select_clause(db_path: str = DB_PATH) -> str:
+    mtime_ns = os.stat(db_path).st_mtime_ns
+    return _get_definitive_reference_select_clause(db_path, mtime_ns)
+
+
 @app.get("/api/reference/search")
 def reference_search(request: Request, q: Optional[str] = "", page_size: int = 10, offset: int = 0, sort_by: str = "year", current_user: Dict[str, Any] = Depends(get_current_user)):
     """
@@ -9907,6 +9949,7 @@ def reference_search(request: Request, q: Optional[str] = "", page_size: int = 1
         }
         
     q = q.strip() if q else ""
+    conn = None
     try:
         owned_ids = _get_user_owned_doc_ids(user_email) if user_email else set()
         
@@ -9936,38 +9979,37 @@ def reference_search(request: Request, q: Optional[str] = "", page_size: int = 1
             # Show empty years (base coin types/programs) first, then sort by year chronologically
             order_by = "ORDER BY CASE WHEN year = '' THEN 0 ELSE 1 END, year ASC, variety ASC"
             
+        select_clause = _definitive_reference_select_clause(DB_PATH)
         cur.execute(
-            f"SELECT doc_id, year, denomination, mint_mark, variety, note, series, category, "
-            f"image_url_obverse, image_url_reverse, price_guide, population_total, apr_history "
+            f"SELECT {select_clause} "
             f"FROM definitive_reference WHERE {where_clause} "
             f"{order_by} "
             f"LIMIT :limit OFFSET :offset",
             {**params, "limit": page_size, "offset": offset}
         )
         rows = [dict(row) for row in cur.fetchall()]
-        conn.close()
         
         results = []
         for r in rows:
             doc_id = r["doc_id"]
-            obv = r["image_url_obverse"] or ""
-            rev = r["image_url_reverse"] or ""
+            obv = r.get("image_url_obverse") or ""
+            rev = r.get("image_url_reverse") or ""
             results.append({
                 "doc_id": doc_id,
-                "year": r["year"] or "",
-                "denomination": r["denomination"] or "",
-                "mint_mark": r["mint_mark"] or "",
-                "variety": r["variety"] or "",
-                "note": r["note"] or "",
-                "series": r["series"] or "",
-                "category": r["category"] or "",
+                "year": r.get("year") or "",
+                "denomination": r.get("denomination") or "",
+                "mint_mark": r.get("mint_mark") or "",
+                "variety": r.get("variety") or "",
+                "note": r.get("note") or "",
+                "series": r.get("series") or "",
+                "category": r.get("category") or "",
                 "is_owned": doc_id in owned_ids,
                 "image_url_obverse": obv,
                 "image_url_reverse": rev,
                 "image_url": obv or rev,
-                "price_guide": r["price_guide"] or "",
-                "population_total": r["population_total"] or 0,
-                "apr_history": r["apr_history"] or ""
+                "price_guide": r.get("price_guide") or "",
+                "population_total": r.get("population_total") or 0,
+                "apr_history": r.get("apr_history") or ""
             })
             
         return {
@@ -9976,8 +10018,12 @@ def reference_search(request: Request, q: Optional[str] = "", page_size: int = 1
             "offset": offset,
             "results": results
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("GET /api/reference/search failed (q=%r, offset=%s, page_size=%s)", q, offset, page_size)
+        raise HTTPException(status_code=500, detail="Search is temporarily unavailable. Please try again.")
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 @app.get("/api/reference/db_update_check")
