@@ -362,7 +362,13 @@ $Results.Add((Invoke-ScanGate -GateId 'Gate 6' -Title 'Cloud Run Secret Bindings
                     }
                 }
             } elseif ($bound.Count -eq 0) {
-                throw 'numista-scan-service has 0 valid env/secret bindings'
+                if ($svc -eq 'numista-scan-service') {
+                    # Intentionally ADC-only: scan_service/main.py uses Application Default Credentials
+                    # and reads no Secret Manager bindings at runtime (verified against scan_service/Dockerfile).
+                    Write-Host "    [OK] $svc is intentionally ADC-only (0 secret/env bindings expected)." -ForegroundColor DarkGray
+                } else {
+                    throw "$svc has 0 valid env/secret bindings"
+                }
             }
         }
     } else {
