@@ -147,6 +147,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
       });
     };
     _loadEverything();
+    if (!widget.isPopout) {
+      MorganScreenStateRegistry.instance.markScreenHydrated(
+        route: 'AI Deepdive',
+        hydrated: true,
+      );
+    }
     if (widget.isPopout) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
@@ -763,7 +769,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Ask Morgan',
+                    widget.isPopout ? 'Ask Morgan' : 'AI Deepdive',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

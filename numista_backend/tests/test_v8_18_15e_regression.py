@@ -165,19 +165,19 @@ class MockBatch:
         self.db = db
         self.operations = []
 
-    def set(self, doc_ref, data):
-        self.operations.append(("set", doc_ref, copy.deepcopy(data)))
+    def set(self, doc_ref, data, merge=False):
+        self.operations.append(("set", doc_ref, copy.deepcopy(data), merge))
 
     def update(self, doc_ref, data):
-        self.operations.append(("update", doc_ref, copy.deepcopy(data)))
+        self.operations.append(("update", doc_ref, copy.deepcopy(data), False))
 
     def delete(self, doc_ref):
-        self.operations.append(("delete", doc_ref, None))
+        self.operations.append(("delete", doc_ref, None, False))
 
     def commit(self):
-        for op, doc_ref, data in self.operations:
+        for op, doc_ref, data, merge in self.operations:
             if op == "set":
-                doc_ref.set(data)
+                doc_ref.set(data, merge=merge)
             elif op == "update":
                 doc_ref.update(data)
             elif op == "delete":
@@ -526,8 +526,10 @@ async def test_all_4_add_paths_through_real_routes_flag_duplicates():
     saved_coin_p1 = db_p1.document(f"users/{user_email}/coins/{queue_id}").get().to_dict()
     assert saved_coin_p1.get("possible_duplicate") is True
     assert saved_coin_p1.get("duplicate_flag") == "Attribute match (Year, Mint, Denomination)"
-    # Verify deleted from review_queue
-    assert not db_p1.document(f"users/{user_email}/review_queue/{queue_id}").get().exists
+    # Verify soft-committed in review_queue (Plan 4.1)
+    q_snap = db_p1.document(f"users/{user_email}/review_queue/{queue_id}").get()
+    assert q_snap.exists
+    assert q_snap.to_dict().get("status") == "committed"
 
     # ── Path 2: identify_coin_photo (scan-save) ───────────────────────────────
     db_p2 = InMemoryFirestore()
@@ -680,7 +682,9 @@ async def test_commit_reviews_argon_a4_invoice_empty_item_no_real():
     assert res.get("skipped") == 0, f"Expected 0 skipped, got {res.get('skipped')}"
     for qid in q_ids:
         assert mock_db.document(f"users/{user_email}/coins/{qid}").get().exists
-        assert not mock_db.document(f"users/{user_email}/review_queue/{qid}").get().exists
+        q_snap = mock_db.document(f"users/{user_email}/review_queue/{qid}").get()
+        assert q_snap.exists
+        assert q_snap.to_dict().get("status") == "committed"
 
 
 @pytest.mark.asyncio
@@ -739,16 +743,16 @@ async def test_invoice_092052_multipage_per_page_metadata_qty_and_linking():
     assert len(coin_docs) == 2
 
     # Coin 0 (Page 1)
-    assert coin_docs[0]["Retailer Invoice #"] == "67000011"
-    assert coin_docs[0]["Purchase Date"] == "2024-11-07"
+    assert coin_docs[0]["invoice_number"] == "67000011"
+    assert coin_docs[0]["purchase_date"] == "2024-11-07"
     assert coin_docs[0]["retailer"] == "Littleton Coin Company"
     assert coin_docs[0]["Cost"] == 19.95
     assert coin_docs[0]["Quantity"] == 1
     assert coin_docs[0]["quantity"] == 1
 
     # Coin 1 (Page 2, Quantity: 2)
-    assert coin_docs[1]["Retailer Invoice #"] == "67226944"
-    assert coin_docs[1]["Purchase Date"] == "2025-01-23"
+    assert coin_docs[1]["invoice_number"] == "67226944"
+    assert coin_docs[1]["purchase_date"] == "2025-01-23"
     assert coin_docs[1]["retailer"] == "Littleton Coin Company"
     assert coin_docs[1]["Cost"] == 29.95
     assert coin_docs[1]["Quantity"] == 2
@@ -799,12 +803,12 @@ async def test_invoice_092052_multipage_per_page_metadata_qty_and_linking():
     assert len(normalized_all) == 14
     assert sum(int(d.get("Quantity") or 1) for d in normalized_all) == 17
 
-    p1_rows = [d for d in normalized_all if d.get("Retailer Invoice #") == "67000011"]
-    p2_rows = [d for d in normalized_all if d.get("Retailer Invoice #") == "67226944"]
+    p1_rows = [d for d in normalized_all if d.get("invoice_number") == "67000011"]
+    p2_rows = [d for d in normalized_all if d.get("invoice_number") == "67226944"]
     assert len(p1_rows) == 9
     assert len(p2_rows) == 5
-    assert all(d.get("Purchase Date") == "2024-11-07" for d in p1_rows)
-    assert all(d.get("Purchase Date") == "2025-01-23" for d in p2_rows)
+    assert all(d.get("purchase_date") == "2024-11-07" for d in p1_rows)
+    assert all(d.get("purchase_date") == "2025-01-23" for d in p2_rows)
 
     k64 = [d for d in normalized_all if d.get("Year") == "1964" and d.get("Mint Mark") == "D"]
     assert len(k64) == 1 and k64[0]["Quantity"] == 2 and k64[0]["quantity"] == 2 and k64[0]["Cost"] == 19.95
@@ -860,3 +864,25 @@ async def test_invoice_092052_multipage_per_page_metadata_qty_and_linking():
 
     assert link_res.get("linked") == 14
     assert link_res.get("unlinked") == 0
+
+
+def test_mock_batch_set_merge_preserves_existing_fields_and_isolation():
+    """Verify MockBatch.set(..., merge=True) preserves existing fields and merge=False overwrites."""
+    db = InMemoryFirestore()
+    ref1 = db.document("users/a@b.com/review_queue/q1")
+    ref1.set({"coin_name": "Morgan Dollar", "qty": 1})
+    ref2 = db.document("users/a@b.com/review_queue/q2")
+    ref2.set({"coin_name": "Peace Dollar", "qty": 2})
+
+    batch = MockBatch(db)
+    batch.set(ref1, {"status": "committed"}, merge=True)
+    batch.set(ref2, {"status": "committed"}, merge=False)
+    batch.commit()
+
+    d1 = ref1.get().to_dict()
+    assert d1["coin_name"] == "Morgan Dollar"
+    assert d1["status"] == "committed"
+
+    d2 = ref2.get().to_dict()
+    assert "coin_name" not in d2
+    assert d2["status"] == "committed"

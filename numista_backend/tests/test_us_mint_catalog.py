@@ -147,3 +147,22 @@ def test_11_sku_catalog_thumbnails():
         assert item is not None, f"Missing catalog entry for SKU {sku}"
         thumb = item.get("thumbnail_url")
         assert thumb is not None and thumb.startswith("https://storage.googleapis.com/numista-reference-library/"), f"Invalid thumbnail for {sku}: {thumb}"
+
+
+def test_us_mint_catalog_has_no_duplicate_keys():
+    """Authoritative AST guard: US_MINT_PRODUCT_CATALOG must never contain duplicate keys."""
+    import ast
+    from pathlib import Path
+
+    src_path = Path(__file__).resolve().parents[1] / "services" / "us_mint_catalog_service.py"
+    tree = ast.parse(src_path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if any(getattr(t, "id", "") == "US_MINT_PRODUCT_CATALOG" for t in targets):
+                assert isinstance(node.value, ast.Dict)
+                keys = [ast.literal_eval(k) for k in node.value.keys if k is not None]
+                duplicates = [k for idx, k in enumerate(keys) if k in keys[:idx]]
+                assert not duplicates, f"Duplicate keys found in US_MINT_PRODUCT_CATALOG: {duplicates}"
+                return
+    raise AssertionError("US_MINT_PRODUCT_CATALOG dict literal not found in us_mint_catalog_service.py")

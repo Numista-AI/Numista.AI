@@ -231,8 +231,8 @@ void main() {
       expect(code.contains("'My Collection'"), isTrue);
       expect(code.contains("'Add new coins/notes/etc.'"), isTrue);
       expect(code.contains("'Coin Programs'"), isTrue);
-      expect(code.contains('_buildNavMorganButton()'), isTrue);
-      expect(code.contains('_MoreSection'), isTrue);
+      expect(code.contains('_MorganSidebarButton'), isTrue);
+      expect(code.contains('SidebarAccordionGroup'), isTrue);
 
       // Verify all 29 routes exist
       final expectedRoutes = [
@@ -242,7 +242,7 @@ void main() {
         'All',
         'Coins',
         'Currency Collection',
-        'World and Specialty',
+        'World & Specialty',
         'Inventory',
         'My Wishlist',
         'Estate Planning',
@@ -272,12 +272,16 @@ void main() {
       }
     });
 
-    testWidgets('MoreNavSection renders ExpansionTile with title More',
+    testWidgets('SidebarAccordionGroup renders title and expands children',
         (tester) async {
-      await tester.pumpWidget(const MaterialApp(
+      await tester.pumpWidget(MaterialApp(
         home: Scaffold(
-          body: MoreNavSection(
-            children: [
+          body: SidebarAccordionGroup(
+            title: 'More',
+            icon: Icons.more_horiz,
+            isExpanded: true,
+            onToggle: () {},
+            children: const [
               Text('Child Item 1'),
             ],
           ),
@@ -285,6 +289,7 @@ void main() {
       ));
       expect(find.text('More'), findsOneWidget);
       expect(find.byIcon(Icons.more_horiz), findsOneWidget);
+      expect(find.text('Child Item 1'), findsOneWidget);
     });
   });
 
