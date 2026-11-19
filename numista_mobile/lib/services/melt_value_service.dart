@@ -47,6 +47,59 @@ class MeltValueService {
 
   static const double _buffaloAuOz = 1.0;
 
+  // ── Platinum (Pt) troy oz by face value: American Platinum Eagle (SILVER-EAGLE-MELT) ──
+  static final _ptEagleOzByFaceValue = {
+    100.0: 1.0,
+    50.0:  0.5,
+    25.0:  0.25,
+    10.0:  0.1,
+  };
+
+  // ── Metal decision helpers (SILVER-EAGLE-MELT) ─────────────────────────────
+  // The metal comes from the composition text, never from the word 'eagle'.
+  static final _platingRe   = RegExp(r'\b(gold|silver|platinum|palladium)[\s-]*(plated|plate|gilt|gilded)\b');
+  static final _metalWordRe = RegExp(r'\b(gold|silver|platinum|palladium)\b');
+  static final _baseWordRe  = RegExp(r'\b(copper|nickel|cupro|cupronickel|zinc|brass|bronze|steel|aluminum|aluminium|manganese|clad|tin|billon)\b');
+  static final _eagleWordRe = RegExp(r'\beagle\b');
+
+  /// 'gold' | 'silver' | 'platinum' | 'palladium', or null when unknown or base metal.
+  /// Never guesses gold: a bare 'eagle' counts as gold only for a pre-1934 $10 Eagle with a known year.
+  static String? metalOf({
+    required String metalContent,
+    String denomination = '',
+    String programSeries = '',
+    String themeSubject = '',
+    Map<String, dynamic>? coinData,
+  }) {
+    final mc = metalContent.trim().toLowerCase().replaceAll(_platingRe, ' ');
+    final named = _metalWordRe.firstMatch(mc);
+    if (named != null) return named.group(1);   // composition names a precious metal (first one wins)
+    if (_baseWordRe.hasMatch(mc)) return null;   // composition says base metal
+    // No usable composition (empty, 'Pending', 'Composition', ...): unambiguous names only.
+    final denom = denomination.trim().toLowerCase();
+    final t = '$mc $denom ${programSeries.trim().toLowerCase()} ${themeSubject.trim().toLowerCase()}'
+        .replaceAll(_platingRe, ' ');
+    if (t.contains('platinum eagle')) return 'platinum';
+    if (t.contains('palladium eagle')) return 'palladium';
+    if (t.contains('silver eagle')) return 'silver';
+    final words = _metalWordRe.allMatches(t).map((m) => m.group(1)!).toSet();
+    if (words.length == 1) return words.first;
+    if (words.length > 1) return null;           // names two metals: ambiguous, no guess
+    if (t.contains('double eagle') || t.contains('half eagle') || t.contains('quarter eagle')) return 'gold';
+    if (t.contains('peace dollar') || t.contains('morgan')) return 'silver';
+    if (_isClassicTenDollarEagle(t, denom, coinData)) return 'gold';
+    return null;
+  }
+
+  static bool _isClassicTenDollarEagle(String t, String denom, Map<String, dynamic>? coinData) {
+    if (!_eagleWordRe.hasMatch(t) || t.contains('american eagle') || t.contains('flying eagle')) return false;
+    if (parseFaceValue(denom) != 10.0) return false;
+    final rawYear = (coinData?['Year'] ?? coinData?['year'])?.toString() ?? '';
+    final m = RegExp(r'\b(1\d{3}|20\d{2})\b').firstMatch(rawYear);
+    final year = m != null ? int.tryParse(m.group(1)!) : int.tryParse(rawYear.replaceAll(RegExp(r'\.0$'), '').trim());
+    return year != null && year >= 1795 && year <= 1933;   // US $10 gold Eagle mintage years
+  }
+
   // ── Unified Face Value Parser ──────────────────────────────────────────────
   /// Parses denomination string to numerical USD value.
   /// Pre-processes dirty strings by stripping parenthetical notes and ellipses.
@@ -199,17 +252,37 @@ class MeltValueService {
     final theme  = themeSubject.trim().toLowerCase();
     final combined = '$mc $denom $series $theme';
 
+    // ── Metal decision (SILVER-EAGLE-MELT): composition first, never the word 'eagle' ──
+    final metal = metalOf(
+      metalContent: metalContent,
+      denomination: denomination,
+      programSeries: programSeries,
+      themeSubject: themeSubject,
+      coinData: coinData,
+    );
+    if (metal == null || metal == 'palladium') return null;   // unknown or unsupported: show N/A, never a gold guess
+
+    // ── Platinum (American Platinum Eagle sizes only) ───────────────────────
+    if (metal == 'platinum') {
+      final pt = spotPrices['Platinum'] ?? 0.0;
+      final oz = _ptEagleOzByFaceValue[parseFaceValue(denom)];
+      if (pt <= 0 || oz == null) return null;
+      return pt * oz * count;
+    }
+
     // ── Gold Detection ──────────────────────────────────────────────────────
-    if (combined.contains('gold') || combined.contains('half eagle') || combined.contains('eagle') || combined.contains('double eagle')) {
+    if (metal == 'gold') {
+      final classicName = combined.contains('indian head gold') || combined.contains('pre-1933') || combined.contains('saint-gaudens') || combined.contains('liberty head');
       if (combined.contains('99.99') || combined.contains('buffalo')) {
         return au * _buffaloAuOz * count;
       }
-      if (combined.contains('91.67') || combined.contains('gold eagle')) {
+      if (combined.contains('91.67') || combined.contains('american eagle') || combined.contains('american gold eagle') ||
+          ('$denom $series $theme'.contains('gold eagle') && !classicName && !combined.contains('90%'))) {
         final fv = parseFaceValue(denom);
         final oz = _au9167ByFaceValue[fv] ?? 1.0;
         return au * oz * count;
       }
-      if (combined.contains('90%') || combined.contains('half eagle') || combined.contains('indian head gold') || combined.contains('pre-1933') || combined.contains('saint-gaudens') || combined.contains('liberty head')) {
+      if (combined.contains('90%') || classicName || combined.contains('eagle')) {
         final fv = parseFaceValue(denom);
         final oz = _au90ByFaceValue[fv] ?? 0.24188;
         return au * oz * count;
@@ -218,8 +291,8 @@ class MeltValueService {
     }
 
     // ── Silver Detection ────────────────────────────────────────────────────
-    if (combined.contains('silver') || combined.contains('silver eagle') || combined.contains('peace dollar') || combined.contains('morgan')) {
-      if (combined.contains('silver eagle') || combined.contains('99.9') || combined.contains('.999') || combined.contains('fine silver')) {
+    if (metal == 'silver') {
+      if (combined.contains('silver eagle') || combined.contains('american eagle') || combined.contains('99.9') || combined.contains('.999') || combined.contains('fine silver')) {
         return ag * _silverEagleOz * count;
       }
       if (combined.contains('90%') || combined.contains('half dime') || combined.contains('half-dime') || combined.contains('morgan') || combined.contains('peace') || combined.contains('barber') || combined.contains('walking liberty') || combined.contains('standing liberty') || combined.contains('mercury')) {
