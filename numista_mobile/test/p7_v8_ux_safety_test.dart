@@ -2701,9 +2701,10 @@ void main() {
       // Assert: the coin map does NOT contain key 'MintMark' (no space variant)
       expect(interceptedPayload!.containsKey('MintMark'), isFalse);
 
-      // Static source assertion confirming save block writes 'Mint Mark' and not 'MintMark'
+      // Static source assertion confirming save block resolves _certManualMint and writes 'Mint Mark'
       final hubSrc = File('lib/screens/add_coins_hub.dart').readAsStringSync();
-      expect(hubSrc, contains("'Mint Mark':         _certManualMint.text.trim()"));
+      expect(hubSrc, contains("rawMintMark: _certManualMint.text.trim()"));
+      expect(hubSrc, contains("'Mint Mark': resolved.mintMark"));
       expect(hubSrc.contains("'MintMark':"), isFalse);
     });
   });

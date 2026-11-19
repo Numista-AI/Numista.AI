@@ -52,12 +52,28 @@ test.describe('05 - Navigation & State Persistence (UX-HOME-SIDEBAR v2.1)', () =
     expect(pageErrors, 'JS errors after rapid nav: ' + pageErrors.join(' | ')).toHaveLength(0);
   });
 
-  test('T04: Research accordion routes (Coin Search, AI Deepdive) load cleanly', async ({ page }) => {
-    await enterDemo(page);
+  test('T04: Research accordion routes (Coin Search, AI Deepdive) load cleanly in main pane', async ({ page }) => {
+    await enterDemo(page, { viewportWidth: 1440, viewportHeight: 900 });
+    const exploreDemo = page.getByRole('button', { name: /explore demo vault|browse demo/i });
+    await exploreDemo.waitFor({ state: 'visible', timeout: 5000 }).then(() => exploreDemo.click()).catch(() => {});
+    const betaModalBtn = page.getByRole('button', { name: /got it, let's explore/i });
+    await betaModalBtn.waitFor({ state: 'visible', timeout: 15000 }).then(() => betaModalBtn.click()).catch(() => {});
     await openAccordionAndNavigate(page, 'Research', 'Coin Search');
+    await expect(page.getByRole('heading', { name: /Coin Reference Search/i })).toBeVisible({ timeout: 10000 });
     expect((await page.screenshot({ path: 'screenshots/coin-search.png' })).length).toBeGreaterThan(50000);
+
     await clickSemanticTarget(page, /^AI Deepdive$/i);
-    await page.waitForTimeout(2500);
+    await expect(
+      page.getByRole('textbox', { name: /Ask Morgan or type here/i })
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole('img', { name: /AI Deepdive/i })
+    ).toBeVisible({ timeout: 10000 });
+    // Main pane left Coin Search and opened full-screen AI Deepdive (NOT docked Ask Morgan popout)
+    await expect(page.getByRole('heading', { name: /Coin Reference Search/i })).toHaveCount(0);
+    await expect(
+      page.locator('flt-semantics').filter({ hasText: /Undock Morgan into floating window|Dock Morgan to right side/i })
+    ).toHaveCount(0);
     expect((await page.screenshot({ path: 'screenshots/ai-deepdive.png' })).length).toBeGreaterThan(50000);
   });
 

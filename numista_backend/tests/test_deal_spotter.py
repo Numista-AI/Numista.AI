@@ -26,23 +26,47 @@ def test_deal_spotter_wishlist_matching():
     assert deals[0]["cpg_retail"] == 150.0
     assert "greysheet_bid" not in deals[0]
 
-def test_wishlist_deals_endpoints():
+def test_wishlist_deals_requires_auth(monkeypatch):
+    monkeypatch.setenv("ALLOW_UNAUTHENTICATED", "0")
     res1 = client.get("/api/wishlist/deals/test@numista.ai")
-    assert res1.status_code == 200
-    data1 = res1.json()
-    assert "deals" in data1
-    # The mock fixture doc has cpgRetail: 120.0 — deals endpoint should return >= 1
-    assert data1["count"] >= 1
+    assert res1.status_code == 401
+    res2 = client.post(
+        "/api/wishlist/deals/check",
+        json={"user_email": "test@numista.ai", "wishlist_items": []},
+    )
+    assert res2.status_code == 401
 
-    payload = {
-        "user_email": "test@numista.ai",
-        "wishlist_items": [
-            # Must have cpg_retail — bid-only items yield 0 deals now
-            {"year": "1881", "mint": "S", "series": "Morgan Dollars", "cpg_retail": 120.0}
-        ]
+
+def test_wishlist_deals_endpoints():
+    from main import get_current_user
+
+    prev = client.app.dependency_overrides.get(get_current_user)
+    client.app.dependency_overrides[get_current_user] = lambda: {
+        "email": "test@numista.ai",
+        "uid": "test-uid",
     }
-    res2 = client.post("/api/wishlist/deals/check", json=payload)
-    assert res2.status_code == 200
-    data2 = res2.json()
-    assert data2["status"] == "success"
-    assert data2["count"] == 1
+    try:
+        res1 = client.get("/api/wishlist/deals/test@numista.ai")
+        assert res1.status_code == 200
+        data1 = res1.json()
+        assert "deals" in data1
+        # The mock fixture doc has cpgRetail: 120.0 — deals endpoint should return >= 1
+        assert data1["count"] >= 1
+
+        payload = {
+            "user_email": "test@numista.ai",
+            "wishlist_items": [
+                # Must have cpg_retail — bid-only items yield 0 deals now
+                {"year": "1881", "mint": "S", "series": "Morgan Dollars", "cpg_retail": 120.0}
+            ]
+        }
+        res2 = client.post("/api/wishlist/deals/check", json=payload)
+        assert res2.status_code == 200
+        data2 = res2.json()
+        assert data2["status"] == "success"
+        assert data2["count"] == 1
+    finally:
+        if prev is None:
+            client.app.dependency_overrides.pop(get_current_user, None)
+        else:
+            client.app.dependency_overrides[get_current_user] = prev
