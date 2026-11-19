@@ -50,17 +50,43 @@ def run_preflight_audit():
     print("  --> PASS: 100% compliant active Gemini 4 stack.")
 
     # Test 2: Sub-Account Tier Limit Logic
+    from unittest.mock import MagicMock, patch
+    from fastapi import HTTPException
+    import routes.subaccount_routes as subaccount_routes
     from routes.subaccount_routes import create_subaccount, SubAccountCreateRequest
+
     print("[2/6] Sub-Account Tier Limits Check:")
     req = SubAccountCreateRequest(
         parent_email="parent_test@numista.ai",
         child_alias="Nat",
         relationship="Daughter",
         permission_level="VIEW_ONLY",
-        bequest_percentage=100.0
+        bequest_percentage=100.0,
     )
-    res = create_subaccount(req, user_tier="Pro")
-    assert res.child_alias == "Nat"
+    mock_user = {"email": "parent_test@numista.ai", "uid": "test-uid"}
+
+    mock_db = MagicMock()
+    user_doc = MagicMock()
+    user_doc.exists = True
+    user_doc.to_dict.return_value = {"tier": "pro"}
+    parent_doc_ref = mock_db.collection.return_value.document.return_value
+    parent_doc_ref.get.return_value = user_doc
+    sub_col = parent_doc_ref.collection.return_value
+
+    with patch.object(subaccount_routes, "get_db", return_value=mock_db):
+        # Happy path: pro tier with 0 existing sub-accounts -> 200 / SubAccountResponse
+        sub_col.stream.return_value = []
+        res = create_subaccount(req, _user=mock_user)
+        assert res.child_alias == "Nat"
+
+        # Limit enforced: pro tier with 5 existing sub-accounts -> 403 HTTPException
+        sub_col.stream.return_value = [MagicMock() for _ in range(5)]
+        try:
+            create_subaccount(req, _user=mock_user)
+            raise AssertionError("Expected 403 HTTPException for Pro tier >= 5 sub-accounts")
+        except HTTPException as exc:
+            assert exc.status_code == 403, f"Expected 403, got {exc.status_code}"
+
     print("  --> PASS: Family Sub-Account creation & tier enforcement verified.")
 
     # Test 3: COA Parser

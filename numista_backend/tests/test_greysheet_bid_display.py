@@ -64,7 +64,7 @@ def mock_external_services(monkeypatch):
     monkeypatch.setattr(gs_module.GreysheetService, "get_pricing", mock_get_pricing)
 
     # Mock _authenticate_request
-    monkeypatch.setattr(main, "_authenticate_request", lambda auth, body_email=None: "test_user@numista.ai")
+    monkeypatch.setattr(main, "_authenticate_request", lambda auth, body_email=None, current_user=None: "test_user@numista.ai")
 
 
 def test_greysheet_lookup_response_contains_no_bid_fields():
@@ -73,7 +73,18 @@ def test_greysheet_lookup_response_contains_no_bid_fields():
         "user_id": "test_user@numista.ai",
         "coin_id": "test-coin-123"
     }
-    response = client.post("/api/greysheet/refresh", json=payload)
+    prev_override = main.app.dependency_overrides.get(main.get_current_user)
+    main.app.dependency_overrides[main.get_current_user] = lambda: {
+        "email": "test_user@numista.ai",
+        "uid": "test-uid",
+    }
+    try:
+        response = client.post("/api/greysheet/refresh", json=payload)
+    finally:
+        if prev_override is None:
+            main.app.dependency_overrides.pop(main.get_current_user, None)
+        else:
+            main.app.dependency_overrides[main.get_current_user] = prev_override
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"

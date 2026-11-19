@@ -27,55 +27,41 @@ import secrets
 import sys
 import types
 from datetime import timezone
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-# ── Firestore / firebase_admin stubs ─────────────────────────────────────────
-# These must be registered BEFORE importing attorney_routes.
+_BACKEND_DIR = str(Path(__file__).resolve().parents[1] / "numista_backend")
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
+
+import firebase_admin.auth as _fb_auth  # noqa: E402
+import routes.attorney_routes as ar      # noqa: E402
+
+# ── Controllable mocks scoped per-test via monkeypatch ────────────────────────
 
 _fake_auth = types.SimpleNamespace()
-
-_google_stub   = types.ModuleType("google")
-_cloud_stub    = types.ModuleType("google.cloud")
-_fs_stub       = types.ModuleType("google.cloud.firestore")
-_genai_stub    = types.ModuleType("google.genai")
-_genai_t_stub  = types.ModuleType("google.genai.types")
-
-for name, mod in [
-    ("google", _google_stub),
-    ("google.cloud", _cloud_stub),
-    ("google.cloud.firestore", _fs_stub),
-    ("google.cloud.storage", types.ModuleType("google.cloud.storage")),
-    ("google.genai", _genai_stub),
-    ("google.genai.types", _genai_t_stub),
-    ("firebase_admin", types.SimpleNamespace(auth=_fake_auth, _apps={"default": True})),
-    ("firebase_admin.auth", _fake_auth),
-    ("firebase_admin.credentials", MagicMock()),
-    ("firebase_admin.firestore", MagicMock()),
-]:
-    sys.modules.setdefault(name, mod)
-
-# ── Build a mock db that tests can configure per-call ───────────────────────
-
 _mock_db   = MagicMock()
 _mock_log  = MagicMock()
 
-# Patch routes.deps so the router imports a controllable db and logger.
-_prev_deps = sys.modules.get("routes.deps")
-_deps_stub = types.SimpleNamespace(db=_mock_db, logger=_mock_log)
-sys.modules["routes.deps"] = _deps_stub
 
-import routes.attorney_routes as ar          # noqa: E402  (import after stubs)
-import importlib
-importlib.reload(ar)                          # pick up the patched deps
-
-if _prev_deps is not None:
-    sys.modules["routes.deps"] = _prev_deps
-else:
-    sys.modules.pop("routes.deps", None)
+@pytest.fixture(autouse=True)
+def _patch_attorney_deps(monkeypatch):
+    monkeypatch.setattr(ar, "db", _mock_db)
+    monkeypatch.setattr(ar, "logger", _mock_log)
+    monkeypatch.setattr(
+        _fb_auth,
+        "verify_id_token",
+        lambda token, *a, **kw: _fake_auth.verify_id_token(token),
+    )
+    monkeypatch.setitem(
+        _app.dependency_overrides,
+        ar.get_current_user,
+        lambda: {"uid": OWNER_UID, "email": "owner@numista.ai"},
+    )
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
@@ -266,14 +252,18 @@ class TestSnapshotEndpoint:
         assert "expired" in resp.json()["detail"].lower()
 
     def test_snapshot_wrong_uid_403(self):
-        """Token uid != query uid → 403 with account message."""
+        """Token uid != query uid → 403 Forbidden."""
         raw = secrets.token_hex(32)
-        # Token owned by OWNER; request uses OTHER
+        # Token owned by OWNER; authenticated request uses OTHER
         _setup_snapshot_db(OWNER_UID, raw)
+        _app.dependency_overrides[ar.get_current_user] = lambda: {
+            "uid": OTHER_UID,
+            "email": "other@numista.ai",
+        }
 
         resp = _client.get(f"/api/attorney/snapshot?uid={OTHER_UID}&token={raw}")
         assert resp.status_code == 403, resp.json()
-        assert "not valid for this account" in resp.json()["detail"]
+        assert resp.json()["detail"] == "Forbidden"
 
     def test_snapshot_revoked_token_410(self):
         """Revoked token → 410 with 'revoked' in message."""

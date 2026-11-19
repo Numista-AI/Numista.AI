@@ -242,10 +242,12 @@ def test_review_commit_attribute_dupe_committed_with_flag():
         assert data["committed"] == 1
         assert data["skipped"] == 0
         assert data["flagged"] == 1
-        # Assert batch.set was called to commit the coin
-        assert mock_batch.set.called
-        saved_dict = mock_batch.set.call_args[0][1]
+        # Assert batch.set was called to commit the coin and soft-commit review_queue
+        assert mock_batch.set.call_count == 2
+        saved_dict = mock_batch.set.call_args_list[0][0][1]
         assert saved_dict["possible_duplicate"] is True
+        queue_update = mock_batch.set.call_args_list[1][0][1]
+        assert queue_update["status"] == "committed"
 def test_review_commit_split_invoice_qty_both_committed():
     """Verify that multiple items with same invoice# and item# in the same review batch are both committed (Qty split rows), even when query matches one in the batch."""
     app.dependency_overrides[get_current_user] = _user_auth(email="alice@example.com")
@@ -312,7 +314,7 @@ def test_review_commit_split_invoice_qty_both_committed():
         data = resp.json()
         assert data["committed"] == 2
         assert data["skipped"] == 0
-        assert mock_batch.set.call_count == 2
+        assert mock_batch.set.call_count == 4
 
 
 def test_review_commit_reimport_same_invoice_item_skipped():

@@ -4,6 +4,7 @@ import 'package:numista_ai/services/canonical_mint_asset_service.dart';
 import 'package:numista_ai/services/coin_image_service.dart';
 import 'package:numista_ai/utils/collection_image_utils.dart';
 import 'package:numista_ai/widgets/collection_card_image.dart';
+import 'package:numista_ai/widgets/signed_storage_image.dart';
 
 void main() {
   group('CollectionCardImage Production Widget Tests (MF-I2, MF-I3\', MF-I5\', MF-I6)', () {
@@ -36,8 +37,9 @@ void main() {
       );
 
       expect(fetchCount, 0, reason: 'Valid user photo must bypass network reference fetch');
-      final img = tester.widget<Image>(find.byType(Image));
-      expect((img.image as NetworkImage).url, equals(userUrl));
+      final img = tester.widget<SignedStorageImage>(find.byType(SignedStorageImage));
+      expect(img.url, equals(userUrl));
+      await tester.pump(const Duration(seconds: 20));
     });
 
     testWidgets('Case 2: Reverse-only user photo renders reverse and bypasses network fetch', (tester) async {
@@ -64,8 +66,9 @@ void main() {
       );
 
       expect(fetchCount, 0, reason: 'Valid reverse-only user photo must bypass network fetch');
-      final img = tester.widget<Image>(find.byType(Image));
-      expect((img.image as NetworkImage).url, equals(revUrl));
+      final img = tester.widget<SignedStorageImage>(find.byType(SignedStorageImage));
+      expect(img.url, equals(revUrl));
+      await tester.pump(const Duration(seconds: 1));
     });
 
     // v2.1 MF-SAG-I1: Case 3 split. (3a) unowned URL with NO user-upload signal is treated as absent:
@@ -255,7 +258,8 @@ void main() {
       const rev = 'https://firebasestorage.googleapis.com/v0/b/studio-9101802118-8c9a8.firebasestorage.app/o/users%2Fanon_user_1%2Fcoins%2Frev.jpg?alt=media';
       final data = {'image_url_reverse': rev, 'image_url_obverse': 'https://evil.example/x.jpg'};
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: CollectionCardImage(data: data))));
-      expect((tester.widget<Image>(find.byType(Image)).image as NetworkImage).url, equals(rev));
+      expect(tester.widget<SignedStorageImage>(find.byType(SignedStorageImage)).url, equals(rev));
+      await tester.pump(const Duration(seconds: 1));
     });
 
     // v2.1 MF-SAG-I5
@@ -267,6 +271,7 @@ void main() {
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: CollectionCardImage(key: key, imageFetcher: f,
           data: const {'Year': '1964', 'denomination': 'Half Dollar', 'image_url_reverse': rev}))));
       expect(fetchCount, 0);
+      await tester.pump(const Duration(seconds: 1));
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: CollectionCardImage(key: key, imageFetcher: f,
           data: const {'Year': '1964', 'denomination': 'Half Dollar'}))));
       await tester.pump();
