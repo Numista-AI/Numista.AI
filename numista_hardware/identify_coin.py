@@ -409,7 +409,7 @@ Return ONLY a valid JSON object:
             config=types.GenerateContentConfig(
                 response_mime_type='application/json',
                 response_schema=Pass2VerificationData,
-                temperature=0.2
+                thinking_config=types.ThinkingConfig(thinking_level="low"),
             )
         )
 
@@ -553,7 +553,7 @@ def run_numista_report(img_path_a, img_path_b):
             config=types.GenerateContentConfig(
                 response_mime_type='application/json',
                 response_schema=Pass1CoinData,
-                temperature=0.2
+                thinking_config=types.ThinkingConfig(thinking_level="low"),
             )
         )
         

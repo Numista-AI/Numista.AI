@@ -634,9 +634,13 @@ Return ONLY valid JSON. No markdown, no explanation, no preamble."""
             model=model,
             contents=[types.Part.from_text(text=prompt)],
             config=types.GenerateContentConfig(
-                temperature=0.3,
                 max_output_tokens=2048,
                 response_mime_type='application/json',
+                thinking_config=(
+                    types.ThinkingConfig(thinking_level="medium")
+                    if str(model or "").strip().lower().startswith("gemini-4-")
+                    else None
+                ),
             ),
         )
         raw = response.candidates[0].content.parts[0].text.strip()

@@ -60,7 +60,7 @@
 - For long-running overnight tasks, use a single `/goal` session.
 
 ### Rule 6 — Mandatory Gemini Model Policy
-- Before changing any Gemini model ID (e.g. `gemini-3.5-flash` to `gemini-3.6-flash`):
+- Before changing any Gemini model ID (e.g. upgrading the primary Flash model to `gemini-4-hydrogen`):
   1. Read the latest PDF documentation in: `C:\Users\ericd\Documents\MyVertexProject\Gemini Deprecation Schedules\`
   2. Verify the shutdown date and recommended replacement model.
   3. **NEVER** downgrade to a model that has an earlier shutdown date.
@@ -120,7 +120,7 @@
   dart pub outdated
   ```
 - **Google SDK Rules:**
-  - Standard Unified SDK: `google-genai` (v2.8.0+ is stable).
+  - Standard Unified SDK: `google-genai` (`>=2.34.0` required for Gemini 4 Hydrogen/Argon).
   - Retired SDKs: **DO NOT USE** legacy `google-generativeai` or `vertexai.generative_models` (retired June 2026).
 
 ---

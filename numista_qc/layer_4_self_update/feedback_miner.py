@@ -67,7 +67,18 @@ def classify_issues_with_gemini(raw_issues):
             "Issues:\n" + "\n".join(f"- {strip_pii(i)}" for i in raw_issues)
         )
 
-        response = client.models.generate_content(model=model_id, contents=prompt)
+        qc_config = (
+            types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_level="low")
+            )
+            if str(model_id or "").strip().lower().startswith("gemini-4-")
+            else None
+        )
+        response = client.models.generate_content(
+            model=model_id,
+            contents=prompt,
+            config=qc_config,
+        )
         text = response.text.strip()
         if text.startswith('```'):
             text = re.sub(r'^```[a-z]*\n?', '', text)

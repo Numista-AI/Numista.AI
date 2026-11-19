@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Configuration
 PROJECT_ID = "studio-9101802118-8c9a8"
 GEMINI_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
-PRIMARY_MODEL = "gemini-4-hydrogen"
+PRIMARY_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-4-hydrogen")
 DB_PATH = os.path.join("database", "numista_coins.db")
 MASTER_JSON_PATH = "master_coin_programs.json"
 OUTPUT_JSON_PATH = "definitive_catalog_full.json"
@@ -236,7 +236,11 @@ Do not include any other fields. Ensure absolute historical accuracy. Do not wra
             contents=[genai_types.Part.from_text(text=prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.0
+                thinking_config=(
+                    genai_types.ThinkingConfig(thinking_level="low")
+                    if str(PRIMARY_MODEL).strip().lower().startswith("gemini-4-")
+                    else None
+                ),
             )
         )
         

@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from google.cloud import firestore
 
+from config import gemini4_thinking_config
 from routes.deps import (
     db,
     get_current_user,
@@ -567,7 +568,7 @@ def execute_morgan_web_lookup(
     query: str,
     coin_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Executes a Google-Search-grounded Gemini query for Morgan (google-genai 1.71.0)."""
+    """Executes a Google-Search-grounded Gemini query for Morgan (google-genai >=2.34.0)."""
     clean_query = str(query or "").strip()
     if not clean_query:
         raise HTTPException(status_code=400, detail="Search query cannot be empty.")
@@ -584,7 +585,7 @@ def execute_morgan_web_lookup(
         contents=[genai_types.Part.from_text(text=prompt)],
         config=genai_types.GenerateContentConfig(
             tools=[genai_types.Tool(google_search=genai_types.GoogleSearch())],
-            temperature=0.2,
+            thinking_config=gemini4_thinking_config(MODEL_FLASH, "low"),
         ),
     )
     return {
@@ -673,9 +674,14 @@ def _safe_doc_float(snap, field_name: str) -> float:
         return 0.0
 
 
-def _estimate_copilot_cost_usd(input_tokens: int, output_tokens: int) -> float:
-    # Gemini Flash pricing estimate ($0.10 / 1M input, $0.40 / 1M output).
-    return round((input_tokens * 0.00000010) + (output_tokens * 0.00000040), 6)
+def _estimate_copilot_cost_usd(
+    input_tokens: int, output_tokens: int, thoughts_tokens: int = 0
+) -> float:
+    # Gemini 4 Hydrogen Global pricing estimate ($1.50 / 1M input, $7.50 / 1M output + thinking).
+    return round(
+        (input_tokens * 0.0000015) + ((output_tokens + thoughts_tokens) * 0.0000075),
+        6,
+    )
 
 
 def _record_copilot_telemetry(
@@ -902,6 +908,7 @@ async def api_morgan_copilot(
     reply_text = ""
     input_tokens = 0
     output_tokens = 0
+    thoughts_tokens = 0
     model_used = "deterministic-tier1"
 
     # 3. Try fast deterministic Tier 1 routing when not using a vision frame
@@ -951,11 +958,14 @@ async def api_morgan_copilot(
             resp = genai_client.models.generate_content(
                 model=MODEL_FLASH,
                 contents=contents,
-                config=genai_types.GenerateContentConfig(temperature=0.2),
+                config=genai_types.GenerateContentConfig(
+                    thinking_config=gemini4_thinking_config(MODEL_FLASH, "low"),
+                ),
             )
             usage = getattr(resp, "usage_metadata", None)
             input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
             output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+            thoughts_tokens = int(getattr(usage, "thoughts_token_count", 0) or 0)
             raw_text = (getattr(resp, "text", None) or "").strip()
 
             parsed_json: Optional[Dict[str, Any]] = None
@@ -987,7 +997,7 @@ async def api_morgan_copilot(
             else:
                 reply_text = raw_text or "How can I help with your collection next?"
 
-    cost_usd = _estimate_copilot_cost_usd(input_tokens, output_tokens)
+    cost_usd = _estimate_copilot_cost_usd(input_tokens, output_tokens, thoughts_tokens)
     latency_ms = int((time.perf_counter() - t0) * 1000)
 
     _record_copilot_telemetry(

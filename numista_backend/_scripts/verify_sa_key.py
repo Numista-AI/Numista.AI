@@ -11,7 +11,7 @@ _BACKEND_ROOT = str(Path(__file__).resolve().parent.parent)
 if _BACKEND_ROOT not in sys.path:
     sys.path.insert(0, _BACKEND_ROOT)
 
-from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL
+from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, gemini4_thinking_config
 
 # Force UTF-8 output so emoji don't crash on Windows cp1252
 if hasattr(sys.stdout, 'reconfigure'):
@@ -40,7 +40,12 @@ def test_model_with_sa(model_name):
         creds = service_account.Credentials.from_service_account_file(key_path)
         client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION, credentials=creds)
         
-        chat = client.chats.create(model=model_name)
+        chat = client.chats.create(
+            model=model_name,
+            config=genai.types.GenerateContentConfig(
+                thinking_config=gemini4_thinking_config(model_name, "low"),
+            ),
+        )
         response = chat.send_message("Ping")
         print(f"✅ SUCCESS: {model_name} RESPONSE: {response.text}")
         return True

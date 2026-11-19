@@ -66,7 +66,7 @@ export const verifyNgcCert = async (certNumber: string, grade: string): Promise<
       config: {
         tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
-        temperature: 0,
+        thinkingConfig: { thinkingLevel: "low" },
       }
     });
 

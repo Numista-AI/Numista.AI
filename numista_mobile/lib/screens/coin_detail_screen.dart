@@ -316,11 +316,12 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
     setState(() { _aiLoading = true; _aiError = null; _aiInsight = ''; });
 
     try {
+      final flashModel = AiConfig.flashModel;
       final model = FirebaseAI.googleAI().generativeModel(
-        model: AiConfig.flashModel,
-        generationConfig: GenerationConfig(
-          temperature: 0.7,
-          thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.medium),
+        model: flashModel,
+        generationConfig: AiConfig.buildFlashGenerationConfig(
+          flashModel,
+          level: ThinkingLevel.medium,
         ),
       );
 

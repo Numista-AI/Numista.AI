@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
 
-from config import DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL
+from config import DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODEL, gemini4_thinking_config
 from routes.deps import genai_client, genai_types, db, get_current_user
 from services.collector_profile_service import collector_profile_service
 
@@ -60,7 +60,7 @@ def call_chat_model_with_fallback(system_prompt: str, user_query: str) -> str:
                     genai_types.Part.from_text(text=f"{system_prompt}\n\nUser Question: {user_query}")
                 ],
                 config=genai_types.GenerateContentConfig(
-                    temperature=0.3,
+                    thinking_config=gemini4_thinking_config(model_id, "low"),
                 ),
             )
             return resp.text.strip()

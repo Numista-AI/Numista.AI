@@ -86,7 +86,18 @@ def generate_stubs_with_llm(items, model_id):
             f"Usages:\n{batch_text}"
         )
 
-        response = client.models.generate_content(model=model_id, contents=prompt)
+        qc_config = (
+            types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_level="low")
+            )
+            if str(model_id or "").strip().lower().startswith("gemini-4-")
+            else None
+        )
+        response = client.models.generate_content(
+            model=model_id,
+            contents=prompt,
+            config=qc_config,
+        )
         text = response.text.strip()
         # Strip markdown fences if present
         if text.startswith('```'):

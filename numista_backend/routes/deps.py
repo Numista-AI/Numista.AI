@@ -24,7 +24,7 @@ PROJECT_ID = "studio-9101802118-8c9a8"
 db = firestore.Client(project=PROJECT_ID)
 storage_client = gcs.Client(project=PROJECT_ID)
 
-# ── 2. Google GenAI Client (google-genai==1.71.0 Vertex AI standard) ───────────
+# ── 2. Google GenAI Client (google-genai>=2.34.0 Vertex AI standard) ──────────
 try:
     genai_client = genai.Client(vertexai=True, project=PROJECT_ID, location="global")
     logger.info("Successfully initialized Vertex AI Google GenAI Client.")

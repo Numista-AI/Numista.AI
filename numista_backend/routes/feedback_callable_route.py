@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from google.cloud import firestore, storage as gcs
 from pydantic import BaseModel
 
+from config import gemini4_thinking_config
 from .deps import db, genai_client, get_current_user, require_admin_user, storage_client, MODEL_FLASH
 from services.gcs_signing_service import generate_v4_signed_url
 
@@ -284,8 +285,9 @@ Return ONLY valid JSON. No markdown. No explanation.
             model=MODEL_FLASH,
             contents=extraction_prompt,
             config=genai_types.GenerateContentConfig(
-                temperature=0.1,
+                response_mime_type="application/json",
                 max_output_tokens=512,
+                thinking_config=gemini4_thinking_config(MODEL_FLASH, "low"),
             ),
         )
         raw = response.text.strip()

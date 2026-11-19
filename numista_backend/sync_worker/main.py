@@ -785,12 +785,18 @@ Extract the following fields and return as a JSON object:
 Ensure the output is valid JSON. Do not wrap in markdown blocks.
 """
         try:
+            sync_model = os.getenv("GEMINI_FLASH_MODEL", "gemini-4-hydrogen")
+            sync_thinking = (
+                genai_types.ThinkingConfig(thinking_level="low")
+                if str(sync_model).strip().lower().startswith("gemini-4-")
+                else None
+            )
             response = genai_client.models.generate_content(
-                model="gemini-4-hydrogen",
+                model=sync_model,
                 contents=[genai_types.Part.from_text(text=prompt)],
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    temperature=0.0
+                    thinking_config=sync_thinking,
                 )
             )
             raw_text = response.text.strip()

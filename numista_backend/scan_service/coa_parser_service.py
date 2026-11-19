@@ -1,6 +1,6 @@
 """
 Numista.AI COA (Certificate of Authenticity) Parser Service
-Parses US Mint Certificate of Authenticity card scans via Gemini 3.6 Flash Vision.
+Parses US Mint Certificate of Authenticity card scans via Gemini 4 Hydrogen Vision.
 Extracts serial numbers, product limits, coin specifications, and mintage signatures.
 Stores document metadata into GCS under gs://numista-vault/users/{email}/coa_documents/
 """
@@ -54,7 +54,7 @@ def validate_mintage_ceiling(raw_serial: Optional[str], raw_mintage: Optional[st
 def parse_coa_document(image_bytes: bytes, filename: str = "coa_scan.jpg") -> Dict[str, Any]:
     """
     Parses US Mint COA card structure.
-    Invokes Gemini 3.6 Flash multimodal vision and applies validate_mintage_ceiling.
+    Invokes Gemini 4 Hydrogen multimodal vision and applies validate_mintage_ceiling.
     """
     logger.info(f"Parsing COA document ({len(image_bytes)} bytes) using model {GEMINI_FLASH_MODEL}...")
 

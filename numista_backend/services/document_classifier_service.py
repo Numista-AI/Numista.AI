@@ -8,6 +8,7 @@ import json
 import logging
 import re
 from typing import Dict, Any, Tuple
+from config import gemini4_thinking_config
 from config.ingestion_config import CLASSIFIER_MODEL, CLASSIFIER_CONFIDENCE_THRESHOLD
 
 logger = logging.getLogger("numista_backend.document_classifier")
@@ -37,7 +38,7 @@ def classify_document_bytes(
     genai_client: Any
 ) -> Dict[str, Any]:
     """
-    Classifies document bytes using Gemini 3.7 Flash multimodal analysis.
+    Classifies document bytes using Gemini 4 Hydrogen multimodal analysis.
     """
     try:
         from google.genai import types as genai_types
@@ -47,6 +48,7 @@ def classify_document_bytes(
             contents=[part, genai_types.Part.from_text(text=CLASSIFIER_PROMPT)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
+                thinking_config=gemini4_thinking_config(CLASSIFIER_MODEL, "low"),
             ),
         )
         raw_text = response.text or "{}"

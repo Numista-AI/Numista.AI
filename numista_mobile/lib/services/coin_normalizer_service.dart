@@ -194,12 +194,13 @@ class CoinNormalizerService {
         '${jsonEncode(coinList)}';
 
     try {
+      final flashModel = AiConfig.flashModel;
       final model = FirebaseAI.googleAI().generativeModel(
-        model: AiConfig.flashModel,
-        generationConfig: GenerationConfig(
+        model: flashModel,
+        generationConfig: AiConfig.buildFlashGenerationConfig(
+          flashModel,
+          level: ThinkingLevel.low,
           responseMimeType: 'application/json',
-          temperature: 0.1,
-          thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.low),
         ),
       );
 
