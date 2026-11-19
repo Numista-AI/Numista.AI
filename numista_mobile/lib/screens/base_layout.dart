@@ -579,7 +579,11 @@ class _BaseLayoutState extends State<BaseLayout> {
       builder: (context, reviewSnap) {
         _isReviewCountLoading =
             email.isNotEmpty && reviewSnap.connectionState == ConnectionState.waiting && !reviewSnap.hasData;
-        _reviewQueueCount = reviewSnap.data?.docs.length ?? 0;
+        final rawDocs = reviewSnap.data?.docs ?? const [];
+        _reviewQueueCount = rawDocs.where((d) {
+          final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
+          return status == 'pending';
+        }).length;
 
         return LayoutBuilder(
           builder: (context, constraints) {
