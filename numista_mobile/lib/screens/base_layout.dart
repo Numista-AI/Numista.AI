@@ -356,6 +356,7 @@ class _BaseLayoutState extends State<BaseLayout> {
     return rawRoute;
   }
 
+  /// All prior desktop width >= 800 intercepts for the 'AI Deepdive' route have been removed; DeepDive always lands in the main pane.
   void _navigateTo(
     String route, {
     String? subTab,

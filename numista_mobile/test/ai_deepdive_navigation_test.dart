@@ -140,6 +140,43 @@ void main() {
     expect(find.text('ROUTE:AI Deepdive'), findsOneWidget);
     expect(find.text('MORGAN_POPOUT'), findsNothing);
     expect(MorganScreenStateRegistry.instance.currentRoute, 'AI Deepdive');
+
+    // Collapsed-rail + Ctrl+M sub-step: switch back to Coin Search, collapse sidebar,
+    // trigger Ctrl+M to open Ask Morgan popout without changing currentRoute, then expand
+    // and navigate to AI Deepdive to close popout and land in main pane.
+    await tester.tap(find.text('Coin Search'));
+    await _settle(tester);
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Coin Search');
+
+    // Invoke Collapse Sidebar button (Ahem test font can overflow the header Row horizontally).
+    final collapseBtn = tester
+        .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_left));
+    collapseBtn.onPressed!();
+    await _settle(tester);
+    expect(find.byTooltip('Expand Sidebar'), findsOneWidget);
+    expect(find.byTooltip('Ask Morgan AI'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await _settle(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyM);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyM);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await _settle(tester);
+
+    expect(find.text('MORGAN_POPOUT'), findsOneWidget);
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Coin Search');
+
+    await tester.tap(find.byTooltip('Expand Sidebar'));
+    await _settle(tester);
+    await tester.ensureVisible(find.text('AI Deepdive'));
+    await _settle(tester);
+    await tester.tap(find.text('AI Deepdive'));
+    await _settle(tester);
+
+    expect(find.text('ROUTE:AI Deepdive'), findsOneWidget);
+    expect(find.text('MORGAN_POPOUT'), findsNothing);
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'AI Deepdive');
     MorganProactiveRescueObserver.instance.resetForTesting();
   });
 
@@ -263,6 +300,68 @@ void main() {
 
     expect(find.text('ROUTE:AI Deepdive'), findsOneWidget);
     expect(MorganScreenStateRegistry.instance.currentRoute, 'AI Deepdive');
+    expect(MorganScreenStateRegistry.instance.isScreenHydrated, isTrue);
+    MorganProactiveRescueObserver.instance.resetForTesting();
+  });
+
+  testWidgets(
+      'Fixture 6: _routeHistory caps at 50 entries and drops oldest routes',
+      (tester) async {
+    _setupHarnessCleanup();
+
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_buildHarness(size: const Size(1440, 900)));
+    await _settle(tester);
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Home Dashboard');
+
+    // Push Coin Programs, then 50 alternating navigations so Home Dashboard and
+    // Coin Programs are evicted by the 50-entry _routeHistory cap.
+    await tester.tap(find.text('Coin Programs'));
+    await tester.pump();
+    for (int i = 0; i < 25; i++) {
+      await tester.tap(find.text('My Collection'));
+      await tester.pump();
+      await tester.tap(find.text('Wishlist'));
+      await tester.pump();
+    }
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'My Wishlist');
+
+    // Popping 49 times walks back to the earliest retained entry (My Collection).
+    for (int i = 0; i < 49; i++) {
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+    }
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'My Collection');
+
+    // A 50th pop cannot go further back to Coin Programs or Home Dashboard.
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'My Collection');
+    MorganProactiveRescueObserver.instance.resetForTesting();
+  });
+
+  testWidgets(
+      'Fixture 7: Aliased route navigation resolves to canonical route and hydrates registry',
+      (tester) async {
+    _setupHarnessCleanup();
+
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_buildHarness(size: const Size(1440, 900)));
+    await _settle(tester);
+
+    await tester.tap(find.text('Research'));
+    await _settle(tester);
+
+    // Tapping 'Numista Lookup' dispatches the aliased route '🔍 Numista Lookup'
+    await tester.tap(find.text('Numista Lookup'));
+    await _settle(tester);
+
+    expect(find.text('ROUTE:Coin Search'), findsOneWidget);
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Coin Search');
     expect(MorganScreenStateRegistry.instance.isScreenHydrated, isTrue);
     MorganProactiveRescueObserver.instance.resetForTesting();
   });
