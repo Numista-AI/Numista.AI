@@ -47,7 +47,7 @@ export const estimateCoinValue = async (coin: Coin): Promise<ValuationResult> =>
           },
           required: ["minPrice", "maxPrice", "summary"]
         },
-        temperature: 0.1,
+        thinkingConfig: { thinkingLevel: "low" },
       },
     });
     const data = parseJsonResponse(response.text || '{}');
@@ -104,7 +104,7 @@ export const processImportedData = async (rawData: any[], onProgress?: (current:
         contents: prompt,
         config: { 
           responseMimeType: "application/json",
-          thinkingConfig: { thinkingBudget: 0 }, 
+          thinkingConfig: { thinkingLevel: "low" }, 
           responseSchema: {
             type: Type.ARRAY,
             items: {
@@ -177,7 +177,7 @@ export const generateCoinAnalysis = async (coin: Coin): Promise<{ text: string }
       model: 'gemini-4-argon',
       contents: prompt,
       config: {
-        thinkingConfig: { thinkingBudget: 4000 }
+        thinkingConfig: { thinkingLevel: "medium" }
       }
     });
     return { text: response.text || "Failed to generate report." };
@@ -200,6 +200,7 @@ export const findMissingCoinsForSet = async (setName: string, selectedCoins: Coi
       contents: prompt,
       config: {
         responseMimeType: "application/json",
+        thinkingConfig: { thinkingLevel: "low" },
         responseSchema: {
           type: Type.ARRAY,
           items: { type: Type.STRING }
@@ -223,7 +224,7 @@ export const getCollectionInsights = async (coins: Coin[], query: string): Promi
     const response = await ai.models.generateContent({ 
         model: 'gemini-4-hydrogen', 
         contents: prompt,
-        config: { thinkingConfig: { thinkingBudget: 0 } }
+        config: { thinkingConfig: { thinkingLevel: "low" } }
     });
     return response.text || "No insights available at this time.";
   } catch (e) { 

@@ -260,6 +260,7 @@ def resolve_via_gemini(
 
     try:
         from google.genai import types as genai_types
+        from config import gemini4_thinking_config
 
         filled_prompt = _LITTLETON_CLASSIFY_PROMPT.format(
             description=description.replace('"', '\\"')
@@ -270,8 +271,8 @@ def resolve_via_gemini(
             contents=[genai_types.Part.from_text(text=filled_prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.0,
                 max_output_tokens=512,
+                thinking_config=gemini4_thinking_config(model, "low"),
             ),
         )
 

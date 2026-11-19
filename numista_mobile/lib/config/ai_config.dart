@@ -1,3 +1,4 @@
+import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
 
@@ -63,4 +64,19 @@ class AiConfig {
       _get('gemini_image_pro_model', defaultImageProModel);
   static String get embeddingModel =>
       _get('gemini_embedding_model', defaultEmbeddingModel);
+
+  static bool isGemini4Model(String modelId) =>
+      modelId.trim().toLowerCase().startsWith('gemini-4-');
+
+  static GenerationConfig buildFlashGenerationConfig(
+    String modelId, {
+    ThinkingLevel level = ThinkingLevel.low,
+    String? responseMimeType,
+  }) {
+    return GenerationConfig(
+      responseMimeType: responseMimeType,
+      thinkingConfig:
+          isGemini4Model(modelId) ? ThinkingConfig.withThinkingLevel(level) : null,
+    );
+  }
 }

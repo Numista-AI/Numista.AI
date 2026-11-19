@@ -3,6 +3,8 @@ Numista.AI Centralized Backend Configuration Package
 """
 
 import os
+from typing import Optional
+from google.genai import types as genai_types
 
 # Primary Public Domain for Numista.AI
 APP_PUBLIC_DOMAIN = os.getenv("APP_PUBLIC_DOMAIN", "numista.ai")
@@ -35,3 +37,17 @@ DEFAULT_VISION_MODEL  = os.getenv("DEFAULT_VISION_MODEL",  GEMINI_FLASH_MODEL)  
 FALLBACK_VISION_MODEL = os.getenv("FALLBACK_VISION_MODEL", GEMINI_LITE_MODEL)     # Vision fallback
 DEFAULT_CHAT_MODEL    = os.getenv("DEFAULT_CHAT_MODEL",    GEMINI_FLASH_MODEL)    # Morgan AI chat
 FALLBACK_CHAT_MODEL   = os.getenv("FALLBACK_CHAT_MODEL",   GEMINI_LITE_MODEL)     # Chat fallback
+
+
+def is_gemini4_model(model_id: str) -> bool:
+    """Return True iff model_id targets a Gemini 4 tier (Hydrogen/Argon/Carbon)."""
+    return str(model_id or "").strip().lower().startswith("gemini-4-")
+
+
+def gemini4_thinking_config(
+    model_id: str, level: str = "low"
+) -> Optional[genai_types.ThinkingConfig]:
+    """Return explicit ThinkingConfig for Gemini 4 models, or None on rollback/lite."""
+    if not is_gemini4_model(model_id):
+        return None
+    return genai_types.ThinkingConfig(thinking_level=level)

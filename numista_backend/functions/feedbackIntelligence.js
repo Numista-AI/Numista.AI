@@ -66,9 +66,15 @@ Analyze this feedback and return ONLY valid JSON (no markdown, no explanation):
 estimated_effort must be exactly one of: small, medium, large
 pattern_tags should be 2-5 lowercase keywords (e.g. "overlay", "web-only", "auth", "navigation", "performance")`;
 
+    const modelId = process.env.GEMINI_FLASH_MODEL || "gemini-4-hydrogen";
+    const config = { responseMimeType: "application/json" };
+    if (String(modelId).trim().toLowerCase().startsWith("gemini-4-")) {
+      config.thinkingConfig = { thinkingLevel: "low" };
+    }
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_FLASH_MODEL || "gemini-4-hydrogen",
+      model: modelId,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config,
     });
 
     const raw = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";

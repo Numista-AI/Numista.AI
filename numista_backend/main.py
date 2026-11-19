@@ -31,7 +31,7 @@ from pathlib import Path
 import time
 from logging_config import get_logger, request_id_var, generate_request_id, rate_tracker
 from numista_scraper.config import DB_PATH
-from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL
+from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL, gemini4_thinking_config
 from services.checklist_parser import parse_checklist_notes, slugify_theme, extract_checklist_document
 from services.mint_helpers import (
     apply_imported_mint_fields,
@@ -842,6 +842,7 @@ Output ONLY raw JSON object: {{"user_header": "schema_key"}}"""
             contents=[genai_types.Part.from_text(text=mapping_prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             ),
         )
         ai_mapping = json.loads(resp.text)
@@ -1415,8 +1416,8 @@ async def identify_world_item(
                     genai_types.Part.from_text(_WORLD_ITEM_PROMPT),
                 ],
                 config=genai_types.GenerateContentConfig(
-                    temperature=0.1,
                     max_output_tokens=800,
+                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                 ),
             )
         else:
@@ -1431,8 +1432,8 @@ async def identify_world_item(
                 model=PRIMARY_MODEL,
                 contents=[genai_types.Part.from_text(filled_prompt)],
                 config=genai_types.GenerateContentConfig(
-                    temperature=0.1,
                     max_output_tokens=600,
+                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                 ),
             )
 
@@ -2185,6 +2186,7 @@ async def process_invoice(
                 contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",
+                    thinking_config=gemini4_thinking_config(PRO_MODEL, "medium"),
                 ),
             )
             logger.info(f"Invoice PRO model OK: {file.filename!r}")
@@ -2195,6 +2197,7 @@ async def process_invoice(
                 contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",
+                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                 ),
             )
             logger.info(f"Invoice PRIMARY model OK: {file.filename!r}")
@@ -2293,6 +2296,7 @@ async def process_invoice(
                     contents=[pdf_part, genai_types.Part.from_text(text=retry_prompt)],
                     config=genai_types.GenerateContentConfig(
                         response_mime_type="application/json",
+                        thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                     ),
                 )
                 retry_text = retry_response.text or ""
@@ -3418,12 +3422,17 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
             tool_declarations.append(fn_web_lookup)
 
         config = genai_types.GenerateContentConfig(
-            tools=[genai_types.Tool(function_declarations=tool_declarations)]
+            tools=[genai_types.Tool(function_declarations=tool_declarations)],
+            thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
         )
 
+        user_turn = genai_types.Content(
+            role="user",
+            parts=[genai_types.Part.from_text(text=prompt)],
+        )
         response = genai_client.models.generate_content(
             model=PRIMARY_MODEL,
-            contents=[genai_types.Part.from_text(text=prompt)],
+            contents=[user_turn],
             config=config,
         )
 
@@ -3431,22 +3440,29 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
 
         if response.function_calls:
             web_lookup_executed = False
+            fn_results = []
             for call in response.function_calls:
                 c_name = call.name
                 c_args = call.args or {}
+                call_result = None
                 if c_name == "add_coin_to_collection":
                     action_payload = propose_add_coin(owner_key, caller_uid, **c_args)
+                    call_result = action_payload
                 elif c_name == "update_coin_in_collection":
                     # G0-1: propose update — no immediate write
                     action_payload = propose_update_coin(owner_key, caller_uid, **c_args)
+                    call_result = action_payload
                 elif c_name == "undo_add_coin":
                     # G0-1/G0-3: verify action log + propose delete
                     action_payload = execute_undo_add_coin(owner_key, caller_uid=caller_uid, **c_args)
+                    call_result = action_payload
                 elif c_name == "get_coin_details":
                     action_payload = execute_get_coin_details(owner_key, include_financial=has_val_keyword, **c_args)
+                    call_result = action_payload
                 elif c_name == "web_lookup":
                     if web_lookup_executed:
                         # Prevent parallel tool calls in a single turn from burning >1 quota unit
+                        fn_results.append((c_name, {"action": "web_lookup", "status": "skipped_duplicate_in_turn"}))
                         continue
                     clean_query = str(c_args.get("query", "")).strip()
                     if not clean_query or not is_morgan_web_lookup_enabled() or not genai_client:
@@ -3455,6 +3471,7 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                             "status": "skipped",
                             "detail": "Web lookup skipped (empty query or disabled).",
                         }
+                        fn_results.append((c_name, action_payload))
                         continue
                     try:
                         quota = check_and_increment_dual_rate_cap(
@@ -3470,6 +3487,7 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                             coin_context=None,
                         )
                         action_payload["quota"] = quota
+                        call_result = action_payload
                     except HTTPException as rate_err:
                         if rate_err.status_code == 429:
                             # Zero-token short-circuit: zero extra Gemini tokens spent.
@@ -3483,12 +3501,46 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                                 },
                             }
                         raise
+                if call_result is not None:
+                    fn_results.append((c_name, call_result))
 
             # Second turn to generate Morgan's final response after executing tool
-            second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. If an add_coin proposal was returned, inform the user about the proposal and ask them to confirm before it is saved to their binder. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
+            cand0_content = (
+                response.candidates[0].content
+                if getattr(response, "candidates", None)
+                else None
+            )
+            if isinstance(cand0_content, genai_types.Content):
+                turn2_parts = [
+                    genai_types.Part.from_function_response(
+                        name=n,
+                        response={"result": r},
+                    )
+                    for n, r in fn_results
+                ] + [
+                    genai_types.Part.from_text(
+                        text=(
+                            "Now output Morgan's final response to the user. "
+                            "If an add_coin proposal was returned, inform the user about the proposal "
+                            "and ask them to confirm before it is saved to their binder. "
+                            "Ask if they want to add more details NOW (cost, condition, storage) or LATER."
+                        )
+                    )
+                ]
+                turn2_contents = [
+                    user_turn,
+                    cand0_content,
+                    genai_types.Content(role="user", parts=turn2_parts),
+                ]
+            else:
+                second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. If an add_coin proposal was returned, inform the user about the proposal and ask them to confirm before it is saved to their binder. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
+                turn2_contents = [genai_types.Part.from_text(text=second_prompt)]
             response2 = genai_client.models.generate_content(
                 model=PRIMARY_MODEL,
-                contents=[genai_types.Part.from_text(text=second_prompt)],
+                contents=turn2_contents,
+                config=genai_types.GenerateContentConfig(
+                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
+                ),
             )
             return {"status": "success", "response": response2.text, "action_payload": action_payload}
 
@@ -4741,9 +4793,8 @@ async def analyze_binder_scan(
             contents=prompt_parts,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
                 max_output_tokens=65536,
-                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),  # LOW thinking for fast JSON
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),  # LOW thinking for fast JSON
             ),
         )
         try:
@@ -5325,9 +5376,8 @@ IMPORTANT:
                 contents=file_parts + [genai_types.Part.from_text(text=checklist_prompt)],
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    temperature=0.1,
                     max_output_tokens=65536,
-                    thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                 ),
             )
             try:
@@ -5973,9 +6023,8 @@ Return ONLY valid JSON — no markdown fences, no commentary:
             contents=[image_part, text_part],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
                 max_output_tokens=16384,
-                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             ),
         )
 
@@ -6397,8 +6446,7 @@ async def call_gemini_identify(contents, model=PRIMARY_MODEL):
             contents=contents,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                thinking_config=gemini4_thinking_config(model, "low"),
             ),
         ),
     )
@@ -6951,8 +6999,7 @@ async def estimate_value_text(request: TextValuationRequest, _user: dict = Depen
             contents=[genai_types.Part.from_text(text=prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             ),
         )
         raw = resp.text.strip()
@@ -7046,8 +7093,7 @@ async def estimate_value_general(request: GeneralValuationRequest, _user: dict =
             contents=[genai_types.Part.from_text(text=prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             ),
         )
         raw = resp.text.strip()
@@ -8294,7 +8340,10 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             resp = genai_client.models.generate_content(
                                 model=PRIMARY_MODEL,
                                 contents=[pdf_part, genai_types.Part.from_text(text=invoice_prompt)],
-                                config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+                                config=genai_types.GenerateContentConfig(
+                                    response_mime_type="application/json",
+                                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
+                                ),
                             )
                             raw_text = resp.text.strip()
                             if raw_text.startswith("```"):
@@ -8497,8 +8546,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         ],
                         config=genai_types.GenerateContentConfig(
                             response_mime_type="application/json",
-                            temperature=0.1,
-                            thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                            thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                         ),
                     )
                     raw1 = resp1.text.strip()
@@ -8527,8 +8575,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             ],
                             config=genai_types.GenerateContentConfig(
                                 response_mime_type="application/json",
-                                temperature=0.1,
-                                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                             ),
                         )
                         raw2 = resp2.text.strip()
@@ -10247,9 +10294,9 @@ def search_reference(request: ReferenceSearchRequest):
             contents=[genai_types.Part.from_text(text=prompt)],
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                temperature=0.1,
                 response_mime_type="application/json",
                 max_output_tokens=1000,
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             ),
         )
         
@@ -10998,7 +11045,8 @@ No markdown, no explanation -- raw JSON only."""
             model=PRIMARY_MODEL,
             contents=[prompt],
             config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json"
+                response_mime_type="application/json",
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             )
         )
         scored_items = json.loads(response.text)
@@ -12882,6 +12930,9 @@ async def api_normalize_epn_search(req: EpnNormalizeRequest):
         response = genai_client.models.generate_content(
             model=GEMINI_FLASH_MODEL,
             contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                thinking_config=gemini4_thinking_config(GEMINI_FLASH_MODEL, "low"),
+            ),
         )
         normalized = response.text.strip().replace("\n", " ") if response and response.text else raw_query
         logger.info(f"[EPN Normalize] Gemini match: '{raw_query}' -> '{normalized}'")

@@ -57,6 +57,13 @@ def identify_coin_and_link_official(image_filename):
     response = genai_client.models.generate_content(
         model=GEMINI_MODEL,
         contents=[prompt, genai_types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg")],
+        config=genai_types.GenerateContentConfig(
+            thinking_config=(
+                genai_types.ThinkingConfig(thinking_level="low")
+                if str(GEMINI_MODEL or "").strip().lower().startswith("gemini-4-")
+                else None
+            ),
+        ),
     )
     detected_name = response.text.strip()
 

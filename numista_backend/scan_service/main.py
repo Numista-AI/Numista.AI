@@ -194,6 +194,16 @@ MODEL      = os.getenv("GEMINI_FLASH_MODEL", "gemini-4-hydrogen")
 PRO_MODEL  = os.getenv("GEMINI_PRO_MODEL",   "gemini-4-argon")
 
 client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
+
+
+def is_gemini4_model(model_id: str) -> bool:
+    return str(model_id or "").strip().lower().startswith("gemini-4-")
+
+
+def gemini4_thinking_config(model_id: str, level: str = "low"):
+    if not is_gemini4_model(model_id):
+        return None
+    return types.ThinkingConfig(thinking_level=level)
 db     = firestore.Client(project=PROJECT_ID)
 
 
@@ -442,9 +452,9 @@ def scan_checklist():
             types.Part.from_text(text=prompt),
         ],
         config=types.GenerateContentConfig(
-            temperature=0.0,
             max_output_tokens=8192,
             response_mime_type="application/json",
+            thinking_config=gemini4_thinking_config(MODEL, "low"),
         ),
     )
 

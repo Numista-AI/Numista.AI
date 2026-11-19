@@ -10,6 +10,7 @@ import hashlib
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
+from config import gemini4_thinking_config
 from config.ingestion_config import (
     CLASSIFIER_MODEL,
     EXTRACTION_MODEL,
@@ -287,6 +288,7 @@ def extract_checklist_document(
             contents=[pdf_part, genai_types.Part.from_text(text=effective_prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
+                thinking_config=gemini4_thinking_config(EXTRACTION_MODEL, "medium"),
             ),
         )
         raw_text = response.text or "{}"

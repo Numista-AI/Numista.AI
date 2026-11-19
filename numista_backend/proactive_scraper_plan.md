@@ -32,7 +32,7 @@ graph TD
 Add a new script under `numista_backend/cron_scrape_errors.py` that:
 1. Performs targeted searches on sites like `coin-identifier.com/blog`, `error-ref.com`, and numismatic news sites.
 2. Extracts coin details (name, year, denomination, estimated auction value, description).
-3. Uses a lightweight LLM parsing pass (`gemini-3.5-flash`) to structure the HTML/markdown text into the clean `MintError` JSON schema.
+3. Uses a lightweight LLM parsing pass (`gemini-4-hydrogen`) to structure the HTML/markdown text into the clean `MintError` JSON schema.
 
 ### Step 2: Implement Deduplication & Confidence Scoring
 * **Deduplication**: Match using a combination of `denomination`, `year`, and canonical ID slugs (e.g. `1999-nj-quarter-die-gouge`).

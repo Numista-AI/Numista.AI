@@ -1,4 +1,5 @@
 import os
+from config import gemini4_thinking_config
 import requests
 import json
 import logging
@@ -448,7 +449,10 @@ class GreysheetService:
                 resp = genai_client.models.generate_content(
                     model=primary_model,
                     contents=prompt,
-                    config=types.GenerateContentConfig(response_mime_type="application/json"),
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        thinking_config=gemini4_thinking_config(primary_model, "low"),
+                    ),
                 )
                 res = json.loads(resp.text)
                 if not res.get("match", True):
@@ -638,7 +642,10 @@ Set gsid to null if no candidate is a good match. Do not output markdown."""
                 resp = genai_client.models.generate_content(
                     model=primary_model,
                     contents=prompt,
-                    config=types.GenerateContentConfig(response_mime_type="application/json"),
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        thinking_config=gemini4_thinking_config(primary_model, "low"),
+                    ),
                 )
                 res_json = json.loads(resp.text)
                 gsid = res_json.get("gsid")

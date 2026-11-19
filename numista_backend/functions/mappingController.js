@@ -38,12 +38,16 @@ async function mapToSchema(entities) {
     Entities: ${JSON.stringify(entities)}`;
 
     try {
+        const config = {
+            responseMimeType: 'application/json',
+            responseSchema: rawSchema
+        };
+        if (String(modelId || '').trim().toLowerCase().startsWith('gemini-4-')) {
+            config.thinkingConfig = { thinkingLevel: 'low' };
+        }
         const result = await genai.models.generateContent({
             model: modelId,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: rawSchema
-            },
+            config,
             contents: [{ parts: [{ text: prompt }] }]
         });
 

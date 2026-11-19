@@ -46,7 +46,7 @@ Execute a 7-day operational countdown and initial testing sprint to achieve **10
 ### 📅 COUNTDOWN PHASE (PRE-LAUNCH)
 
 #### [X] DAY 1 (T-72 Hours) — Backend Model Pinning & Core Health Check
-- [x] Pinned `gemini-3.6-flash` in `numista_backend/main.py` and `scan_service/main.py`.
+- [x] Pinned primary Flash model in `numista_backend/config/__init__.py` and `scan_service/main.py` (originally pinned JUL 2026; superseded Nov 2026 by `gemini-4-hydrogen` per Rule 6).
 - [x] Ran automated backend test suite (16/16 passed).
 - [x] Code pushed cleanly to `dev` branch (`e0721b5`).
 
