@@ -59,7 +59,7 @@ void main() {
       );
 
       expect(find.text('\$12.50'), findsOneWidget);
-      expect(find.text('Value pending AI estimate'), findsNothing);
+      expect(find.text('Pending'), findsNothing);
     });
 
     testWidgets('Case 2 (MF-C2\'): Real Firestore key "AI Estimated Value" displays formatted AI value when cpgRetail is 0', (tester) async {
@@ -80,7 +80,7 @@ void main() {
       );
 
       expect(find.text('\$35.00'), findsOneWidget);
-      expect(find.text('Value pending AI estimate'), findsNothing);
+      expect(find.text('Pending'), findsNothing);
     });
 
     testWidgets('Case 3 (MF-C2\'): Real Firestore key "AI Estimated Value" with enrichment_status == pending shows AI value AND pending chip', (tester) async {
@@ -101,7 +101,7 @@ void main() {
       );
 
       expect(find.text('\$35.00'), findsOneWidget);
-      expect(find.text('Value pending AI estimate'), findsOneWidget);
+      expect(find.text('Pending'), findsOneWidget);
     });
 
     testWidgets('Case 4 (MF-C2\'): Sentinel AI values ("Pending", "null", "—") fall through to denomination face value + pending chip', (tester) async {
@@ -122,7 +122,7 @@ void main() {
         );
 
         expect(find.text('\$0.25'), findsOneWidget, reason: 'Sentinel "$sentinel" must fall through to Quarter face value');
-        expect(find.text('Value pending AI estimate'), findsOneWidget);
+        expect(find.text('Pending'), findsOneWidget);
       }
     });
 
@@ -159,7 +159,7 @@ void main() {
           findsOneWidget,
           reason: 'Denomination "${entry.key}" must render "${entry.value}"',
         );
-        expect(find.text('Value pending AI estimate'), findsOneWidget);
+        expect(find.text('Pending'), findsOneWidget);
         expect(find.text('\$0.00'), findsNothing);
       }
     });
@@ -192,7 +192,7 @@ void main() {
         final renderedSurface = (surfaceBox.decoration as BoxDecoration?)?.color ?? surfaceBox.color!;
         expect(renderedSurface.a, 1.0, reason: 'card surface must be opaque for a valid ratio');
 
-        final chipText = tester.widget<Text>(find.text('Value pending AI estimate'));
+        final chipText = tester.widget<Text>(find.text('Pending'));
         final valText = tester.widget<Text>(find.text('\$0.05'));
         final textColor = chipText.style!.color!;
         expect(valText.style!.color, equals(textColor));

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/denomination_canon.dart';
+import '../services/coin_data_normalizer.dart';
 import '../utils/mint_helpers.dart';
 import '../utils/web_input_helper.dart';
 
@@ -388,7 +389,8 @@ class _AddCoinManualFormState extends State<AddCoinManualForm> {
       };
 
 
-      widget.onSubmit(formData);
+      final normalized = CoinDataNormalizer.normalizeCoinMap(formData);
+      widget.onSubmit(normalized);
       _resetForm();
     }
   }

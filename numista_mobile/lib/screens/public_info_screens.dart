@@ -105,7 +105,7 @@ class PublicInfoShell extends StatelessWidget {
                       onPressed: () {
                         AuthGate.navigateTo(context, initialAuthTab: 1);
                       },
-                      child: const Text('Join Beta', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      child: const Text('Get Started', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -268,9 +268,9 @@ class _FeaturesView extends StatelessWidget {
         _featureItem(
           icon: Icons.picture_as_pdf_outlined,
           title: 'Estate Documentation & Reports',
-          status: 'COMING SOON',
+          status: 'EARLY ACCESS',
           statusColor: const Color(0xFFD97706),
-          desc: 'Estate PDF reports are coming soon in beta for personal records, insurance documentation, and family review.',
+          desc: 'Structured estate PDF reports for personal records, insurance documentation, and family review.',
         ),
         const SizedBox(height: 32),
         _actionRow(context),
@@ -356,10 +356,10 @@ class _PricingView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _tagBadge('BETA PRICING'),
+        _tagBadge('ACCESS & PRICING'),
         const SizedBox(height: 12),
         const Text(
-          'Free During Beta — Pricing TBA',
+          'Early Access Included — Plans TBA',
           style: TextStyle(
             color: Color(0xFF0F172A),
             fontSize: 32,
@@ -382,7 +382,7 @@ class _PricingView extends StatelessWidget {
                       border: Border.all(color: const Color(0xFF059669).withAlpha(90)),
                     ),
                     child: const Text(
-                      'OPEN PUBLIC BETA',
+                      'EARLY ACCESS',
                       style: TextStyle(
                         color: Color(0xFF059669),
                         fontWeight: FontWeight.bold,
@@ -404,12 +404,12 @@ class _PricingView extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               const Text(
-                'Numista.AI is currently in open public beta. During this phase, collection tracking, AI photo identification, and market value estimates are completely free for registered participants.',
+                'Numista.AI is currently in early access. Collection tracking, AI photo identification, and market value estimates are included for registered members.',
                 style: TextStyle(color: Color(0xFF0F172A), fontSize: 15, height: 1.6),
               ),
               const SizedBox(height: 16),
               const Text(
-                'Long-term pricing and plans will be announced prior to general release. Existing beta accounts will be grandfathered—you will not be asked to pay for your active beta access.',
+                'Long-term pricing and plans will be announced prior to general release. Founding Member accounts will be grandfathered—you will not be asked to pay for your existing early access.',
                 style: TextStyle(color: Color(0xFF0F172A), fontSize: 15, height: 1.6),
               ),
             ],
@@ -453,15 +453,15 @@ class _FaqView extends StatelessWidget {
         ),
         _faqTile(
           question: '3. Can I export / print an estate report?',
-          answer: 'Estate PDF reports are coming soon in beta. Numista is developing structured export tools so you can generate professional collection summaries for personal records, insurance documentation, and family estate planning.',
+          answer: 'Yes. Numista provides structured export tools so you can generate professional collection summaries for personal records, insurance documentation, and family estate planning.',
         ),
         _faqTile(
-          question: '4. What works in public beta, and how do I send feedback?',
-          answer: 'Most core features—including collection cataloging, photo lookup, and Greysheet value estimates—work today, while select advanced features are still being polished. You can submit feedback through the Ask Morgan chat or participate in our sidebar AI Trainer Board, where community members review and rate AI coin classifications.',
+          question: '4. What features are included today, and how do I send feedback?',
+          answer: 'Most core features—including collection cataloging, photo lookup, and Greysheet value estimates—work today, while select advanced features are still being polished. You can submit feedback through Ask Morgan or participate in our sidebar AI Trainer Board, where community members review and rate AI coin classifications.',
         ),
         _faqTile(
           question: '5. Does Guest / Demo save my coins?',
-          answer: 'No. The Demo Vault runs entirely in-memory with sample coins for exploration. Any changes made during a demo session are not saved. To build and preserve your personal collection vault, create a free beta account.',
+          answer: 'No. The Demo Vault runs entirely in-memory with sample coins for exploration. Any changes made during a demo session are not saved. To build and preserve your personal collection vault, create a free account.',
         ),
         const SizedBox(height: 32),
         _actionRow(context),
@@ -555,7 +555,7 @@ Widget _actionRow(BuildContext context) {
           AuthGate.navigateTo(context, initialAuthTab: 1);
         },
         icon: const Icon(Icons.rocket_launch_outlined, size: 18),
-        label: const Text('Create Free Beta Account', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('Create Free Account', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       OutlinedButton.icon(
         style: OutlinedButton.styleFrom(

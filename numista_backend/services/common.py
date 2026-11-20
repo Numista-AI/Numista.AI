@@ -17,12 +17,36 @@ GOLDEN_SCHEMA_MAPPING: Dict[str, str] = {
     "Certification #": "Certification Number",
     "Personal Ref #": "Personal Reference #",
     "Ref #": "Personal Reference #",
+    # Official US Mint Terms slang headers
+    "Date": "Year",
+    "date": "Year",
+    "mintage_year": "Year",
+    "Mint Year": "Year",
+    "mint_year": "Year",
+    "Coin Date": "Year",
+    "coin_date": "Year",
+    "front": "Obverse",
+    "Front": "Obverse",
+    "heads": "Obverse",
+    "Heads": "Obverse",
+    "back": "Reverse",
+    "Back": "Reverse",
+    "tail": "Reverse",
+    "Tail": "Reverse",
+    "tails": "Reverse",
+    "Tails": "Reverse",
+}
+
+_GOLDEN_SCHEMA_LOWER: Dict[str, str] = {
+    k.strip().lower(): v for k, v in GOLDEN_SCHEMA_MAPPING.items()
 }
 
 def normalize_colloquial_header(header_name: str) -> str:
     """Maps informal collector spreadsheet headers into canonical Golden Schema column names."""
     cleaned = header_name.strip()
-    return GOLDEN_SCHEMA_MAPPING.get(cleaned, cleaned)
+    if cleaned in GOLDEN_SCHEMA_MAPPING:
+        return GOLDEN_SCHEMA_MAPPING[cleaned]
+    return _GOLDEN_SCHEMA_LOWER.get(cleaned.lower(), cleaned)
 
 def safe_get_str(row: Dict[str, Any], key: str, default: str = "") -> str:
     """Safely extracts string values from data dictionaries preventing KeyError exceptions."""

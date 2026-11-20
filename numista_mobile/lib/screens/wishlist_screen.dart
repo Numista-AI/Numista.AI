@@ -11,7 +11,6 @@ import '../constants.dart';
 import '../models/coin_model.dart';
 import '../models/program_model.dart';
 import '../services/auth_service.dart';
-import '../services/beta_checklist_service.dart';
 import '../services/epn_service.dart';
 import '../services/http_auth_client.dart';
 import '../services/reference_service.dart';
@@ -309,9 +308,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
       if (!mounted) return;
       if (response.statusCode == 200) {
-        if (_hasFirebaseApp) {
-          BetaChecklistService.autoCompleteTask('task_15_public_wishlist');
-        }
         _showSnack(
           'Sent! Your Wish List of ${items.length} coins was emailed to $recipient.',
           backgroundColor: _emerald,
@@ -370,7 +366,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final shareUrl = data['share_url']?.toString() ?? '';
-        BetaChecklistService.autoCompleteTask('task_15_public_wishlist');
         if (shareUrl.isNotEmpty) {
           await Clipboard.setData(ClipboardData(text: shareUrl));
           if (!mounted) return;

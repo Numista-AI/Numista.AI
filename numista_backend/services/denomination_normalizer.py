@@ -101,8 +101,9 @@ def normalize_denomination(
         if not is_us:
             return (raw_clean, False, raw_clean)
 
-    # Clean suffixes like (25C), (50c), etc.
-    d_clean = re.sub(r"\s*\(\s*\d+\s*[c¢\w\s]*\)", "", raw_clean, flags=re.IGNORECASE).strip()
+    # Clean suffixes like (25C), (50c), etc. and collapse spaces before ¢/₵ ('.25 ₵' -> '.25₵')
+    d_clean = re.sub(r"\s*\(\s*\d+\s*[c¢₵\w\s]*\)", "", raw_clean, flags=re.IGNORECASE)
+    d_clean = re.sub(r"\s+([¢₵])", r"\1", d_clean).strip()
 
     # Clean doubled words (e.g. "Quarter Dollar Dollar" -> "Quarter Dollar")
     d_lower = d_clean.lower()
@@ -124,6 +125,247 @@ def normalize_denomination(
 
     # Fails open for uncataloged or world denominations
     return (raw_clean, False, raw_clean)
+
+
+_METAL_WORD_TYPOS: Dict[str, str] = {
+    "silve": "Silver",
+    "sliver": "Silver",
+    "silvr": "Silver",
+    "siver": "Silver",
+    "silv": "Silver",
+    "ag": "Silver",
+    "gol": "Gold",
+    "gld": "Gold",
+    "godl": "Gold",
+    "au": "Gold",
+    "platnium": "Platinum",
+    "platnum": "Platinum",
+    "pt": "Platinum",
+    "coper": "Copper",
+    "coppr": "Copper",
+    "cu": "Copper",
+    "nickle": "Nickel",
+    "cupronickle": "Cupro-Nickel Clad",
+    "cupronickel": "Cupro-Nickel Clad",
+}
+
+_PROTECTED_BASE_METAL_PHRASES = (
+    "nickel silver",
+    "german silver",
+    "cupro-nickel",
+    "cupronickel",
+    "silver plated",
+    "silver-plated",
+    "gold plated",
+    "gold-plated",
+    "platinum plated",
+    "platinum-plated",
+)
+
+_SHELDON_GRADE_RE = re.compile(
+    r"^(?:PF|PR|MS|AU|XF|EF|VF|F|VG|G|AG|FR|PO)\s*[- ]?\s*\d{1,2}\b",
+    re.IGNORECASE,
+)
+
+
+def _is_us_country(country: Optional[str]) -> bool:
+    if not country:
+        return True
+    return country.strip().lower() in {
+        "",
+        "us",
+        "usa",
+        "u.s.",
+        "u.s.a.",
+        "united states",
+        "united states of america",
+        "united states mint",
+    }
+
+
+def _parse_year_int(raw_year: Optional[Any]) -> Optional[int]:
+    if raw_year is None:
+        return None
+    s = str(raw_year).strip()
+    m = re.search(r"\b(1[7-9]\d{2}|20\d{2})\b", s)
+    if m:
+        return int(m.group(1))
+    s_no_dec = re.sub(r"\.0+$", "", s)
+    return int(s_no_dec) if s_no_dec.isdigit() else None
+
+
+def normalize_metal_content(
+    raw_metal: Optional[str],
+    year: Optional[Any] = None,
+    canonical_denom: Optional[str] = None,
+    country: Optional[str] = None,
+    item_type: Optional[str] = None,
+) -> str:
+    """Fixes metal typos (`Silve` -> `Silver`) and enriches historical US silver compositions."""
+    if item_type and "paper" in str(item_type).lower():
+        return str(raw_metal or "").strip()
+
+    trimmed = str(raw_metal or "").strip()
+    lower = trimmed.lower()
+    for phrase in _PROTECTED_BASE_METAL_PHRASES:
+        if phrase in lower:
+            return trimmed
+
+    cleaned = trimmed
+    if lower == "clad":
+        cleaned = "Cupro-Nickel Clad"
+    elif lower in _METAL_WORD_TYPOS:
+        cleaned = _METAL_WORD_TYPOS[lower]
+    elif cleaned:
+        cleaned = re.sub(
+            r"\b[A-Za-z]+\b",
+            lambda m: _METAL_WORD_TYPOS.get(m.group(0).lower(), m.group(0)),
+            cleaned,
+        )
+        if cleaned.lower() in ("silver", "gold", "platinum", "copper", "nickel"):
+            cleaned = cleaned.capitalize()
+
+    yr = _parse_year_int(year)
+    is_us = _is_us_country(country)
+    c_low = cleaned.lower()
+    is_bare_or_empty_silver = c_low in ("", "pending", "unknown", "silver")
+
+    if is_us and yr is not None and canonical_denom:
+        if yr <= 1964 and canonical_denom in ("Dime", "Quarter Dollar", "Half Dollar") and is_bare_or_empty_silver:
+            return "90% Silver, 10% Copper"
+        if 1965 <= yr <= 1970 and canonical_denom == "Half Dollar" and c_low == "silver":
+            return "40% Silver, 60% Copper"
+        if 1942 <= yr <= 1945 and canonical_denom == "Five Cents" and c_low == "silver":
+            return "35% Silver, 56% Copper, 9% Manganese"
+
+    return cleaned
+
+
+def normalize_condition(raw_condition: Optional[str]) -> str:
+    """Translates raw condition slang (`shiny` -> `Uncirculated`) while keeping Sheldon grades intact."""
+    trimmed = str(raw_condition or "").strip()
+    if not trimmed:
+        return ""
+    if _SHELDON_GRADE_RE.match(trimmed) or "details" in trimmed.lower():
+        return trimmed
+    low = trimmed.lower()
+    if low in ("shiny", "bright", "mint", "bu", "brilliant uncirculated"):
+        return "Uncirculated"
+    if low in ("worn", "heavily circulated"):
+        return "Circulated"
+    return trimmed
+
+
+def infer_classic_us_series(
+    year: Optional[Any],
+    canonical_denom: Optional[str],
+    existing_series: Optional[str],
+    country: Optional[str] = None,
+) -> str:
+    trimmed = str(existing_series or "").strip()
+    if not _is_us_country(country):
+        return trimmed
+    if trimmed.lower() not in ("", "general item", "standard circulation", "none", "n/a", "unknown", "other"):
+        return trimmed
+    yr = _parse_year_int(year)
+    if yr is None or not canonical_denom:
+        return trimmed
+    if canonical_denom == "Quarter Dollar":
+        if 1932 <= yr <= 1998:
+            return "Washington Quarters"
+        if 1916 <= yr <= 1930:
+            return "Standing Liberty Quarters"
+    elif canonical_denom == "Dime":
+        if yr >= 1946:
+            return "Roosevelt Dimes"
+        if 1916 <= yr <= 1945:
+            return "Mercury Dimes"
+    elif canonical_denom == "Half Dollar":
+        if yr >= 1964:
+            return "Kennedy Half Dollars"
+        if 1948 <= yr <= 1963:
+            return "Franklin Half Dollars"
+        if 1916 <= yr <= 1947:
+            return "Walking Liberty Half Dollars"
+    elif canonical_denom == "Five Cents":
+        if yr >= 1938:
+            return "Jefferson Nickels"
+        if 1913 <= yr <= 1938:
+            return "Buffalo Nickels"
+    elif canonical_denom == "Cent":
+        if yr >= 2010:
+            return "Lincoln Shield Cents"
+        if 1959 <= yr <= 2008:
+            return "Lincoln Memorial Cents"
+        if 1909 <= yr <= 1958:
+            return "Lincoln Wheat Cents"
+    elif canonical_denom == "Dollar":
+        if 1921 <= yr <= 1935:
+            return "Peace Dollars"
+        if 1878 <= yr <= 1921:
+            return "Morgan Dollars"
+    return trimmed
+
+
+def normalize_coin_fields(coin_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """Applies canonical US Mint denomination, metal, series, and condition normalization."""
+    out = dict(coin_dict)
+    country = out.get("Country") or out.get("country")
+    item_type = out.get("item_type") or out.get("Item Type")
+    if out.get("is_foreign") is True:
+        country = country or "Foreign"
+    raw_denom = out.get("Denomination") if "Denomination" in out else out.get("denomination")
+    year = out.get("Year") if "Year" in out else out.get("year")
+    canon_denom, was_corr, orig_denom = normalize_denomination(
+        str(raw_denom or ""),
+        country=str(country or "") if country is not None else None,
+        item_type=str(item_type or "") if item_type is not None else None,
+    )
+    if canon_denom:
+        if "Denomination" in out or "denomination" not in out:
+            out["Denomination"] = canon_denom
+        if "denomination" in out:
+            out["denomination"] = canon_denom
+        if was_corr:
+            out["denom_corrected"] = True
+            out["original_denomination"] = orig_denom
+
+    raw_metal = out.get("Metal Content") if "Metal Content" in out else out.get("metal_content")
+    norm_metal = normalize_metal_content(
+        str(raw_metal or ""),
+        year=year,
+        canonical_denom=canon_denom,
+        country=str(country or "") if country is not None else None,
+        item_type=str(item_type or "") if item_type is not None else None,
+    )
+    if norm_metal:
+        if "Metal Content" in out or "metal_content" not in out:
+            out["Metal Content"] = norm_metal
+        if "metal_content" in out:
+            out["metal_content"] = norm_metal
+
+    raw_series = out.get("Program/Series") if "Program/Series" in out else out.get("program_series")
+    norm_series = infer_classic_us_series(
+        year=year,
+        canonical_denom=canon_denom,
+        existing_series=str(raw_series or ""),
+        country=str(country or "") if country is not None else None,
+    )
+    if norm_series:
+        if "Program/Series" in out or "program_series" not in out:
+            out["Program/Series"] = norm_series
+        if "program_series" in out:
+            out["program_series"] = norm_series
+
+    raw_cond = out.get("Condition") if "Condition" in out else out.get("condition")
+    norm_cond = normalize_condition(str(raw_cond or ""))
+    if norm_cond:
+        if "Condition" in out or "condition" not in out:
+            out["Condition"] = norm_cond
+        if "condition" in out:
+            out["condition"] = norm_cond
+
+    return out
 
 
 def infer_denomination_from_program(program_str: Optional[str]) -> Optional[str]:

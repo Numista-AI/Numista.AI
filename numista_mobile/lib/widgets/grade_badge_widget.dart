@@ -10,12 +10,38 @@ import '../constants.dart';
 class GradeBadgeWidget extends StatelessWidget {
   final String gradeCode;
   final VoidCallback? onTap;
+  final bool compact;
 
   const GradeBadgeWidget({
     super.key,
     required this.gradeCode,
     this.onTap,
+    this.compact = false,
   });
+
+  static String compactLabel(String raw) {
+    final trimmed = raw.trim();
+    switch (trimmed.toLowerCase()) {
+      case 'unspecified / raw':
+      case 'unspecified/raw':
+      case 'unspecified':
+        return 'Raw';
+      case 'uncirculated':
+        return 'UNC';
+      case 'circulated':
+        return 'Circ.';
+      case 'about uncirculated':
+        return 'AU';
+      case 'extremely fine':
+        return 'XF';
+      case 'very fine':
+        return 'VF';
+      case 'very good':
+        return 'VG';
+      default:
+        return trimmed;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +49,7 @@ class GradeBadgeWidget extends StatelessWidget {
 
     final colors = _getBadgeColors(gradeCode);
     final tooltipText = _getGradeTooltip(gradeCode);
+    final displayLabel = compact ? compactLabel(gradeCode) : gradeCode;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Tooltip(
@@ -51,7 +78,10 @@ class GradeBadgeWidget extends StatelessWidget {
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 7 : 10,
+              vertical: compact ? 2 : 4,
+            ),
             decoration: BoxDecoration(
               color: colors.backgroundColor,
               borderRadius: BorderRadius.circular(20),
@@ -65,12 +95,15 @@ class GradeBadgeWidget extends StatelessWidget {
               ],
             ),
             child: Text(
-              gradeCode,
+              displayLabel,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: colors.textColor,
-                fontSize: 12,
+                fontSize: compact ? 11 : 12,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
+                letterSpacing: compact ? 0.2 : 0.5,
               ),
             ),
           ),

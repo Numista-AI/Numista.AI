@@ -188,8 +188,17 @@ class CoinModel {
       condition: data['Condition']?.toString() ?? data['condition']?.toString() ?? 'Ungraded',
       strikeType: data['Strike Type']?.toString() ?? data['strikeType']?.toString() ?? '',
       holderType: data['Holder Type']?.toString() ?? data['holderType']?.toString() ?? '',
-      gradingService: data['Grading Service']?.toString() ?? data['gradingService']?.toString() ?? '',
-      certificationNumber: data['Certification Number']?.toString() ?? data['certificationNumber']?.toString() ?? '',
+      gradingService: data['Grading Service']?.toString() ??
+          data['gradingService']?.toString() ??
+          data['grading_service']?.toString() ??
+          data['grader']?.toString() ??
+          '',
+      certificationNumber: data['Certification Number']?.toString() ??
+          data['certificationNumber']?.toString() ??
+          data['cert_number']?.toString() ??
+          data['Cert #']?.toString() ??
+          data['certNo']?.toString() ??
+          '',
       metalContent: data['Metal Content']?.toString() ?? data['metalContent']?.toString() ?? '',
       quantity: data['Quantity']?.toString() ?? data['quantity']?.toString() ?? '1',
       purchaseCost: data['Cost']?.toString() ?? data['Purchase Cost']?.toString() ?? data['purchaseCost']?.toString() ?? '\$0.00',
@@ -303,28 +312,106 @@ class CoinModel {
     };
   }
 
+  /// Returns canonical short grader label ('NGC', 'PCGS', 'ANACS', 'CACG', 'CAC'),
+  /// or null if uncertified / no certification number.
+  static String? resolveVerificationServiceLabel({
+    required String certificationNumber,
+    String gradingService = '',
+    String holderType = '',
+    bool hasCac = false,
+  }) {
+    final rawCert = certificationNumber.trim();
+    if (rawCert.isEmpty) return null;
+
+    final svc =
+        (gradingService.isNotEmpty ? gradingService : holderType).trim().toUpperCase();
+    final holder = holderType.trim().toUpperCase();
+
+    if (svc.contains('NGC') || holder.contains('NGC')) return 'NGC';
+    if (svc.contains('PCGS') || holder.contains('PCGS')) return 'PCGS';
+    if (svc.contains('ANACS') || holder.contains('ANACS')) return 'ANACS';
+    if (svc.contains('CACG') || holder.contains('CACG')) return 'CACG';
+    if (svc.contains('CAC') || holder.contains('CAC') || hasCac) return 'CAC';
+
+    // Auto-detect NGC hyphenated cert format (e.g. 8321797-003) if service omitted
+    if (RegExp(r'^\d{6,8}-\d{2,3}$').hasMatch(rawCert)) return 'NGC';
+    if (RegExp(r'^\d{7,9}$').hasMatch(rawCert)) return 'PCGS';
+    return null;
+  }
+
+  /// Builds the direct official verification URL for slabbed coins,
+  /// preserving NGC hyphens and appending the numeric grade when available.
+  static String? buildVerificationUrl({
+    required String certificationNumber,
+    String gradingService = '',
+    String holderType = '',
+    String condition = '',
+    bool hasCac = false,
+  }) {
+    final label = resolveVerificationServiceLabel(
+      certificationNumber: certificationNumber,
+      gradingService: gradingService,
+      holderType: holderType,
+      hasCac: hasCac,
+    );
+    if (label == null) return null;
+
+    final rawCert = certificationNumber.trim();
+    switch (label) {
+      case 'NGC':
+        // Preserve NGC submission-line hyphen (e.g. '8321797-003')
+        final ngcCert = rawCert
+            .replaceAll(RegExp(r'[^0-9\-]'), '')
+            .replaceAll(RegExp(r'^-+|-+$'), '');
+        if (ngcCert.isEmpty) return null;
+        // Extract numeric Sheldon grade (1-70) from e.g. 'PF 67', 'MS65', 'PF 70 ULTRA CAMEO'
+        final gradeMatch =
+            RegExp(r'(?:^|\D)([1-9]|[1-6][0-9]|70)(?:\D|$)').firstMatch(condition);
+        if (gradeMatch != null) {
+          return 'https://www.ngccoin.com/certlookup/$ngcCert/${gradeMatch.group(1)}/';
+        }
+        return 'https://www.ngccoin.com/certlookup/$ngcCert/';
+      case 'PCGS':
+        // Handle barcode slash format '986403.70/53652580' -> '53652580'
+        final afterSlash =
+            rawCert.contains('/') ? rawCert.split('/').last : rawCert;
+        final pcgsCert = afterSlash.replaceAll(RegExp(r'\D'), '');
+        return pcgsCert.isNotEmpty ? 'https://www.pcgs.com/cert/$pcgsCert' : null;
+      case 'ANACS':
+        final anacsCert = rawCert.replaceAll(RegExp(r'\D'), '');
+        return anacsCert.isNotEmpty
+            ? 'https://www.anacs.com/Verify/CertVerification.aspx?Cert=$anacsCert'
+            : null;
+      case 'CACG':
+        final afterSlash =
+            rawCert.contains('/') ? rawCert.split('/').last : rawCert;
+        final cacgCert = afterSlash.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
+        return cacgCert.isNotEmpty
+            ? 'https://www.cacgrading.com/cert-verify/$cacgCert'
+            : null;
+      case 'CAC':
+        return 'https://www.caccoin.com/cert-lookup/';
+      default:
+        return null;
+    }
+  }
+
+  String? getVerificationServiceLabel() => resolveVerificationServiceLabel(
+        certificationNumber: certificationNumber,
+        gradingService: gradingService,
+        holderType: holderType,
+        hasCac: hasCac,
+      );
+
   /// Returns the direct official verification URL for slabbed coins,
   /// or null if uncertified, raw, or missing cert number.
   /// Supports PCGS, NGC, ANACS, CAC (Sticker), and CACG (Slab).
-  String? getVerificationUrl() {
-    final cert = certificationNumber.replaceAll(RegExp(r'\D'), '').trim();
-    if (cert.isEmpty) return null;
-
-    final svc = (gradingService.isNotEmpty ? gradingService : holderType).trim().toUpperCase();
-    final holder = holderType.trim().toUpperCase();
-
-    if (svc.contains('PCGS')) {
-      return 'https://www.pcgs.com/cert/$cert';
-    } else if (svc.contains('NGC')) {
-      return 'https://www.ngccoin.com/certlookup/$cert/';
-    } else if (svc.contains('ANACS')) {
-      return 'https://www.anacs.com/Verify/CertVerification.aspx?Cert=$cert';
-    } else if (svc.contains('CACG') || holder.contains('CACG')) {
-      return 'https://www.cacgrading.com/cert-verify/$cert';
-    } else if (svc.contains('CAC') || holder.contains('CAC') || hasCac) {
-      return 'https://www.caccoin.com/cert-lookup/';
-    }
-    return null;
-  }
+  String? getVerificationUrl() => buildVerificationUrl(
+        certificationNumber: certificationNumber,
+        gradingService: gradingService,
+        holderType: holderType,
+        condition: condition,
+        hasCac: hasCac,
+      );
 }
 

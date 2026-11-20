@@ -23,7 +23,6 @@ import '../services/morgan_proactive_rescue_observer.dart';
 import '../services/morgan_voice_confirmation_parser.dart';
 import '../widgets/morgan_settings_panel.dart';
 import '../widgets/morgan_copilot_cards.dart';
-import '../services/beta_checklist_service.dart';
 import '../constants.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -558,13 +557,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
             summaryText: prop['summary_text']?.toString() ?? replyText,
             payload: prop,
           );
-        }
-        if (data is Map &&
-            data['error'] == null &&
-            data['status'] != 'rate_limited' &&
-            replyText.trim().isNotEmpty &&
-            replyText != 'No response.') {
-          BetaChecklistService.autoCompleteTask('task_18_ai_chat');
         }
       } else {
         replyText = formatChatErrorResponse(response.statusCode, response.body);

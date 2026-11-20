@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
-import 'beta_checklist_service.dart';
 import 'epn_service.dart';
 import '../models/coin_model.dart';
 import '../models/program_model.dart';
@@ -325,7 +324,6 @@ class WishlistService {
       'coin': coin.toFirestore(),
       'timestamp': FieldValue.serverTimestamp(),
     });
-    BetaChecklistService.autoCompleteTask('task_14_wishlist');
   }
 
   static Future<void> addProgramToWishlist(String programId, {
@@ -342,7 +340,6 @@ class WishlistService {
         'foundVarieties': initialVarieties,
         'timestamp': FieldValue.serverTimestamp(),
       });
-      BetaChecklistService.autoCompleteTask('task_14_wishlist');
     }
   }
 

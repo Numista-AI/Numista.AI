@@ -157,7 +157,7 @@ class MorganFeedbackSession extends ChangeNotifier {
   Future<SubmitResult?> confirmAndSubmit({
     String? screenshotUrl,
     bool screenshotConsented = false,
-    String appVersion = '4.1.0-beta',
+    String appVersion = '4.1.0',
   }) async {
     if (_phase != SessionPhase.awaitingConfirmation) return null;
 
@@ -216,7 +216,7 @@ class MorganFeedbackSession extends ChangeNotifier {
   /// Called when user taps "File this as unconfirmed" after EXTRACT FAIL.
   Future<SubmitResult?> fileUnconfirmed({
     String? clientSuggestedIssueType,
-    String appVersion = '4.1.0-beta',
+    String appVersion = '4.1.0',
   }) async {
     final transcript = _bubbles.map((b) => b.toTranscriptMessage()).toList();
 

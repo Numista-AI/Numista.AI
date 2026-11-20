@@ -254,7 +254,7 @@ void main() {
         'Review Hub',
         'AI Trainer Board',
         'Admin Grade Flags',
-        'Beta Feedback Inbox',
+        'Feedback Inbox',
         'Admin: Support Portal',
         'Error Library',
         'Glossary Academy',

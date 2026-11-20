@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:numista_ai/constants/denomination_canon.dart';
+import 'package:numista_ai/services/coin_data_normalizer.dart';
 import 'package:numista_ai/services/melt_value_service.dart';
 import 'package:numista_ai/widgets/grade_badge_widget.dart';
 
@@ -24,11 +26,13 @@ import 'package:numista_ai/widgets/grade_badge_widget.dart';
 class CollectionCardValuationRow extends StatelessWidget {
   final Map<String, dynamic> data;
   final String condition;
+  final Map<String, double> spotPrices;
 
   const CollectionCardValuationRow({
     super.key,
     required this.data,
     this.condition = '',
+    this.spotPrices = const {},
   });
 
   static double _parseNumber(dynamic val) {
@@ -40,27 +44,23 @@ class CollectionCardValuationRow extends StatelessWidget {
     return double.tryParse(m.group(1)!.replaceAll(',', '')) ?? 0.0;
   }
 
-  /// Reads AI value across the canonical Firestore key `'AI Estimated Value'` (`_F.aiValue` at `:72`)
-  /// and snake_case / camelCase aliases, filtering out sentinel strings per `:3346`.
+  /// Reads AI value across canonical and legacy Firestore keys, rejecting zero
+  /// sentinels (`$0.00`, `0`, `Pending`, `null`, `—`).
   static String? extractValidAiValue(Map<String, dynamic> data) {
-    final raw = data['AI Estimated Value'] ??
-        data['ai_estimated_value'] ??
-        data['ai_value'] ??
-        data['aiValue'];
-    if (raw == null) return null;
-    final trimmed = raw.toString().trim();
-    if (trimmed.isEmpty) return null;
-    final lower = trimmed.toLowerCase();
-    if (lower == 'pending' ||
-        lower == 'valuation pending' ||
-        lower == 'null' ||
-        lower == 'none' ||
-        lower == 'nan' ||
-        trimmed == '—' ||
-        trimmed == '-') {
-      return null;
+    final candidates = [
+      data['AI Estimated Value'],
+      data['ai_estimated_value'],
+      data['ai_value'],
+      data['aiValue'],
+      data['estimated_value'],
+    ];
+    for (final raw in candidates) {
+      if (raw == null) continue;
+      final trimmed = raw.toString().trim();
+      if (CoinDataNormalizer.isZeroOrInvalidAiEstimate(trimmed)) continue;
+      return trimmed;
     }
-    return trimmed;
+    return null;
   }
 
   /// Exact US origin allowlist matching `my_collection_screen.dart` (`usAllowList`).
@@ -137,10 +137,49 @@ class CollectionCardValuationRow extends StatelessWidget {
     final chipBgColor = isDark ? const Color(0xFF0D1520) : const Color(0xFFFFF3CD);
     final chipBorderColor = isDark ? const Color(0xFFD4AF37).withAlpha(120) : const Color(0xFFFFEEBA);
 
-    final valCpg = _parseNumber(data['cpgRetail']);
+    final valCpg = _parseNumber(data['cpg_retail'] ?? data['cpgRetail']);
     final validAiStr = extractValidAiValue(data);
     final enrichmentStatus = data['enrichment_status']?.toString().toLowerCase().trim() ?? '';
     final rawDenom = (data['Denomination'] ?? data['denomination'] ?? '').toString();
+    final isUs = isUsOrigin(data);
+    final canonicalDenom = DenominationCanon.normalize(
+      rawDenom,
+      country: (data['Country'] ?? data['country'] ?? '').toString(),
+      itemType: (data['item_type'] ?? data['Item Type'] ?? '').toString(),
+      isForeign: !isUs,
+    );
+    final yearStr = (data['Year'] ?? data['year'] ?? '').toString();
+    final rawMetal =
+        (data['Metal Content'] ?? data['metalContent'] ?? data['metal_content'] ?? '')
+            .toString();
+    final normMetal = CoinDataNormalizer.normalizeMetal(
+      rawMetal,
+      year: yearStr,
+      canonicalDenom: canonicalDenom,
+      isUsCoin: isUs,
+    );
+    final rawSeries = (data['Program/Series'] ??
+            data['program_series'] ??
+            data['programSeries'] ??
+            '')
+        .toString();
+    final rawTheme =
+        (data['Theme/Subject'] ?? data['theme_subject'] ?? '').toString();
+    final qty =
+        int.tryParse((data['Quantity'] ?? data['quantity'] ?? '1').toString()) ??
+            1;
+    final computedMelt = MeltValueService.compute(
+          metalContent: normMetal,
+          denomination: canonicalDenom.isNotEmpty ? canonicalDenom : rawDenom,
+          spotPrices: spotPrices,
+          programSeries: rawSeries,
+          themeSubject: rawTheme,
+          qty: qty,
+          coinData: data,
+        ) ??
+        0.0;
+    final parsedStaticMelt = _parseNumber(data['Melt Value'] ?? data['melt_value']);
+    final effectiveMelt = math.max(computedMelt, parsedStaticMelt);
 
     final fmt = intl.NumberFormat.currency(symbol: '\$');
 
@@ -152,15 +191,19 @@ class CollectionCardValuationRow extends StatelessWidget {
       displayValue = fmt.format(valCpg);
       showPendingChip = false;
     } else if (validAiStr != null) {
-      // 2. Valid AI Estimate present (supports range strings per :3347-3355)
+      // 2. Valid positive AI Estimate present
       final rangeMatch = RegExp(r'^\$?(\d+(?:\.\d+)?)\s*[-–]\s*\$?(\d+(?:\.\d+)?)$').firstMatch(validAiStr);
       if (rangeMatch != null) {
         final v1 = double.tryParse(rangeMatch.group(1)!);
         final v2 = double.tryParse(rangeMatch.group(2)!);
-        if (v1 != null && v2 != null) {
+        if (v1 != null && v2 != null && (v1 > 0 || v2 > 0)) {
           displayValue = '\$${v1.toStringAsFixed(2)} - \$${v2.toStringAsFixed(2)}';
         } else {
-          displayValue = validAiStr;
+          final faceValue = isUs
+              ? resolveFaceValue(canonicalDenom.isNotEmpty ? canonicalDenom : rawDenom)
+              : 0.0;
+          final floorVal = math.max(effectiveMelt, faceValue);
+          displayValue = floorVal > 0 ? fmt.format(floorVal) : '—';
         }
       } else {
         final parsedAi = _parseNumber(validAiStr);
@@ -170,63 +213,64 @@ class CollectionCardValuationRow extends StatelessWidget {
       }
       showPendingChip = (enrichmentStatus == 'pending');
     } else {
-      // 3. Fallback to face value (US-scoped per MF-3; closing B05N-8 & MF-C3')
-      final faceValue = isUsOrigin(data) ? resolveFaceValue(rawDenom) : 0.0;
-      displayValue = faceValue > 0 ? fmt.format(faceValue) : '—';
+      // 3. Fallback to max(Live Melt, Face Value), never $0.00
+      final faceValue = isUs
+          ? resolveFaceValue(canonicalDenom.isNotEmpty ? canonicalDenom : rawDenom)
+          : 0.0;
+      final floorVal = math.max(effectiveMelt, faceValue);
+      displayValue = floorVal > 0 ? fmt.format(floorVal) : '—';
       showPendingChip = true;
     }
 
+    final priceWidget = Text(
+      displayValue,
+      maxLines: 1,
+      softWrap: false,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+        color: chipTextColor,
+      ),
+    );
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        if (showPendingChip)
-          Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  displayValue,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: chipTextColor,
-                  ),
+        priceWidget,
+        if (showPendingChip) ...[
+          const SizedBox(width: 4),
+          Tooltip(
+            message: 'Value pending AI estimate',
+            child: Container(
+              key: const Key('valuation_pending_chip'), // v2.1 MF-SAG-C3
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              decoration: BoxDecoration(
+                color: chipBgColor,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: chipBorderColor),
+              ),
+              child: Text(
+                'Pending',
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: chipTextColor,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Container(
-                    key: const Key('valuation_pending_chip'), // v2.1 MF-SAG-C3
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: chipBgColor,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: chipBorderColor),
-                    ),
-                    child: Text(
-                      'Value pending AI estimate',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: chipTextColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          Text(
-            displayValue,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: chipTextColor,
+              ),
             ),
           ),
-        if (condition.isNotEmpty)
-          GradeBadgeWidget(gradeCode: condition),
+        ],
+        const Spacer(),
+        if (condition.isNotEmpty) ...[
+          const SizedBox(width: 4),
+          Flexible(
+            child: GradeBadgeWidget(
+              gradeCode: condition,
+              compact: true,
+            ),
+          ),
+        ],
       ],
     );
   }

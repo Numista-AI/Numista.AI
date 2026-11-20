@@ -71,7 +71,15 @@ class MeltValueService {
     String themeSubject = '',
     Map<String, dynamic>? coinData,
   }) {
-    final mc = metalContent.trim().toLowerCase().replaceAll(_platingRe, ' ');
+    final rawMc = metalContent.trim().toLowerCase().replaceAll(_platingRe, ' ');
+    // Base-metal nickel alloys ("nickel silver" / "german silver") contain zero silver.
+    if (rawMc.contains('nickel silver') || rawMc.contains('german silver')) {
+      return null;
+    }
+    // Normalize common metal typos at read time as defense-in-depth (e.g. "Silve" -> "silver").
+    final mc = rawMc
+        .replaceAll(RegExp(r'\b(silve|sliver|silvr|siver)\b'), 'silver')
+        .replaceAll(RegExp(r'\b(platnium|platnum)\b'), 'platinum');
     final named = _metalWordRe.firstMatch(mc);
     if (named != null) return named.group(1);   // composition names a precious metal (first one wins)
     if (_baseWordRe.hasMatch(mc)) return null;   // composition says base metal
