@@ -291,7 +291,7 @@ def _normalize_product(item: Dict[str, Any]) -> Dict[str, Any]:
     price_str = item.get("price", "TBD")
     price_num = parse_price(price_str)
 
-    images = item.get("images", [])
+    images = [u.strip() for u in (item.get("images") or []) if isinstance(u, str) and u.strip()]
     image_url = images[0] if images else None
 
     return {
@@ -409,7 +409,15 @@ def _detect_changes(
     existing: Dict[str, Any], incoming: Dict[str, Any]
 ) -> Dict[str, tuple]:
     """Compare existing vs incoming and return changed fields."""
-    tracked_fields = ["price", "status", "badge", "release_date", "mintage_limit"]
+    tracked_fields = [
+        "price",
+        "status",
+        "badge",
+        "release_date",
+        "mintage_limit",
+        "image_url",
+        "image_urls",
+    ]
     changes = {}
     for field in tracked_fields:
         old_val = existing.get(field)

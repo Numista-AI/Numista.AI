@@ -1,5 +1,10 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:numista_ai/constants.dart';
 import 'package:numista_ai/services/upcoming_releases_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -82,11 +87,54 @@ void main() {
   });
 
   group('UpcomingReleasesService Fallback', () {
-    test('fallback returns verified 2026 US Mint products when network fails', () async {
-      final releases = await UpcomingReleasesService.fetchUpcoming();
-      expect(releases, isNotEmpty);
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      UpcomingReleasesService.resetForTest();
+    });
+
+    test('fallback returns verified 2026 US Mint products with GCS imageUrls when network fails', () async {
+      final releases = await http.runWithClient(
+        () => UpcomingReleasesService.fetchUpcoming(),
+        () => MockClient((request) async {
+          return http.Response('Server Error', 500);
+        }),
+      );
+      expect(releases, hasLength(5));
       expect(releases.any((r) => r.itemNumber == '26XE'), isTrue);
       expect(releases.any((r) => r.itemNumber == '26EA'), isTrue);
+      for (final r in releases) {
+        expect(
+          r.imageUrl,
+          startsWith('https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/'),
+        );
+      }
+    });
+
+    test('P5 capture: fetchUpcoming and fetchAll hit exact GET URLs and fallback on empty products', () async {
+      final captured = <http.Request>[];
+      final mockClient = MockClient((request) async {
+        captured.add(request);
+        return http.Response(jsonEncode({'products': []}), 200);
+      });
+
+      final upcoming = await http.runWithClient(
+        () => UpcomingReleasesService.fetchUpcoming(),
+        () => mockClient,
+      );
+      final all = await http.runWithClient(
+        () => UpcomingReleasesService.fetchAll(),
+        () => mockClient,
+      );
+
+      expect(captured, hasLength(2));
+      expect(captured[0].method, 'GET');
+      expect(captured[0].url.toString(), '$kApiBaseUrl/api/mint-releases/upcoming');
+      expect(captured[1].method, 'GET');
+      expect(captured[1].url.toString(), '$kApiBaseUrl/api/mint-releases/all');
+
+      expect(upcoming, hasLength(5));
+      expect(all, hasLength(5));
+      expect(upcoming.every((r) => r.imageUrl != null && r.imageUrl!.isNotEmpty), isTrue);
     });
   });
 }
