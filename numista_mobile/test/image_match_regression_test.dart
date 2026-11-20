@@ -119,10 +119,10 @@ void main() {
       expect(slug, equals('connecticut'));
     });
 
-    test('Mount Rushmore → south-dakota for america-the-beautiful', () {
+    test('Mount Rushmore → mount-rushmore for america-the-beautiful', () {
       final slug = CoinImageService.testResolveSubject(
           'Mount Rushmore', 'america-the-beautiful');
-      expect(slug, equals('south-dakota'));
+      expect(slug, equals('mount-rushmore'));
     });
 
     test('null subject returns null', () {
@@ -177,48 +177,48 @@ void main() {
     test('generic base does NOT contain subject slug (steal-guard invariant)', () {
       final bases = CoinImageService.testCandidateBases(
         '2013', 'P', 'america-the-beautiful',
-        subject: 'south-dakota',
+        subject: 'mount-rushmore',
       );
 
-      final subjectBases = bases.where((b) => b.contains('south-dakota')).toList();
+      final subjectBases = bases.where((b) => b.contains('mount-rushmore')).toList();
       expect(subjectBases, isNotEmpty,
           reason: 'Must have subject-specific candidate bases');
 
-      final genericBases = bases.where((b) => !b.contains('south-dakota')).toList();
+      final genericBases = bases.where((b) => !b.contains('mount-rushmore')).toList();
       expect(genericBases, isNotEmpty,
           reason: 'Generic bases should still be present for obverse fallback');
 
       for (final base in genericBases) {
-        expect(base.contains('south-dakota'), isFalse,
+        expect(base.contains('mount-rushmore'), isFalse,
             reason: 'Generic base "$base" must not contain subject slug');
       }
     });
 
-    test('ATB White Mountain bases include new-hampshire subject key', () {
+    test('ATB White Mountain bases include white-mountain subject key', () {
       final bases = CoinImageService.testCandidateBases(
         '2013', 'D', 'america-the-beautiful',
-        subject: 'new-hampshire',
+        subject: 'white-mountain',
       );
-      expect(bases.any((b) => b.contains('new-hampshire')), isTrue);
+      expect(bases.any((b) => b.contains('white-mountain')), isTrue);
     });
 
-    test('Perry Victory regression: south-dakota and new-hampshire bases are distinct', () {
+    test('Perry Victory regression: mount-rushmore and white-mountain bases are distinct', () {
       final rushmoreBases = CoinImageService.testCandidateBases(
         '2013', 'P', 'america-the-beautiful',
-        subject: 'south-dakota',
+        subject: 'mount-rushmore',
       );
       final whiteMtnBases = CoinImageService.testCandidateBases(
         '2013', 'D', 'america-the-beautiful',
-        subject: 'new-hampshire',
+        subject: 'white-mountain',
       );
       // Subject-specific bases must be different
-      final rushmoreSub = rushmoreBases.where((b) => b.contains('south-dakota'));
-      final whiteMtnSub = whiteMtnBases.where((b) => b.contains('new-hampshire'));
+      final rushmoreSub = rushmoreBases.where((b) => b.contains('mount-rushmore'));
+      final whiteMtnSub = whiteMtnBases.where((b) => b.contains('white-mountain'));
       expect(rushmoreSub, isNotEmpty);
       expect(whiteMtnSub, isNotEmpty);
       // Neither should contain the other's slug
-      expect(rushmoreBases.any((b) => b.contains('new-hampshire')), isFalse);
-      expect(whiteMtnBases.any((b) => b.contains('south-dakota')), isFalse);
+      expect(rushmoreBases.any((b) => b.contains('white-mountain')), isFalse);
+      expect(whiteMtnBases.any((b) => b.contains('mount-rushmore')), isFalse);
     });
 
     test('no subject → all bases available for reverse (no steal-guard)', () {
