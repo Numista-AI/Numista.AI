@@ -117,13 +117,13 @@ class CoinPicturePicker {
   /// - `presidential-dollars`: `obverse` (per-president portrait; shared Liberty reverse)
   /// - `50-state-quarters`, `america-the-beautiful`, `american-women-quarters`,
   ///   `american-innovation`, `native-american-dollar` (2009+): `reverse`
-  /// - `2026` Semiquincentennial dimes: defaults to `reverse` unless
-  ///   [prefer2026DimeObverse] is explicitly enabled.
+  /// - `2026` Semiquincentennial dimes: defaults to `obverse` (mint-specific)
+  ///   unless [prefer2026DimeObverse] is explicitly set to `false`.
   static String distinctiveSide({
     String? program,
     String? year,
     String? denomination,
-    bool prefer2026DimeObverse = false,
+    bool prefer2026DimeObverse = true,
   }) {
     final p = (program ?? '').trim().toLowerCase();
     final y = (year ?? '').trim().replaceFirst(RegExp(r'\.0+$'), '');
@@ -175,7 +175,7 @@ class CoinPicturePicker {
     Map<String, dynamic> data, {
     CoinImageResult? referenceResult,
     bool ignoreUserPhotos = false,
-    bool prefer2026DimeObverse = false,
+    bool prefer2026DimeObverse = true,
   }) {
     final year = CanonicalMintAssetService.canonicalYear(data);
     final denom = _readField(data, 'denomination', 'Denomination');

@@ -217,5 +217,60 @@ void main() {
         );
       }
     });
+
+    test('9. 2026 P/D Dimes default to obverse-first while keeping shared reverse in card pair', () {
+      expect(
+        CoinPicturePicker.distinctiveSide(program: 'dime', year: '2026'),
+        equals('obverse'),
+      );
+      expect(
+        CoinPicturePicker.distinctiveSide(
+          program: 'dime',
+          year: '2026',
+          prefer2026DimeObverse: false,
+        ),
+        equals('reverse'),
+      );
+
+      final dimeP = CoinPicturePicker.select({
+        'Year': '2026',
+        'Mint Mark': 'P',
+        'Denomination': 'Dime',
+        'Program/Series': 'Roosevelt Dimes',
+        'Theme/Subject': 'Franklin D. Roosevelt',
+      });
+      expect(dimeP.preferredSide, equals('obverse'));
+      expect(
+        dimeP.preferredCardUrl,
+        equals('https://storage.googleapis.com/numista-reference-library/reference_library/bulk_programs/dime/SemiQ-Dime-Obverse-Unc-P.jpg'),
+      );
+      expect(dimeP.primaryObverseUrl, equals(dimeP.preferredCardUrl));
+      expect(dimeP.primaryReverseUrl, isNotNull);
+      expect(dimeP.primaryReverseUrl, isNotEmpty);
+      expect(
+        dimeP.primaryReverseUrl,
+        equals('https://storage.googleapis.com/numista-reference-library/reference_library/bulk_programs/dime/SemiQ-Dime-Reverse-Unc.jpg'),
+      );
+
+      final dimeD = CoinPicturePicker.select({
+        'Year': '2026',
+        'Mint Mark': 'D',
+        'Denomination': 'Dime',
+        'Program/Series': 'Roosevelt Dimes',
+        'Theme/Subject': 'Franklin D. Roosevelt',
+      });
+      expect(dimeD.preferredSide, equals('obverse'));
+      expect(
+        dimeD.preferredCardUrl,
+        equals('https://storage.googleapis.com/numista-reference-library/reference_library/bulk_programs/dime/SemiQ-Dime-Obverse-Unc-D.jpg'),
+      );
+      expect(dimeD.primaryObverseUrl, equals(dimeD.preferredCardUrl));
+      expect(dimeD.primaryReverseUrl, isNotNull);
+      expect(dimeD.primaryReverseUrl, isNotEmpty);
+      expect(
+        dimeD.primaryReverseUrl,
+        equals('https://storage.googleapis.com/numista-reference-library/reference_library/bulk_programs/dime/SemiQ-Dime-Reverse-Unc.jpg'),
+      );
+    });
   });
 }
