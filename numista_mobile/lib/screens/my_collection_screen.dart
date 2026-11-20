@@ -12,6 +12,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/valuation_mode_service.dart';
+import '../services/morgan_action_bus.dart';
 import 'currency_collection_screen.dart';
 import 'unified_coin_detail_screen.dart';
 import '../services/world_item_service.dart';
@@ -113,6 +114,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   String? _selectedCoinId;
   CollectionLimitMode _limitMode = CollectionLimitMode.all;
   String  _searchQuery      = '';
+  Set<String>? _morganCoinIdsFilter;
   // _showInspector removed — inspector is now always expanded in the dialog
   // Default: sort by date added, newest first (column index -1 = special Added sort)
   // Users can click any column header to override.
@@ -259,6 +261,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     super.initState();
     _loadDefaultTab();
     _loadSortPreferences();
+    final pendingIds = MorganActionBus.instance.pendingCollectionCoinIdsFilter;
+    if (pendingIds != null && pendingIds.isNotEmpty) {
+      _morganCoinIdsFilter = Set<String>.from(pendingIds);
+      MorganActionBus.instance.pendingCollectionCoinIdsFilter = null;
+    }
     MorganScreenStateRegistry.instance.markScreenHydrated(
       route: 'My Collection',
       hydrated: true,
@@ -272,9 +279,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           isEnabled: true,
           onInvoke: ([params]) async {
             final q = params?['query']?.toString() ?? '';
+            final rawIds = params?['coinIds'] as List<dynamic>?;
             if (mounted) {
               _searchCtrl.text = q;
-              setState(() => _searchQuery = q.toLowerCase());
+              setState(() {
+                _searchQuery = q.toLowerCase();
+                if (rawIds != null) {
+                  _morganCoinIdsFilter = rawIds.map((e) => e.toString()).toSet();
+                }
+              });
               MorganScreenStateRegistry.instance.updateContextData({
                 'activeSearchQuery': q.toLowerCase(),
               });
@@ -894,11 +907,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       return true;
     }).toList();
 
+    // Phase 2.5: Analytics / Morgan coinIds filter
+    final idFiltered = (_morganCoinIdsFilter == null || _morganCoinIdsFilter!.isEmpty)
+        ? originFiltered
+        : originFiltered.where((row) => _morganCoinIdsFilter!.contains(row.id)).toList();
+
     // Phase 3: Search filter (both PascalCase _F keys and snake_case helper keys)
-    if (_searchQuery.isEmpty) return originFiltered;
+    if (_searchQuery.isEmpty) return idFiltered;
     final trimmedQuery = _searchQuery.trim();
     final denomCanonical = DenominationCanon.colloquialMap[trimmedQuery];
-    return originFiltered.where((row) {
+    return idFiltered.where((row) {
       final m = row.data;
       return [
         _F.year, 'year',

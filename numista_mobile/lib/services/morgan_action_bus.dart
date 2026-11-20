@@ -11,6 +11,7 @@ enum MorganAllowedRoute {
   microscopeScanner('Microscope Scanner'),
   reviewHub('Review Hub'),
   myCollection('My Collection'),
+  analytics('Analytics'),
   coinDetail('Coin Detail'),
   wishList('Wish List'),
   programManager('Program Manager'),
@@ -50,6 +51,7 @@ enum MorganAllowedActionId {
   openBulkImport('btn_open_bulk_import'),
   openFilePicker('open_file_picker'),
   applyCollectionFilter('apply_collection_filter'),
+  applyAnalyticsScenario('apply_analytics_scenario'),
   confirmFlip('confirm_flip');
 
   final String wireId;
@@ -189,6 +191,7 @@ class MorganActionBus {
   static const int maxActionsPerTurn = 3;
 
   Future<void> Function(String route, {String? subTab})? onNavigateToRoute;
+  Set<String>? pendingCollectionCoinIdsFilter;
   Future<void> Function(
     String actionType,
     String summaryText,

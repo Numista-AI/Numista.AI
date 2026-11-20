@@ -137,6 +137,7 @@ from routes.morgan_routes import (
     create_proposal,
     execute_morgan_web_lookup,
 )
+from routes.analytics_routes import analytics_router
 from routes.catalog_routes import public_router as catalog_public_router, write_router as catalog_write_router
 from routes.deps import (
     get_current_user,
@@ -150,6 +151,7 @@ from routes.deps import (
 )
 
 app.include_router(morgan_router)
+app.include_router(analytics_router)
 app.include_router(catalog_public_router)
 app.include_router(catalog_write_router)
 app.include_router(subaccount_router)

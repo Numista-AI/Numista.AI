@@ -11,6 +11,7 @@ import '../services/wizard_service.dart';
 import '../widgets/wizard_overlay.dart';
 import 'home_dashboard.dart';
 import 'my_collection_screen.dart';
+import 'analytics_screen.dart';
 import 'microscope_scan_screen.dart';
 import 'program_manager_screen.dart';
 import 'settings_screen.dart';
@@ -415,6 +416,10 @@ class _BaseLayoutState extends State<BaseLayout> {
           reviewQueueCount: _reviewQueueCount,
           isReviewCountLoading: _isReviewCountLoading,
         );
+      case 'Analytics':
+        return AnalyticsScreen(
+          onExpandMorganToFullChat: () => _navigateTo('AI Deepdive'),
+        );
       case 'My Collection':
         return MyCollectionScreen(
           initialTab: _myCollectionTab,
@@ -535,6 +540,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'AI Photo Identification':
         maxWidth = 1100.0;
         break;
+      case 'Analytics':
       case 'My Collection':
       case 'Currency Collection':
         maxWidth = 1440.0;
@@ -901,6 +907,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                             child: _buildNavItem('My Collection',
                                 icon: Icons.layers_outlined),
                           ),
+                          _buildNavItem('Analytics',
+                              icon: Icons.insights_rounded),
                           WizardNavPulse(
                             active: ws?.step.targetRoute == 'Coin Programs',
                             child: _buildNavItem('Coin Programs',
@@ -988,23 +996,25 @@ class _BaseLayoutState extends State<BaseLayout> {
                     ),
                   ),
                 ),
-                // ── Morgan sidebar button ──────────────────────────────────
-                if (!_isSidebarCollapsed)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-                    child: _MorganSidebarButton(onTap: _showMorganDialog),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Tooltip(
-                      message: 'Ask Morgan AI',
-                      child: IconButton(
-                        icon: Image.asset('assets/logo_owl.png', height: 28),
-                        onPressed: _showMorganDialog,
+                // ── Morgan sidebar button (suppressed on Analytics — Single-Morgan-Per-Screen rule) ──
+                if (_activeRoute != 'Analytics') ...[
+                  if (!_isSidebarCollapsed)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                      child: _MorganSidebarButton(onTap: _showMorganDialog),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Tooltip(
+                        message: 'Ask Morgan AI',
+                        child: IconButton(
+                          icon: Image.asset('assets/logo_owl.png', height: 28),
+                          onPressed: _showMorganDialog,
+                        ),
                       ),
                     ),
-                  ),
+                ],
 
                 if (!_isSidebarCollapsed) ...[
                   Padding(
