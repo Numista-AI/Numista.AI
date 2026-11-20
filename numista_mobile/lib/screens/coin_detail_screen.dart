@@ -17,7 +17,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../utils/mint_helpers.dart';
-import '../services/signed_photo_url_service.dart';
+import '../services/coin_picture_picker.dart';
 import '../widgets/signed_storage_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
@@ -40,7 +40,6 @@ import '../services/inspector_service.dart';
 import '../services/melt_value_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/coin_image_service.dart';
-import '../services/canonical_mint_asset_service.dart';
 import '../services/mint_error_service.dart';
 import '../widgets/grade_badge_widget.dart';
 import '../widgets/glossary_tooltip_wrapper.dart';
@@ -1079,41 +1078,33 @@ class _CoinImagePair extends StatefulWidget {
 class _CoinImagePairState extends State<_CoinImagePair> {
   String _obvUrl = '';
   String _revUrl = '';
+  String _refObvUrl = '';
+  String _refRevUrl = '';
+  bool _hasUserObv = false;
+  bool _hasUserRev = false;
+  bool _userObvFailed = false;
+  bool _userRevFailed = false;
   String? _attribution;
   bool _loadingRef = false;
 
   @override
   void initState() {
     super.initState();
-    // gs:// URIs are not displayable by Image.network() – treat as empty
-    // so CoinImageService can fill in a public HTTPS URL from coin_image_index.
     final coinMap = <String, dynamic>{
       ...widget.coin.toFirestore(),
       'source': widget.coin.source,
       'Personal Notes': widget.coin.personalNotes,
     };
-    final canon = CanonicalMintAssetService.resolveFromMap(coinMap);
-    if (canon != null) {
-      _obvUrl = canon.obverseUrl;
-      _revUrl = canon.reverseUrl;
-      _attribution = 'U.S. Mint';
-    } else {
-      _obvUrl = _toHttpsUrl(widget.coin.imageUrlObverse);
-      _revUrl = _toHttpsUrl(widget.coin.imageUrlReverse);
-    }
-    // Fetch reference images for any side that doesn't have a personal photo or canonical asset
-    if (_obvUrl.isEmpty || _revUrl.isEmpty) {
+    final sel = CoinPicturePicker.select(coinMap);
+    _obvUrl = sel.primaryObverseUrl ?? '';
+    _revUrl = sel.primaryReverseUrl ?? '';
+    _hasUserObv = sel.hasUserObverse;
+    _hasUserRev = sel.hasUserReverse;
+    _attribution = sel.attribution;
+    // Fetch reference images for any missing side OR as fallback for user photos
+    if (_obvUrl.isEmpty || _revUrl.isEmpty || _hasUserObv || _hasUserRev) {
       _fetchReferenceImages();
     }
-  }
-
-  /// Returns the URL if it is a loadable HTTPS URL or a signable gs:// owner URI.
-  static String _toHttpsUrl(String url) {
-    if (url.isEmpty) return '';
-    if (url.startsWith('gs://') && !SignedPhotoUrlService.needsSigning(url)) {
-      return '';
-    }
-    return url;
   }
 
   Future<void> _fetchReferenceImages() async {
@@ -1129,10 +1120,12 @@ class _CoinImagePairState extends State<_CoinImagePair> {
       );
       if (mounted && result.hasAny) {
         setState(() {
-          // Only fill in sides that don't already have a personal photo
-          if (_obvUrl.isEmpty) _obvUrl = result.obverseUrl ?? '';
-          if (_revUrl.isEmpty) _revUrl = result.reverseUrl ?? '';
-          _attribution = result.attribution;
+          _refObvUrl = result.obverseUrl ?? '';
+          _refRevUrl = result.reverseUrl ?? '';
+          // Fill in sides that don't have a personal photo (or already failed)
+          if (_obvUrl.isEmpty || _userObvFailed) _obvUrl = _refObvUrl;
+          if (_revUrl.isEmpty || _userRevFailed) _revUrl = _refRevUrl;
+          _attribution ??= result.attribution;
         });
       }
     } catch (_) {
@@ -1317,6 +1310,17 @@ class _CoinImagePairState extends State<_CoinImagePair> {
           attribution: _attribution,
           isSet: isSet,
           onFlag: showFlag ? () => _reportImageError(context, 'obverse') : null,
+          onImageError: (_hasUserObv && !_userObvFailed)
+              ? () {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted || _userObvFailed) return;
+                    setState(() {
+                      _userObvFailed = true;
+                      if (_refObvUrl.isNotEmpty) _obvUrl = _refObvUrl;
+                    });
+                  });
+                }
+              : null,
         ),
         if (!isSet) ...[
           const SizedBox(width: 8),
@@ -1328,6 +1332,17 @@ class _CoinImagePairState extends State<_CoinImagePair> {
             attribution: _attribution,
             isSet: false,
             onFlag: showFlag ? () => _reportImageError(context, 'reverse') : null,
+            onImageError: (_hasUserRev && !_userRevFailed)
+                ? () {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted || _userRevFailed) return;
+                      setState(() {
+                        _userRevFailed = true;
+                        if (_refRevUrl.isNotEmpty) _revUrl = _refRevUrl;
+                      });
+                    });
+                  }
+                : null,
           ),
         ],
       ],
@@ -1343,6 +1358,7 @@ class _CoinImageTile extends StatelessWidget {
   final String? attribution;
   final bool isSet;
   final VoidCallback? onFlag;
+  final VoidCallback? onImageError;
   const _CoinImageTile({
     required this.url,
     required this.label,
@@ -1351,6 +1367,7 @@ class _CoinImageTile extends StatelessWidget {
     this.attribution,
     this.isSet = false,
     this.onFlag,
+    this.onImageError,
   });
 
   @override
@@ -1436,7 +1453,10 @@ class _CoinImageTile extends StatelessWidget {
       url: url,
       fit: fit,
       placeholderBuilder: (_) => _skeleton(),
-      errorBuilder: (_) => _placeholder(),
+      errorBuilder: (_) {
+        onImageError?.call();
+        return _placeholder();
+      },
     );
   }
 

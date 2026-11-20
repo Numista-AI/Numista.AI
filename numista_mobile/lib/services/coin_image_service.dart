@@ -28,15 +28,307 @@ class CoinImageService {
     'commemorative',
     'uncirculated-sets',
     'semiquincentennial',
-    // Generic programs — subject resolution still useful for fallback
+    // Generic programs — subject resolution still useful for fallback / 2026
     'dollar',
     'quarter',
+    'dime',
   };
 
-  /// Maps subject names (states, presidents, women) to canonical slugs.
-  /// Mirrors STATE_SLUG_MAP in build_image_index.py.
-  static const _subjectSlugMap = <String, String>{
-    // 50 US States
+  /// Maps canonical program slug -> canonical denomination slug.
+  /// Mirrors program_to_denom in coin_image_schema.json.
+  static const _programToDenom = <String, String>{
+    'lincoln-cent': 'cent',
+    'indian-head-cent': 'cent',
+    'flying-eagle-cent': 'cent',
+    'cent': 'cent',
+    'jefferson-nickel': 'nickel',
+    'buffalo-nickel': 'nickel',
+    'nickel': 'nickel',
+    'mercury-dime': 'dime',
+    'barber-dime': 'dime',
+    'dime': 'dime',
+    '50-state-quarters': 'quarter',
+    'america-the-beautiful': 'quarter',
+    'american-women-quarters': 'quarter',
+    'barber-quarter': 'quarter',
+    'quarter': 'quarter',
+    'semiquincentennial': 'quarter',
+    'kennedy-half-dollar': 'half-dollar',
+    'franklin-half-dollar': 'half-dollar',
+    'liberty-walking-half-dollar': 'half-dollar',
+    'walking-liberty': 'half-dollar',
+    'barber-half-dollar': 'half-dollar',
+    'half-dollar': 'half-dollar',
+    'presidential-dollars': 'dollar',
+    'native-american-dollar': 'dollar',
+    'american-innovation': 'dollar',
+    'morgan-dollar': 'dollar',
+    'peace-dollar': 'dollar',
+    'eisenhower-dollar': 'dollar',
+    'dollar': 'dollar',
+    'american-eagle-silver': 'dollar',
+    'american-eagle-gold': 'gold',
+    'american-eagle-platinum': 'platinum',
+    'american-eagle-palladium': 'palladium',
+    'saint-gaudens': 'gold',
+    'bicentennial': 'quarter',
+    'commemorative': 'commemorative',
+    'uncirculated-sets': 'set',
+    'american-liberty': 'dollar',
+    'flowing-hair': 'dollar',
+  };
+
+  /// Shared-side wildcard entries (e.g. Statue of Liberty reverse for Presidential $1).
+  static const _sharedWildcardSides = <String, String>{
+    'presidential-dollars': 'reverse',
+    'native-american-dollar': 'obverse',
+    'american-innovation': 'obverse',
+    'america-the-beautiful': 'obverse',
+    'american-women-quarters': 'obverse',
+    '50-state-quarters': 'obverse',
+  };
+
+  /// Program-scoped exact name lists (mirrors coin_image_schema.json).
+  static const _presidentialSubjects = <String, String>{
+    'george washington': 'george-washington',
+    'washington': 'george-washington',
+    'john adams': 'john-adams',
+    'adams': 'john-adams',
+    'thomas jefferson': 'thomas-jefferson',
+    'jefferson': 'thomas-jefferson',
+    'james madison': 'james-madison',
+    'madison': 'james-madison',
+    'james monroe': 'james-monroe',
+    'monroe': 'james-monroe',
+    'john quincy adams': 'john-quincy-adams',
+    'andrew jackson': 'andrew-jackson',
+    'jackson': 'andrew-jackson',
+    'martin van buren': 'martin-van-buren',
+    'van buren': 'martin-van-buren',
+    'william henry harrison': 'william-henry-harrison',
+    'john tyler': 'john-tyler',
+    'tyler': 'john-tyler',
+    'james k polk': 'james-k-polk',
+    'james polk': 'james-k-polk',
+    'polk': 'james-k-polk',
+    'zachary taylor': 'zachary-taylor',
+    'taylor': 'zachary-taylor',
+    'millard fillmore': 'millard-fillmore',
+    'fillmore': 'millard-fillmore',
+    'franklin pierce': 'franklin-pierce',
+    'pierce': 'franklin-pierce',
+    'james buchanan': 'james-buchanan',
+    'buchanan': 'james-buchanan',
+    'abraham lincoln': 'abraham-lincoln',
+    'lincoln': 'abraham-lincoln',
+    'andrew johnson': 'andrew-johnson',
+    'johnson': 'andrew-johnson',
+    'ulysses s grant': 'ulysses-s-grant',
+    'ulysses s. grant': 'ulysses-s-grant',
+    'ulysses grant': 'ulysses-s-grant',
+    'grant': 'ulysses-s-grant',
+    'rutherford b hayes': 'rutherford-b-hayes',
+    'rutherford b. hayes': 'rutherford-b-hayes',
+    'rutherford hayes': 'rutherford-b-hayes',
+    'hayes': 'rutherford-b-hayes',
+    'james a garfield': 'james-a-garfield',
+    'james a. garfield': 'james-a-garfield',
+    'james garfield': 'james-a-garfield',
+    'garfield': 'james-a-garfield',
+    'chester a arthur': 'chester-a-arthur',
+    'chester a. arthur': 'chester-a-arthur',
+    'chester arthur': 'chester-a-arthur',
+    'arthur': 'chester-a-arthur',
+    'grover cleveland first term': 'grover-cleveland-1st',
+    'grover cleveland 1st term': 'grover-cleveland-1st',
+    'grover cleveland 1st': 'grover-cleveland-1st',
+    'cleveland first term': 'grover-cleveland-1st',
+    'cleveland 1st term': 'grover-cleveland-1st',
+    'first term': 'grover-cleveland-1st',
+    '1st term': 'grover-cleveland-1st',
+    'grover cleveland second term': 'grover-cleveland-2nd',
+    'grover cleveland 2nd term': 'grover-cleveland-2nd',
+    'grover cleveland 2nd': 'grover-cleveland-2nd',
+    'cleveland second term': 'grover-cleveland-2nd',
+    'cleveland 2nd term': 'grover-cleveland-2nd',
+    'second term': 'grover-cleveland-2nd',
+    '2nd term': 'grover-cleveland-2nd',
+    'grover cleveland': 'grover-cleveland-1st',
+    'cleveland': 'grover-cleveland-1st',
+    'benjamin harrison': 'benjamin-harrison',
+    'harrison': 'william-henry-harrison',
+    'william mckinley': 'william-mckinley',
+    'mckinley': 'william-mckinley',
+    'theodore roosevelt': 'theodore-roosevelt',
+    'teddy roosevelt': 'theodore-roosevelt',
+    'william howard taft': 'william-howard-taft',
+    'william taft': 'william-howard-taft',
+    'taft': 'william-howard-taft',
+    'woodrow wilson': 'woodrow-wilson',
+    'wilson': 'woodrow-wilson',
+    'warren g harding': 'warren-g-harding',
+    'warren g. harding': 'warren-g-harding',
+    'warren harding': 'warren-g-harding',
+    'harding': 'warren-g-harding',
+    'calvin coolidge': 'calvin-coolidge',
+    'coolidge': 'calvin-coolidge',
+    'herbert hoover': 'herbert-hoover',
+    'hoover': 'herbert-hoover',
+    'franklin d roosevelt': 'franklin-d-roosevelt',
+    'franklin d. roosevelt': 'franklin-d-roosevelt',
+    'franklin delano roosevelt': 'franklin-d-roosevelt',
+    'franklin roosevelt': 'franklin-d-roosevelt',
+    'fdr': 'franklin-d-roosevelt',
+    'harry s truman': 'harry-s-truman',
+    'harry s. truman': 'harry-s-truman',
+    'harry truman': 'harry-s-truman',
+    'truman': 'harry-s-truman',
+    'dwight d eisenhower': 'dwight-d-eisenhower',
+    'dwight d. eisenhower': 'dwight-d-eisenhower',
+    'dwight eisenhower': 'dwight-d-eisenhower',
+    'eisenhower': 'dwight-d-eisenhower',
+    'john f kennedy': 'john-f-kennedy',
+    'john f. kennedy': 'john-f-kennedy',
+    'john kennedy': 'john-f-kennedy',
+    'kennedy': 'john-f-kennedy',
+    'lyndon b johnson': 'lyndon-b-johnson',
+    'lyndon b. johnson': 'lyndon-b-johnson',
+    'lyndon johnson': 'lyndon-b-johnson',
+    'richard m nixon': 'richard-nixon',
+    'richard m. nixon': 'richard-nixon',
+    'richard nixon': 'richard-nixon',
+    'nixon': 'richard-nixon',
+    'gerald r ford': 'gerald-ford',
+    'gerald r. ford': 'gerald-ford',
+    'gerald ford': 'gerald-ford',
+    'ford': 'gerald-ford',
+    'ronald reagan': 'ronald-reagan',
+    'reagan': 'ronald-reagan',
+    'george h w bush': 'george-h-w-bush',
+    'george h.w. bush': 'george-h-w-bush',
+    'george hw bush': 'george-h-w-bush',
+    'george bush': 'george-h-w-bush',
+    'bush': 'george-h-w-bush',
+  };
+
+  static const _atbParkSubjects = <String, String>{
+    'hot springs national park': 'hot-springs',
+    'hot springs': 'hot-springs',
+    'yellowstone national park': 'yellowstone',
+    'yellowstone': 'yellowstone',
+    'yosemite national park': 'yosemite',
+    'yosemite': 'yosemite',
+    'grand canyon national park': 'grand-canyon',
+    'grand canyon': 'grand-canyon',
+    'mount hood national forest': 'mount-hood',
+    'mount hood': 'mount-hood',
+    'gettysburg national military park': 'gettysburg',
+    'gettysburg': 'gettysburg',
+    'glacier national park': 'glacier',
+    'glacier': 'glacier',
+    'olympic national park': 'olympic',
+    'olympic': 'olympic',
+    'vicksburg national military park': 'vicksburg',
+    'vicksburg': 'vicksburg',
+    'chickasaw national recreation area': 'chickasaw',
+    'chickasaw': 'chickasaw',
+    'el yunque national forest': 'el-yunque',
+    'el yunque': 'el-yunque',
+    'chaco culture national historical park': 'chaco-culture',
+    'chaco culture': 'chaco-culture',
+    'acadia national park': 'acadia',
+    'acadia': 'acadia',
+    'hawaii volcanoes national park': 'hawaii-volcanoes',
+    'hawaii volcanoes': 'hawaii-volcanoes',
+    'denali national park': 'denali',
+    'denali': 'denali',
+    'white mountain national forest': 'white-mountain',
+    'white mountain': 'white-mountain',
+    "perry's victory and international peace memorial": 'perrys-victory',
+    'perrys victory': 'perrys-victory',
+    "perry's victory": 'perrys-victory',
+    'great basin national park': 'great-basin',
+    'great basin': 'great-basin',
+    'fort mchenry national monument': 'fort-mchenry',
+    'fort mchenry': 'fort-mchenry',
+    'mount rushmore national memorial': 'mount-rushmore',
+    'mount rushmore': 'mount-rushmore',
+    'great smoky mountains national park': 'great-smoky-mountains',
+    'great smoky mountains': 'great-smoky-mountains',
+    'shenandoah national park': 'shenandoah',
+    'shenandoah': 'shenandoah',
+    'arches national park': 'arches',
+    'arches': 'arches',
+    'great sand dunes national park': 'great-sand-dunes',
+    'great sand dunes': 'great-sand-dunes',
+    'everglades national park': 'everglades',
+    'everglades': 'everglades',
+    'homestead national monument': 'homestead',
+    'homestead': 'homestead',
+    'kisatchie national forest': 'kisatchie',
+    'kisatchie': 'kisatchie',
+    'blue ridge parkway': 'blue-ridge-parkway',
+    'bombay hook national wildlife refuge': 'bombay-hook',
+    'bombay hook': 'bombay-hook',
+    'saratoga national historical park': 'saratoga',
+    'saratoga': 'saratoga',
+    'shawnee national forest': 'shawnee',
+    'shawnee': 'shawnee',
+    'cumberland gap national historical park': 'cumberland-gap',
+    'cumberland gap': 'cumberland-gap',
+    'harpers ferry national historical park': 'harpers-ferry',
+    'harpers ferry': 'harpers-ferry',
+    'theodore roosevelt national park': 'theodore-roosevelt-np',
+    'theodore roosevelt': 'theodore-roosevelt-np',
+    'fort moultrie national monument': 'fort-moultrie',
+    'fort moultrie': 'fort-moultrie',
+    'effigy mounds national monument': 'effigy-mounds',
+    'effigy mounds': 'effigy-mounds',
+    'frederick douglass national historic site': 'frederick-douglass',
+    'frederick douglass': 'frederick-douglass',
+    'ozark national scenic riverways': 'ozark-riverways',
+    'ozark riverways': 'ozark-riverways',
+    'ellis island national monument': 'ellis-island',
+    'ellis island': 'ellis-island',
+    'george rogers clark national historical park': 'george-rogers-clark',
+    'george rogers clark': 'george-rogers-clark',
+    'pictured rocks national lakeshore': 'pictured-rocks',
+    'pictured rocks': 'pictured-rocks',
+    'apostle islands national lakeshore': 'apostle-islands',
+    'apostle islands': 'apostle-islands',
+    'voyageurs national park': 'voyageurs',
+    'voyageurs': 'voyageurs',
+    'cumberland island national seashore': 'cumberland-island',
+    'cumberland island': 'cumberland-island',
+    'block island national wildlife refuge': 'block-island',
+    'block island': 'block-island',
+    'lowell national historical park': 'lowell',
+    'lowell': 'lowell',
+    'american memorial park': 'american-memorial-park',
+    'war in the pacific national historical park': 'war-in-the-pacific',
+    'war in the pacific': 'war-in-the-pacific',
+    'san antonio missions national historical park': 'san-antonio-missions',
+    'san antonio missions': 'san-antonio-missions',
+    'frank church river of no return wilderness': 'frank-church',
+    'frank church': 'frank-church',
+    'river of no return': 'frank-church',
+    'national park of american samoa': 'national-park-of-american-samoa',
+    'weir farm national historical park': 'weir-farm',
+    'weir farm': 'weir-farm',
+    'salt river bay national historical park': 'salt-river-bay',
+    'salt river bay': 'salt-river-bay',
+    'marsh-billings-rockefeller national historical park': 'marsh-billings-rockefeller',
+    'marsh billings rockefeller': 'marsh-billings-rockefeller',
+    'tallgrass prairie national preserve': 'tallgrass-prairie',
+    'tallgrass prairie': 'tallgrass-prairie',
+    'tuskegee airmen national historic site': 'tuskegee-airmen',
+    'tuskegee airmen': 'tuskegee-airmen',
+    'tuskegee': 'tuskegee-airmen',
+    'crossing the delaware': 'crossing-the-delaware',
+    'washington crossing historic park': 'crossing-the-delaware',
+  };
+
+  static const _stateQuarterSubjects = <String, String>{
     'alabama': 'alabama', 'alaska': 'alaska', 'arizona': 'arizona',
     'arkansas': 'arkansas', 'california': 'california', 'colorado': 'colorado',
     'connecticut': 'connecticut', 'delaware': 'delaware', 'florida': 'florida',
@@ -55,139 +347,77 @@ class CoinImageService {
     'tennessee': 'tennessee', 'texas': 'texas', 'utah': 'utah',
     'vermont': 'vermont', 'virginia': 'virginia', 'washington': 'washington',
     'west virginia': 'west-virginia', 'wisconsin': 'wisconsin', 'wyoming': 'wyoming',
-    // Territories
     'puerto rico': 'puerto-rico', 'guam': 'guam',
     'us virgin islands': 'us-virgin-islands',
+    'u.s. virgin islands': 'us-virgin-islands',
     'american samoa': 'american-samoa',
+    'northern mariana islands': 'northern-mariana-islands',
     'northern mariana': 'northern-mariana-islands',
     'district of columbia': 'district-of-columbia',
-    // ATB parks
-    'yellowstone': 'yellowstone', 'grand canyon': 'grand-canyon',
-    'yosemite': 'yosemite', 'gettysburg': 'gettysburg',
-    'hot springs': 'hot-springs', 'mount hood': 'mount-hood',
-    'glacier': 'glacier', 'olympic': 'olympic',
-    // ATB park name → state/territory slug (2010–2021 complete program)
-    // Note: coin_image_index keys images by state (from filename), not park name.
-    // 2010
-    'hot springs national park': 'arkansas',
-    'yellowstone national park': 'wyoming',
-    'yosemite national park': 'california',
-    'grand canyon national park': 'arizona',
-    'mount hood national forest': 'oregon',
-    // 2011
-    'gettysburg national military park': 'pennsylvania',
-    'glacier national park': 'montana',
-    'olympic national park': 'washington',
-    'vicksburg national military park': 'mississippi',
-    'chickasaw national recreation area': 'oklahoma',
-    // 2012
-    'el yunque national forest': 'puerto-rico',
-    'chaco culture national historical park': 'new-mexico',
-    'acadia national park': 'maine',
-    'hawaii volcanoes national park': 'hawaii',
-    'denali national park': 'alaska',
-    // 2013
-    'white mountain national forest': 'new-hampshire',
-    "perry's victory and international peace memorial": 'ohio',
-    'great basin national park': 'nevada',
-    'fort mchenry national monument': 'maryland',
-    'mount rushmore national memorial': 'south-dakota',
-    // 2014
-    'great smoky mountains national park': 'tennessee',
-    'shenandoah national park': 'virginia',
-    'arches national park': 'utah',
-    'great sand dunes national park': 'colorado',
-    'everglades national park': 'florida',
-    // 2015
-    'homestead national monument': 'nebraska',
-    'kisatchie national forest': 'louisiana',
-    'blue ridge parkway': 'north-carolina',
-    'bombay hook national wildlife refuge': 'delaware',
-    'saratoga national historical park': 'new-york',
-    // 2016
-    'shawnee national forest': 'illinois',
-    'cumberland gap national historical park': 'kentucky',
-    'harpers ferry national historical park': 'west-virginia',
-    'theodore roosevelt national park': 'north-dakota',
-    'fort moultrie national monument': 'south-carolina',
-    // 2017
-    'effigy mounds national monument': 'iowa',
-    'frederick douglass national historic site': 'district-of-columbia',
-    'ozark national scenic riverways': 'missouri',
-    'ellis island national monument': 'new-jersey',
-    'george rogers clark national historical park': 'indiana',
-    // 2018
-    'pictured rocks national lakeshore': 'michigan',
-    'apostle islands national lakeshore': 'wisconsin',
-    'voyageurs national park': 'minnesota',
-    'cumberland island national seashore': 'georgia',
-    'block island national wildlife refuge': 'rhode-island',
-    // 2019
-    'lowell national historical park': 'massachusetts',
-    'lowell': 'massachusetts',
-    'american memorial park': 'northern-mariana-islands',
-    'war in the pacific national historical park': 'guam',
-    'war in the pacific': 'guam',
-    'san antonio missions national historical park': 'texas',
-    'san antonio missions': 'texas',
-    'frank church river of no return wilderness': 'idaho',
-    'frank church': 'idaho',
-    'river of no return': 'idaho',
-    // 2020
-    'national park of american samoa': 'american-samoa',
-    'weir farm national historical park': 'connecticut',
-    'salt river bay national historical park': 'us-virgin-islands',
-    'marsh-billings-rockefeller national historical park': 'vermont',
-    'tallgrass prairie national preserve': 'kansas',
-    // 2021
-    'tuskegee airmen national historic site': 'alabama',
-    'tuskegee airmen': 'alabama',
-    'tuskegee': 'alabama',
-    'crossing the delaware': 'new-jersey',
-    'washington crossing historic park': 'new-jersey',
-    // 2026 Semiquincentennial
-    '250th anniversary uncirculated coin set': '250th-anniversary',
-    '250th anniversary': '250th-anniversary',
-    'mayflower compact & pilgrim couple': 'mayflower-compact',
-    // Presidents (presidential dollar subjects)
-    'adams': 'adams', 'jefferson': 'jefferson', 'madison': 'madison',
-    'monroe': 'monroe', 'jackson': 'jackson', 'van buren': 'van-buren',
-    'harrison': 'harrison', 'tyler': 'tyler', 'polk': 'polk',
-    'taylor': 'taylor', 'fillmore': 'fillmore', 'pierce': 'pierce',
-    'buchanan': 'buchanan', 'lincoln': 'lincoln', 'johnson': 'johnson',
-    'grant': 'grant', 'hayes': 'hayes', 'garfield': 'garfield',
-    'arthur': 'arthur', 'cleveland': 'cleveland', 'mckinley': 'mckinley',
-    'roosevelt': 'roosevelt', 'taft': 'taft', 'wilson': 'wilson',
-    'harding': 'harding', 'coolidge': 'coolidge', 'hoover': 'hoover',
-    'truman': 'truman', 'eisenhower': 'eisenhower', 'kennedy': 'kennedy',
-    'ford': 'ford', 'carter': 'carter', 'reagan': 'reagan',
-    'bush': 'bush', 'clinton': 'clinton', 'obama': 'obama',
-    'trump': 'trump', 'biden': 'biden',
-    // American Women Quarters
+  };
+
+  static const _womenQuarterSubjects = <String, String>{
     'maya angelou': 'maya-angelou', 'sally ride': 'sally-ride',
+    'dr sally ride': 'sally-ride',
     'wilma mankiller': 'wilma-mankiller', 'nina otero warren': 'nina-otero-warren',
     'nina otero-warren': 'nina-otero-warren', 'adelina otero-warren': 'nina-otero-warren',
+    'nina otero': 'nina-otero-warren',
     'anna may wong': 'anna-may-wong', 'anna mae wong': 'anna-may-wong',
     'bessie coleman': 'bessie-coleman',
     'edith kanaka ole': 'edith-kanaka-ole',
-    "edith kanaka\u02bbole": 'edith-kanaka-ole',   // okina (ʻ)
-    "edith kanaka\u2018ole": 'edith-kanaka-ole',   // left single quote
-    "edith kanaka\u2019ole": 'edith-kanaka-ole',   // right single quote
+    "edith kanaka\u02bbole": 'edith-kanaka-ole',
+    "edith kanaka\u2018ole": 'edith-kanaka-ole',
+    "edith kanaka\u2019ole": 'edith-kanaka-ole',
     'edith kanakaole': 'edith-kanaka-ole',
     'eleanor roosevelt': 'eleanor-roosevelt',
     'jovita idar': 'jovita-idar', 'maria tallchief': 'maria-tallchief',
     'patsy mink': 'patsy-mink', 'patsy takemoto mink': 'patsy-mink',
-    // 2024 AWQ
     'celia cruz': 'celia-cruz',
     'zitkala-sa': 'zitkala-sa', 'zitkala sa': 'zitkala-sa', 'zitkala sha': 'zitkala-sa',
     'mary edwards walker': 'mary-edwards-walker',
     'pauli murray': 'pauli-murray',
-    // 2025 AWQ
     'ida b. wells': 'ida-b-wells', 'ida b wells': 'ida-b-wells',
     'vera rubin': 'vera-rubin',
     'althea gibson': 'althea-gibson',
     'stacey park milbern': 'stacey-park-milbern',
     'juliette gordon low': 'juliette-gordon-low',
+  };
+
+  static const _nativeAmericanYears = <String, String>{
+    '2009': 'three-sisters',
+    '2010': 'great-law-of-peace',
+    '2011': 'wampanoag-treaty',
+    '2012': 'trade-routes',
+    '2013': 'delaware-treaty',
+    '2014': 'native-hospitality',
+    '2015': 'mohawk-ironworkers',
+    '2016': 'code-talkers',
+    '2017': 'sequoyah',
+    '2018': 'jim-thorpe',
+    '2019': 'american-indians-in-space',
+    '2020': 'elizabeth-peratrovich',
+    '2021': 'native-americans-in-military',
+    '2022': 'ely-s-parker',
+    '2023': 'maria-tallchief',
+    '2024': 'indian-citizenship-act',
+    '2025': 'mary-g-ross',
+    '2026': 'polly-cooper',
+  };
+
+  static const _semiquincentennial2026Subjects = <String, String>{
+    'mayflower compact & pilgrim couple': 'mayflower-compact',
+    'mayflower compact': 'mayflower-compact',
+    'mayflower': 'mayflower-compact',
+    'revolutionary war': 'revolutionary-war',
+    'declaration of independence': 'declaration-of-independence',
+    'u.s. constitution': 'us-constitution',
+    'us constitution': 'us-constitution',
+    'constitution': 'us-constitution',
+    'gettysburg address': 'gettysburg-address',
+    'emerging liberty': 'emerging-liberty',
+    'liberty over tyranny': 'emerging-liberty',
+    '250th anniversary uncirculated coin set': '250th-anniversary',
+    '250th anniversary': '250th-anniversary',
   };
 
   /// Maps denomination/series strings → canonical program slug used as the
@@ -377,28 +607,99 @@ class CoinImageService {
     return null;
   }
 
-  /// Resolve a coin's Theme/Subject field to a canonical subject slug used in
-  /// the Firestore key for series coins (State Quarters, Presidents, Women, etc.)
-  static String? _resolveSubject(String? subject, String? program) {
-    if (subject == null || subject.trim().isEmpty) return null;
-    if (program == null || !_subjectPrograms.contains(program)) return null;
-    final key = subject.trim().toLowerCase();
-    // Exact match first
-    if (_subjectSlugMap.containsKey(key)) return _subjectSlugMap[key];
-    // Partial match — try longest matching key first to avoid e.g. 'adams' matching 'van buren'
-    final sorted = _subjectSlugMap.entries.toList()
+  /// Program-scoped exact subject match helper. Never uses bidirectional
+  /// `entry.key.contains(key)` substring matching.
+  static String? _matchSubjectMap(String key, Map<String, String> subjectMap) {
+    if (subjectMap.containsKey(key)) return subjectMap[key];
+    final sorted = subjectMap.entries.toList()
       ..sort((a, b) => b.key.length.compareTo(a.key.length));
     for (final entry in sorted) {
-      if (key.contains(entry.key) || entry.key.contains(key)) {
+      final tokenPattern = entry.key
+          .split(RegExp(r'\s+'))
+          .map(RegExp.escape)
+          .join(r'[\s_-]+');
+      final re = RegExp(
+        r'(?:^|[^a-z0-9])' + tokenPattern + r'(?:$|[^a-z0-9])',
+        caseSensitive: false,
+      );
+      if (re.hasMatch(key)) {
         return entry.value;
       }
     }
     return null;
   }
 
-  /// Build all candidate Firestore document keys for a coin, in priority order.
-  /// Each key is a base (without side suffix) that we'll probe for both _obverse
-  /// and _reverse documents.
+  /// Resolve a coin's Theme/Subject field to a canonical subject slug used in
+  /// the Firestore key for series coins (State Quarters, Presidents, Women, etc.)
+  /// Scoped strictly to [program] to prevent cross-program collisions.
+  static String? _resolveSubject(String? subject, String? program, {String? year}) {
+    if (program == null || !_subjectPrograms.contains(program)) return null;
+    if (program == 'native-american-dollar') {
+      final y = (year ?? '').trim().replaceFirst(RegExp(r'\.0+$'), '');
+      if (y.isNotEmpty && _nativeAmericanYears.containsKey(y)) {
+        return _nativeAmericanYears[y];
+      }
+    }
+    if (subject == null || subject.trim().isEmpty) return null;
+    final key = subject.trim().toLowerCase();
+
+    if (program == 'presidential-dollars') {
+      return _matchSubjectMap(key, _presidentialSubjects);
+    }
+    if (program == 'america-the-beautiful') {
+      return _matchSubjectMap(key, _atbParkSubjects);
+    }
+    if (program == '50-state-quarters' || program == 'american-innovation') {
+      return _matchSubjectMap(key, _stateQuarterSubjects);
+    }
+    if (program == 'american-women-quarters') {
+      return _matchSubjectMap(key, _womenQuarterSubjects);
+    }
+    if (program == 'quarter' || program == 'semiquincentennial' || program == 'dime') {
+      return _matchSubjectMap(key, _semiquincentennial2026Subjects);
+    }
+    return null;
+  }
+
+  /// Build composite Firestore document keys (`{denom}|{program}|{year}|{subject}|{side}`)
+  /// for a specific [side] ('obverse' or 'reverse'), plus shared-side wildcard keys
+  /// (e.g. `dollar|presidential-dollars|*|shared|reverse`).
+  static List<String> _compositeKeysForSide(
+    String year,
+    String? mint,
+    String? program,
+    String side, {
+    String? subject,
+  }) {
+    final keys = <String>[];
+    if (program == null || program.isEmpty) return keys;
+    final denom = _programToDenom[program] ?? program;
+    final subj = (subject != null && subject.isNotEmpty) ? subject : 'standard';
+    final y = year.trim().replaceFirst(RegExp(r'\.0+$'), '');
+
+    if (y.isNotEmpty) {
+      keys.add('$denom|$program|$y|$subj|$side');
+      if (subj != 'standard') {
+        // Also allow mint-specific composite key if present, without colliding
+        if (mint != null && mint.isNotEmpty) {
+          keys.add('$denom|$program|$y|$subj|$side|${mint.toUpperCase()}');
+        }
+      } else if (mint != null && mint.isNotEmpty) {
+        keys.add('$denom|$program|$y|standard|$side|${mint.toUpperCase()}');
+      }
+    }
+
+    // Shared-side wildcard entry (e.g. Presidential $1 Statue of Liberty reverse,
+    // ATB / AWQ / 50-State Washington obverse, Native American / Innovation obverse)
+    if (_sharedWildcardSides[program] == side) {
+      keys.add('$denom|$program|*|shared|$side');
+    }
+
+    return keys;
+  }
+
+  /// Build all candidate legacy Firestore document keys for a coin, in priority order.
+  /// Used as dual-read fallback after composite keys.
   static List<String> _candidateBases(
       String year, String? mint, String? program, {String? subject}) {
     final bases = <String>[];
@@ -483,10 +784,9 @@ class CoinImageService {
   /// Returns a [CoinImageResult] -- fields are null if no image found.
   /// Never throws; errors are silently swallowed so the UI degrades gracefully.
   ///
-  /// Obverse and reverse are resolved INDEPENDENTLY across all candidate bases,
-  /// so a subject-specific reverse (e.g. 1999_new-jersey_50-state-quarters_reverse)
-  /// can be paired with a generic obverse (e.g. 1999_50-state-quarters_obverse)
-  /// from a different candidate base.
+  /// Probes composite keys (`{denom}|{program}|{year}|{subject}|{side}` and
+  /// shared wildcard keys) first, then falls back to legacy `_candidateBases`
+  /// for dual-read compatibility.
   static Future<CoinImageResult> fetchReferenceImages({
     required String year,
     String? mint,
@@ -516,40 +816,74 @@ class CoinImageService {
       final program = _resolveProgram(denomination, series, subject: subject);
       if (program == null) return const CoinImageResult();
 
-      // Resolve subject slug (e.g. 'New Jersey' -> 'new-jersey')
-      final subjectSlug = _resolveSubject(subject, program);
+      // Resolve subject slug (program-scoped)
+      final subjectSlug = _resolveSubject(subject, program, year: y);
 
       final db = FirebaseFirestore.instance;
-      final bases = _candidateBases(
-        year, mint?.toUpperCase(), program,
-        subject: subjectSlug,
-      );
 
       // Independently track the best obverse and best reverse found.
-      // We keep scanning all candidate bases until both sides are resolved.
       String? bestObvUrl;
       String? bestRevUrl;
       String? bestAttr;
       String? bestLabel;
       String? bestKey;
 
-      // MF1 STEAL-GUARD: When a subject slug is resolved, the REVERSE image
-      // must come from a candidate base that contains the subject slug.
-      // Generic bases (year+program, expandFallbacks, design_*) may only
-      // supply the OBVERSE (e.g. shared Washington portrait is fine).
-      // This prevents "stealing" another coin's reverse design
-      // (e.g. Maya Angelou reverse showing for Anna May Wong).
-      // MF-V6-FIX1: Also activate steal-guard when program is a known subject-program
-      // (e.g. american-women-quarters, america-the-beautiful). This blocks generic
-      // obverse/reverse images (Angelou split photo, Perry's Victory, Lincoln penny)
-      // even when the Theme/Subject Firestore field is missing or "None".
+      // 1. Composite keys (v2 schema)
+      final obvCompositeKeys = _compositeKeysForSide(
+        y, mint?.toUpperCase(), program, 'obverse', subject: subjectSlug,
+      );
+      for (final docKey in obvCompositeKeys) {
+        if (bestObvUrl != null) break;
+        final doc = await db.collection(_collection).doc(docKey).get();
+        if (doc.exists) {
+          final d = doc.data()?['obverse'] as Map<String, dynamic>?;
+          if (d != null) {
+            bestObvUrl = d['public_url'] as String?;
+            bestAttr  ??= d['attribution'] as String?;
+            bestLabel ??= d['source_label'] as String?;
+            bestKey   ??= docKey;
+          }
+        }
+      }
+
+      final revCompositeKeys = _compositeKeysForSide(
+        y, mint?.toUpperCase(), program, 'reverse', subject: subjectSlug,
+      );
+      for (final docKey in revCompositeKeys) {
+        if (bestRevUrl != null) break;
+        final doc = await db.collection(_collection).doc(docKey).get();
+        if (doc.exists) {
+          final d = doc.data()?['reverse'] as Map<String, dynamic>?;
+          if (d != null) {
+            bestRevUrl = d['public_url'] as String?;
+            bestAttr  ??= d['attribution'] as String?;
+            bestLabel ??= d['source_label'] as String?;
+            bestKey   ??= docKey;
+          }
+        }
+      }
+
+      if (bestObvUrl != null && bestRevUrl != null) {
+        return CoinImageResult(
+          obverseUrl:  bestObvUrl,
+          reverseUrl:  bestRevUrl,
+          attribution: bestAttr,
+          sourceLabel: bestLabel,
+          matchedKey:  bestKey,
+        );
+      }
+
+      // 2. Dual-read fallback to legacy keys
+      final bases = _candidateBases(
+        y, mint?.toUpperCase(), program,
+        subject: subjectSlug,
+      );
+
       final bool hasSubject = (subjectSlug != null && subjectSlug.isNotEmpty)
           || _subjectPrograms.contains(program);
 
-      // MF-V4-3 DIAGNOSTIC (dev only — remove before merge to main)
       debugPrint('[CIS] fetchReferenceImages: year=$year mint=$mint denom=$denomination series=$series subject=$subject');
       debugPrint('[CIS]   → program=$program subjectSlug=$subjectSlug hasSubject=$hasSubject');
-      debugPrint('[CIS]   → bases=${bases.join(', ')}');
 
       for (final base in bases) {
         final needsObv = bestObvUrl == null;
@@ -590,7 +924,6 @@ class CoinImageService {
       }
 
       if (bestObvUrl != null || bestRevUrl != null) {
-        // MF-V4-3 DIAGNOSTIC (dev only — remove before merge to main)
         debugPrint('[CIS]   → RESULT revUrl=${bestRevUrl ?? "null"} key=$bestKey');
         return CoinImageResult(
           obverseUrl:  bestObvUrl,
@@ -606,6 +939,12 @@ class CoinImageService {
     return const CoinImageResult();
   }
 
+  /// Public helper to resolve a coin's denomination + series + subject to a
+  /// canonical program slug.
+  static String? resolveProgram(
+      String? denomination, String? series, {String? subject}) =>
+      _resolveProgram(denomination, series, subject: subject);
+
   // ── @visibleForTesting wrappers ──────────────────────────────────────────
   // Thin wrappers exposing pure-logic statics for MF7 regression tests.
   // These do NOT hit Firestore — only the deterministic resolver/slug logic.
@@ -616,13 +955,22 @@ class CoinImageService {
       _resolveProgram(denomination, series, subject: subject);
 
   @visibleForTesting
-  static String? testResolveSubject(String? subject, String? program) =>
-      _resolveSubject(subject, program);
+  static String? testResolveSubject(String? subject, String? program, {String? year}) =>
+      _resolveSubject(subject, program, year: year);
 
   @visibleForTesting
   static List<String> testCandidateBases(
       String year, String? mint, String? program, {String? subject}) =>
       _candidateBases(year, mint, program, subject: subject);
+
+  @visibleForTesting
+  static List<String> testCompositeKeys(
+      String year, String? mint, String? program, String side, {String? subject}) =>
+      _compositeKeysForSide(year, mint, program, side, subject: subject);
+
+  @visibleForTesting
+  static String? testProgramToDenom(String? program) =>
+      program == null ? null : _programToDenom[program];
 
   @visibleForTesting
   static Set<String> get testSubjectPrograms => _subjectPrograms;

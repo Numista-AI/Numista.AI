@@ -19,7 +19,8 @@ import '../services/auth_service.dart';
 import '../models/coin_model.dart';
 import '../services/guest_seed_service.dart';
 import '../services/coin_image_service.dart';
-import '../services/canonical_mint_asset_service.dart';
+import '../services/coin_picture_picker.dart';
+import '../utils/owned_storage_url.dart';
 import '../widgets/grade_badge_widget.dart';
 import '../widgets/signed_storage_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -3842,13 +3843,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   /// or an inviting "Add Your Photo" prompt otherwise.
   // ignore: unused_element — kept for CoinDetailScreen integration (Phase 2)
   Widget _buildCoinVaultGallery(Map<String, dynamic> data) {
-    final hasUserPhoto = CanonicalMintAssetService.hasUserUploadedPhotos(data);
-    final canon = hasUserPhoto ? null : CanonicalMintAssetService.resolveFromMap(data);
-    final obvUrl = canon?.obverseUrl ?? (data[_F.imageObverse]?.toString() ?? '');
-    final revUrl = canon?.reverseUrl ?? (data[_F.imageReverse]?.toString() ?? '');
-    final hasObv = obvUrl.isNotEmpty && obvUrl.startsWith('http');
-    final hasRev = revUrl.isNotEmpty && revUrl.startsWith('http');
-    final hasAny = hasUserPhoto || canon != null || hasObv || hasRev;
+    final sel = CoinPicturePicker.select(data);
+    final obvUrl = sel.primaryObverseUrl ?? '';
+    final revUrl = sel.primaryReverseUrl ?? '';
+    final hasObv = obvUrl.isNotEmpty && isOwnedStorageUrl(obvUrl);
+    final hasRev = revUrl.isNotEmpty && isOwnedStorageUrl(revUrl);
+    final hasAny = sel.hasAny;
 
     // If switching to reverse but no reverse exists, stay on obverse
     final showObverse = _vaultShowObverse || (!hasRev && hasObv);
@@ -3858,22 +3858,24 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     final scanSource   = data['scan_source']?.toString();
     final isMicroscope = scanSource == 'microscope';
 
-    // When no user photo exists, try to fetch a reference image from GCS index
-    if (!hasAny) {
-      final year  = _rowField(data, 'year', _F.year).replaceAll(RegExp(r'\.0$'), '');
-      final mint  = _rowField(data, 'mint_mark', _F.mintMark);
-      final denom = _rowField(data, 'denomination', _F.denomination);
-      final series = _rowField(data, 'program_series', _F.programSeries);
-      final subject = _rowField(data, 'theme_subject', _F.themeSubject);
+    final year  = _rowField(data, 'year', _F.year).replaceAll(RegExp(r'\.0$'), '');
+    final mint  = _rowField(data, 'mint_mark', _F.mintMark);
+    final denom = _rowField(data, 'denomination', _F.denomination);
+    final series = _rowField(data, 'program_series', _F.programSeries);
+    final subject = _rowField(data, 'theme_subject', _F.themeSubject);
 
-      return FutureBuilder<CoinImageResult>(
-        future: CoinImageService.fetchReferenceImages(
+    Future<CoinImageResult> fetchRef() => CoinImageService.fetchReferenceImages(
           year:         year,
           mint:         mint.isEmpty ? null : mint,
           denomination: denom.isEmpty ? null : denom,
           series:       series.isEmpty ? null : series,
           subject:      subject.isEmpty ? null : subject,
-        ),
+        );
+
+    // When no user photo exists, try to fetch a reference image from GCS index
+    if (!hasAny) {
+      return FutureBuilder<CoinImageResult>(
+        future: fetchRef(),
         builder: (context, snap) {
           final ref = snap.data;
           final refObvUrl = ref?.obverseUrl ?? '';
@@ -4160,9 +4162,62 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               ),
                             ),
                           ),
-                          errorBuilder: (_) => _vaultPlaceholder(
-                            showObverse ? 'Obverse' : 'Reverse',
-                            isError: true,
+                          errorBuilder: (_) => FutureBuilder<CoinImageResult>(
+                            future: fetchRef(),
+                            builder: (ctx, refSnap) {
+                              final fallbackSel = CoinPicturePicker.select(
+                                data,
+                                referenceResult: refSnap.data,
+                                ignoreUserPhotos: true,
+                              );
+                              final fbUrl = showObverse
+                                  ? (fallbackSel.primaryObverseUrl ?? fallbackSel.primaryReverseUrl ?? '')
+                                  : (fallbackSel.primaryReverseUrl ?? fallbackSel.primaryObverseUrl ?? '');
+                              if (fbUrl.isNotEmpty && isOwnedStorageUrl(fbUrl)) {
+                                return Stack(
+                                  children: [
+                                    SignedStorageImage(
+                                      url: fbUrl,
+                                      width: double.infinity,
+                                      height: 220,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_) => _vaultPlaceholder(
+                                        showObverse ? 'Obverse' : 'Reverse',
+                                        isError: true,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 8,
+                                      left: 8,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black54,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'Reference fallback',
+                                          style: TextStyle(fontSize: 10, color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+                              if (refSnap.connectionState == ConnectionState.waiting) {
+                                return Container(
+                                  height: 220,
+                                  color: Color(0xFFF0F2F6),
+                                  child: Center(
+                                    child: CircularProgressIndicator(color: _accent, strokeWidth: 2),
+                                  ),
+                                );
+                              }
+                              return _vaultPlaceholder(
+                                showObverse ? 'Obverse' : 'Reverse',
+                                isError: true,
+                              );
+                            },
                           ),
                         ),
                         Positioned(
