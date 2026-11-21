@@ -10,7 +10,7 @@ from firebase_admin import credentials, firestore, initialize_app, _apps
 # Configuration
 PROJECT_ID = "studio-9101802118-8c9a8"
 GEMINI_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
-PRIMARY_MODEL = "gemini-4-hydrogen"
+PRIMARY_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-4-hydrogen")
 DB_PATH = os.path.join("database", "numista_coins.db")
 COINS_JSON = "definitive_catalog_full.json"
 BANKNOTES_JSON = "banknotes_expanded.json"
@@ -337,7 +337,11 @@ Your output MUST be a valid JSON array of objects. Do not wrap the JSON output i
             contents=[genai_types.Part.from_text(text=prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.0
+                thinking_config=(
+                    genai_types.ThinkingConfig(thinking_level="low")
+                    if str(PRIMARY_MODEL).strip().lower().startswith("gemini-4-")
+                    else None
+                ),
             )
         )
         raw_text = response.text.strip()

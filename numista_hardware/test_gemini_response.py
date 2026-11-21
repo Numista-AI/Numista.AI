@@ -17,7 +17,14 @@ img = client.files.upload(file='captures/2023_Roosevelt_Dime_D_Obverse_20260523_
 resp = client.models.generate_content(
     model=FLASH_MODEL,
     contents=['Describe this image in JSON with key "description".', img],
-    config=types.GenerateContentConfig(response_mime_type='application/json')
+    config=types.GenerateContentConfig(
+        response_mime_type='application/json',
+        thinking_config=(
+            types.ThinkingConfig(thinking_level='low')
+            if str(FLASH_MODEL or '').strip().lower().startswith('gemini-4-')
+            else None
+        ),
+    )
 )
 print("Raw response (first 500):", repr(resp.text[:500]))
 try:

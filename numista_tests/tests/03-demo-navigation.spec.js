@@ -98,7 +98,7 @@ test.describe('03 - Browse Demo Navigation', () => {
     expect(buf.length).toBeGreaterThan(100000);
   });
 
-  test('T06: Send Beta Feedback button renders', async ({ page }) => {
+  test('T06: Send Feedback button renders', async ({ page }) => {
     await enterDemo(page);
     const buf = await page.screenshot({ type: 'png' });
     expect(buf.length).toBeGreaterThan(100000);

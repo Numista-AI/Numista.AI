@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:numista_ai/screens/base_layout.dart';
 import 'package:numista_ai/screens/home_dashboard.dart';
+import 'package:numista_ai/services/display_preferences_service.dart';
 import 'package:numista_ai/widgets/collection_card_image.dart';
 
 Widget _wrapTestHome({
@@ -38,6 +40,11 @@ Widget _wrapTestHome({
 }
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    DisplayPreferencesService.instance.resetForTest(initialValue: true);
+  });
+
   final coinWithoutPhoto = <String, dynamic>{
     'id': 'c1',
     'Program/Series': 'Peace Dollar',
@@ -53,29 +60,30 @@ void main() {
     'cpgRetail': '12400',
   };
 
-  testWidgets('1. Media rule: CollectionCardImage and No photo yet fallback, zero dollar signs', (tester) async {
+  testWidgets('1. Media rule: CollectionCardImage and No photo yet fallback, value visible by default', (tester) async {
     await tester.pumpWidget(_wrapTestHome(coins: [coinWithoutPhoto]));
     await tester.pumpAndSettle();
     expect(find.byType(CollectionCardImage), findsOneWidget);
     expect(find.textContaining('No photo'), findsOneWidget);
-    expect(find.textContaining(r'$'), findsNothing);
+    expect(find.text(r'$35.00'), findsOneWidget);
   });
 
-  testWidgets('2. Value hidden by default; Show value reveals and Hide value hides', (tester) async {
+  testWidgets('2. Value visible by default as currency; Hide value hides and Show value restores', (tester) async {
     await tester.pumpWidget(_wrapTestHome(coins: [coinWithPhoto]));
     await tester.pump();
     await tester.pump();
-    expect(find.text('Hidden for your safety'), findsOneWidget);
-    expect(find.textContaining('12,400'), findsNothing);
-
-    await tester.tap(find.text('Show value'));
-    await tester.pump();
-    expect(find.textContaining('12,400 dollars'), findsOneWidget);
+    expect(find.text(r'$12,400.00'), findsOneWidget);
     expect(find.text('Hide value'), findsOneWidget);
+    expect(find.text('Hidden for your safety'), findsNothing);
 
     await tester.tap(find.text('Hide value'));
     await tester.pump();
     expect(find.text('Hidden for your safety'), findsOneWidget);
+    expect(find.text('Show value'), findsOneWidget);
+
+    await tester.tap(find.text('Show value'));
+    await tester.pump();
+    expect(find.text(r'$12,400.00'), findsOneWidget);
   });
 
   testWidgets('3. Typography >= 18px and tap targets >= 56px', (tester) async {
@@ -88,7 +96,7 @@ void main() {
       }
     }
     expect(
-      tester.getSize(find.widgetWithText(OutlinedButton, 'Show value')).height,
+      tester.getSize(find.widgetWithText(OutlinedButton, 'Hide value')).height,
       greaterThanOrEqualTo(56.0),
     );
   });
@@ -106,6 +114,7 @@ void main() {
     await tester.pump();
     expect(find.text('Add your first coin'), findsOneWidget);
     expect(find.text('Show value'), findsNothing);
+    expect(find.text('Hide value'), findsNothing);
   });
 
   testWidgets('5. Desktop accordion: single group open at a time', (tester) async {

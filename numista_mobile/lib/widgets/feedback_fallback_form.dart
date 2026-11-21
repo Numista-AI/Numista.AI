@@ -94,7 +94,7 @@ class _FeedbackFallbackFormState extends State<FeedbackFallbackForm> {
         triggerReason: triggerReason,
         pageTitle: session?.triggerEvent.pageTitle ?? 'Unknown',
         route: session?.triggerEvent.route ?? '/',
-        appVersion: '4.1.0-beta',
+        appVersion: '4.1.0',
         screenshotConsented: false,
         userConfirmedSummary: false,
         clientSuggestedIssueType: _selectedType,

@@ -11,7 +11,6 @@ import '../constants.dart';
 import '../models/coin_model.dart';
 import '../models/program_model.dart';
 import '../services/auth_service.dart';
-import '../services/beta_checklist_service.dart';
 import '../services/epn_service.dart';
 import '../services/http_auth_client.dart';
 import '../services/reference_service.dart';
@@ -27,6 +26,7 @@ class WishlistScreen extends StatefulWidget {
   final List<AutoFilledProgramGroup>? initialAutoGroupsForTest;
   final List<WishlistItem>? initialManualItemsForTest;
   final bool? isGuestForTest;
+  final Future<void> Function(String email)? saveRecipientEmailForTest;
 
   const WishlistScreen({
     super.key,
@@ -34,6 +34,7 @@ class WishlistScreen extends StatefulWidget {
     this.initialAutoGroupsForTest,
     this.initialManualItemsForTest,
     this.isGuestForTest,
+    this.saveRecipientEmailForTest,
   });
 
   @override
@@ -225,13 +226,48 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return items;
   }
 
+  static final RegExp _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  Future<void> _persistRecipientEmail(String recipient) async {
+    if (widget.saveRecipientEmailForTest != null) {
+      await widget.saveRecipientEmailForTest!(recipient);
+      return;
+    }
+    if (_hasFirebaseApp) {
+      await WishlistService.saveRecipientEmail(recipient);
+    }
+  }
+
+  Future<void> _saveRecipientEmailAction() async {
+    if (_isGuest) return;
+    final recipient = _recipientController.text.trim();
+    if (!_emailRegex.hasMatch(recipient)) {
+      _showSnack('Please enter a valid family email address.');
+      return;
+    }
+
+    try {
+      await _persistRecipientEmail(recipient);
+      if (!mounted) return;
+      _showSnack(
+        'Saved $recipient to Family Emails.',
+        backgroundColor: _emerald,
+      );
+    } catch (e, st) {
+      debugPrint('[WishlistScreen] _saveRecipientEmailAction error: $e\n$st');
+      if (mounted) {
+        _showSnack('Could not save email right now.');
+      }
+    }
+  }
+
   Future<void> _sendWishlistEmail(
     List<AutoFilledProgramGroup> autoGroups,
     List<WishlistItem> manualItems,
   ) async {
     if (_isGuest) return;
     final recipient = _recipientController.text.trim();
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(recipient)) {
+    if (!_emailRegex.hasMatch(recipient)) {
       _showSnack('Please enter a valid family email address.');
       return;
     }
@@ -244,10 +280,18 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
     setState(() => _isSendingEmail = true);
     try {
-      await WishlistService.saveRecipientEmail(recipient);
-      final userEmail = AuthService.userEmail;
-      final alias = AuthService.displayName.isNotEmpty
-          ? AuthService.displayName
+      try {
+        await _persistRecipientEmail(recipient);
+      } catch (e) {
+        debugPrint('[WishlistScreen] saveRecipientEmail skipped/failed: $e');
+      }
+
+      final userEmail =
+          _hasFirebaseApp ? AuthService.userEmail : 'test@example.com';
+      final displayName =
+          _hasFirebaseApp ? AuthService.displayName : 'Test Collector';
+      final alias = displayName.isNotEmpty
+          ? displayName
           : userEmail.split('@').first;
 
       final response = await HttpAuthClient.post(
@@ -264,7 +308,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
       if (!mounted) return;
       if (response.statusCode == 200) {
-        BetaChecklistService.autoCompleteTask('task_15_public_wishlist');
         _showSnack(
           'Sent! Your Wish List of ${items.length} coins was emailed to $recipient.',
           backgroundColor: _emerald,
@@ -276,7 +319,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
       } else {
         _showSnack(NumistaErrorHelper.toUserFriendly(response.body, statusCode: response.statusCode));
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[WishlistScreen] _sendWishlistEmail error: $e\n$st');
       if (mounted) {
         _showSnack(
           'Could not send email right now. Try Copy / Share Link instead.',
@@ -322,7 +366,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final shareUrl = data['share_url']?.toString() ?? '';
-        BetaChecklistService.autoCompleteTask('task_15_public_wishlist');
         if (shareUrl.isNotEmpty) {
           await Clipboard.setData(ClipboardData(text: shareUrl));
           if (!mounted) return;
@@ -860,7 +903,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
       return _buildScaffold(
         prefs: widget.initialPrefsForTest ?? const WishlistAutoFillPrefs(),
         autoGroups: const [],
-        manualItems: const [],
+        manualItems: widget.initialManualItemsForTest ?? const [],
       );
     }
 
@@ -1129,6 +1172,32 @@ class _WishlistScreenState extends State<WishlistScreen> {
                 hintText: 'eric@example.com',
                 labelStyle: TextStyle(fontSize: 18, color: _inkMuted),
                 border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: ElevatedButton.icon(
+                key: const Key('wishlist_save_email_button'),
+                onPressed: _isGuest ? null : _saveRecipientEmailAction,
+                icon: const Icon(Icons.bookmark_add_outlined, size: 22),
+                label: const Text(
+                  'Save Email',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(0, 56),
+                  backgroundColor: Colors.white,
+                  foregroundColor: _primaryBlue,
+                  side: const BorderSide(color: _primaryBlue, width: 1.5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),

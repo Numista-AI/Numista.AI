@@ -32,6 +32,7 @@ import requests as _requests
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException, Depends
 
+from config import gemini4_thinking_config
 from routes.deps import logger, get_current_user, db, MODEL_FLASH
 
 # google-genai SDK — Vertex AI + ADC (no API key). Patchable at module level for tests.
@@ -460,6 +461,7 @@ def extract_cert_from_image(
                 config=_genai_types.GenerateContentConfig(
                     response_mime_type="application/json",
                     max_output_tokens=1024,
+                    thinking_config=gemini4_thinking_config(model_name, "low"),
                 ),
             )
 

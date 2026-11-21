@@ -37,7 +37,7 @@ import 'admin_feedback_screen.dart';
 import 'my_tickets_screen.dart';
 import 'support_portal_screen.dart';
 import '../models/coin_model.dart';
-import '../widgets/beta_feedback_widget.dart';
+import '../widgets/morgan_owl_avatar.dart';
 import '../widgets/auth_gate.dart';
 import '../services/feedback_trigger_observer.dart';
 import '../services/beta_feedback_service.dart' show FeedbackTriggerReason;
@@ -59,7 +59,20 @@ import '../utils/numista_error_helper.dart';
 
 class BaseLayout extends StatefulWidget {
   final bool isDemoMode;
-  const BaseLayout({super.key, this.isDemoMode = false});
+  @visibleForTesting
+  final bool testSkipFirebase;
+  @visibleForTesting
+  final Widget Function(String route, String? aiInitialQuery, String myCollectionTab)? testRouteBuilder;
+  @visibleForTesting
+  final Widget Function(String? initialQuery, VoidCallback onClose)? testPopoutBuilder;
+
+  const BaseLayout({
+    super.key,
+    this.isDemoMode = false,
+    this.testSkipFirebase = false,
+    this.testRouteBuilder,
+    this.testPopoutBuilder,
+  });
 
   @override
   State<BaseLayout> createState() => _BaseLayoutState();
@@ -105,9 +118,7 @@ class _BaseLayoutState extends State<BaseLayout> {
     final gs = MorganGuideService.current.value;
     if (MediaQuery.of(context).size.width < 800) {
       // Mobile: Switch tab to AI Deepdive
-      setState(() {
-        _activeRoute = 'AI Deepdive';
-      });
+      _navigateTo('AI Deepdive');
       return;
     }
 
@@ -255,26 +266,30 @@ class _BaseLayoutState extends State<BaseLayout> {
 
     // Load eBay credentials from Firestore into SharedPreferences.
     // Skip in demo mode to enforce zero Firestore network reads.
-    if (!widget.isDemoMode && !GuestSeedService.isBrowseDemoMode) {
+    if (!widget.testSkipFirebase && !widget.isDemoMode && !GuestSeedService.isBrowseDemoMode) {
       EpnService.loadFromFirestore();
     }
     // Run US Mint data normalization silently in background for all accounts.
     // Only processes coins that haven't been normalized yet.
-    if (!AuthService.isGuest && !widget.isDemoMode && !GuestSeedService.isBrowseDemoMode && AuthService.isSignedIn) {
+    if (!widget.testSkipFirebase && !AuthService.isGuest && !widget.isDemoMode && !GuestSeedService.isBrowseDemoMode && AuthService.isSignedIn) {
       CoinNormalizerService.runForUser();
     }
     // Auto-start the guided wizard for first-time Guest users.
     // Demo mode gets a read-only experience without the wizard.
-    if (AuthService.isGuest && !widget.isDemoMode) {
+    if (!widget.testSkipFirebase && AuthService.isGuest && !widget.isDemoMode) {
       WizardService.start(
         'guest',
-        onNavigate: (route) => setState(() => _activeRoute = route),
+        onNavigate: (route) {
+          if (mounted) _navigateTo(route);
+        },
       );
     } else {
       // Register the navigate callback even if wizard isn't active yet,
       // so a future wizard invocation can still drive the nav.
       WizardService.setNavigateCallback(
-        (route) => setState(() => _activeRoute = route),
+        (route) {
+          if (mounted) _navigateTo(route);
+        },
       );
     }
 
@@ -333,39 +348,63 @@ class _BaseLayoutState extends State<BaseLayout> {
     });
   }
 
-  void _navigateTo(String route) {
-    MorganProactiveRescueObserver.instance.recordUserActivity();
-    if (route == 'AI Deepdive' && MediaQuery.of(context).size.width >= 800) {
-      setState(() {
-        _isMorganPopoutOpen = true;
-        _popoutInitialQuery = null;
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _popoutInitialQuery = null;
-      });
-      return;
+  String _resolveRouteAlias(String rawRoute) {
+    if (rawRoute == 'Add new coins/notes/etc.') return 'Add New Coins';
+    if (rawRoute == 'Admin Grade Flags') return 'Admin: Grade Flags';
+    if (rawRoute == '🔍 Numista Lookup' || rawRoute == 'Numista Lookup') {
+      return 'Coin Search';
     }
-    String resolvedRoute = route;
+    return rawRoute;
+  }
+
+  /// All prior desktop width >= 800 intercepts for the 'AI Deepdive' route have been removed; DeepDive always lands in the main pane.
+  void _navigateTo(
+    String route, {
+    String? subTab,
+    String? aiInitialQuery,
+    bool pushHistory = true,
+  }) {
+    MorganProactiveRescueObserver.instance.recordUserActivity();
+    final aliased = _resolveRouteAlias(route);
+    String resolvedRoute = aliased;
+    final String resolvedSubTab = subTab ?? '';
+
     setState(() {
-      if (route.startsWith('Coin Programs:')) {
-        final parts = route.split(':');
+      if (subTab != null) {
+        _myCollectionTab = subTab;
+      }
+      if (aiInitialQuery != null) {
+        _aiInitialQuery = aiInitialQuery;
+      }
+      if (aliased.startsWith('Coin Programs:')) {
+        final parts = aliased.split(':');
         _programManagerInitialId = parts[1];
         resolvedRoute = 'Coin Programs';
-        _activeRoute = 'Coin Programs';
-        // ITEM 5: push resolved route name for history
-        if (_routeHistory.isEmpty || _routeHistory.last != 'Coin Programs') {
-          _routeHistory.add('Coin Programs');
-        }
-      } else {
-        _activeRoute = route;
-        // ITEM 5: push to history, skip duplicate consecutive entries
-        if (_routeHistory.isEmpty || _routeHistory.last != route) {
-          _routeHistory.add(route);
+      }
+      _activeRoute = resolvedRoute;
+      if (resolvedRoute == 'AI Deepdive' && _isMorganPopoutOpen) {
+        // Main pane is now full-screen AI Deepdive; close side popout so two
+        // AiChatScreen instances are never mounted simultaneously.
+        _isMorganPopoutOpen = false;
+        _popoutInitialQuery = null;
+      }
+      if (pushHistory &&
+          (_routeHistory.isEmpty || _routeHistory.last != resolvedRoute)) {
+        _routeHistory.add(resolvedRoute);
+        if (_routeHistory.length > 50) {
+          _routeHistory.removeAt(0);
         }
       }
     });
+
+    MorganScreenStateRegistry.instance.beginRouteTransition(
+      resolvedRoute,
+      subTab: resolvedSubTab,
+      hydratedImmediately: false,
+    );
     MorganScreenStateRegistry.instance.markScreenHydrated(
       route: resolvedRoute,
+      subTab: resolvedSubTab,
       hydrated: resolvedRoute != 'Microscope Scanner',
     );
   }
@@ -388,10 +427,27 @@ class _BaseLayoutState extends State<BaseLayout> {
   }
 
   Widget _buildBodyForRoute() {
+    if (widget.testRouteBuilder != null) {
+      final consumedQuery = _activeRoute == 'AI Deepdive' ? _aiInitialQuery : null;
+      if (_activeRoute == 'AI Deepdive') {
+        _aiInitialQuery = null;
+      }
+      return widget.testRouteBuilder!(_activeRoute, consumedQuery, _myCollectionTab);
+    }
     switch (_activeRoute) {
       case 'Home Dashboard':
         return HomeDashboard(
-          onAskMorgan: () => _navigateTo('AI Deepdive'),
+          onAskMorgan: () {
+            if (MediaQuery.of(context).size.width >= 800) {
+              setState(() {
+                _isMorganPopoutOpen = true;
+                _popoutInitialQuery = null;
+              });
+              showMorganConsentModalIfNeeded(context);
+            } else {
+              _navigateTo('AI Deepdive');
+            }
+          },
           onAskMorganWithQuery: (query) {
             if (MediaQuery.of(context).size.width >= 800) {
               setState(() {
@@ -402,10 +458,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                 _popoutInitialQuery = null;
               });
             } else {
-              setState(() {
-                _aiInitialQuery = query;
-                _activeRoute = 'AI Deepdive';
-              });
+              _navigateTo('AI Deepdive', aiInitialQuery: query);
             }
           },
           onNavigateToCollection: () => _navigateTo('My Collection'),
@@ -424,22 +477,8 @@ class _BaseLayoutState extends State<BaseLayout> {
         return MyCollectionScreen(
           initialTab: _myCollectionTab,
           onNavigate: _navigateTo,
-          onNavigateWithQuery: (route, query) {
-            if (route == 'AI Deepdive' && MediaQuery.of(context).size.width >= 800) {
-              setState(() {
-                _isMorganPopoutOpen = true;
-                _popoutInitialQuery = query;
-              });
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _popoutInitialQuery = null;
-              });
-            } else {
-              setState(() {
-                _activeRoute = route;
-                _aiInitialQuery = query;
-              });
-            }
-          },
+          onNavigateWithQuery: (route, query) =>
+              _navigateTo(route, aiInitialQuery: query),
           onTabChanged: _onMyCollectionTabChanged,
         );
       case 'Microscope Scanner':
@@ -505,10 +544,11 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const AdminGradeFlagsScreen();
       case 'Admin: Beta Dashboard':
       case 'Beta Feedback Inbox':
+      case 'Feedback Inbox':
         return const AdminFeedbackScreen();
       case 'Customer Service':
         return CustomerServiceScreen(
-          onNavigateToTickets: () => setState(() => _activeRoute = 'My Tickets'),
+          onNavigateToTickets: () => _navigateTo('My Tickets'),
         );
       case 'My Tickets':
         return const MyTicketsScreen();
@@ -568,14 +608,14 @@ class _BaseLayoutState extends State<BaseLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = widget.testSkipFirebase ? null : FirebaseAuth.instance.currentUser;
     final displayName = user?.displayName?.isNotEmpty == true
         ? user!.displayName!
         : (user?.email?.split('@').first ?? 'Collector');
     final email = user?.email ?? '';
 
     final rootContent = StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: email.isNotEmpty
+      stream: !widget.testSkipFirebase && email.isNotEmpty
           ? FirebaseFirestore.instance
               .collection('users')
               .doc(email)
@@ -584,7 +624,10 @@ class _BaseLayoutState extends State<BaseLayout> {
           : const Stream.empty(),
       builder: (context, reviewSnap) {
         _isReviewCountLoading =
-            email.isNotEmpty && reviewSnap.connectionState == ConnectionState.waiting && !reviewSnap.hasData;
+            !widget.testSkipFirebase &&
+            email.isNotEmpty &&
+            reviewSnap.connectionState == ConnectionState.waiting &&
+            !reviewSnap.hasData;
         final rawDocs = reviewSnap.data?.docs ?? const [];
         _reviewQueueCount = rawDocs.where((d) {
           final status = (d.data()['status'] ?? 'pending').toString().toLowerCase();
@@ -609,10 +652,17 @@ class _BaseLayoutState extends State<BaseLayout> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return; // already popped — nothing to do
+        if (_isMorganPopoutOpen) {
+          setState(() {
+            _isMorganPopoutOpen = false;
+            _popoutInitialQuery = null;
+          });
+          return;
+        }
         if (_routeHistory.length > 1) {
           _routeHistory.removeLast();
           final previous = _routeHistory.last;
-          setState(() => _activeRoute = previous);
+          _navigateTo(previous, pushHistory: false);
         } else {
           // At root (Home Dashboard) — show a friendly "use X to close" hint
           // on desktop web instead of silently doing nothing.
@@ -635,12 +685,10 @@ class _BaseLayoutState extends State<BaseLayout> {
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
-        SingleActivator(LogicalKeyboardKey.keyK, control: true): () {
-          setState(() => _activeRoute = 'Coin Search');
-        },
-        SingleActivator(LogicalKeyboardKey.keyK, meta: true): () {
-          setState(() => _activeRoute = 'Coin Search');
-        },
+        SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
+            _navigateTo('Coin Search'),
+        SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
+            _navigateTo('Coin Search'),
         SingleActivator(LogicalKeyboardKey.keyM, control: true): _showMorganDialog,
         SingleActivator(LogicalKeyboardKey.keyM, meta: true): _showMorganDialog,
         SingleActivator(LogicalKeyboardKey.escape): () {
@@ -672,7 +720,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                       GuestSeedService.deactivateBrowseDemo();
                       AuthGate.navigateTo(context, initialAuthTab: 1);
                     }),
-                  if (AuthService.isGuest) _GuestBanner(),
+                  if (!widget.testSkipFirebase && AuthService.isGuest) _GuestBanner(),
                   // Phone top bar: Numista.Ai + labeled Menu button (>= 56px)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -734,7 +782,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   reviewCount: badgeCount,
                   isReviewLoading: _isReviewCountLoading,
                   drillGroup: _phoneDrillGroup,
-                  isAdmin: AuthService.isAdmin,
+                  isAdmin: !widget.testSkipFirebase && AuthService.isAdmin,
                   onClose: () => setState(() {
                     _isPhoneMenuOpen = false;
                     _phoneDrillGroup = null;
@@ -763,10 +811,6 @@ class _BaseLayoutState extends State<BaseLayout> {
             MorganGuidePanel(
               onSearch: _onMorganSearch,
               onSearchResultTap: _handleMorganSearchResultTap,
-            ),
-            BetaFeedbackWidget(
-              currentRoute: _activeRoute,
-              pageTitle: _activeRoute,
             ),
           ],
         ),
@@ -807,25 +851,33 @@ class _BaseLayoutState extends State<BaseLayout> {
                         : MainAxisAlignment.spaceBetween,
                     children: [
                       if (!_isSidebarCollapsed)
-                        RichText(
-                          text: const TextSpan(
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF0B1A2E),
-                            ),
-                            children: [
-                              TextSpan(text: 'Numista.'),
-                              TextSpan(
-                                text: 'Ai',
-                                style: TextStyle(color: Color(0xFF1D4F91)),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: RichText(
+                              text: const TextSpan(
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0B1A2E),
+                                ),
+                                children: [
+                                  TextSpan(text: 'Numista.'),
+                                  TextSpan(
+                                    text: 'Ai',
+                                    style: TextStyle(color: Color(0xFF1D4F91)),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         )
                       else
-                        Image.asset('assets/logo_owl.png',
-                            height: 36, fit: BoxFit.contain),
+                        Flexible(
+                          child: Image.asset('assets/logo_owl.png',
+                              height: 36, fit: BoxFit.contain),
+                        ),
                       SizedBox(
                         width: 48,
                         height: 48,
@@ -977,13 +1029,13 @@ class _BaseLayoutState extends State<BaseLayout> {
                                   return _buildNavItem(item.route,
                                       displayLabel: item.label, icon: item.icon);
                                 }),
-                                if (AuthService.isAdmin) ...[
+                                if (!widget.testSkipFirebase && AuthService.isAdmin) ...[
                                   const Divider(color: Color(0xFFD5DEEA)),
                                   _buildNavItem('AI Trainer Board',
                                       icon: Icons.how_to_vote_outlined),
                                   _buildNavItem('Admin Grade Flags',
                                       icon: Icons.admin_panel_settings_outlined),
-                                  _buildNavItem('Beta Feedback Inbox',
+                                  _buildNavItem('Feedback Inbox',
                                       icon: Icons.rate_review_outlined),
                                   _buildNavItem('Admin: Support Portal',
                                       icon: Icons.support_agent_outlined),
@@ -996,8 +1048,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                     ),
                   ),
                 ),
-                // ── Morgan sidebar button (suppressed on Analytics — Single-Morgan-Per-Screen rule) ──
-                if (_activeRoute != 'Analytics') ...[
+                // ── Morgan sidebar button (hidden on Home and Analytics — Single-Morgan-Per-Screen rule) ──
+                if (_activeRoute != 'Home Dashboard' && _activeRoute != 'Home' && _activeRoute != 'Analytics') ...[
                   if (!_isSidebarCollapsed)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
@@ -1009,7 +1061,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                       child: Tooltip(
                         message: 'Ask Morgan AI',
                         child: IconButton(
-                          icon: Image.asset('assets/logo_owl.png', height: 28),
+                          icon: const MorganOwlAvatar(size: 28),
                           onPressed: _showMorganDialog,
                         ),
                       ),
@@ -1033,7 +1085,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                         ),
                         icon: Icon(Icons.feedback_outlined, size: 14, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA)),
                         label: const Text(
-                          'Send Beta Feedback',
+                          'Send Feedback',
                           style: TextStyle(fontSize: NumistaTheme.textBodySm, fontWeight: FontWeight.w600),
                         ),
                         onPressed: () {
@@ -1110,7 +1162,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                         label: Text(
                           (widget.isDemoMode || GuestSeedService.isBrowseDemoMode)
                               ? 'Exit Demo'
-                              : (AuthService.isGuest ? 'Exit Guest' : 'Sign Out'),
+                              : (!widget.testSkipFirebase && AuthService.isGuest ? 'Exit Guest' : 'Sign Out'),
                           style: const TextStyle(fontSize: NumistaTheme.textBodySm),
                         ),
                         onPressed: () => _confirmSignOut(context),
@@ -1121,7 +1173,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                   Tooltip(
                     message: (widget.isDemoMode || GuestSeedService.isBrowseDemoMode)
                         ? 'Exit Demo'
-                        : (AuthService.isGuest ? 'Exit Guest' : 'Sign Out'),
+                        : (!widget.testSkipFirebase && AuthService.isGuest ? 'Exit Guest' : 'Sign Out'),
                     child: IconButton(
                       icon: const Icon(Icons.logout, size: 18),
                       onPressed: () => _confirmSignOut(context),
@@ -1150,7 +1202,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                             GuestSeedService.deactivateBrowseDemo();
                             AuthGate.navigateTo(context, initialAuthTab: 1);
                           }),
-                        if (!widget.isDemoMode && AuthService.isGuest) _GuestBanner(),
+                        if (!widget.testSkipFirebase && !widget.isDemoMode && AuthService.isGuest) _GuestBanner(),
                         Expanded(child: _wrapBodyWithMaxWidth(_buildBody(), _activeRoute)),
                       ],
                     ),
@@ -1170,22 +1222,23 @@ class _BaseLayoutState extends State<BaseLayout> {
                       reducedMotionOverride:
                           MorganSettingsService.instance.reduceMotion,
                     ),
-                    BetaFeedbackWidget(
-                      currentRoute: _activeRoute,
-                      pageTitle: _activeRoute,
-                    ),
                     if (_isMorganPopoutOpen &&
                         (!_isMorganDocked || MediaQuery.sizeOf(context).width < 1024))
-                      MorganChatPopout(
-                        initialQuery: _popoutInitialQuery,
-                        isDocked: false,
-                        onToggleDock: () {
-                          setState(() => _isMorganDocked = true);
-                          MorganSettingsService.instance.setDockToSide(true);
-                        },
-                        onClose: () => setState(() => _isMorganPopoutOpen = false),
-                        onNavigateToCollection: () => _navigateTo('My Collection'),
-                      ),
+                      widget.testPopoutBuilder != null
+                          ? widget.testPopoutBuilder!(
+                              _popoutInitialQuery,
+                              () => setState(() => _isMorganPopoutOpen = false),
+                            )
+                          : MorganChatPopout(
+                              initialQuery: _popoutInitialQuery,
+                              isDocked: false,
+                              onToggleDock: () {
+                                setState(() => _isMorganDocked = true);
+                                MorganSettingsService.instance.setDockToSide(true);
+                              },
+                              onClose: () => setState(() => _isMorganPopoutOpen = false),
+                              onNavigateToCollection: () => _navigateTo('My Collection'),
+                            ),
                   ],
                 ),
               ),
@@ -1194,16 +1247,21 @@ class _BaseLayoutState extends State<BaseLayout> {
           if (_isMorganPopoutOpen &&
               _isMorganDocked &&
               MediaQuery.sizeOf(context).width >= 1024)
-            MorganChatPopout(
-              initialQuery: _popoutInitialQuery,
-              isDocked: true,
-              onToggleDock: () {
-                setState(() => _isMorganDocked = false);
-                MorganSettingsService.instance.setDockToSide(false);
-              },
-              onClose: () => setState(() => _isMorganPopoutOpen = false),
-              onNavigateToCollection: () => _navigateTo('My Collection'),
-            ),
+            widget.testPopoutBuilder != null
+                ? widget.testPopoutBuilder!(
+                    _popoutInitialQuery,
+                    () => setState(() => _isMorganPopoutOpen = false),
+                  )
+                : MorganChatPopout(
+                    initialQuery: _popoutInitialQuery,
+                    isDocked: true,
+                    onToggleDock: () {
+                      setState(() => _isMorganDocked = false);
+                      MorganSettingsService.instance.setDockToSide(false);
+                    },
+                    onClose: () => setState(() => _isMorganPopoutOpen = false),
+                    onNavigateToCollection: () => _navigateTo('My Collection'),
+                  ),
         ],
       ),
     );
@@ -1248,7 +1306,7 @@ class _BaseLayoutState extends State<BaseLayout> {
             'Human AI Trainer Review Board',
             'AI Trainer Board',
             'Admin: Grade Flags',
-            'Beta Feedback Inbox',
+            'Feedback Inbox',
             'Settings & Backup',
             'Our Team',
             'Customer Service',
@@ -1269,35 +1327,11 @@ class _BaseLayoutState extends State<BaseLayout> {
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: InkWell(
             onTap: isEnabled
-                ? () {
-                    if (subItemKey != null) {
-                      setState(() {
-                        _activeRoute = 'My Collection';
-                        _myCollectionTab = subItemKey;
-                      });
-                    } else if (title == 'Add new coins/notes/etc.') {
-                      setState(() => _activeRoute = 'Add New Coins');
-                    } else if (title == 'Take a photo') {
-                      setState(() => _activeRoute = 'Take a photo');
-                    } else if (title == 'Admin Grade Flags') {
-                      setState(() => _activeRoute = 'Admin: Grade Flags');
-                    } else if (title == '🔍 Numista Lookup' || title == 'Numista Lookup') {
-                      setState(() => _activeRoute = 'Coin Search');
-                    } else if (title == 'AI Deepdive') {
-                      if (MediaQuery.of(context).size.width >= 800) {
-                        setState(() {
-                          _isMorganPopoutOpen = !_isMorganPopoutOpen;
-                          if (_isMorganPopoutOpen) {
-                            _popoutInitialQuery = null;
-                          }
-                        });
-                      } else {
-                        setState(() => _activeRoute = title);
-                      }
-                    } else {
-                      setState(() => _activeRoute = title);
-                    }
-                  }
+                ? (onCustomTap ??
+                    () => _navigateTo(
+                          subItemKey != null ? 'My Collection' : title,
+                          subTab: subItemKey,
+                        ))
                 : null,
             borderRadius: BorderRadius.circular(8),
             child: Container(
@@ -1327,35 +1361,11 @@ class _BaseLayoutState extends State<BaseLayout> {
       opacity: isEnabled ? 1.0 : 0.45,
       child: InkWell(
         onTap: isEnabled
-            ? (onCustomTap ?? () {
-                if (subItemKey != null) {
-                  setState(() {
-                    _activeRoute = 'My Collection';
-                    _myCollectionTab = subItemKey;
-                  });
-                } else if (title == 'Add new coins/notes/etc.') {
-                  setState(() => _activeRoute = 'Add New Coins');
-                } else if (title == 'Take a photo') {
-                  setState(() => _activeRoute = 'Take a photo');
-                } else if (title == 'Admin Grade Flags') {
-                  setState(() => _activeRoute = 'Admin: Grade Flags');
-                } else if (title == '🔍 Numista Lookup' || title == 'Numista Lookup') {
-                  setState(() => _activeRoute = 'Coin Search');
-                } else if (title == 'AI Deepdive') {
-                  if (MediaQuery.of(context).size.width >= 800) {
-                    setState(() {
-                      _isMorganPopoutOpen = !_isMorganPopoutOpen;
-                      if (_isMorganPopoutOpen) {
-                        _popoutInitialQuery = null;
-                      }
-                    });
-                  } else {
-                    setState(() => _activeRoute = title);
-                  }
-                } else {
-                  setState(() => _activeRoute = title);
-                }
-              })
+            ? (onCustomTap ??
+                () => _navigateTo(
+                      subItemKey != null ? 'My Collection' : title,
+                      subTab: subItemKey,
+                    ))
             : null,
         borderRadius: BorderRadius.circular(10),
         child: Container(
@@ -1802,10 +1812,10 @@ class PhoneMenuOverlay extends StatelessWidget {
           onTap: () => onSelectRoute('Admin: Grade Flags'),
         ),
         _buildMenuRow(
-          label: 'Beta Feedback Inbox',
+          label: 'Feedback Inbox',
           icon: Icons.rate_review_outlined,
-          isActive: activeRoute == 'Beta Feedback Inbox',
-          onTap: () => onSelectRoute('Beta Feedback Inbox'),
+          isActive: activeRoute == 'Feedback Inbox' || activeRoute == 'Beta Feedback Inbox',
+          onTap: () => onSelectRoute('Feedback Inbox'),
         ),
         _buildMenuRow(
           label: 'Admin: Support Portal',

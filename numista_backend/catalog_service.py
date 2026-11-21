@@ -21,7 +21,7 @@ from catalog_nac1 import KIND_TO_COLLECTION, validate_nac1
 
 CATALOG_COLLECTION = "us_numismatics_catalog"
 USER_COLLECTIONS = ("coins", "currency", "world_items")
-FREE_TRIAL_ITEM_LIMIT = 5
+FREE_TRIAL_ITEM_LIMIT = 10  # = TIER_COIN_LIMITS["free"]; CoS 16 Nov (Free 10 everywhere)
 _FIXTURE_PATH = os.path.join(os.path.dirname(__file__), "data", "catalog_dev_fixture.json")
 
 # In-memory guest search sliding-window rate limiter (Founder Q4: rate-limited guest search)

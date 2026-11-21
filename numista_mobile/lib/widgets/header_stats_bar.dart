@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' as intl;
 import '../services/melt_value_service.dart';
 import '../services/batch_valuation_service.dart';
 import '../services/set_expansion_helper.dart';
@@ -153,9 +154,11 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
         );
 
         // Fact 2: USD Face Value Chip
+        final currencyFmt =
+            intl.NumberFormat.currency(symbol: r'$', decimalDigits: 2);
         final faceChip = _buildStatChip(
           label: 'USD FACE VALUE',
-          value: '\$${usdFaceSum.toStringAsFixed(2)}',
+          value: currencyFmt.format(usdFaceSum),
           badge: worldTenderCount > 0 ? '+$worldTenderCount World' : null,
           badgeTooltip: worldTenderCount > 0 ? '$worldTenderCount foreign coin(s) excluded from USD Face' : null,
           cardBg: cardBg,
@@ -167,8 +170,8 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
         final meltChip = _buildStatChip(
           label: 'MELT VALUE',
           value: isOffline
-              ? '⚠️ \$${meltTotal.toStringAsFixed(2)} (offline)'
-              : '🥈 \$${meltTotal.toStringAsFixed(2)}',
+              ? '⚠️ ${currencyFmt.format(meltTotal)} (offline)'
+              : '🥈 ${currencyFmt.format(meltTotal)}',
           cardBg: cardBg,
           borderCol: borderCol,
           textCol: _kGold,
@@ -197,13 +200,24 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
           valChip,
         ];
 
+        final row = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: chips,
+        );
+        if (constraints.maxWidth >= 600) {
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: row,
+            ),
+          );
+        }
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: chips,
-          ),
+          child: row,
         );
       },
     );
@@ -377,7 +391,7 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '(\$${retailSum.toStringAsFixed(2)})',
+                      '(${intl.NumberFormat.currency(symbol: r'$', decimalDigits: 2).format(retailSum)})',
                       style: const TextStyle(fontSize: 8, color: _kSubtext),
                     ),
                   ],
@@ -400,7 +414,7 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '\$${retailSum.toStringAsFixed(2)} ($retailCount/$totalDocs)',
+                  '${intl.NumberFormat.currency(symbol: r'$', decimalDigits: 2).format(retailSum)} ($retailCount/$totalDocs)',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,

@@ -3,27 +3,27 @@
   "us_circulating": {
     "Cent": {
       "face_value_cents": 1,
-      "colloquial": ["penny", "pennies", "one cent", "1 cent", "1c", "1¢", "lincoln cent", "wheatie", "cent"]
+      "colloquial": ["penny", "pennies", "one cent", "1 cent", "1c", "1¢", "1₵", "$0.01", "0.01", ".01", ".01¢", ".01₵", "lincoln cent", "lincoln penny", "wheat penny", "wheat cent", "wheatie", "indian head penny", "flying eagle cent", "cent"]
     },
     "Five Cents": {
       "face_value_cents": 5,
-      "colloquial": ["nickel", "nickels", "nickles", "5 cents", "5c", "5¢", "five cent", "five cents", "jefferson nickel", "buffalo nickel"]
+      "colloquial": ["nickel", "nickels", "nickles", "5 cents", "5c", "5¢", "5₵", "$0.05", "0.05", ".05", ".05¢", ".05₵", "five cent", "five cents", "jefferson nickel", "buffalo nickel", "indian head nickel", "v nickel", "liberty nickel", "shield nickel"]
     },
     "Dime": {
       "face_value_cents": 10,
-      "colloquial": ["10c", "10¢", "ten cents", "10 cents", "roosevelt dime", "mercury dime", "dime"]
+      "colloquial": ["one dime", "10c", "10¢", "10₵", "$0.10", "0.10", ".10", ".10¢", ".10₵", "ten cents", "10 cents", "roosevelt dime", "mercury dime", "winged liberty dime", "barber dime", "seated dime", "dime"]
     },
     "Quarter Dollar": {
       "face_value_cents": 25,
-      "colloquial": ["quarter", "quarters", "25c", "25¢", "25 cents", "washington quarter", "state quarter", "quarter dollar"]
+      "colloquial": ["quarter", "quarters", "25c", "25¢", "25₵", "25 cents", ".25¢", ".25₵", "0.25¢", "0.25₵", "$0.25", "0.25", ".25", "washington quarter", "state quarter", "atb quarter", "standing liberty quarter", "barber quarter", "two bits", "quarter dollar"]
     },
     "Half Dollar": {
       "face_value_cents": 50,
-      "colloquial": ["half", "halves", "50c", "50¢", "50 cents", "jfk half", "kennedy half", "walking liberty half", "franklin half", "half dollar"]
+      "colloquial": ["half", "halves", "50c", "50¢", "50₵", "50 cents", ".50¢", ".50₵", "$0.50", "0.50", ".50", "fifty cent piece", "50 cent piece", "jfk 50 cent piece", "jfk half", "kennedy half", "kennedy half dollar", "walking liberty half", "franklin half", "barber half", "half dollar"]
     },
     "Dollar": {
       "face_value_cents": 100,
-      "colloquial": ["dollar coin", "$1", "buck", "1 dollar", "silver dollar", "morgan dollar", "peace dollar", "eisenhower dollar", "sacagawea dollar", "presidential dollar", "native american dollar", "american innovation dollar", "dollar"]
+      "colloquial": ["dollar coin", "one dollar", "$1", "$1 coin", "$1.00", "1.00", "buck", "1 dollar", "silver dollar", "morgan dollar", "peace dollar", "eisenhower dollar", "ike dollar", "susan b anthony dollar", "sacagawea dollar", "presidential dollar", "native american dollar", "american innovation dollar", "dollar"]
     }
   },
   "us_historical": {

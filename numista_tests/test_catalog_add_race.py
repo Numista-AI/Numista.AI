@@ -14,11 +14,7 @@ from catalog_service import (  # noqa: E402
     add_catalog_item_in_txn,
 )
 from tests.test_catalog_collection_routing import (  # noqa: E402
-    FUGIO,
-    MEDAL,
     MORGAN,
-    NOTE,
-    PHL1P,
     SPAN8R,
     FakeDb,
     FakeTx,
@@ -77,19 +73,20 @@ def test_client_supplied_kind_slot_or_tier_rejected():
             CollectionAddRequest(nac_code=MORGAN, **extra_field)
 
 
-def test_free_trial_5_item_server_enforcement():
-    """Founder-confirmed 5-item free trial allows items 1..5 across all collections and blocks item 6 with 403 QUOTA_EXCEEDED."""
-    assert FREE_TRIAL_ITEM_LIMIT == 5
+def test_free_trial_10_item_server_enforcement():
+    """CoS 16 Nov (Free 10 everywhere): allows up to 10 items and blocks the 11th with 403 QUOTA_EXCEEDED."""
+    assert FREE_TRIAL_ITEM_LIMIT == 10
     db = FakeDb()
-    five_items = [MORGAN, NOTE, MEDAL, FUGIO, PHL1P]
-    for nac in five_items:
-        tx = FakeTx(db)
-        res = add_catalog_item_in_txn(tx, db, "u1", nac, FREE_TRIAL_ITEM_LIMIT, count(db))
-        assert res["created"] is True
+    for i in range(9):
+        db.store[f"users/u1/coins/seed{i}"] = {}
 
-    tx6 = FakeTx(db)
+    tx10 = FakeTx(db)
+    res10 = add_catalog_item_in_txn(tx10, db, "u1", MORGAN, FREE_TRIAL_ITEM_LIMIT, count(db))
+    assert res10["created"] is True
+
+    tx11 = FakeTx(db)
     with pytest.raises(CatalogError) as exc:
-        add_catalog_item_in_txn(tx6, db, "u1", SPAN8R, FREE_TRIAL_ITEM_LIMIT, count(db))
+        add_catalog_item_in_txn(tx11, db, "u1", SPAN8R, FREE_TRIAL_ITEM_LIMIT, count(db))
     assert exc.value.status_code == 403
     assert exc.value.code == "QUOTA_EXCEEDED"
-    assert exc.value.extra == {"count": 5, "limit": 5}
+    assert exc.value.extra == {"count": 10, "limit": 10}

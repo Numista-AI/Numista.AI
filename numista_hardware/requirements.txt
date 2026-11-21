@@ -2,7 +2,7 @@ flask
 flask-cors
 opencv-python
 numpy
-google-genai
+google-genai>=2.34.0,<3.0.0
 python-dotenv
 pandas
 google-cloud-storage

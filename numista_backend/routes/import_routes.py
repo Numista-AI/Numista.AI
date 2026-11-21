@@ -34,7 +34,13 @@ def _read_spreadsheet_bytes(contents: bytes, filename: str) -> pd.DataFrame:
     else:
         return pd.read_csv(io.BytesIO(contents))
 
-from services.denomination_normalizer import normalize_denomination, infer_denomination_from_program
+from services.denomination_normalizer import (
+    normalize_denomination,
+    infer_denomination_from_program,
+    normalize_metal_content,
+    normalize_condition,
+    infer_classic_us_series,
+)
 
 def _normalize_us_denomination(denom: str) -> str:
     """Pre-deduplication US Mint denomination normalization (fails open for non-US coins).
@@ -177,6 +183,33 @@ async def import_spreadsheet(
             if was_corrected:
                 norm_coin["denom_corrected"] = True
                 norm_coin["original_denomination"] = orig_denom
+
+        # Metal, condition, and classic series normalization
+        raw_metal = norm_coin.get("metal_content") or norm_coin.get("metal") or ""
+        norm_metal = normalize_metal_content(
+            raw_metal,
+            year=norm_coin.get("year"),
+            canonical_denom=canon_denom,
+            country=country,
+            item_type=item_type,
+        )
+        if norm_metal:
+            norm_coin["metal_content"] = norm_metal
+
+        raw_cond = norm_coin.get("condition") or norm_coin.get("grade") or ""
+        norm_cond = normalize_condition(raw_cond)
+        if norm_cond:
+            norm_coin["condition"] = norm_cond
+
+        raw_prog = norm_coin.get("program_series") or norm_coin.get("program") or ""
+        norm_prog = infer_classic_us_series(
+            year=norm_coin.get("year"),
+            canonical_denom=canon_denom,
+            existing_series=raw_prog,
+            country=country,
+        )
+        if norm_prog:
+            norm_coin["program_series"] = norm_prog
 
         cert = str(norm_coin.get("cert_number") or norm_coin.get("cert") or "").strip().lower()
         year = str(norm_coin.get("year") or "").strip()

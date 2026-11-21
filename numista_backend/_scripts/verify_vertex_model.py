@@ -13,7 +13,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import GEMINI_FLASH_MODEL
+from config import GEMINI_FLASH_MODEL, gemini4_thinking_config
 
 try:
     load_dotenv(encoding="utf-8-sig")
@@ -27,7 +27,10 @@ def test_model(model_name, location):
         client = genai.Client(vertexai=True, project=PROJECT_ID, location=location)
         response = client.models.generate_content(
             model=model_name,
-            contents="Ping"
+            contents="Ping",
+            config=genai.types.GenerateContentConfig(
+                thinking_config=gemini4_thinking_config(model_name, "low"),
+            ),
         )
         print(f"✅ SUCCESS: {model_name} working in {location} -> response: {response.text}")
         return True

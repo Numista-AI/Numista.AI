@@ -23,7 +23,6 @@ import '../services/morgan_proactive_rescue_observer.dart';
 import '../services/morgan_voice_confirmation_parser.dart';
 import '../widgets/morgan_settings_panel.dart';
 import '../widgets/morgan_copilot_cards.dart';
-import '../services/beta_checklist_service.dart';
 import '../constants.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -147,6 +146,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
       });
     };
     _loadEverything();
+    if (!widget.isPopout) {
+      MorganScreenStateRegistry.instance.markScreenHydrated(
+        route: 'AI Deepdive',
+        hydrated: true,
+      );
+    }
     if (widget.isPopout) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
@@ -553,13 +558,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
             payload: prop,
           );
         }
-        if (data is Map &&
-            data['error'] == null &&
-            data['status'] != 'rate_limited' &&
-            replyText.trim().isNotEmpty &&
-            replyText != 'No response.') {
-          BetaChecklistService.autoCompleteTask('task_18_ai_chat');
-        }
       } else {
         replyText = formatChatErrorResponse(response.statusCode, response.body);
       }
@@ -763,7 +761,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Ask Morgan',
+                    widget.isPopout ? 'Ask Morgan' : 'AI Deepdive',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

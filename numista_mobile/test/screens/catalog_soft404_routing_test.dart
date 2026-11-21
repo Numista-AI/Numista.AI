@@ -77,7 +77,7 @@ void main() {
   });
 
   testWidgets(
-    'Pricing: Fail-closed copy renders free-beta strings and excludes unapproved tier & ETA',
+    'Pricing: Fail-closed copy renders early-access strings without Beta branding',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -90,11 +90,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Positive assertions: 4 established free-beta strings (public_info_screens.dart:362/396/407/412)
-      expect(find.textContaining('Free During Beta — Pricing TBA'), findsOneWidget);
+      expect(find.textContaining('Early Access Included — Plans TBA'), findsOneWidget);
       expect(find.textContaining(r'$0 / month'), findsOneWidget);
-      expect(find.textContaining('completely free for registered participants.'), findsOneWidget);
-      expect(find.textContaining('Existing beta accounts will be grandfathered'), findsOneWidget);
+      expect(find.textContaining('included for registered members.'), findsOneWidget);
+      expect(find.textContaining('Founding Member accounts will be grandfathered'), findsOneWidget);
+      expect(find.textContaining('Beta'), findsNothing);
+      expect(find.textContaining('beta'), findsNothing);
 
       // Negative assertions: unapproved paid tier & world-coverage ETA must be absent
       expect(find.textContaining(r'$30 / 6 months'), findsNothing);

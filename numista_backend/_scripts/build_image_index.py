@@ -60,6 +60,41 @@ SCAN_TARGETS = [
     ),
     (
         "numista-reference-library",
+        "reference_library/us_mint_official/",
+        1,
+        "US Mint",
+        "United States Mint image",
+    ),
+    (
+        "numista-reference-library",
+        "reference_library/atb_quarters/",
+        2,
+        "Numista Reference Library (ATB)",
+        "",
+    ),
+    (
+        "numista-reference-library",
+        "reference_library/2023_series/",
+        2,
+        "Numista Reference Library (2023)",
+        "",
+    ),
+    (
+        "numista-reference-library",
+        "reference_library/2024_series/",
+        2,
+        "Numista Reference Library (2024)",
+        "",
+    ),
+    (
+        "numista-reference-library",
+        "reference_library/2025_series/",
+        2,
+        "Numista Reference Library (2025)",
+        "",
+    ),
+    (
+        "numista-reference-library",
         "reference_library/bulk_programs/",
         2,
         "Numista Reference Library",
@@ -104,6 +139,22 @@ SCAN_TARGETS = [
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
+# ─── Shared Canonical Schema ───────────────────────────────────────────────────
+
+_SCHEMA_PATH = Path(__file__).with_name("coin_image_schema.json")
+with open(_SCHEMA_PATH, "r", encoding="utf-8") as _f:
+    _SCHEMA = json.load(_f)
+
+PROGRAM_TO_DENOM = _SCHEMA["program_to_denom"]
+DISTINCTIVE_SIDE = _SCHEMA["distinctive_side"]
+SHARED_WILDCARD_SIDES = _SCHEMA["shared_wildcard_sides"]
+PRESIDENTIAL_SUBJECTS = _SCHEMA["presidential_subjects"]
+ATB_PARK_SUBJECTS = _SCHEMA["atb_park_subjects"]
+STATE_QUARTER_SUBJECTS = _SCHEMA["state_quarter_subjects"]
+WOMEN_QUARTER_SUBJECTS = _SCHEMA["women_quarter_subjects"]
+NATIVE_AMERICAN_YEARS = _SCHEMA["native_american_years"]
+SEMIQUINCENTENNIAL_2026_SUBJECTS = _SCHEMA["semiquincentennial_2026_subjects"]
+
 # ─── Slug → metadata parser ────────────────────────────────────────────────────
 
 # Programs that have per-design subjects (State, President, Woman, etc.)
@@ -116,58 +167,9 @@ SUBJECT_PROGRAMS = {
     "american-innovation",
     "native-american-dollar",
     "commemorative",
-}
-
-# State names → slug (covers all 50 states + territories used in quarter programs)
-STATE_SLUG_MAP = {
-    "alabama": "alabama", "alaska": "alaska", "arizona": "arizona",
-    "arkansas": "arkansas", "california": "california", "colorado": "colorado",
-    "connecticut": "connecticut", "delaware": "delaware", "florida": "florida",
-    "georgia": "georgia", "hawaii": "hawaii", "idaho": "idaho",
-    "illinois": "illinois", "indiana": "indiana", "iowa": "iowa",
-    "kansas": "kansas", "kentucky": "kentucky", "louisiana": "louisiana",
-    "maine": "maine", "maryland": "maryland", "massachusetts": "massachusetts",
-    "michigan": "michigan", "minnesota": "minnesota", "mississippi": "mississippi",
-    "missouri": "missouri", "montana": "montana", "nebraska": "nebraska",
-    "nevada": "nevada", "new hampshire": "new-hampshire", "new jersey": "new-jersey",
-    "new mexico": "new-mexico", "new york": "new-york", "north carolina": "north-carolina",
-    "north dakota": "north-dakota", "ohio": "ohio", "oklahoma": "oklahoma",
-    "oregon": "oregon", "pennsylvania": "pennsylvania", "rhode island": "rhode-island",
-    "south carolina": "south-carolina", "south dakota": "south-dakota",
-    "tennessee": "tennessee", "texas": "texas", "utah": "utah",
-    "vermont": "vermont", "virginia": "virginia", "washington": "washington",
-    "west virginia": "west-virginia", "wisconsin": "wisconsin", "wyoming": "wyoming",
-    # ATB / AWQ / AI territories
-    "puerto rico": "puerto-rico", "guam": "guam", "us virgin islands": "us-virgin-islands",
-    "american samoa": "american-samoa", "northern mariana": "northern-mariana-islands",
-    "district of columbia": "district-of-columbia",
-    # Common ATB park/site names (abbreviated list)
-    "yellowstone": "yellowstone", "grand canyon": "grand-canyon",
-    "yosemite": "yosemite", "gettysburg": "gettysburg",
-    "hot springs": "hot-springs", "mount hood": "mount-hood",
-    "glacier": "glacier", "olympic": "olympic",
-    # Presidential dollar subjects (presidents)
-    "washington": "washington", "adams": "adams", "jefferson": "jefferson",
-    "madison": "madison", "monroe": "monroe", "jackson": "jackson",
-    "van buren": "van-buren", "harrison": "harrison", "tyler": "tyler",
-    "polk": "polk", "taylor": "taylor", "fillmore": "fillmore",
-    "pierce": "pierce", "buchanan": "buchanan", "lincoln": "lincoln",
-    "johnson": "johnson", "grant": "grant", "hayes": "hayes",
-    "garfield": "garfield", "arthur": "arthur", "cleveland": "cleveland",
-    "mckinley": "mckinley", "roosevelt": "roosevelt", "taft": "taft",
-    "wilson": "wilson", "harding": "harding", "coolidge": "coolidge",
-    "hoover": "hoover", "truman": "truman", "eisenhower": "eisenhower",
-    "kennedy": "kennedy", "ford": "ford", "carter": "carter",
-    "reagan": "reagan", "bush": "bush", "clinton": "clinton",
-    "obama": "obama", "trump": "trump", "biden": "biden",
-    # American Women Quarters subjects
-    "maya angelou": "maya-angelou", "dr sally ride": "sally-ride",
-    "wilma mankiller": "wilma-mankiller", "nina otero warren": "nina-otero-warren",
-    "anna may wong": "anna-may-wong", "bessie coleman": "bessie-coleman",
-    "edith kanaka ole": "edith-kanaka-ole", "eleanor roosevelt": "eleanor-roosevelt",
-    "jovita idar": "jovita-idar", "maria tallchief": "maria-tallchief",
-    "patsy mink": "patsy-mink", "nina otero": "nina-otero-warren",
-    "sally ride": "sally-ride",
+    "semiquincentennial",
+    "quarter",
+    "dime",
 }
 
 # Known program slug fragments → canonical program name
@@ -177,7 +179,7 @@ PROGRAM_MAP = [
     (r"platinum.?eagle|american.?eagle.?platinum",      "american-eagle-platinum"),
     (r"palladium.?eagle|american.?eagle.?palladium",    "american-eagle-palladium"),
     (r"state.?quarter|50.?state",                       "50-state-quarters"),
-    (r"america.?beautiful|atb",                         "america-the-beautiful"),
+    (r"atb.?quarter|america.?the.?beautiful|america.?beautiful|national.?park|\batb\b", "america-the-beautiful"),
     (r"american.?women",                                "american-women-quarters"),
     (r"american.?innov",                                "american-innovation"),
     (r"native.?american|sacagawea",                     "native-american-dollar"),
@@ -195,36 +197,93 @@ PROGRAM_MAP = [
     (r"commemorative",                                  "commemorative"),
     (r"american.?liberty",                              "american-liberty"),
     (r"flowing.?hair",                                  "flowing-hair"),
-    (r"dollar",                                         "dollar"),
     (r"dime",                                           "dime"),
     (r"quarter",                                        "quarter"),
+    (r"dollar",                                         "dollar"),
     (r"nickel",                                         "nickel"),
     (r"cent|penny",                                     "cent"),
 ]
 
 MINT_MARKS = {"P": "P", "D": "D", "S": "S", "W": "W", "CC": "CC", "O": "O"}
 
+_REVERSE_DISTINCTIVE_PROGRAMS = {
+    "american-women-quarters",
+    "america-the-beautiful",
+    "50-state-quarters",
+    "american-innovation",
+}
+
+# Middle initials that appear in president/honoree names and must never be read as mint marks
+_MIDDLE_INITIAL_CONTEXTS = (
+    r"(?:^|[-_\s])(?:"
+    r"franklin[-_\s]+d[-_\s]+roosevelt|"
+    r"harry[-_\s]+s[-_\s]+truman|"
+    r"dwight[-_\s]+d[-_\s]+eisenhower|"
+    r"ulysses[-_\s]+s[-_\s]+grant|"
+    r"john[-_\s]+f[-_\s]+kennedy|"
+    r"lyndon[-_\s]+b[-_\s]+johnson|"
+    r"george[-_\s]+h[-_\s]+w[-_\s]+bush|"
+    r"james[-_\s]+k[-_\s]+polk|"
+    r"james[-_\s]+a[-_\s]+garfield|"
+    r"chester[-_\s]+a[-_\s]+arthur|"
+    r"warren[-_\s]+g[-_\s]+harding|"
+    r"rutherford[-_\s]+b[-_\s]+hayes|"
+    r"richard[-_\s]+m[-_\s]+nixon|"
+    r"gerald[-_\s]+r[-_\s]+ford|"
+    r"ida[-_\s]+b[-_\s]+wells|"
+    r"ely[-_\s]+s[-_\s]+parker|"
+    r"mary[-_\s]+g[-_\s]+ross|"
+    r"d[-_\s]+roosevelt|"
+    r"s[-_\s]+truman|"
+    r"d[-_\s]+eisenhower|"
+    r"s[-_\s]+grant|"
+    r"f[-_\s]+kennedy|"
+    r"b[-_\s]+johnson"
+    r")(?=$|[-_\s])"
+)
+
 def slugify(text):
     """Normalize text for matching."""
     text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
     return text.lower()
 
-def detect_side(slug):
-    if re.search(r"obv|obverse|front", slug, re.I):
+def detect_side(slug, program=None, subject=None, year=None):
+    if re.search(r"(?:^|[-_\s])(obv|obverse|front)(?:$|[-_\s])", slug, re.I):
         return "obverse"
-    if re.search(r"rev|reverse|back", slug, re.I):
+    if re.search(r"(?:^|[-_\s])(rev|reverse|back)(?:$|[-_\s])", slug, re.I):
         return "reverse"
-    return "obverse"  # default
+    if subject:
+        if program in _REVERSE_DISTINCTIVE_PROGRAMS:
+            return "reverse"
+        if program == "native-american-dollar" and year and year.isdigit() and int(year) >= 2009:
+            return "reverse"
+        if program in ("quarter", "semiquincentennial") and year == "2026":
+            return "reverse"
+        if program == "presidential-dollars":
+            return "obverse"
+    return "obverse"  # single-design series default
 
 def detect_year(slug):
-    m = re.search(r"\b(1[789]\d{2}|20[012]\d)\b", slug)
+    m = re.search(r"(?<!\d)(1[789]\d{2}|20[012]\d)(?!\d)", slug)
     return m.group(1) if m else None
 
-def detect_mint(slug):
-    # Look for patterns like -1921-D- or _D_ or (D)
-    m = re.search(r"[-_\s(]([PDSWpdswOo]|CC)[-_\s)]", slug)
+def detect_mint(slug, program=None):
+    # Strip personal-name middle initials so e.g. 2014_D_roosevelt or harry-s-truman
+    # never triggers a false Denver/San Francisco mint mark.
+    cleaned = re.sub(_MIDDLE_INITIAL_CONTEXTS, " ", slug, flags=re.I)
+    if program == "presidential-dollars":
+        # Presidential dollars in this index never key on mint; also guard against
+        # abbreviated middle-initial filenames like 2014_D_roosevelt.
+        cleaned = re.sub(r"(?<!\d)(?:1[789]\d{2}|20[012]\d)[-_ ]+[ds](?=[-_ ]+[a-z])", " ", cleaned, flags=re.I)
+    m = re.search(
+        r"(?:(?<!\d)(?:1[789]\d{2}|20[012]\d)[-_ ]+([PDSWpdswOo]|CC)(?=[-_ .)]|$)|"
+        r"(?:^|[-_\s(])mint[-_ ]?([PDSWpdswOo]|CC)(?=[-_ .)]|$)|"
+        r"[-_\s(]([PDSWpdswOo]|CC)[-_ ](?:obv|obverse|rev|reverse|unc|uncirculated|proof)(?=[-_ .)]|$))",
+        cleaned,
+    )
     if m:
-        return m.group(1).upper()
+        val = next((g for g in m.groups() if g), None)
+        return val.upper() if val else None
     return None
 
 def detect_program(slug):
@@ -233,24 +292,56 @@ def detect_program(slug):
             return canonical
     return None
 
-def detect_subject(slug, program):
-    """
-    For series programs (State Quarters, Presidential Dollars, etc.) extract
-    the per-design subject from the filename slug so that each unique design
-    gets its own Firestore document key.
+def _match_subject_map(slug, subject_map):
+    for name_lower, name_slug in sorted(subject_map.items(), key=lambda x: -len(x[0])):
+        pattern = r"(?:^|[^a-z0-9])" + re.escape(name_lower).replace(r"\ ", r"[\s_-]+") + r"(?:$|[^a-z0-9])"
+        if re.search(pattern, slug, re.I):
+            return name_slug
+    return None
 
-    Returns a slug string like "new-jersey" or "george-washington", or None.
+def detect_subject(slug, program, year=None):
+    """
+    Program-scoped exact subject extraction. Never mixes subjects across programs.
+    Returns a canonical slug string or None.
     """
     if program not in SUBJECT_PROGRAMS:
         return None
 
-    # Try multi-word subjects first (longest match wins)
-    for name_lower, name_slug in sorted(STATE_SLUG_MAP.items(), key=lambda x: -len(x[0])):
-        # Replace spaces with either space or hyphen/dash in the slug for matching
-        pattern = name_lower.replace(" ", r"[\s_-]")
-        if re.search(pattern, slug, re.I):
-            return name_slug
+    if program == "presidential-dollars":
+        # Handle abbreviated middle-initial filenames like 2014_D_roosevelt
+        if year == "2014" and re.search(r"(?:^|[-_\s])roosevelt(?:$|[-_\s])", slug, re.I):
+            return "franklin-d-roosevelt"
+        if year == "2013" and re.search(r"(?:^|[-_\s])roosevelt(?:$|[-_\s])", slug, re.I):
+            return "theodore-roosevelt"
+        return _match_subject_map(slug, PRESIDENTIAL_SUBJECTS)
+
+    if program == "america-the-beautiful":
+        return _match_subject_map(slug, ATB_PARK_SUBJECTS)
+
+    if program in ("50-state-quarters", "american-innovation"):
+        return _match_subject_map(slug, STATE_QUARTER_SUBJECTS)
+
+    if program == "american-women-quarters":
+        return _match_subject_map(slug, WOMEN_QUARTER_SUBJECTS)
+
+    if program == "native-american-dollar":
+        if year and year in NATIVE_AMERICAN_YEARS:
+            return NATIVE_AMERICAN_YEARS[year]
+        return None
+
+    if program in ("quarter", "semiquincentennial", "dime"):
+        if year == "2026":
+            return _match_subject_map(slug, SEMIQUINCENTENNIAL_2026_SUBJECTS)
+        return None
+
     return None
+
+def build_composite_key(denom, program, year, subject, side, mint=None, include_mint=False):
+    subj = subject if (subject and subject.strip()) else "standard"
+    parts = [denom, program, year, subj, side]
+    if include_mint and mint:
+        parts.append(mint)
+    return "|".join(parts)
 
 def parse_filename(blob_name, bucket, prefix, source_tier):
     """
@@ -278,41 +369,52 @@ def parse_filename(blob_name, bucket, prefix, source_tier):
     slug = slugify(f"{folder_hint} {clean}")
 
     year    = detect_year(slug)
-    mint    = detect_mint(slug)
     program = detect_program(slug) or slugify(folder_hint).replace(" ", "-") or "unknown"
-    side    = detect_side(slug)
+    mint    = detect_mint(slug, program=program)
 
     if not year:
         return None  # can't index without a year
 
-    # Detect optional per-design subject (e.g. state name, president name)
-    subject = detect_subject(slug, program)
+    # Detect optional per-design subject (program-scoped)
+    subject = detect_subject(slug, program, year=year)
+    side    = detect_side(slug, program=program, subject=subject, year=year)
+    denom   = PROGRAM_TO_DENOM.get(program, program)
 
-    # Build canonical key: {year}[_{mint}][_{subject}]_{program}_{side}
-    key_parts = [year]
+    composite_key = build_composite_key(denom, program, year, subject, side)
+
+    # Legacy key preserved for dual-read diagnostics
+    legacy_parts = [year]
     if mint:
-        key_parts.append(mint)
+        legacy_parts.append(mint)
     if subject:
-        key_parts.append(subject)
-    key_parts.append(program)
-    key_parts.append(side)
-    canonical_key = "_".join(key_parts)
+        legacy_parts.append(subject)
+    legacy_parts.append(program)
+    legacy_parts.append(side)
+    legacy_key = "_".join(legacy_parts)
+
+    is_uncirculated = bool(re.search(r"uncirculated|\bunc\b", slug, re.I))
+    filename_specificity = len(clean)
 
     # Build public URL
     encoded_path = blob_name.replace(" ", "%20")
     public_url = f"{PUBLIC_URL_BASE}/{bucket}/{encoded_path}"
 
     return {
-        "canonical_key": canonical_key,
-        "year":          year,
-        "mint":          mint,
-        "subject":       subject,
-        "program":       program,
-        "side":          side,
-        "gcs_path":      f"gs://{bucket}/{blob_name}",
-        "public_url":    public_url,
-        "filename":      filename,
-        "source_tier":   source_tier,
+        "canonical_key":        composite_key,
+        "composite_key":        composite_key,
+        "legacy_key":           legacy_key,
+        "denom":                denom,
+        "year":                 year,
+        "mint":                 mint,
+        "subject":              subject,
+        "program":              program,
+        "side":                 side,
+        "is_uncirculated":      is_uncirculated,
+        "filename_specificity": filename_specificity,
+        "gcs_path":             f"gs://{bucket}/{blob_name}",
+        "public_url":           public_url,
+        "filename":             filename,
+        "source_tier":          source_tier,
     }
 
 # ─── Manifest loader ───────────────────────────────────────────────────────────
@@ -447,9 +549,51 @@ def setup_contribution_folder():
     print(f"  GCS destination: gs://numista-reference-library/reference_library/user_contributed/")
 
 
+def _candidate_rank_tuple(item):
+    return (
+        item.get("source_tier", 99),
+        0 if item.get("is_uncirculated") else 1,
+        -(item.get("filename_specificity", 0)),
+        item.get("gcs_path", ""),
+    )
+
+
+def select_winners(parsed_items):
+    """
+    Group parsed items by composite_key and deterministically select the winner
+    for each key without last-writer-wins overwrites.
+    Returns (winners_by_key, collision_count).
+    """
+    grouped = {}
+    for item in parsed_items:
+        key = item["composite_key"]
+        grouped.setdefault(key, []).append(item)
+
+    winners = {}
+    collisions = 0
+    for key, candidates in grouped.items():
+        ranked = sorted(candidates, key=_candidate_rank_tuple)
+        winner = dict(ranked[0])
+        if len(ranked) > 1:
+            collisions += len(ranked) - 1
+            winner["alternates"] = [
+                {
+                    "gcs_path": c["gcs_path"],
+                    "public_url": c["public_url"],
+                    "source_tier": c["source_tier"],
+                }
+                for c in ranked[1:6]
+            ]
+        else:
+            winner["alternates"] = []
+        winners[key] = winner
+    return winners, collisions
+
+
 def main():
     parser = argparse.ArgumentParser(description="Build Numista coin image index")
     parser.add_argument("--dry-run",              action="store_true", help="Print only, no Firestore writes")
+    parser.add_argument("--report-json",          type=str, default=None, help="Write dry-run report JSON to this path")
     parser.add_argument("--wipe",                 action="store_true", help="Delete existing index before re-indexing")
     parser.add_argument("--vision-pass",          action="store_true", help="Re-classify 'unknown' entries using Gemini Vision")
     parser.add_argument("--ingest-contributions", action="store_true", help="Upload local new_coin_images/ to GCS and index")
@@ -486,6 +630,7 @@ def main():
     total_indexed  = 0
     total_skipped  = 0
     program_counts = {}
+    all_candidates = []
 
     for (bucket_name, prefix, source_tier, source_label, default_attribution) in SCAN_TARGETS:
         if skip_scan:
@@ -504,9 +649,6 @@ def main():
             print(f"  ❌ Could not list bucket: {e}")
             continue
 
-        batch    = db.batch() if not args.dry_run else None
-        batch_n  = 0
-
         for blob in blobs:
             total_scanned += 1
             result = parse_filename(blob.name, bucket_name, prefix, source_tier)
@@ -520,41 +662,63 @@ def main():
             if blob_folder in manifests:
                 attribution = manifests[blob_folder].get("attribution_text", default_attribution)
 
-            doc_key  = result["canonical_key"]
-            side_key = result["side"]
+            result["source_label"] = source_label
+            result["attribution"] = attribution
+            all_candidates.append(result)
 
-            doc_data = {
-                side_key: {
-                    "gcs_path":      result["gcs_path"],
-                    "public_url":    result["public_url"],
-                    "source_tier":   source_tier,
-                    "source_label":  source_label,
-                    "attribution":   attribution,
-                    "indexed_at":    datetime.utcnow().isoformat(),
-                },
-                "year":    result["year"],
-                "mint":    result["mint"],
-                "subject": result.get("subject"),
-                "program": result["program"],
-            }
+    winners, collisions = select_winners(all_candidates)
+    batch = db.batch() if not args.dry_run else None
+    batch_n = 0
 
-            if args.dry_run:
-                print(f"  [{source_tier}] {doc_key} → {result['public_url'][:80]}...")
-            else:
-                doc_ref = db.collection(FIRESTORE_COLLECTION).document(doc_key)
-                batch.set(doc_ref, doc_data, merge=True)
-                batch_n += 1
-                if batch_n >= 400:
-                    batch.commit()
-                    batch = db.batch()
-                    batch_n = 0
+    for doc_key, result in sorted(winners.items()):
+        side_key = result["side"]
+        doc_data = {
+            side_key: {
+                "gcs_path":      result["gcs_path"],
+                "public_url":    result["public_url"],
+                "source_tier":   result["source_tier"],
+                "source_label":  result["source_label"],
+                "attribution":   result["attribution"],
+                "indexed_at":    datetime.utcnow().isoformat(),
+            },
+            "denom":      result["denom"],
+            "year":       result["year"],
+            "mint":       result["mint"],
+            "subject":    result.get("subject"),
+            "program":    result["program"],
+            "alternates": result.get("alternates", []),
+        }
 
-            total_indexed += 1
-            prog = result["program"]
-            program_counts[prog] = program_counts.get(prog, 0) + 1
+        if args.dry_run:
+            print(f"  [{result['source_tier']}] {doc_key} → {result['public_url'][:80]}...")
+        else:
+            doc_ref = db.collection(FIRESTORE_COLLECTION).document(doc_key)
+            batch.set(doc_ref, doc_data, merge=True)
+            batch_n += 1
+            if batch_n >= 400:
+                batch.commit()
+                batch = db.batch()
+                batch_n = 0
 
-        if not args.dry_run and batch_n > 0:
-            batch.commit()
+        total_indexed += 1
+        prog = result["program"]
+        program_counts[prog] = program_counts.get(prog, 0) + 1
+
+    if not args.dry_run and batch_n > 0:
+        batch.commit()
+
+    if args.report_json:
+        report = {
+            "total_scanned": total_scanned,
+            "total_candidates": len(all_candidates),
+            "total_indexed": total_indexed,
+            "total_skipped": total_skipped,
+            "collisions_deduped": collisions,
+            "program_counts": program_counts,
+            "keys": sorted(winners.keys()),
+        }
+        Path(args.report_json).write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(f"  Wrote dry-run report to {args.report_json}")
 
     # ── Gemini Vision second pass ──────────────────────────────────────────────
     if args.vision_pass:

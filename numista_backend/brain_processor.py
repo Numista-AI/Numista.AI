@@ -10,7 +10,7 @@ from google.genai import types as genai_types
 from google.cloud import firestore
 import google.auth
 
-from config import GEMINI_FLASH_MODEL
+from config import GEMINI_FLASH_MODEL, gemini4_thinking_config
 
 # --- CONFIGURATION ---
 PROJECT_ID = "studio-9101802118-8c9a8"
@@ -290,7 +290,8 @@ def analyze_document(filename: str, file_bytes: bytes, mime_type: str, user_inte
         ],
         config=genai_types.GenerateContentConfig(
             system_instruction=system_instruction,
-            response_mime_type="application/json"
+            response_mime_type="application/json",
+            thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
         )
     )
 

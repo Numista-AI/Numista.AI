@@ -18,6 +18,7 @@
 
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../widgets/morgan_owl_avatar.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -620,7 +621,7 @@ class _MintErrorDetailScreenState extends State<MintErrorDetailScreen>
         ),
         // Ask AI
         _ActionButton(
-          icon: Icons.psychology_outlined,
+          leading: const MorganOwlAvatar(size: 18),
           label: 'Ask AI About This',
           color: _kBrand,
           onTap: () {
@@ -837,23 +838,25 @@ class _ZoomButton extends StatelessWidget {
 
 // ─── Action button widget ─────────────────────────────────────────────────────
 class _ActionButton extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final Widget? leading;
   final String label;
   final Color color;
   final VoidCallback onTap;
 
   const _ActionButton({
-    required this.icon,
+    this.icon,
+    this.leading,
     required this.label,
     required this.color,
     required this.onTap,
-  });
+  }) : assert(icon != null || leading != null);
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, size: 15),
+      icon: leading ?? Icon(icon!, size: 15),
       label: Text(label, style: const TextStyle(fontSize: 12)),
       style: ElevatedButton.styleFrom(
         backgroundColor: color,

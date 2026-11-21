@@ -24,13 +24,14 @@ from google.cloud import documentai
 from google import genai
 from google.genai import types as genai_types
 import feedparser
+import functools
 import re
 import sqlite3
 from pathlib import Path
 import time
 from logging_config import get_logger, request_id_var, generate_request_id, rate_tracker
 from numista_scraper.config import DB_PATH
-from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL
+from config import GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL, GEMINI_LITE_MODEL, GEMINI_IMAGE_MODEL, gemini4_thinking_config
 from services.checklist_parser import parse_checklist_notes, slugify_theme, extract_checklist_document
 from services.mint_helpers import (
     apply_imported_mint_fields,
@@ -843,6 +844,7 @@ Output ONLY raw JSON object: {{"user_header": "schema_key"}}"""
             contents=[genai_types.Part.from_text(text=mapping_prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             ),
         )
         ai_mapping = json.loads(resp.text)
@@ -1416,8 +1418,8 @@ async def identify_world_item(
                     genai_types.Part.from_text(_WORLD_ITEM_PROMPT),
                 ],
                 config=genai_types.GenerateContentConfig(
-                    temperature=0.1,
                     max_output_tokens=800,
+                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                 ),
             )
         else:
@@ -1432,8 +1434,8 @@ async def identify_world_item(
                 model=PRIMARY_MODEL,
                 contents=[genai_types.Part.from_text(filled_prompt)],
                 config=genai_types.GenerateContentConfig(
-                    temperature=0.1,
                     max_output_tokens=600,
+                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                 ),
             )
 
@@ -2186,6 +2188,7 @@ async def process_invoice(
                 contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",
+                    thinking_config=gemini4_thinking_config(PRO_MODEL, "medium"),
                 ),
             )
             logger.info(f"Invoice PRO model OK: {file.filename!r}")
@@ -2196,6 +2199,7 @@ async def process_invoice(
                 contents=[pdf_part, genai_types.Part.from_text(text=extraction_prompt)],
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",
+                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                 ),
             )
             logger.info(f"Invoice PRIMARY model OK: {file.filename!r}")
@@ -2294,6 +2298,7 @@ async def process_invoice(
                     contents=[pdf_part, genai_types.Part.from_text(text=retry_prompt)],
                     config=genai_types.GenerateContentConfig(
                         response_mime_type="application/json",
+                        thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                     ),
                 )
                 retry_text = retry_response.text or ""
@@ -3419,12 +3424,17 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
             tool_declarations.append(fn_web_lookup)
 
         config = genai_types.GenerateContentConfig(
-            tools=[genai_types.Tool(function_declarations=tool_declarations)]
+            tools=[genai_types.Tool(function_declarations=tool_declarations)],
+            thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
         )
 
+        user_turn = genai_types.Content(
+            role="user",
+            parts=[genai_types.Part.from_text(text=prompt)],
+        )
         response = genai_client.models.generate_content(
             model=PRIMARY_MODEL,
-            contents=[genai_types.Part.from_text(text=prompt)],
+            contents=[user_turn],
             config=config,
         )
 
@@ -3432,22 +3442,29 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
 
         if response.function_calls:
             web_lookup_executed = False
+            fn_results = []
             for call in response.function_calls:
                 c_name = call.name
                 c_args = call.args or {}
+                call_result = None
                 if c_name == "add_coin_to_collection":
                     action_payload = propose_add_coin(owner_key, caller_uid, **c_args)
+                    call_result = action_payload
                 elif c_name == "update_coin_in_collection":
                     # G0-1: propose update — no immediate write
                     action_payload = propose_update_coin(owner_key, caller_uid, **c_args)
+                    call_result = action_payload
                 elif c_name == "undo_add_coin":
                     # G0-1/G0-3: verify action log + propose delete
                     action_payload = execute_undo_add_coin(owner_key, caller_uid=caller_uid, **c_args)
+                    call_result = action_payload
                 elif c_name == "get_coin_details":
                     action_payload = execute_get_coin_details(owner_key, include_financial=has_val_keyword, **c_args)
+                    call_result = action_payload
                 elif c_name == "web_lookup":
                     if web_lookup_executed:
                         # Prevent parallel tool calls in a single turn from burning >1 quota unit
+                        fn_results.append((c_name, {"action": "web_lookup", "status": "skipped_duplicate_in_turn"}))
                         continue
                     clean_query = str(c_args.get("query", "")).strip()
                     if not clean_query or not is_morgan_web_lookup_enabled() or not genai_client:
@@ -3456,6 +3473,7 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                             "status": "skipped",
                             "detail": "Web lookup skipped (empty query or disabled).",
                         }
+                        fn_results.append((c_name, action_payload))
                         continue
                     try:
                         quota = check_and_increment_dual_rate_cap(
@@ -3471,6 +3489,7 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                             coin_context=None,
                         )
                         action_payload["quota"] = quota
+                        call_result = action_payload
                     except HTTPException as rate_err:
                         if rate_err.status_code == 429:
                             # Zero-token short-circuit: zero extra Gemini tokens spent.
@@ -3484,12 +3503,46 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                                 },
                             }
                         raise
+                if call_result is not None:
+                    fn_results.append((c_name, call_result))
 
             # Second turn to generate Morgan's final response after executing tool
-            second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. If an add_coin proposal was returned, inform the user about the proposal and ask them to confirm before it is saved to their binder. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
+            cand0_content = (
+                response.candidates[0].content
+                if getattr(response, "candidates", None)
+                else None
+            )
+            if isinstance(cand0_content, genai_types.Content):
+                turn2_parts = [
+                    genai_types.Part.from_function_response(
+                        name=n,
+                        response={"result": r},
+                    )
+                    for n, r in fn_results
+                ] + [
+                    genai_types.Part.from_text(
+                        text=(
+                            "Now output Morgan's final response to the user. "
+                            "If an add_coin proposal was returned, inform the user about the proposal "
+                            "and ask them to confirm before it is saved to their binder. "
+                            "Ask if they want to add more details NOW (cost, condition, storage) or LATER."
+                        )
+                    )
+                ]
+                turn2_contents = [
+                    user_turn,
+                    cand0_content,
+                    genai_types.Content(role="user", parts=turn2_parts),
+                ]
+            else:
+                second_prompt = f"{prompt}\n\n[SYSTEM TOOL EXECUTED]\nTool Execution Result: {json.dumps(action_payload, default=str)}\nNow output Morgan's final response to the user. If an add_coin proposal was returned, inform the user about the proposal and ask them to confirm before it is saved to their binder. Ask if they want to add more details NOW (cost, condition, storage) or LATER."
+                turn2_contents = [genai_types.Part.from_text(text=second_prompt)]
             response2 = genai_client.models.generate_content(
                 model=PRIMARY_MODEL,
-                contents=[genai_types.Part.from_text(text=second_prompt)],
+                contents=turn2_contents,
+                config=genai_types.GenerateContentConfig(
+                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
+                ),
             )
             return {"status": "success", "response": response2.text, "action_payload": action_payload}
 
@@ -4742,9 +4795,8 @@ async def analyze_binder_scan(
             contents=prompt_parts,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
                 max_output_tokens=65536,
-                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),  # LOW thinking for fast JSON
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),  # LOW thinking for fast JSON
             ),
         )
         try:
@@ -5326,9 +5378,8 @@ IMPORTANT:
                 contents=file_parts + [genai_types.Part.from_text(text=checklist_prompt)],
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    temperature=0.1,
                     max_output_tokens=65536,
-                    thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                 ),
             )
             try:
@@ -5730,6 +5781,8 @@ SLAB / CERTIFIED HOLDER DETECTION (CRITICAL FIRST STEP):
 Check immediately whether either image shows a third-party grading service slab/holder (PCGS, NGC, CAC, or CACG).
 If a certified slab label is visible:
 1. THE SLAB LABEL WINS over any visual coin design impression. Read Year, Denomination, Grade, Grading Service, and Certification Number directly from the label!
+   - For US coins, ALWAYS translate abbreviated slab denomination codes to official US Mint denomination names:
+     "1C" -> "Cent", "5C" -> "Five Cents", "10C" -> "Dime", "25C" -> "Quarter Dollar", "50C" -> "Half Dollar", "$1" -> "Dollar".
 2. Grading Service MUST be one of: "PCGS", "NGC", "CACG", "CAC", or "None".
 3. Certification Number format:
    - NGC: Typically 7 digits with a 3-digit line item, e.g. "8321797-003" or "1234567-001" or 7 digits.
@@ -5974,9 +6027,8 @@ Return ONLY valid JSON — no markdown fences, no commentary:
             contents=[image_part, text_part],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
                 max_output_tokens=16384,
-                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             ),
         )
 
@@ -6200,18 +6252,26 @@ async def commit_group_photo(
     coin_ids = []
     added_coins = []  # List of (orig_index, coin_id) to maintain indexing integrity (SF3)
     results = []
+    from services.denomination_normalizer import normalize_denomination, normalize_condition, infer_classic_us_series
     for i, coin in enumerate(request.coins):
         try:
+            canon_denom, _, _ = normalize_denomination(coin.denomination, item_type="coin")
+            canon_cond = normalize_condition(coin.condition or "Ungraded / Raw")
+            canon_series = infer_classic_us_series(
+                year=coin.year,
+                canonical_denom=canon_denom,
+                existing_series=coin.program_series or "",
+            )
             result = execute_add_coin(
                 user_email=user_email,
                 year=coin.year,
-                denomination=coin.denomination,
+                denomination=canon_denom or coin.denomination,
                 mint_mark=coin.mint_mark or "",
-                program_series=coin.program_series or "",
+                program_series=canon_series or (coin.program_series or ""),
                 theme_subject=coin.theme_subject or "",
                 variety=coin.variety or "",
                 storage_location=request.storage_location or "",
-                condition=coin.condition or "Ungraded / Raw",
+                condition=canon_cond or "Ungraded / Raw",
                 cost="$0.00",
                 personal_notes="",
                 quantity=1,
@@ -6398,8 +6458,7 @@ async def call_gemini_identify(contents, model=PRIMARY_MODEL):
             contents=contents,
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                thinking_config=gemini4_thinking_config(model, "low"),
             ),
         ),
     )
@@ -6636,7 +6695,7 @@ async def identify_coin_photo(
     raw_c = pass1.get("country", "")
     norm_c, is_frn, rev_need = _normalize_country_metadata(raw_c)
 
-    from services.denomination_normalizer import normalize_denomination
+    from services.denomination_normalizer import normalize_denomination, normalize_coin_fields
     raw_denom_input = override_denom or final_denom
     norm_denom, was_corrected, orig_denom = normalize_denomination(raw_denom_input, country=norm_c, item_type="coin")
 
@@ -6717,6 +6776,7 @@ async def identify_coin_photo(
         "source":         "AI Photo Identifier",
         "deep_dive_status": "PENDING",
     }
+    ai_coin = normalize_coin_fields(ai_coin)
 
     # -- 5. Optionally save to Firestore + GCS ---------------------------------
     coin_id      = str(uuid.uuid4())
@@ -6952,8 +7012,7 @@ async def estimate_value_text(request: TextValuationRequest, _user: dict = Depen
             contents=[genai_types.Part.from_text(text=prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             ),
         )
         raw = resp.text.strip()
@@ -7047,8 +7106,7 @@ async def estimate_value_general(request: GeneralValuationRequest, _user: dict =
             contents=[genai_types.Part.from_text(text=prompt)],
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
-                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             ),
         )
         raw = resp.text.strip()
@@ -8295,7 +8353,10 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             resp = genai_client.models.generate_content(
                                 model=PRIMARY_MODEL,
                                 contents=[pdf_part, genai_types.Part.from_text(text=invoice_prompt)],
-                                config=genai_types.GenerateContentConfig(response_mime_type="application/json"),
+                                config=genai_types.GenerateContentConfig(
+                                    response_mime_type="application/json",
+                                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
+                                ),
                             )
                             raw_text = resp.text.strip()
                             if raw_text.startswith("```"):
@@ -8498,8 +8559,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         ],
                         config=genai_types.GenerateContentConfig(
                             response_mime_type="application/json",
-                            temperature=0.1,
-                            thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                            thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                         ),
                     )
                     raw1 = resp1.text.strip()
@@ -8528,8 +8588,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                             ],
                             config=genai_types.GenerateContentConfig(
                                 response_mime_type="application/json",
-                                temperature=0.1,
-                                thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
+                                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                             ),
                         )
                         raw2 = resp2.text.strip()
@@ -9891,6 +9950,47 @@ def collection_completion_stats(request: Request, current_user: Dict[str, Any] =
         raise HTTPException(status_code=500, detail=str(e))
 
 
+_DEFINITIVE_REFERENCE_BASE_COLS = (
+    "doc_id",
+    "year",
+    "denomination",
+    "mint_mark",
+    "variety",
+    "note",
+    "series",
+    "category",
+)
+_DEFINITIVE_REFERENCE_OPTIONAL_COLS = (
+    ("image_url_obverse", "''"),
+    ("image_url_reverse", "''"),
+    ("price_guide", "''"),
+    ("population_total", "0"),
+    ("apr_history", "''"),
+)
+
+
+@functools.lru_cache(maxsize=8)
+def _get_definitive_reference_select_clause(db_path: str, mtime_ns: int) -> str:
+    """Build and cache a deterministic SELECT column list for definitive_reference."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info(definitive_reference)")
+        existing_cols = {row[1] for row in cur.fetchall()}
+    finally:
+        conn.close()
+
+    cols = list(_DEFINITIVE_REFERENCE_BASE_COLS)
+    for col, default_sql in _DEFINITIVE_REFERENCE_OPTIONAL_COLS:
+        cols.append(col if col in existing_cols else f"{default_sql} AS {col}")
+    return ", ".join(cols)
+
+
+def _definitive_reference_select_clause(db_path: str = DB_PATH) -> str:
+    mtime_ns = os.stat(db_path).st_mtime_ns
+    return _get_definitive_reference_select_clause(db_path, mtime_ns)
+
+
 @app.get("/api/reference/search")
 def reference_search(request: Request, q: Optional[str] = "", page_size: int = 10, offset: int = 0, sort_by: str = "year", current_user: Dict[str, Any] = Depends(get_current_user)):
     """
@@ -9909,6 +10009,7 @@ def reference_search(request: Request, q: Optional[str] = "", page_size: int = 1
         }
         
     q = q.strip() if q else ""
+    conn = None
     try:
         owned_ids = _get_user_owned_doc_ids(user_email) if user_email else set()
         
@@ -9938,38 +10039,37 @@ def reference_search(request: Request, q: Optional[str] = "", page_size: int = 1
             # Show empty years (base coin types/programs) first, then sort by year chronologically
             order_by = "ORDER BY CASE WHEN year = '' THEN 0 ELSE 1 END, year ASC, variety ASC"
             
+        select_clause = _definitive_reference_select_clause(DB_PATH)
         cur.execute(
-            f"SELECT doc_id, year, denomination, mint_mark, variety, note, series, category, "
-            f"image_url_obverse, image_url_reverse, price_guide, population_total, apr_history "
+            f"SELECT {select_clause} "
             f"FROM definitive_reference WHERE {where_clause} "
             f"{order_by} "
             f"LIMIT :limit OFFSET :offset",
             {**params, "limit": page_size, "offset": offset}
         )
         rows = [dict(row) for row in cur.fetchall()]
-        conn.close()
         
         results = []
         for r in rows:
             doc_id = r["doc_id"]
-            obv = r["image_url_obverse"] or ""
-            rev = r["image_url_reverse"] or ""
+            obv = r.get("image_url_obverse") or ""
+            rev = r.get("image_url_reverse") or ""
             results.append({
                 "doc_id": doc_id,
-                "year": r["year"] or "",
-                "denomination": r["denomination"] or "",
-                "mint_mark": r["mint_mark"] or "",
-                "variety": r["variety"] or "",
-                "note": r["note"] or "",
-                "series": r["series"] or "",
-                "category": r["category"] or "",
+                "year": r.get("year") or "",
+                "denomination": r.get("denomination") or "",
+                "mint_mark": r.get("mint_mark") or "",
+                "variety": r.get("variety") or "",
+                "note": r.get("note") or "",
+                "series": r.get("series") or "",
+                "category": r.get("category") or "",
                 "is_owned": doc_id in owned_ids,
                 "image_url_obverse": obv,
                 "image_url_reverse": rev,
                 "image_url": obv or rev,
-                "price_guide": r["price_guide"] or "",
-                "population_total": r["population_total"] or 0,
-                "apr_history": r["apr_history"] or ""
+                "price_guide": r.get("price_guide") or "",
+                "population_total": r.get("population_total") or 0,
+                "apr_history": r.get("apr_history") or ""
             })
             
         return {
@@ -9978,8 +10078,12 @@ def reference_search(request: Request, q: Optional[str] = "", page_size: int = 1
             "offset": offset,
             "results": results
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("GET /api/reference/search failed (q=%r, offset=%s, page_size=%s)", q, offset, page_size)
+        raise HTTPException(status_code=500, detail="Search is temporarily unavailable. Please try again.")
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 @app.get("/api/reference/db_update_check")
@@ -10203,9 +10307,9 @@ def search_reference(request: ReferenceSearchRequest):
             contents=[genai_types.Part.from_text(text=prompt)],
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                temperature=0.1,
                 response_mime_type="application/json",
                 max_output_tokens=1000,
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             ),
         )
         
@@ -10954,7 +11058,8 @@ No markdown, no explanation -- raw JSON only."""
             model=PRIMARY_MODEL,
             contents=[prompt],
             config=genai_types.GenerateContentConfig(
-                response_mime_type="application/json"
+                response_mime_type="application/json",
+                thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
             )
         )
         scored_items = json.loads(response.text)
@@ -12838,6 +12943,9 @@ async def api_normalize_epn_search(req: EpnNormalizeRequest):
         response = genai_client.models.generate_content(
             model=GEMINI_FLASH_MODEL,
             contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                thinking_config=gemini4_thinking_config(GEMINI_FLASH_MODEL, "low"),
+            ),
         )
         normalized = response.text.strip().replace("\n", " ") if response and response.text else raw_query
         logger.info(f"[EPN Normalize] Gemini match: '{raw_query}' -> '{normalized}'")

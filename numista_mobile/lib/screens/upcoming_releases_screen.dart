@@ -131,7 +131,7 @@ class _UpcomingReleasesScreenState extends State<UpcomingReleasesScreen> {
                     ),
                   ),
                   if (_filteredReleases.isNotEmpty && _selectedFilter == 'All') ...[
-                    _buildHeroCard(_filteredReleases.first, surface, textCol),
+                    _buildHeroCard(_filteredReleases.first, surface, textCol, isDark),
                   ],
                   Expanded(
                     child: ListView.builder(
@@ -152,7 +152,55 @@ class _UpcomingReleasesScreenState extends State<UpcomingReleasesScreen> {
     );
   }
 
-  Widget _buildHeroCard(UpcomingRelease release, Color surface, Color textCol) {
+  Widget _buildImagePlaceholder({required bool isHero, required bool isDark}) {
+    final bgColor = isDark ? const Color(0xFF161D29) : const Color(0xFFEAECE8);
+    final borderColor = isDark
+        ? Colors.amber.withValues(alpha: 0.30)
+        : Colors.amber.shade700.withValues(alpha: 0.30);
+    final medallionBg = isDark
+        ? Colors.amber.withValues(alpha: 0.12)
+        : Colors.amber.withValues(alpha: 0.16);
+    final iconColor = isDark ? Colors.amber.shade300 : Colors.amber.shade800;
+
+    if (isHero) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        ),
+        alignment: Alignment.center,
+        child: Container(
+          width: 84,
+          height: 84,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: medallionBg,
+            border: Border.all(color: borderColor, width: 1.5),
+          ),
+          child: Icon(Icons.toll_outlined, size: 42, color: iconColor),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: borderColor, width: 1),
+        ),
+        alignment: Alignment.center,
+        child: Icon(Icons.toll_outlined, size: 24, color: iconColor),
+      ),
+    );
+  }
+
+  Widget _buildHeroCard(UpcomingRelease release, Color surface, Color textCol, bool isDark) {
+    final hasImage = release.imageUrl != null && release.imageUrl!.trim().isNotEmpty;
     return Card(
       margin: const EdgeInsets.all(16),
       color: surface,
@@ -161,19 +209,15 @@ class _UpcomingReleasesScreenState extends State<UpcomingReleasesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (release.imageUrl != null)
+            if (hasImage)
               CachedNetworkImage(
-                imageUrl: release.imageUrl!,
+                imageUrl: release.imageUrl!.trim(),
                 height: 200,
                 fit: BoxFit.cover,
-                errorWidget: (c, u, e) => const Icon(Icons.image_not_supported, size: 50),
+                errorWidget: (c, u, e) => _buildImagePlaceholder(isHero: true, isDark: isDark),
               )
             else
-              Container(
-                height: 200,
-                color: Colors.grey.withValues(alpha: 0.2),
-                child: const Icon(Icons.image_not_supported, size: 50),
-              ),
+              _buildImagePlaceholder(isHero: true, isDark: isDark),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -200,20 +244,24 @@ class _UpcomingReleasesScreenState extends State<UpcomingReleasesScreen> {
   }
 
   Widget _buildProductCard(UpcomingRelease release, Color surface, Color textCol, bool isDark) {
+    final hasImage = release.imageUrl != null && release.imageUrl!.trim().isNotEmpty;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: surface,
       child: ListTile(
         onTap: () => launchUrl(Uri.parse(release.productUrl)),
-        leading: release.imageUrl != null
-            ? CachedNetworkImage(
-                imageUrl: release.imageUrl!,
-                width: 50,
-                height: 50,
-                fit: BoxFit.cover,
-                errorWidget: (c, u, e) => const Icon(Icons.image_not_supported),
+        leading: hasImage
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CachedNetworkImage(
+                  imageUrl: release.imageUrl!.trim(),
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                  errorWidget: (c, u, e) => _buildImagePlaceholder(isHero: false, isDark: isDark),
+                ),
               )
-            : const Icon(Icons.image_not_supported),
+            : _buildImagePlaceholder(isHero: false, isDark: isDark),
         title: Text(release.title, style: TextStyle(color: textCol, fontWeight: FontWeight.bold)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

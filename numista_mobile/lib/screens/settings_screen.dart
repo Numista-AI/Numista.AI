@@ -18,11 +18,18 @@ import '../services/epn_service.dart';
 import '../services/theme_provider.dart';
 import '../services/backup_export_service.dart';
 import '../services/collector_profile_service.dart';
+import '../services/display_preferences_service.dart';
 import '../services/hardware_service.dart';
+import '../widgets/morgan_owl_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final bool testSkipInitialLoad;
+
+  const SettingsScreen({
+    super.key,
+    this.testSkipInitialLoad = false,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -55,6 +62,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    DisplayPreferencesService.instance.ensureLoaded();
+    if (widget.testSkipInitialLoad) {
+      _isLoading = false;
+      return;
+    }
     _loadSettings();
     _loadPhotoSharingPref();
     _loadInspectorModePref();
@@ -105,13 +117,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final settings = await EpnService.getSettings();
-    setState(() {
-      _campIdController.text = settings['campaignId'] ?? '';
-      _mkridController.text = settings['rotationId'] ?? '';
-      _appIdController.text = settings['appId'] ?? '';
-      _isLoading = false;
-    });
+    try {
+      final settings = await EpnService.getSettings();
+      if (!mounted) return;
+      setState(() {
+        _campIdController.text = settings['campaignId'] ?? '';
+        _mkridController.text = settings['rotationId'] ?? '';
+        _appIdController.text = settings['appId'] ?? '';
+      });
+    } catch (_) {
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _saveEpnSettings() async {
@@ -186,6 +205,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           // ── Theme Configuration Section ───────────────────────────────
           _buildThemeConfigCard(context),
+          const SizedBox(height: 24),
+          Divider(color: borderColor),
+          const SizedBox(height: 24),
+
+          // ── Display Preferences Section ──────────────────────────────
+          _buildDisplayPreferencesCard(context),
           const SizedBox(height: 24),
           Divider(color: borderColor),
           const SizedBox(height: 24),
@@ -290,8 +315,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 scheme: 'mailto',
                 path: 'eric@numista.ai',
                 queryParameters: {
-                  'subject': 'Numista.AI Beta Feedback',
-                  'body': 'Hi Numista.AI Team,\n\nHere is my feedback on the beta:\n\n',
+                  'subject': 'Numista.AI Feedback',
+                  'body': 'Hi Numista.AI Team,\n\nHere is my feedback:\n\n',
                 },
               );
               try {
@@ -501,6 +526,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (mounted) setState(() => _clearCoinCount = (data['coins'] as num).toInt());
       }
     } catch (_) {}
+  }
+
+  Widget _buildDisplayPreferencesCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final descColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF374151) : const Color(0xFFE2E6E9);
+
+    return Container(
+      padding: const EdgeInsets.all(20.0),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: ValueListenableBuilder<bool>(
+        valueListenable: DisplayPreferencesService.instance.showCollectionValue,
+        builder: (context, showValue, _) {
+          return SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(
+              Icons.visibility_outlined,
+              color: Color(0xFF1D4F91),
+              size: 28,
+            ),
+            title: Text(
+              'Show Collection Value on Home',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            subtitle: Text(
+              'Display your total collection value card on the Home screen by default.',
+              style: TextStyle(fontSize: 13, color: descColor),
+            ),
+            value: showValue,
+            onChanged: (val) =>
+                DisplayPreferencesService.instance.setShowCollectionValue(val),
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildDesktopHotkeysCard(BuildContext context) {
@@ -813,7 +882,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Beta Inspector Mode',
+                        'Inspector Mode',
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
@@ -1138,7 +1207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: headerColor),
           ),
           subtitle: Text(
-            'Access internal diagnostics and beta features',
+            'Access internal diagnostics and developer tools',
             style: TextStyle(fontSize: 12, color: descColor),
           ),
           leading: const Icon(Icons.developer_mode, color: Color(0xFFF63366)),
@@ -1224,7 +1293,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: const Text(
           'This will hide all seeded demo coins from your collection view. '
           'No data is deleted — this is a soft-archive only. '
-          'You can re-seed from the beta testers guide if needed.',
+          'You can re-seed from the getting started guide if needed.',
         ),
         actions: [
           TextButton(
@@ -1939,7 +2008,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   child: const Center(
-                    child: Icon(Icons.psychology_outlined, color: Colors.white, size: 28),
+                    child: MorganOwlAvatar(size: 32),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1949,12 +2018,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            '🧠 Learned Preferences & AI Memory',
-                            style: TextStyle(
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          Flexible(
+                            child: Text(
+                              'Learned Preferences & AI Memory',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -2080,7 +2152,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               color: const Color(0xFF8B5CF6).withAlpha(40),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.psychology_outlined, color: Color(0xFFA78BFA), size: 24),
+                            child: const MorganOwlAvatar(size: 28),
                           ),
                           const SizedBox(width: 12),
                           const Expanded(

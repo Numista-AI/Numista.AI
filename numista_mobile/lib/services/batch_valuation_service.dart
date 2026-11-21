@@ -17,6 +17,7 @@ import 'http_auth_client.dart';
 import '../constants.dart';
 import '../utils/mint_helpers.dart';
 import 'auth_service.dart';
+import 'coin_data_normalizer.dart';
 
 
 // ── Progress model ────────────────────────────────────────────────────────────
@@ -87,8 +88,164 @@ class BatchValuationService {
   BatchValuationProgress _progress = const BatchValuationProgress();
   BatchValuationProgress get current => _progress;
 
+  static const int maxCleanupAutoEnqueue = 10;
+
   bool _pauseRequested = false;
   bool _running        = false;
+
+  // ── Single-coin auto-valuation queue ────────────────────────────────────────
+  final Set<String> _enqueuedOrValuedSingleIds = {};
+  final Set<String> _queuedSingleDocIds = {};
+  final List<_SingleValuationRequest> _singleQueue = [];
+  int _cleanupEnqueuedCount = 0;
+  bool _singleWorkerRunning = false;
+  Completer<void>? _singleQueueIdleCompleter;
+
+  @visibleForTesting
+  Duration singleCoinDelay = const Duration(seconds: 2);
+
+  @visibleForTesting
+  Future<Map<String, dynamic>> Function({
+    required String year,
+    required String denomination,
+    required String mintMark,
+    required String condition,
+    required String programSeries,
+    required String metalContent,
+    required String country,
+  })? testEstimateCaller;
+
+  @visibleForTesting
+  Future<void> Function(
+    String uid,
+    String docId,
+    Map<String, dynamic> payload,
+  )? testFirestoreWriter;
+
+  @visibleForTesting
+  void resetForTest() {
+    _enqueuedOrValuedSingleIds.clear();
+    _queuedSingleDocIds.clear();
+    _singleQueue.clear();
+    _cleanupEnqueuedCount = 0;
+    _singleWorkerRunning = false;
+    _singleQueueIdleCompleter = null;
+    singleCoinDelay = const Duration(seconds: 2);
+    testEstimateCaller = null;
+    testFirestoreWriter = null;
+  }
+
+  /// Waits until any active single-coin queue drains (for tests).
+  @visibleForTesting
+  Future<void> waitForSingleQueueForTest() async {
+    if (!_singleWorkerRunning && _singleQueue.isEmpty) return;
+    _singleQueueIdleCompleter ??= Completer<void>();
+    await _singleQueueIdleCompleter!.future;
+  }
+
+  /// Enqueues a single unvalued coin for background AI valuation with:
+  /// - per-session deduplication by [docId]
+  /// - 2-second inter-call pacing
+  /// - strict [maxCleanupAutoEnqueue] (`<= 10`) storm cap when [fromCleanup] is true
+  /// Returns `true` if queued, `false` if skipped.
+  bool enqueueSingleCoin(
+    String uid,
+    String docId,
+    Map<String, dynamic> coinData, {
+    bool fromCleanup = false,
+    bool forceRetry = false,
+  }) {
+    if (uid.trim().isEmpty || docId.trim().isEmpty) return false;
+    final normalized = CoinDataNormalizer.normalizeCoinMap(coinData);
+    if (!CoinDataNormalizer.needsValuation(normalized)) return false;
+    if (!forceRetry &&
+        (_enqueuedOrValuedSingleIds.contains(docId) ||
+            _queuedSingleDocIds.contains(docId))) {
+      return false;
+    }
+    if (fromCleanup && _cleanupEnqueuedCount >= maxCleanupAutoEnqueue) {
+      return false;
+    }
+
+    if (fromCleanup) {
+      _cleanupEnqueuedCount++;
+    }
+    _enqueuedOrValuedSingleIds.add(docId);
+    _queuedSingleDocIds.add(docId);
+    _singleQueue.add(_SingleValuationRequest(
+      uid: uid,
+      docId: docId,
+      coinData: normalized,
+    ));
+    _pumpSingleQueue();
+    return true;
+  }
+
+  Future<void> _pumpSingleQueue() async {
+    if (_singleWorkerRunning) return;
+    _singleWorkerRunning = true;
+    try {
+      while (_singleQueue.isNotEmpty) {
+        final req = _singleQueue.removeAt(0);
+        _queuedSingleDocIds.remove(req.docId);
+        try {
+          final data = req.coinData;
+          final year = (data['Year'] ?? data['year'] ?? '').toString();
+          final denom =
+              (data['Denomination'] ?? data['denomination'] ?? '').toString();
+          final mint = MintHelpers.readMintMark(data);
+          final cond =
+              (data['Condition'] ?? data['condition'] ?? '').toString();
+          final series =
+              (data['Program/Series'] ?? data['program_series'] ?? '')
+                  .toString();
+          final metal =
+              (data['Metal Content'] ?? data['metal_content'] ?? '').toString();
+          final country =
+              (data['Country'] ?? data['country'] ?? 'United States').toString();
+
+          final caller = testEstimateCaller ?? _callApi;
+          final result = await caller(
+            year: year,
+            denomination: denom,
+            mintMark: mint,
+            condition: cond,
+            programSeries: series,
+            metalContent: metal,
+            country: country,
+          );
+
+          final payload = buildValuationPayload(result);
+          if (payload['ai_value_status'] == 'valued' &&
+              !CoinDataNormalizer.isZeroOrInvalidAiEstimate(
+                  payload['AI Estimated Value'])) {
+            final writer = testFirestoreWriter ??
+                (String uid, String docId, Map<String, dynamic> writeData) async {
+                  final path = AuthService.coinsPath.isNotEmpty
+                      ? AuthService.coinsPath
+                      : 'users/$uid/coins';
+                  await FirebaseFirestore.instance
+                      .collection(path)
+                      .doc(docId)
+                      .set(writeData, SetOptions(merge: true));
+                };
+            await writer(req.uid, req.docId, payload);
+          }
+        } catch (e) {
+          // Never write $0.00 or '0' on API errors (401/500/timeout).
+          debugPrint('[BatchValuation] Single-coin auto-valuation skipped (${req.docId}): $e');
+        }
+
+        if (_singleQueue.isNotEmpty && singleCoinDelay > Duration.zero) {
+          await Future.delayed(singleCoinDelay);
+        }
+      }
+    } finally {
+      _singleWorkerRunning = false;
+      _singleQueueIdleCompleter?.complete();
+      _singleQueueIdleCompleter = null;
+    }
+  }
 
   /// Resolves the Firestore collection path for a valuation task.
   /// Banknotes ('currency') route to [AuthService.currencyPath]; coins/sets
@@ -108,7 +265,13 @@ class BatchValuationService {
   @visibleForTesting
   static ValuationTask? buildCoinTask(String docId, Map<String, dynamic> data) {
     final status = data['ai_value_status']?.toString() ?? '';
-    if (status == 'valued') return null;
+    final existingEst = data['AI Estimated Value'] ??
+        data['ai_estimated_value'] ??
+        data['estimated_value'];
+    if (status == 'valued' &&
+        !CoinDataNormalizer.isZeroOrInvalidAiEstimate(existingEst)) {
+      return null;
+    }
 
     final year    = data['Year']?.toString()           ?? '';
     final denom   = data['Denomination']?.toString()   ?? '';
@@ -181,12 +344,35 @@ class BatchValuationService {
     Map<String, dynamic> result, {
     DateTime? now,
   }) {
-    final status = result['ai_value_status']?.toString() ?? 'valued';
     final estimatedText = result['estimated_value'] ?? 'Pending';
+    final numericMedian = result['numeric_median'];
+    final numericVal = numericMedian is num ? numericMedian.toDouble() : null;
+    final hasInvalidText =
+        CoinDataNormalizer.isZeroOrInvalidAiEstimate(estimatedText);
+    final hasInvalidNumeric = numericVal == null || numericVal <= 0.0;
+
+    // Never persist "$0.00" or 0 as a 'valued' estimate.
+    if (hasInvalidText && hasInvalidNumeric) {
+      return <String, dynamic>{
+        'ai_value_status': 'pending',
+        'ai_estimated_value': 'Pending',
+        'AI Estimated Value': 'Pending',
+        'ai_value_source': result['source'] ?? 'text_estimator',
+        'ai_value_basis': result['basis'] ?? '',
+        'ai_value_confidence': result['confidence'] ?? 'LOW',
+        'ai_needs_photo': result['needs_photo'] ?? true,
+        'ai_value_as_of': (now ?? DateTime.now()).toUtc().toIso8601String(),
+      };
+    }
+
+    final status = result['ai_value_status']?.toString() ?? 'valued';
+    final safeText = hasInvalidText && numericVal != null && numericVal > 0
+        ? '\$${numericVal.toStringAsFixed(2)}'
+        : estimatedText.toString();
     final payload = <String, dynamic>{
       'ai_value_status':     status,
-      'ai_estimated_value':  estimatedText,
-      'AI Estimated Value':  estimatedText,
+      'ai_estimated_value':  safeText,
+      'AI Estimated Value':  safeText,
       'ai_value_source':     result['source'] ?? 'text_estimator',
       'ai_value_basis':      result['basis'] ?? '',
       'ai_value_confidence': result['confidence'] ?? 'LOW',
@@ -194,13 +380,13 @@ class BatchValuationService {
       'ai_value_as_of':      (now ?? DateTime.now()).toUtc().toIso8601String(),
     };
 
-    if (result['numeric_median'] != null) {
-      payload['estimated_value'] = (result['numeric_median'] as num).toDouble();
+    if (numericVal != null && numericVal > 0) {
+      payload['estimated_value'] = numericVal;
     }
-    if (result['low'] != null) {
+    if (result['low'] != null && (result['low'] as num) > 0) {
       payload['ai_value_low'] = (result['low'] as num).toDouble();
     }
-    if (result['high'] != null) {
+    if (result['high'] != null && (result['high'] as num) > 0) {
       payload['ai_value_high'] = (result['high'] as num).toDouble();
     }
     return payload;
@@ -540,5 +726,17 @@ class ValuationTask {
     required this.country,
     required this.details,
     this.extraData,
+  });
+}
+
+class _SingleValuationRequest {
+  final String uid;
+  final String docId;
+  final Map<String, dynamic> coinData;
+
+  const _SingleValuationRequest({
+    required this.uid,
+    required this.docId,
+    required this.coinData,
   });
 }

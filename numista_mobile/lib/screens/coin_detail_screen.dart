@@ -17,7 +17,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../utils/mint_helpers.dart';
-import '../services/signed_photo_url_service.dart';
+import '../services/coin_picture_picker.dart';
 import '../widgets/signed_storage_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
@@ -35,14 +35,16 @@ import '../models/mint_product_metadata.dart';
 import '../services/mint_product_lookup_service.dart';
 import '../constants.dart';
 import '../services/auth_service.dart';
+import '../services/batch_valuation_service.dart';
+import '../services/coin_data_normalizer.dart';
 import '../services/http_auth_client.dart';
 import '../services/inspector_service.dart';
 import '../services/melt_value_service.dart';
 import '../services/wishlist_service.dart';
 import '../services/coin_image_service.dart';
-import '../services/canonical_mint_asset_service.dart';
 import '../services/mint_error_service.dart';
 import '../widgets/grade_badge_widget.dart';
+import '../widgets/morgan_owl_avatar.dart';
 import '../widgets/glossary_tooltip_wrapper.dart';
 import '../models/mint_error.dart';
 import 'mint_error_detail_screen.dart';
@@ -316,11 +318,12 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
     setState(() { _aiLoading = true; _aiError = null; _aiInsight = ''; });
 
     try {
+      final flashModel = AiConfig.flashModel;
       final model = FirebaseAI.googleAI().generativeModel(
-        model: AiConfig.flashModel,
-        generationConfig: GenerationConfig(
-          temperature: 0.7,
-          thinkingConfig: ThinkingConfig.withThinkingLevel(ThinkingLevel.medium),
+        model: flashModel,
+        generationConfig: AiConfig.buildFlashGenerationConfig(
+          flashModel,
+          level: ThinkingLevel.medium,
         ),
       );
 
@@ -516,6 +519,40 @@ Write in an engaging, authoritative style like a respected numismatic reference.
     updates['mint_mark'] = resolvedMint.mintMark;
     updates['Mint Mark'] = resolvedMint.mintMark;
 
+    // ── Deterministic normalization + verify_link healing on Save ─────────────
+    final normalizedMerged = CoinDataNormalizer.normalizeCoinMap({
+      ..._coin.toFirestore(),
+      ...updates,
+    });
+    for (final k in const [
+      'Denomination',
+      'Metal Content',
+      'Program/Series',
+      'Condition',
+      'AI Estimated Value',
+      'ai_estimated_value',
+      'ai_value_status',
+      'verify_link',
+    ]) {
+      if (normalizedMerged.containsKey(k)) {
+        updates[k] = normalizedMerged[k];
+      }
+    }
+    updates['_norm_v2'] = true;
+    updates['_normalized'] = true;
+    if (updates['Denomination'] is String) {
+      _editCtrl['Denomination']?.text = updates['Denomination'] as String;
+    }
+    if (updates['Metal Content'] is String) {
+      _editCtrl['Metal Content']?.text = updates['Metal Content'] as String;
+    }
+    if (updates['Program/Series'] is String) {
+      _editCtrl['Program/Series']?.text = updates['Program/Series'] as String;
+    }
+    if (updates['Condition'] is String) {
+      _editCtrl['Condition']?.text = updates['Condition'] as String;
+    }
+
     try {
       await FirebaseFirestore.instance
           .collection(AuthService.coinsPath)
@@ -527,6 +564,14 @@ Write in an engaging, authoritative style like a respected numismatic reference.
         ...updates,
         'timestamp': _coin.timestamp,
       }, _coin.id);
+      if (CoinDataNormalizer.needsValuation(updated.toFirestore())) {
+        BatchValuationService.instance.enqueueSingleCoin(
+          AuthService.userEmail,
+          _coin.id,
+          updated.toFirestore(),
+          forceRetry: true,
+        );
+      }
       if (!mounted) return;
       setState(() { _coin = updated; _inEditMode = false; });
       widget.onEdited?.call();
@@ -772,10 +817,12 @@ Write in an engaging, authoritative style like a respected numismatic reference.
               'mintage figures, current market value, and collector tips.',
             );
           },
-          onPcgs: _coin.certificationNumber.isNotEmpty
-              ? () => launchUrl(Uri.parse(
-                    'https://www.pcgs.com/cert/${_coin.certificationNumber.replaceAll(RegExp(r'[^0-9]'), '')}'),
-                  mode: LaunchMode.externalApplication)
+          verifyServiceLabel: _coin.getVerificationServiceLabel(),
+          onVerifyCert: _coin.getVerificationUrl() != null
+              ? () => launchUrl(
+                    Uri.parse(_coin.getVerificationUrl()!),
+                    mode: LaunchMode.externalApplication,
+                  )
               : null,
           onDelete: _confirmDelete,
           onRefresh: widget.onEdited,
@@ -899,7 +946,8 @@ class _HeroHeader extends StatelessWidget {
   final VoidCallback onWishlist;
   final VoidCallback onEdit;
   final VoidCallback onAiChat;
-  final Future<void> Function()? onPcgs;
+  final Future<void> Function()? onVerifyCert;
+  final String? verifyServiceLabel;
   final VoidCallback onDelete;
   final VoidCallback? onVerifyManually;
   final VoidCallback? onRefresh;
@@ -912,7 +960,8 @@ class _HeroHeader extends StatelessWidget {
     required this.onWishlist,
     required this.onEdit,
     required this.onAiChat,
-    this.onPcgs,
+    this.onVerifyCert,
+    this.verifyServiceLabel,
     required this.onDelete,
     this.onVerifyManually,
     this.onRefresh,
@@ -992,18 +1041,18 @@ class _HeroHeader extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               _ActionBtn(
-                icon: Icons.psychology_outlined,
+                leading: const MorganOwlAvatar(size: 16),
                 label: 'AI Chat',
                 color: const Color(0xFFC9A227),
                 onTap: onAiChat,
               ),
-              if (onPcgs != null) ...[
+              if (onVerifyCert != null && verifyServiceLabel != null) ...[
                 const SizedBox(width: 8),
                 _ActionBtn(
                   icon: Icons.open_in_new,
-                  label: 'PCGS',
+                  label: verifyServiceLabel!,
                   color: const Color(0xFFC9A227),
-                  onTap: onPcgs,
+                  onTap: onVerifyCert,
                 ),
               ],
               if (onVerifyManually != null) ...[
@@ -1078,41 +1127,33 @@ class _CoinImagePair extends StatefulWidget {
 class _CoinImagePairState extends State<_CoinImagePair> {
   String _obvUrl = '';
   String _revUrl = '';
+  String _refObvUrl = '';
+  String _refRevUrl = '';
+  bool _hasUserObv = false;
+  bool _hasUserRev = false;
+  bool _userObvFailed = false;
+  bool _userRevFailed = false;
   String? _attribution;
   bool _loadingRef = false;
 
   @override
   void initState() {
     super.initState();
-    // gs:// URIs are not displayable by Image.network() – treat as empty
-    // so CoinImageService can fill in a public HTTPS URL from coin_image_index.
     final coinMap = <String, dynamic>{
       ...widget.coin.toFirestore(),
       'source': widget.coin.source,
       'Personal Notes': widget.coin.personalNotes,
     };
-    final canon = CanonicalMintAssetService.resolveFromMap(coinMap);
-    if (canon != null) {
-      _obvUrl = canon.obverseUrl;
-      _revUrl = canon.reverseUrl;
-      _attribution = 'U.S. Mint';
-    } else {
-      _obvUrl = _toHttpsUrl(widget.coin.imageUrlObverse);
-      _revUrl = _toHttpsUrl(widget.coin.imageUrlReverse);
-    }
-    // Fetch reference images for any side that doesn't have a personal photo or canonical asset
-    if (_obvUrl.isEmpty || _revUrl.isEmpty) {
+    final sel = CoinPicturePicker.select(coinMap);
+    _obvUrl = sel.primaryObverseUrl ?? '';
+    _revUrl = sel.primaryReverseUrl ?? '';
+    _hasUserObv = sel.hasUserObverse;
+    _hasUserRev = sel.hasUserReverse;
+    _attribution = sel.attribution;
+    // Fetch reference images for any missing side OR as fallback for user photos
+    if (_obvUrl.isEmpty || _revUrl.isEmpty || _hasUserObv || _hasUserRev) {
       _fetchReferenceImages();
     }
-  }
-
-  /// Returns the URL if it is a loadable HTTPS URL or a signable gs:// owner URI.
-  static String _toHttpsUrl(String url) {
-    if (url.isEmpty) return '';
-    if (url.startsWith('gs://') && !SignedPhotoUrlService.needsSigning(url)) {
-      return '';
-    }
-    return url;
   }
 
   Future<void> _fetchReferenceImages() async {
@@ -1128,10 +1169,12 @@ class _CoinImagePairState extends State<_CoinImagePair> {
       );
       if (mounted && result.hasAny) {
         setState(() {
-          // Only fill in sides that don't already have a personal photo
-          if (_obvUrl.isEmpty) _obvUrl = result.obverseUrl ?? '';
-          if (_revUrl.isEmpty) _revUrl = result.reverseUrl ?? '';
-          _attribution = result.attribution;
+          _refObvUrl = result.obverseUrl ?? '';
+          _refRevUrl = result.reverseUrl ?? '';
+          // Fill in sides that don't have a personal photo (or already failed)
+          if (_obvUrl.isEmpty || _userObvFailed) _obvUrl = _refObvUrl;
+          if (_revUrl.isEmpty || _userRevFailed) _revUrl = _refRevUrl;
+          _attribution ??= result.attribution;
         });
       }
     } catch (_) {
@@ -1316,6 +1359,17 @@ class _CoinImagePairState extends State<_CoinImagePair> {
           attribution: _attribution,
           isSet: isSet,
           onFlag: showFlag ? () => _reportImageError(context, 'obverse') : null,
+          onImageError: (_hasUserObv && !_userObvFailed)
+              ? () {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted || _userObvFailed) return;
+                    setState(() {
+                      _userObvFailed = true;
+                      if (_refObvUrl.isNotEmpty) _obvUrl = _refObvUrl;
+                    });
+                  });
+                }
+              : null,
         ),
         if (!isSet) ...[
           const SizedBox(width: 8),
@@ -1327,6 +1381,17 @@ class _CoinImagePairState extends State<_CoinImagePair> {
             attribution: _attribution,
             isSet: false,
             onFlag: showFlag ? () => _reportImageError(context, 'reverse') : null,
+            onImageError: (_hasUserRev && !_userRevFailed)
+                ? () {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted || _userRevFailed) return;
+                      setState(() {
+                        _userRevFailed = true;
+                        if (_refRevUrl.isNotEmpty) _revUrl = _refRevUrl;
+                      });
+                    });
+                  }
+                : null,
           ),
         ],
       ],
@@ -1342,6 +1407,7 @@ class _CoinImageTile extends StatelessWidget {
   final String? attribution;
   final bool isSet;
   final VoidCallback? onFlag;
+  final VoidCallback? onImageError;
   const _CoinImageTile({
     required this.url,
     required this.label,
@@ -1350,6 +1416,7 @@ class _CoinImageTile extends StatelessWidget {
     this.attribution,
     this.isSet = false,
     this.onFlag,
+    this.onImageError,
   });
 
   @override
@@ -1435,7 +1502,10 @@ class _CoinImageTile extends StatelessWidget {
       url: url,
       fit: fit,
       placeholderBuilder: (_) => _skeleton(),
-      errorBuilder: (_) => _placeholder(),
+      errorBuilder: (_) {
+        onImageError?.call();
+        return _placeholder();
+      },
     );
   }
 
@@ -1499,19 +1569,21 @@ class _GradeBadge extends StatelessWidget {
 // ACTION BUTTON
 // ─────────────────────────────────────────────────────────────────────────────
 class _ActionBtn extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final Widget? leading;
   final String label;
   final Color color;
   final dynamic onTap; // VoidCallback or Future Function()
   final bool loading;
 
   const _ActionBtn({
-    required this.icon,
+    this.icon,
+    this.leading,
     required this.label,
     required this.color,
     required this.onTap,
     this.loading = false,
-  });
+  }) : assert(icon != null || leading != null);
 
   @override
   Widget build(BuildContext context) {
@@ -1534,7 +1606,7 @@ class _ActionBtn extends StatelessWidget {
             ? SizedBox(width: 14, height: 14,
                 child: CircularProgressIndicator(strokeWidth: 2, color: color))
             : Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(icon, size: 14, color: color),
+                leading ?? Icon(icon!, size: 14, color: color),
                 const SizedBox(width: 5),
                 Text(label, style: TextStyle(color: color, fontSize: 12,
                     fontWeight: FontWeight.w600)),
@@ -1653,6 +1725,10 @@ class _FinancialsTab extends StatelessWidget {
             metalContent: coin.metalContent,
             denomination: coin.denomination,
             spotPrices: spotPrices,
+            programSeries: coin.programSeries,
+            themeSubject: coin.themeSubject,
+            qty: int.tryParse(coin.quantity) ?? 1,
+            coinData: coin.toFirestore(),
           )
         : null;
     final meltVal = liveMelt != null
@@ -1689,6 +1765,16 @@ class _FinancialsTab extends StatelessWidget {
       } else if (mc.startsWith('35% silver')) {
         const oz = 0.05626;
         if (ag > 0) meltFormula = '${oz.toStringAsFixed(5)} troy oz Ag (35% silver) × (silver spot \$${ag.toStringAsFixed(2)}/oz) = \$${liveMelt.toStringAsFixed(2)}';
+      } else if (mc.contains('silver')) {
+        final yr = int.tryParse(coin.year.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+        if (yr > 0 && yr <= 1964) {
+          final ozMap = {'dime': 0.07234, 'quarter': 0.18084, 'half': 0.36169, 'half dollar': 0.36169, 'dollar': 0.77344};
+          double? oz;
+          for (final e in ozMap.entries) { if (denom.contains(e.key)) { oz = e.value; break; } }
+          if (oz != null && ag > 0) {
+            meltFormula = '${oz.toStringAsFixed(5)} troy oz Ag (90% silver) × (silver spot \$${ag.toStringAsFixed(2)}/oz) = \$${liveMelt.toStringAsFixed(2)}';
+          }
+        }
       } else if (mc.contains('gold')) {
         meltFormula = au > 0
             ? 'Gold content × (gold spot \$${au.toStringAsFixed(2)}/oz) = \$${liveMelt.toStringAsFixed(2)}'
@@ -1717,7 +1803,7 @@ class _FinancialsTab extends StatelessWidget {
     final greysheetVal = gCpg > 0 ? gCpg : 0.0;
     final aiDisplay = greysheetVal > 0
         ? '\$${greysheetVal.toStringAsFixed(2)}'
-        : (coin.aiEstimatedValue.isEmpty || coin.aiEstimatedValue == 'Pending'
+        : (CoinDataNormalizer.isZeroOrInvalidAiEstimate(coin.aiEstimatedValue)
             ? 'Pending'
             : coin.aiEstimatedValue);
 
@@ -2572,10 +2658,7 @@ class _CertCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final certNum = coin.certificationNumber.replaceAll(RegExp(r'[^0-9]'), '');
-    final pcgsUrl = certNum.isNotEmpty
-        ? 'https://www.pcgs.com/cert/$certNum'
-        : null;
+    final verifyUrl = coin.getVerificationUrl();
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -2599,9 +2682,9 @@ class _CertCard extends StatelessWidget {
             Text(coin.certificationNumber,
               style: TextStyle(fontSize: 12, color: _kText(context), fontWeight: FontWeight.w600)),
             const Spacer(),
-            if (pcgsUrl != null)
+            if (verifyUrl != null)
               GestureDetector(
-                onTap: () => launchUrl(Uri.parse(pcgsUrl),
+                onTap: () => launchUrl(Uri.parse(verifyUrl),
                     mode: LaunchMode.externalApplication),
                 child: Row(children: [
                   Text('Verify →', style: TextStyle(
@@ -2770,7 +2853,11 @@ class _AiInsightsTab extends StatelessWidget {
                 border: Border.all(color: _kAccent(context).withAlpha(60)),
               ),
               child: Column(children: [
-                Icon(Icons.psychology_outlined, size: 40, color: _kAccent(context)),
+                const MorganOwlAvatar(
+                  size: 44,
+                  borderWidth: 1.5,
+                  borderColor: Color(0xFFC9A227),
+                ),
                 SizedBox(height: 10),
                 Text('AI Insights', style: TextStyle(
                   fontSize: 16, fontWeight: FontWeight.bold, color: _kText(context))),
@@ -2876,7 +2963,7 @@ class _AiInsightsTab extends StatelessWidget {
               const SizedBox(width: 10),
               ElevatedButton.icon(
                 onPressed: onOpenChat,
-                icon: const Icon(Icons.psychology_outlined, size: 14),
+                icon: const MorganOwlAvatar(size: 16),
                 label: const Text('Ask follow-up in AI Chat'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kBrand,

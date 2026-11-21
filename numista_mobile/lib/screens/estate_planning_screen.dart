@@ -12,7 +12,6 @@ import '../services/estate_profile_service.dart';
 import '../services/estate_data_service.dart';
 import '../services/estate_report_service.dart';
 import '../services/estate_fiduciary_service.dart';
-import '../services/beta_checklist_service.dart';
 import '../services/valuation_mode_service.dart';
 import '../widgets/signed_storage_image.dart';
 
@@ -1759,10 +1758,6 @@ class _GenerateTabState extends State<_GenerateTab> {
           'filename': filename,
           'generated_at': FieldValue.serverTimestamp(),
         });
-        await BetaChecklistService.autoCompleteTask(
-          'task_16_estate_report',
-          evidenceDocPath: evidencePath,
-        );
       } catch (e) {
         debugPrint('[EstatePlanning] Failed to record export receipt: $e');
       }

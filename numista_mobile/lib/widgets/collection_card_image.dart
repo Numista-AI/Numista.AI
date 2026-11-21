@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:numista_ai/services/canonical_mint_asset_service.dart';
 import 'package:numista_ai/services/coin_image_service.dart';
-import 'package:numista_ai/utils/collection_image_utils.dart';
+import 'package:numista_ai/services/coin_picture_picker.dart';
 import 'package:numista_ai/utils/owned_storage_url.dart';
 import 'package:numista_ai/widgets/signed_storage_image.dart';
 
@@ -71,16 +71,6 @@ typedef ImageFetcherFn = Future<CoinImageResult> Function({
   String? subject,
 });
 
-/// v2.1: result of the shared precedence decision.
-class _Selection {
-  final String? url;
-  final bool needsReference;
-  final String signature;
-  const _Selection.image(String this.url, this.signature) : needsReference = false;
-  const _Selection.placeholder(this.signature) : url = null, needsReference = false;
-  const _Selection.reference(this.signature) : url = null, needsReference = true;
-}
-
 /// Production collection card image widget with lifecycle caching, fail-closed
 /// storage validation, shipped precedence (`Canonical -> Direct URL -> Reference`),
 /// reverse-preference display policy, and MF-V3-3 steal-guard.
@@ -103,6 +93,8 @@ class CollectionCardImage extends StatefulWidget {
 class _CollectionCardImageState extends State<CollectionCardImage> {
   Future<CoinImageResult>? _refFuture;
   CollectionCardImageRequestKey? _lastKey;
+  bool _userPhotoFailed = false;
+  String? _lastSelSig;
 
   @override
   void initState() {
@@ -110,59 +102,46 @@ class _CollectionCardImageState extends State<CollectionCardImage> {
     _checkAndInitFetch();
   }
 
-  String? _lastSelSig;
-
   @override
   void didUpdateWidget(covariant CollectionCardImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     final newKey = CollectionCardImageRequestKey.fromData(widget.data);
+    final nextSig = _selectionSignature(ignoreUserPhotos: false);
     // v2.1 MF-SAG-I5: also refresh when the photo selection changes (cleared/added/changed URL)
-    if (newKey != _lastKey || _select().signature != _lastSelSig) {
+    if (newKey != _lastKey || nextSig != _lastSelSig) {
+      _userPhotoFailed = false;
       _checkAndInitFetch();
     }
   }
 
-  /// v2.1 MF-SAG-I1: ONE precedence decision shared by build() and _checkAndInitFetch().
-  _Selection _select() {
-    final data = widget.data;
-    final rev = extractUserPhoto(data, isObverse: false);
-    final obv = extractUserPhoto(data, isObverse: true);
-    final userUploaded = CanonicalMintAssetService.hasUserUploadedPhotos(data); // pin :27 (+users%2f patch)
-
-    if (userUploaded) {
-      final selected = rev.isNotEmpty ? rev : obv;             // preferred side only
-      if (selected.isNotEmpty) {
-        if (isOwnedStorageUrl(selected)) return _Selection.image(selected, 'U|$selected');
-        return const _Selection.placeholder('U|unowned');       // non-empty unowned URL -> placeholder, never fall through to canonical
-      }
-      // v2.3 MF-2: Signal-only upload (e.g. scan_source == 'microscope'/'hardware agent'
-      // or stored_obv/stored_rev with no extractable http(s) direct URL) -> preserve canonical
-      // suppression and fall through to reference fetch (matching shipped :6369-6406).
-      return const _Selection.reference('R');
+  String _selectionSignature({required bool ignoreUserPhotos}) {
+    final sel = CoinPicturePicker.select(
+      widget.data,
+      ignoreUserPhotos: ignoreUserPhotos,
+    );
+    if (sel.isUnownedUserUpload) return 'U|unowned';
+    if (sel.preferredCardUrl != null) {
+      final tag = (sel.hasUserObverse || sel.hasUserReverse) ? 'U' : 'C';
+      return '$tag|${sel.preferredCardUrl}';
     }
-
-    // Not a confirmed user upload: unowned / non-URL fields are treated as ABSENT.
-    final canon = CanonicalMintAssetService.resolveFromMap(data);
-    if (canon != null) {
-      final c = canon.reverseUrl.isNotEmpty ? canon.reverseUrl : canon.obverseUrl;
-      if (c.isNotEmpty && isOwnedStorageUrl(c)) return _Selection.image(c, 'C|$c');
-    }
-    final ownedRev = (rev.isNotEmpty && isOwnedStorageUrl(rev)) ? rev : '';
-    final ownedObv = (obv.isNotEmpty && isOwnedStorageUrl(obv)) ? obv : '';
-    final direct = ownedRev.isNotEmpty ? ownedRev : ownedObv;
-    if (direct.isNotEmpty) return _Selection.image(direct, 'D|$direct');
-    return const _Selection.reference('R');
+    return 'R';
   }
 
   void _checkAndInitFetch() {
     _lastKey = CollectionCardImageRequestKey.fromData(widget.data);
-    final sel = _select();
-    _lastSelSig = sel.signature;
-    if (!sel.needsReference) {
+    final sel = CoinPicturePicker.select(
+      widget.data,
+      ignoreUserPhotos: _userPhotoFailed,
+    );
+    _lastSelSig = _selectionSignature(ignoreUserPhotos: false);
+    if (sel.isUnownedUserUpload || (sel.preferredCardUrl != null && !sel.needsReferenceFetch)) {
       _refFuture = null;
       return;
     }
-    // Reference step: same call shape as shipped :6399-6406. v2.1 MF-SAG-I4: NO timeout (shipped has none).
+    if (sel.preferredCardUrl != null && !_userPhotoFailed) {
+      _refFuture = null;
+      return;
+    }
     final fetcher = widget.imageFetcher ?? CoinImageService.fetchReferenceImages;
     _refFuture = fetcher(
       year: _lastKey!.year,
@@ -173,27 +152,42 @@ class _CollectionCardImageState extends State<CollectionCardImage> {
     );
   }
 
+  void _onUserPhotoError() {
+    if (_userPhotoFailed || !mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _userPhotoFailed) return;
+      setState(() {
+        _userPhotoFailed = true;
+        _checkAndInitFetch();
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final sel = _select();
-    if (sel.url != null) return _buildCoinImage(sel.url!);
-    if (!sel.needsReference || _refFuture == null) return _buildPlaceholder();
+    final sel = CoinPicturePicker.select(
+      widget.data,
+      ignoreUserPhotos: _userPhotoFailed,
+    );
+    if (sel.isUnownedUserUpload) return _buildPlaceholder();
+    if (sel.preferredCardUrl != null) {
+      final isUser = sel.hasUserObverse || sel.hasUserReverse;
+      return _buildCoinImage(sel.preferredCardUrl!, isUserPhoto: isUser);
+    }
+    if (_refFuture == null) return _buildPlaceholder();
 
     return FutureBuilder<CoinImageResult>(
       future: _refFuture,
       builder: (context, snapshot) {
-        final ref = snapshot.data;
-
-        // MF-V3-3 Steal-Guard (:6409-6417): When subject is known and reverse is null,
-        // show placeholder instead of falling back to generic obverse.
-        final refUrl = (ref?.reverseUrl?.isNotEmpty == true)
-            ? ref!.reverseUrl!
-            : (_lastKey!.subject.isEmpty && ref?.obverseUrl?.isNotEmpty == true)
-                ? ref!.obverseUrl!
-                : '';
+        final refSel = CoinPicturePicker.select(
+          widget.data,
+          referenceResult: snapshot.data,
+          ignoreUserPhotos: _userPhotoFailed,
+        );
+        final refUrl = refSel.preferredCardUrl ?? '';
 
         if (refUrl.isNotEmpty && isOwnedStorageUrl(refUrl)) {
-          return _buildCoinImage(refUrl);
+          return _buildCoinImage(refUrl, isUserPhoto: false);
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -223,7 +217,7 @@ class _CollectionCardImageState extends State<CollectionCardImage> {
     );
   }
 
-  Widget _buildCoinImage(String url) {
+  Widget _buildCoinImage(String url, {bool isUserPhoto = false}) {
     return Center(
       child: Container(
         decoration: BoxDecoration(
@@ -239,7 +233,22 @@ class _CollectionCardImageState extends State<CollectionCardImage> {
         child: SignedStorageImage(
           url: url,
           fit: BoxFit.contain, // Prevents coin edge cropping
-          errorBuilder: (_) => _buildPlaceholder(),
+          errorBuilder: (_) {
+            if (isUserPhoto && !_userPhotoFailed) {
+              _onUserPhotoError();
+              return const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFFC9A227),
+                  ),
+                ),
+              );
+            }
+            return _buildPlaceholder();
+          },
           placeholderBuilder: (_) => const Center(
             child: SizedBox(
               width: 24,

@@ -17,7 +17,8 @@ import '../models/coin_model.dart';
 import '../utils/mint_helpers.dart';
 import '../services/pcgs_import_service.dart';
 import '../services/backup_export_service.dart';
-import '../services/beta_checklist_service.dart';
+import '../services/batch_valuation_service.dart';
+import '../services/coin_data_normalizer.dart';
 import '../widgets/roll_entry_dialog.dart';
 import '../widgets/morgan_guide_flow.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -467,9 +468,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
   void _showSuccessDialog(int totalItems) {
     if (!mounted) return;
-    if (totalItems > 0) {
-      BetaChecklistService.autoCompleteTask('task_5_invoice_pdf');
-    }
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -809,17 +807,24 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         'is_demo_cleared': false,
       };
 
-      final isDupe = await _checkAttributeDuplicate(coinDoc);
+      final normalizedDoc = CoinDataNormalizer.normalizeCoinMap(coinDoc)
+        ..['_norm_v2'] = true;
+
+      final isDupe = await _checkAttributeDuplicate(normalizedDoc);
       if (isDupe) {
-        coinDoc['possible_duplicate'] = true;
-        coinDoc['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
+        normalizedDoc['possible_duplicate'] = true;
+        normalizedDoc['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
       }
 
-      await FirebaseFirestore.instance
+      final docRef = await FirebaseFirestore.instance
           .collection(AuthService.coinsPath)
-          .add(coinDoc);
+          .add(normalizedDoc);
 
-      BetaChecklistService.autoCompleteTask('task_3_manual_entry');
+      BatchValuationService.instance.enqueueSingleCoin(
+        AuthService.userEmail,
+        docRef.id,
+        normalizedDoc,
+      );
 
       if (!mounted) return;
       setState(() => _isProcessing = false);
@@ -1532,9 +1537,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                   onPressed: () async {
                     final result = await showRollEntryDialog(context);
                     if (!mounted || result == null) return;
-                    if (result.coinsAdded > 0) {
-                      BetaChecklistService.autoCompleteTask('task_7_roll_batch');
-                    }
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('✅  ${result.coinsAdded} coin${result.coinsAdded == 1 ? '' : 's'} added to your collection!'),
                       backgroundColor: const Color(0xFF22C55E),
@@ -2418,26 +2420,31 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                     };
 
 
-                    final isDupe = await _checkAttributeDuplicate(coinDoc);
+                    final normalizedDoc =
+                        CoinDataNormalizer.normalizeCoinMap(coinDoc)
+                          ..['_norm_v2'] = true;
+
+                    final isDupe = await _checkAttributeDuplicate(normalizedDoc);
                     if (isDupe) {
-                      coinDoc['possible_duplicate'] = true;
-                      coinDoc['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
+                      normalizedDoc['possible_duplicate'] = true;
+                      normalizedDoc['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
                     }
 
                     // ── Save to Firestore ────────────────────────────────────
-                    await FirebaseFirestore.instance
+                    final docRef = await FirebaseFirestore.instance
                         .collection(AuthService.coinsPath)
-                        .add(coinDoc);
+                        .add(normalizedDoc);
 
-                    BetaChecklistService.autoCompleteTask('task_3_manual_entry');
-                    if (isForeign || data['is_foreign'] == true) {
-                      BetaChecklistService.autoCompleteTask('task_13_world_items');
-                    }
+                    BatchValuationService.instance.enqueueSingleCoin(
+                      AuthService.userEmail,
+                      docRef.id,
+                      normalizedDoc,
+                    );
 
                     if (!mounted) return;
 
                     // ── Smart Wishlist Ownership Detection ───────────────────
-                    final coin = CoinModel.fromMap(data, 'temp');
+                    final coin = CoinModel.fromMap(normalizedDoc, docRef.id);
                     final match = await WishlistService.checkMatchAndMarkAsFound(coin);
 
                     if (!mounted) return;
@@ -2867,11 +2874,19 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       final data = _skuSearchResult!;
       final itemSku = (_skuSearchResult?['sku'] ?? _skuSearchResult?['mint_product_id'] ?? _skuCtrl.text.trim().replaceAll(RegExp(r'[^a-zA-Z0-9\-]'), '_').toUpperCase()).toString();
       
-      final coinDoc = AddCoinsHub.buildSkuCoinDoc(data, itemSku);
+      final coinDoc = CoinDataNormalizer.normalizeCoinMap(
+        AddCoinsHub.buildSkuCoinDoc(data, itemSku),
+      )..['_norm_v2'] = true;
 
       final docRef = await FirebaseFirestore.instance
           .collection(AuthService.coinsPath)
           .add(coinDoc);
+
+      BatchValuationService.instance.enqueueSingleCoin(
+        AuthService.userEmail,
+        docRef.id,
+        coinDoc,
+      );
 
       if (!mounted) return;
       setState(() => _isProcessing = false);
@@ -4264,24 +4279,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     setState(() => _certManualSaving = true);
     try {
       final grade = _certManualGrade.text.trim();
-      // ── Verify link (NET-093): stored as proof, shown in confirm screen ───
-      final String verifyLink;
-      switch (grader.toUpperCase()) {
-        case 'NGC':
-          // Numeric grade only: PF67→67, MS64→64, PR65→65
-          final numericGrade = grade.replaceAll(RegExp(r'[^0-9]'), '');
-          final gradeSegment = numericGrade.isNotEmpty ? numericGrade : grade;
-          verifyLink = 'https://www.ngccoin.com/certlookup/$certNo/$gradeSegment/';
-          break;
-        case 'CAC':
-        case 'CACG':
-          verifyLink = 'https://www.cacgrading.com/cert-verify/$certNo';
-          break;
-        case 'PCGS':
-        default:
-          verifyLink = 'https://www.pcgs.com/cert/$certNo';
-          break;
-      }
+      final verifyLink = CoinModel.buildVerificationUrl(
+            certificationNumber: certNo,
+            gradingService: grader,
+            condition: grade,
+          ) ??
+          '';
 
       final effectiveCond = grade.isNotEmpty ? grade : 'Ungraded';
       final coinDoc = <String, dynamic>{
@@ -4357,16 +4360,23 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       }
 
 
-      final isDupe = await _checkAttributeDuplicate(coinDoc);
+      final normalizedCertDoc = CoinDataNormalizer.normalizeCoinMap(coinDoc)
+        ..['_norm_v2'] = true;
+
+      final isDupe = await _checkAttributeDuplicate(normalizedCertDoc);
       if (isDupe) {
-        coinDoc['possible_duplicate'] = true;
-        coinDoc['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
+        normalizedCertDoc['possible_duplicate'] = true;
+        normalizedCertDoc['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
       }
 
-      await FirebaseFirestore.instance
+      final docRef = await FirebaseFirestore.instance
           .collection(AuthService.coinsPath)
-          .add(coinDoc);
-      BetaChecklistService.autoCompleteTask('task_6_pcgs_cert');
+          .add(normalizedCertDoc);
+      BatchValuationService.instance.enqueueSingleCoin(
+        AuthService.userEmail,
+        docRef.id,
+        normalizedCertDoc,
+      );
       if (!mounted) return;
       setState(() {
         _certManualSaving  = false;
@@ -5084,7 +5094,12 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       final mapped = PcgsImportService.mapToFirestoreSchema(_pcgsLookupResult!, certNo: cert);
       mapped['is_duplicate_allowed'] = allowDuplicate;
       // NET-093: public verify link stored as proof; PCGS lookup entries start unverified
-      mapped['verify_link'] = 'https://www.pcgs.com/cert/$cert';
+      mapped['verify_link'] = CoinModel.buildVerificationUrl(
+            certificationNumber: cert,
+            gradingService: mapped['Grading Service']?.toString() ?? 'PCGS',
+            condition: mapped['Condition']?.toString() ?? '',
+          ) ??
+          'https://www.pcgs.com/cert/$cert';
       mapped['verified'] = false;
 
       // ── Dup-add check (NET-087 / Task 3): backend is single checker ───────
@@ -5119,14 +5134,23 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       }
 
 
-      final isDupe = await _checkAttributeDuplicate(mapped);
+      final normMapped = CoinDataNormalizer.normalizeCoinMap(mapped)
+        ..['_norm_v2'] = true;
+
+      final isDupe = await _checkAttributeDuplicate(normMapped);
       if (isDupe) {
-        mapped['possible_duplicate'] = true;
-        mapped['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
+        normMapped['possible_duplicate'] = true;
+        normMapped['duplicate_flag'] = 'Attribute match (Year, Mint, Denomination)';
       }
 
-      await FirebaseFirestore.instance.collection(AuthService.coinsPath).add(mapped);
-      BetaChecklistService.autoCompleteTask('task_6_pcgs_cert');
+      final docRef = await FirebaseFirestore.instance
+          .collection(AuthService.coinsPath)
+          .add(normMapped);
+      BatchValuationService.instance.enqueueSingleCoin(
+        AuthService.userEmail,
+        docRef.id,
+        normMapped,
+      );
       if (!mounted) return;
       setState(() {
         _pcgsSingleAdding  = false;
@@ -5609,6 +5633,22 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       final responseBody = await streamedResponse.stream.bytesToString();
 
       if (streamedResponse.statusCode == 200) {
+        try {
+          final parsed = jsonDecode(responseBody);
+          if (parsed is Map<String, dynamic>) {
+            final savedId = (parsed['doc_id'] ?? parsed['coin_id'] ?? '').toString();
+            final savedCoin = parsed['coin'] is Map<String, dynamic>
+                ? Map<String, dynamic>.from(parsed['coin'] as Map<String, dynamic>)
+                : parsed;
+            if (savedId.isNotEmpty) {
+              BatchValuationService.instance.enqueueSingleCoin(
+                AuthService.userEmail,
+                savedId,
+                savedCoin,
+              );
+            }
+          }
+        } catch (_) {}
         setState(() {
           _camSaving = false;
         });
@@ -6349,9 +6389,6 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
                           .collection('review_queue')
                           .add(itemData);
                       count++;
-                    }
-                    if (count > 0) {
-                      BetaChecklistService.autoCompleteTask('task_4_csv_upload');
                     }
                     if (mounted) {
                       messenger.showSnackBar(SnackBar(

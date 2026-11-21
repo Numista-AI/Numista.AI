@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:intl/intl.dart' as intl;
 import '../utils/numista_error_helper.dart';
 import '../utils/text_sanitizer.dart';
@@ -18,21 +19,18 @@ import 'unified_coin_detail_screen.dart';
 import '../services/world_item_service.dart';
 import '../services/auth_service.dart';
 import '../models/coin_model.dart';
-import '../services/epn_service.dart';
 import '../services/guest_seed_service.dart';
-import '../services/reference_library_service.dart';
 import '../services/coin_image_service.dart';
-import '../services/canonical_mint_asset_service.dart';
-import '../widgets/coin_set_viewer.dart';
-import '../widgets/set_contents_panel.dart';
+import '../services/coin_picture_picker.dart';
+import '../utils/owned_storage_url.dart';
 import '../widgets/grade_badge_widget.dart';
 import '../widgets/signed_storage_image.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:http/http.dart' as http;
 import '../services/http_auth_client.dart';
 import 'dart:convert';
 import '../services/melt_value_service.dart';
 import '../services/batch_valuation_service.dart';
+import '../services/coin_normalizer_service.dart';
 import '../services/photo_sharing_service.dart';
 import '../services/estate_report_service.dart';
 import '../services/estate_profile_service.dart';
@@ -58,14 +56,12 @@ class _F {
   static const programSeries    = 'Program/Series';
   static const themeSubject     = 'Theme/Subject';
   static const condition        = 'Condition';
-  static const strikeType       = 'Strike Type';
   static const holderType       = 'Holder Type';
   static const gradingService   = 'Grading Service';
   static const gradingCert      = 'Certification Number';
   static const metalContent     = 'Metal Content';
   static const cost             = 'Cost';
   static const purchaseDate     = 'Purchase Date';
-  static const retailer         = 'Retailer/Website';
   static const retailerItemNo   = 'Retailer Item No.';
   static const retailerInvoice  = 'Retailer Invoice #';
   static const variety          = 'Variety';
@@ -81,9 +77,6 @@ class _F {
   static const pcgsNumber       = 'PCGS Number';
   static const imageObverse     = 'image_url_obverse';
   static const imageReverse     = 'image_url_reverse';
-  // PCGS-specific extended fields
-  static const population       = 'Population';
-  static const isNfcSecure      = 'Is NFC Secure';
 }
 
 // --- Column definition --------------------------------------------------------
@@ -102,7 +95,20 @@ class MyCollectionScreen extends StatefulWidget {
   /// Navigate to a screen AND pass an initial query (used for AI Deep Dive).
   final Function(String route, String query)? onNavigateWithQuery;
   final Function(String)? onTabChanged;
-  const MyCollectionScreen({super.key, this.initialTab, this.onNavigate, this.onNavigateWithQuery, this.onTabChanged});
+  @visibleForTesting
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>>? initialDocsForTest;
+  @visibleForTesting
+  final bool initialIsCardViewForTest;
+
+  const MyCollectionScreen({
+    super.key,
+    this.initialTab,
+    this.onNavigate,
+    this.onNavigateWithQuery,
+    this.onTabChanged,
+    this.initialDocsForTest,
+    this.initialIsCardViewForTest = true,
+  });
   @override
   State<MyCollectionScreen> createState() => _MyCollectionScreenState();
 }
@@ -148,15 +154,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // Per-coin upload progress (null = idle, 0.0-1.0 = uploading)
   double? _uploadProgressObverse;
   double? _uploadProgressReverse;
-  
-  // Stores fetched eBay prices keyed by coinId
-  final Map<String, String> _ebayPrices = {};
-  // _isCheckingEbay removed — eBay fetch state tracked locally in each call
-
-  // --- Similar Coins state (inspector) ------------------------------------
-  List<ReferenceImage> _inspectorSimilar = [];
-  bool _loadingInspectorSimilar = false;
-  // _inspectorSimilarCoinId removed — tracking via _selectedCoinId is sufficient
 
 
   // --- Coin origin filter state ('All', 'U.S.', 'World') ------------------
@@ -166,6 +163,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Map<String, double> _spotPrices = {};
   Map<String, dynamic> _completionStats = {};
   bool _isLoadingCompletion = true;
+  bool _shownRemainingValuationPrompt = false;
 
   Future<void> _fetchSpotPrices() async {
     try {
@@ -259,7 +257,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDefaultTab();
+    _isCardView = widget.initialIsCardViewForTest;
+    if (widget.initialTab != null) {
+      _currentTab = widget.initialTab!;
+    } else {
+      _loadDefaultTab();
+    }
     _loadSortPreferences();
     final pendingIds = MorganActionBus.instance.pendingCollectionCoinIdsFilter;
     if (pendingIds != null && pendingIds.isNotEmpty) {
@@ -297,37 +300,49 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       ],
     );
 
-    // Listen to Firebase Auth state before binding collection stream
-    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user != null || GuestSeedService.isBrowseDemoMode) {
-        _subscribeCoinsStream();
-      } else {
-        if (mounted) {
-          setState(() {
-            _isLoadingCoins = true;
-            _coinsError = null;
-            _cachedCoinsDocs = [];
-          });
-        }
-      }
-    });
+    if (widget.initialDocsForTest != null) {
+      _cachedCoinsDocs = widget.initialDocsForTest!;
+      _isLoadingCoins = false;
+      _isLoadingCompletion = false;
+    } else {
+      _loadDefaultTab();
+      _loadSortPreferences();
 
-    // If demo mode or user already present, kick off stream subscription immediately
-    if (GuestSeedService.isBrowseDemoMode || FirebaseAuth.instance.currentUser != null) {
-      _subscribeCoinsStream();
+      // Listen to Firebase Auth state before binding collection stream
+      _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+        if (user != null || GuestSeedService.isBrowseDemoMode) {
+          _subscribeCoinsStream();
+        } else {
+          if (mounted) {
+            setState(() {
+              _isLoadingCoins = true;
+              _coinsError = null;
+              _cachedCoinsDocs = [];
+            });
+          }
+        }
+      });
+
+      // If demo mode or user already present, kick off stream subscription immediately
+      if (GuestSeedService.isBrowseDemoMode || FirebaseAuth.instance.currentUser != null) {
+        _subscribeCoinsStream();
+      }
+
+      // Listen to batch valuation progress for the live badge in _buildFiltersRow
+      _valuationSub = BatchValuationService.instance.progressStream.listen((p) {
+        if (mounted) setState(() => _valuation = p);
+      });
+      _valuation = BatchValuationService.instance.current;
+      // Restore persisted progress so AI Valuation badge appears after page refresh
+      BatchValuationService.instance.restoreFromFirestore();
+
+      _fetchSpotPrices();
+      _fetchCompletionStats();
     }
 
-
-    // Listen to batch valuation progress for the live badge in _buildFiltersRow
-    _valuationSub = BatchValuationService.instance.progressStream.listen((p) {
-      if (mounted) setState(() => _valuation = p);
-    });
-    _valuation = BatchValuationService.instance.current;
-    // Restore persisted progress so AI Valuation badge appears after page refresh
-    BatchValuationService.instance.restoreFromFirestore();
-
-    _fetchSpotPrices();
-    _fetchCompletionStats();
+    CoinNormalizerService.remainingUnvaluedCount
+        .addListener(_onRemainingUnvaluedChanged);
+    _onRemainingUnvaluedChanged();
 
     // Debounced search: 150ms after last keystroke before applying filter.
     // Short enough to feel instant; long enough to avoid per-character rebuilds.
@@ -548,8 +563,31 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
   }
 
+  void _onRemainingUnvaluedChanged() {
+    final rem = CoinNormalizerService.remainingUnvaluedCount.value;
+    if (!mounted || rem <= 0 || _shownRemainingValuationPrompt) return;
+    _shownRemainingValuationPrompt = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$rem unvalued coins remain after auto-cleanup. Value the rest now?',
+          ),
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: 'Value All',
+            onPressed: () => BatchValuationService.instance.start(),
+          ),
+        ),
+      );
+    });
+  }
+
   @override
   void dispose() {
+    CoinNormalizerService.remainingUnvaluedCount
+        .removeListener(_onRemainingUnvaluedChanged);
     _authSub?.cancel();
     _coinsSnapSub?.cancel();
     _coinsTimeoutTimer?.cancel();
@@ -1157,23 +1195,29 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   // --- Root build ---------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    final email = FirebaseAuth.instance.currentUser?.email ?? '';
+    final email = widget.initialDocsForTest != null
+        ? ''
+        : (FirebaseAuth.instance.currentUser?.email ?? '');
 
+    final isNarrow = MediaQuery.sizeOf(context).width < 600;
     return Scaffold(
       backgroundColor: _bg,
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(32),
+        padding: EdgeInsets.symmetric(
+          horizontal: isNarrow ? 12 : 24,
+          vertical: 10,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header & Segmented Tab Picker
             LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 900;
+                final isWide = constraints.maxWidth > 720;
                 final headerText = Text(
                   'My Collection',
                   style: TextStyle(
-                    fontSize: 36,
+                    fontSize: isWide ? 28 : 22,
                     fontWeight: FontWeight.w900,
                     color: _text,
                   ),
@@ -1189,7 +1233,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     children: [
                       headerText,
                       if (_currentTab == 'Coins' && _cachedCoinsDocs.isNotEmpty) ...[
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: HeaderStatsBar(
                             docs: _sorted(_filtered(_cachedCoinsDocs)),
@@ -1203,7 +1247,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             isFiltered: _searchQuery.isNotEmpty || _coinOriginFilter != 'All',
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                       ],
                       picker,
                     ],
@@ -1215,12 +1259,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          headerText,
-                          picker,
+                          Flexible(child: headerText),
+                          const SizedBox(width: 8),
+                          Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: picker)),
                         ],
                       ),
                       if (_currentTab == 'Coins' && _cachedCoinsDocs.isNotEmpty) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 6),
                         HeaderStatsBar(
                           docs: _sorted(_filtered(_cachedCoinsDocs)),
                           totalCoinsCount: expandCollection(
@@ -1238,23 +1283,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 }
               },
             ),
-            const SizedBox(height: 8),
-
-            // Beta banner (slimmed to 20px)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
-              decoration: BoxDecoration(
-                  color: _accent, borderRadius: BorderRadius.circular(4)),
-              child: const Text('BETA TESTING', style: TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 9,
-                  color: Colors.white, letterSpacing: 1.0)),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
 
             // Tab View Dispatcher
             _buildTabContent(email),
-            SizedBox(height: 32),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -1306,104 +1339,118 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   Widget _buildCoinsTab(List<CollectionRow> rows, List<CollectionRow> allRows, {bool advanced = false}) {
+    final mediaSize = MediaQuery.sizeOf(context);
+    final isWideViewport = mediaSize.width >= 900;
+    final chromeReserve = isWideViewport ? 196.0 : 320.0;
+    final double gridHeight = math.max(
+      isWideViewport ? 576.0 : 420.0,
+      mediaSize.height - chromeReserve,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildFiltersRow(_cachedCoinsDocs),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
 
         // Toolbar: origin sub-filter + view toggle + column visibility toggle + AI Report button
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Origin Sub-Filter Chips (All | U.S. | World)
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: _border),
-                borderRadius: BorderRadius.circular(6),
+        SizedBox(
+          width: double.infinity,
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              // Origin Sub-Filter Chips (All | U.S. | World)
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: _border),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _toggleSegment(
+                      label: 'All Coins',
+                      icon: Icons.public,
+                      active: _coinOriginFilter == 'All',
+                      onTap: () => setState(() => _coinOriginFilter = 'All'),
+                      isLeft: true,
+                    ),
+                    _toggleSegment(
+                      label: 'U.S.',
+                      icon: Icons.flag_outlined,
+                      active: _coinOriginFilter == 'U.S.',
+                      onTap: () => setState(() => _coinOriginFilter = 'U.S.'),
+                      isLeft: false,
+                    ),
+                    _toggleSegment(
+                      label: 'World',
+                      icon: Icons.language,
+                      active: _coinOriginFilter == 'World',
+                      onTap: () => setState(() => _coinOriginFilter = 'World'),
+                      isLeft: false,
+                    ),
+                  ],
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _toggleSegment(
-                    label: 'All Coins',
-                    icon: Icons.public,
-                    active: _coinOriginFilter == 'All',
-                    onTap: () => setState(() => _coinOriginFilter = 'All'),
-                    isLeft: true,
-                  ),
-                  _toggleSegment(
-                    label: 'U.S.',
-                    icon: Icons.flag_outlined,
-                    active: _coinOriginFilter == 'U.S.',
-                    onTap: () => setState(() => _coinOriginFilter = 'U.S.'),
-                    isLeft: false,
-                  ),
-                  _toggleSegment(
-                    label: 'World',
-                    icon: Icons.language,
-                    active: _coinOriginFilter == 'World',
-                    onTap: () => setState(() => _coinOriginFilter = 'World'),
-                    isLeft: false,
-                  ),
-                ],
-              ),
-            ),
 
-            Row(
-              children: [
-                // Card / Table View Toggle
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: _border),
-                    borderRadius: BorderRadius.circular(6),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  // Card / Table View Toggle
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: _border),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _toggleSegment(
+                          label: 'Table',
+                          icon: Icons.table_chart_outlined,
+                          active: !_isCardView,
+                          onTap: () => setState(() => _isCardView = false),
+                          isLeft: true,
+                        ),
+                        _toggleSegment(
+                          label: 'Cards',
+                          icon: Icons.grid_view_outlined,
+                          active: _isCardView,
+                          onTap: () => setState(() => _isCardView = true),
+                          isLeft: false,
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _toggleSegment(
-                        label: 'Table',
-                        icon: Icons.table_chart_outlined,
-                        active: !_isCardView,
-                        onTap: () => setState(() => _isCardView = false),
-                        isLeft: true,
-                      ),
-                      _toggleSegment(
-                        label: 'Cards',
-                        icon: Icons.grid_view_outlined,
-                        active: _isCardView,
-                        onTap: () => setState(() => _isCardView = true),
-                        isLeft: false,
-                      ),
-                    ],
+                  // Column visibility toggle (only relevant when table is visible)
+                  if (!_isCardView) ...[
+                    _columnToggleButton(),
+                    _buildPanButtonsToolbar(),
+                  ],
+                  ElevatedButton.icon(
+                    onPressed: () => _showGenerateReportModal(),
+                    icon: const Icon(Icons.auto_awesome, size: 15),
+                    label: const Text('Generate AI Report Now'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF63366),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                // Column visibility toggle (only relevant when table is visible)
-                if (!_isCardView) ...[
-                  _columnToggleButton(),
-                  const SizedBox(width: 12),
-                  _buildPanButtonsToolbar(),
-                  const SizedBox(width: 12),
                 ],
-                ElevatedButton.icon(
-                  onPressed: () => _showGenerateReportModal(),
-                  icon: const Icon(Icons.auto_awesome, size: 16),
-                  label: const Text('Generate AI Report Now'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF63366),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4)),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
 
         // Data view -- three distinct states
         if (_cachedCoinsDocs.isEmpty)
@@ -1415,7 +1462,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 style: TextStyle(color: _subtext))))
         else
           SizedBox(
-            height: 520,
+            height: gridHeight,
             child: _isCardView
                 ? _buildCardGrid(rows, advanced: advanced)
                 : Builder(
@@ -1536,11 +1583,26 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           final year = data['Year']?.toString() ?? '';
                           final title = TextSanitizer.fixMojibake('$year $denom'.trim());
 
-                          final coinCpg = _parseNumber(data['cpgRetail']);
-                          final gVal = coinCpg;
-                          final displayValue = gVal > 0 
-                              ? gVal 
-                              : _parseAiValue(data['AI Estimated Value']?.toString() ?? '');
+                          final coinCpg = _parseNumber(data['cpgRetail'] ?? data['cpg_retail']);
+                          final aiVal = _parseAiValue(
+                            (data['AI Estimated Value'] ?? data['ai_estimated_value'] ?? '').toString(),
+                          );
+                          double displayValue = coinCpg > 0 ? coinCpg : aiVal;
+                          if (displayValue <= 0) {
+                            final isUs = CollectionCardValuationRow.isUsOrigin(data);
+                            final liveMelt = MeltValueService.compute(
+                                  metalContent: (data['Metal Content'] ?? data['metal_content'] ?? '').toString(),
+                                  denomination: denom,
+                                  spotPrices: _spotPrices,
+                                  programSeries: (data['Program/Series'] ?? data['program_series'] ?? '').toString(),
+                                  themeSubject: (data['Theme/Subject'] ?? data['theme_subject'] ?? '').toString(),
+                                  qty: int.tryParse((data['Quantity'] ?? data['qty'] ?? '1').toString()) ?? 1,
+                                  coinData: data,
+                                ) ??
+                                0.0;
+                            final faceVal = isUs ? CollectionCardValuationRow.resolveFaceValue(denom) : 0.0;
+                            displayValue = math.max(liveMelt, faceVal);
+                          }
 
                           return UnifiedCollectionItem(
                             title: title.isNotEmpty ? title : 'Coin',
@@ -1597,6 +1659,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
                         // Take top 10
                         final recentAdditions = combinedItems.take(10).toList();
+                        final allTabCurrencyFmt =
+                            intl.NumberFormat.currency(symbol: r'$', decimalDigits: 2);
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1617,7 +1681,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                 _buildDashboardCard(
                                   'Total Inventory Value',
                                   'ESTIMATED PORTFOLIO VALUE',
-                                  '\$${grandTotalValue.toStringAsFixed(2)}',
+                                  allTabCurrencyFmt.format(grandTotalValue),
                                   'Based on AI, cost, and specialty appraisals',
                                   Icons.account_balance_wallet_rounded,
                                   _accent,
@@ -1626,7 +1690,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   'Coins',
                                   'COIN COLLECTION',
                                   '$coinsCount Items',
-                                  'Valued at \$${coinsValue.toStringAsFixed(2)}',
+                                  'Valued at ${allTabCurrencyFmt.format(coinsValue)}',
                                   Icons.monetization_on_rounded,
                                   Colors.amber,
                                 ),
@@ -1634,7 +1698,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   'Currency',
                                   'PAPER BANKNOTES',
                                   '$currencyCount Items',
-                                  'Valued at \$${currencyValue.toStringAsFixed(2)}',
+                                  'Valued at ${allTabCurrencyFmt.format(currencyValue)}',
                                   Icons.money_rounded,
                                   Colors.green,
                                 ),
@@ -1642,7 +1706,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   'Non-Legal Tender',
                                   'OTHER ITEMS',
                                   '$otherItemsCount Items',
-                                  'Valued at \$${worldValue.toStringAsFixed(2)}',
+                                  'Valued at ${allTabCurrencyFmt.format(worldValue)}',
                                   Icons.language_rounded,
                                   Colors.teal,
                                 ),
@@ -1753,8 +1817,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          '\$${item.value.toStringAsFixed(2)}',
-                                          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                                          item.value > 0
+                                              ? allTabCurrencyFmt.format(item.value)
+                                              : 'Pending',
+                                          style: TextStyle(
+                                            color: item.value > 0 ? Colors.green : const Color(0xFFD97706),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
                                         ),
                                         if (isTappable) ...[
                                           SizedBox(width: 4),
@@ -2309,7 +2379,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ),
             SizedBox(height: 8),
             Text(
-              'Check your internet connection and try refreshing.\nIf the problem persists, contact support at beta@numista.ai',
+              'Check your internet connection and try refreshing.\nIf the problem persists, contact support at support@numista.ai',
               textAlign: TextAlign.center,
               style: TextStyle(color: _subtext, height: 1.5),
             ),
@@ -2358,10 +2428,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Widget _buildFiltersRow(List<QueryDocumentSnapshot> allDocs) {
     return Row(children: [
       SizedBox(
-        width: 140,
+        width: 118,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Show:', style: TextStyle(color: _text, fontSize: 14)),
-          SizedBox(height: 8),
+          Text('Show:', style: TextStyle(color: _text, fontSize: 13)),
+          const SizedBox(height: 4),
           _styledDropdown<CollectionLimitMode>(
             value: _limitMode,
             items: const [CollectionLimitMode.all, CollectionLimitMode.last100, CollectionLimitMode.last50],
@@ -2375,17 +2445,17 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         ]),
       ),
-      SizedBox(width: 24),
+      const SizedBox(width: 12),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Icon(Icons.search, size: 16, color: _text),
-            SizedBox(width: 4),
-            Text('Search', style: TextStyle(color: _text, fontSize: 14)),
+            Icon(Icons.search, size: 15, color: _text),
+            const SizedBox(width: 4),
+            Text('Search', style: TextStyle(color: _text, fontSize: 13)),
           ]),
-          SizedBox(height: 8),
+          const SizedBox(height: 4),
           SizedBox(
-            height: 44,
+            height: 40,
             child: TextField(
               controller: _searchCtrl,
               focusNode: _searchFocus,
@@ -2777,24 +2847,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             final m   = crw.data;
             final sel = crw.id == _selectedCoinId;
 
-            // For virtual children, inspector/detail navigate to parent
-            final effectiveId = crw.isVirtualChild ? (crw.parentDocId ?? crw.id) : crw.id;
-
-            void onTap() {
-              final parentDoc = crw.isVirtualChild
-                  ? _cachedCoinsDocs.where((d) => d.id == crw.parentDocId).firstOrNull
-                  : crw.snapshot;
-              final coinData = (parentDoc?.data() as Map<String, dynamic>?) ?? m;
-              UnifiedCoinDetailScreen.show(
-                context,
-                coin: CoinModel.fromMap(coinData, effectiveId),
-                snapshot: parentDoc,
-                initialParentIndex: resolveParentIndex(docs, effectiveId),
-                collectionRows: docs,
-                cachedCoinsDocs: _cachedCoinsDocs,
-                legacyOpen: () => _showCoinInspectorDialog(effectiveId, m),
-              );
-            }
+            void onTap() => _openCoinDetailsForRow(crw, docs);
 
             // Actions cell (col 0)
             if (col == 0) {
@@ -2808,57 +2861,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _iconBtn(Icons.info_outline,
-                          crw.isVirtualChild ? 'View Parent Set' : 'View Details', () {
-                          // G-2: For virtual children, look up parent doc data.
-                          // If parent not in cache, skip navigation.
-                          if (crw.isVirtualChild) {
-                            final parentDoc = _cachedCoinsDocs
-                                .where((d) => d.id == crw.parentDocId)
-                                .firstOrNull;
-                            if (parentDoc == null) return; // parent missing — skip
-                            final parentData = (parentDoc.data() as Map<String, dynamic>?) ?? {};
-                            final coin = CoinModel.fromMap(parentData, parentDoc.id);
-                            UnifiedCoinDetailScreen.show(
-                              context,
-                              coin: coin,
-                              snapshot: parentDoc,
-                              initialParentIndex: resolveParentIndex(docs, parentDoc.id),
-                              collectionRows: docs,
-                              cachedCoinsDocs: _cachedCoinsDocs,
-                              legacyOpen: () => CoinDetailScreen.show(
-                                context,
-                                coin: coin,
-                                spotPrices: _spotPrices,
-                                onNavigateToAiChat: widget.onNavigateWithQuery != null
-                                    ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
-                                    : null,
-                                onDeleted: () => setState(() {}),
-                                onEdited: () => setState(() {}),
-                              ),
-                            );
-                          } else {
-                            final coin = CoinModel.fromMap(m, crw.id);
-                            UnifiedCoinDetailScreen.show(
-                              context,
-                              coin: coin,
-                              snapshot: crw.snapshot,
-                              initialParentIndex: resolveParentIndex(docs, crw.id),
-                              collectionRows: docs,
-                              cachedCoinsDocs: _cachedCoinsDocs,
-                              legacyOpen: () => CoinDetailScreen.show(
-                                context,
-                                coin: coin,
-                                spotPrices: _spotPrices,
-                                onNavigateToAiChat: widget.onNavigateWithQuery != null
-                                    ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
-                                    : null,
-                                onDeleted: () => setState(() {}),
-                                onEdited: () => setState(() {}),
-                              ),
-                            );
-                          }
-                        }),
+                        _iconBtn(
+                          Icons.info_outline,
+                          crw.isVirtualChild ? 'View Parent Set' : 'View Details',
+                          () => _openCoinDetailsForRow(crw, docs),
+                        ),
                         if (canMutate) _iconBtn(Icons.edit_outlined, 'Edit',
                             () => _onEdit(crw.id, m)),
                         if (canMutate) _iconBtn(Icons.auto_stories, 'AI Deep Dive',
@@ -3060,9 +3067,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 220,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.75,
+        mainAxisSpacing: 6,
+        crossAxisSpacing: 10,
+        mainAxisExtent: 162,
       ),
       itemCount: docs.length,
       itemBuilder: (context, index) {
@@ -3111,23 +3118,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           child: InkWell(
             onTap: () {
               setState(() => _selectedCoinId = effectiveId);
-              final parentDoc = crw.isVirtualChild
-                  ? _cachedCoinsDocs.where((d) => d.id == crw.parentDocId).firstOrNull
-                  : crw.snapshot;
-              final coinData = (parentDoc?.data() as Map<String, dynamic>?) ?? m;
-              UnifiedCoinDetailScreen.show(
-                context,
-                coin: CoinModel.fromMap(coinData, effectiveId),
-                snapshot: parentDoc,
-                initialParentIndex: resolveParentIndex(docs, effectiveId),
-                collectionRows: docs,
-                cachedCoinsDocs: _cachedCoinsDocs,
-                legacyOpen: () => _showCoinInspectorDialog(effectiveId, m),
-              );
+              _openCoinDetailsForRow(crw, docs);
             },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -3192,26 +3187,23 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 6),
                   if (m['parent_set_id'] != null && m['parent_set_id'].toString().isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: InkWell(
                         onTap: () {
-                          final parentId = m['parent_set_id'].toString();
+                          if (m.isEmpty) return; // crw.data is non-nullable Map<String, dynamic> (collection_row.dart:15)
+                          final parentId = m['parent_set_id']?.toString();
+                          if (parentId == null || parentId.isEmpty) return;
                           final parentDoc = _cachedCoinsDocs.where((d) => d.id == parentId).firstOrNull;
-                          if (parentDoc != null) {
-                            final parentData = parentDoc.data();
-                            UnifiedCoinDetailScreen.show(
-                              context,
-                              coin: CoinModel.fromMap(parentData, parentDoc.id),
-                              snapshot: parentDoc,
-                              initialParentIndex: resolveParentIndex(docs, parentDoc.id),
-                              collectionRows: docs,
-                              cachedCoinsDocs: _cachedCoinsDocs,
-                              legacyOpen: () => _showCoinInspectorDialog(parentDoc.id, parentData),
-                            );
-                          }
+                          if (parentDoc == null) return;
+                          _openCoinDetails(
+                            coinId: parentDoc.id,
+                            data: parentDoc.data(),
+                            snapshot: parentDoc,
+                            docs: docs,
+                          );
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -3254,10 +3246,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 11, color: _subtext),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   CollectionCardValuationRow(
                     data: m,
                     condition: condition,
+                    spotPrices: _spotPrices,
                   ),
                 ],
               ),
@@ -3512,577 +3505,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       ),
     );
   }
-
-
-  // --- Coin Inspector Dialog ------------------------------------------------
-  void _showCoinInspectorDialog(String coinId, Map<String, dynamic> data) {
-    setState(() {
-      _selectedCoinId   = coinId;
-      _vaultShowObverse = true;
-    });
-    _fetchInspectorSimilar(data);
-
-    final year  = _rowField(data, 'year', _F.year).replaceAll(RegExp(r'\.0$'), '');
-    final mint  = _rowField(data, 'mint_mark', _F.mintMark).trim();
-    final denom = _rowField(data, 'denomination', _F.denomination);
-    // Capitalise word-form denomination in the dialog title (penny > Penny)
-    final denomTrim = denom.trim();
-    final denomDisplay = denomTrim.isNotEmpty && !denomTrim.startsWith(r'$')
-        ? denomTrim[0].toUpperCase() + denomTrim.substring(1)
-        : denomTrim;
-    final title = '$year${mint.isNotEmpty ? '-$mint' : ''} $denomDisplay'.trim();
-
-    // Pre-fetch reference image once (no user photo path only).
-    // Capture in closure so FutureBuilder doesn't re-run on every rebuild.
-    final hasUserPhoto = CanonicalMintAssetService.hasUserUploadedPhotos(data);
-    final canon = hasUserPhoto ? null : CanonicalMintAssetService.resolveFromMap(data);
-    final refFuture = hasUserPhoto
-        ? null
-        : (canon != null
-            ? Future.value(CoinImageResult(
-                obverseUrl: canon.obverseUrl,
-                reverseUrl: canon.reverseUrl,
-                attribution: 'U.S. Mint',
-                sourceLabel: 'Canonical Mint Asset',
-                matchedKey: canon.sku,
-              ))
-            : CoinImageService.fetchReferenceImages(
-            year:         year,
-            mint:         mint.isEmpty ? null : mint,
-            denomination: denom.isEmpty ? null : denom,
-            series:       _rowField(data, 'program_series', _F.programSeries).isEmpty
-                ? null
-                : _rowField(data, 'program_series', _F.programSeries),
-            subject:      _rowField(data, 'theme_subject', _F.themeSubject).isEmpty
-                ? null
-                : _rowField(data, 'theme_subject', _F.themeSubject),
-              ));
-    // refFuture passed into FutureBuilder below
-
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setDlg) {
-          final canMutate = data['is_virtual'] != true && coinId.isNotEmpty;
-          final obvUrl   = (data[_F.imageObverse] ?? data['primary_image_url'] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).isNotEmpty ? data['photo_urls'][0] : null))?.toString() ?? '';
-          final revUrl   = (data[_F.imageReverse] ?? (data['photo_urls'] is List && (data['photo_urls'] as List).length > 1 ? data['photo_urls'][1] : null))?.toString() ?? '';
-          final hasObv   = obvUrl.isNotEmpty && obvUrl.startsWith('http');
-          final hasRev   = revUrl.isNotEmpty && revUrl.startsWith('http');
-          final showObv  = _vaultShowObverse || (!hasRev && hasObv);
-          final activeUrl = showObv ? obvUrl : revUrl;
-          final hasActive = showObv ? hasObv : hasRev;
-
-          return Dialog(
-            backgroundColor: _surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            insetPadding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: 1100,
-                maxHeight: MediaQuery.of(context).size.height * 0.88,
-              ),
-              child: Column(children: [
-                // -- Header -----------------------------------------------
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: _surface,
-                    border: Border(bottom: BorderSide(color: _border)),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                  ),
-                  child: Row(children: [
-                    Icon(Icons.book_outlined, size: 18, color: _text),
-                    SizedBox(width: 8),
-                    Text('Coin Inspector -- $title',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _text)),
-                    Spacer(),
-                    if (canMutate && data['is_set'] != true && data['isSet'] != true && (data['parent_set_id'] == null || data['parent_set_id'].toString().isEmpty)) ...[
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _showGroupAsSetDialog(coinId, data);
-                        },
-                        icon: const Icon(Icons.create_new_folder_outlined, size: 15, color: Color(0xFFC9A227)),
-                        label: const Text('Group as Set', style: TextStyle(color: Color(0xFFC9A227), fontWeight: FontWeight.w600)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFC9A227)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          textStyle: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    IconButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      icon: Icon(Icons.close, size: 20, color: _subtext),
-                      tooltip: 'Close',
-                    ),
-                  ]),
-                ),
-
-                // -- Body -------------------------------------------------
-                Expanded(
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    // Left panel: image (300px)
-                    Container(
-                      width: 300,
-                      decoration: BoxDecoration(
-                        color: _surface,
-                        border: Border(right: BorderSide(color: _border)),
-                      ),
-                      padding: EdgeInsets.all(16),
-                      child: refFuture != null
-                          // No user photo -- show reference image via FutureBuilder
-                          ? FutureBuilder<CoinImageResult>(
-                              future: refFuture,
-                              builder: (ctx2, snap) {
-                                final ref       = snap.data;
-                                final refObvUrl = ref?.obverseUrl ?? '';
-                                final refRevUrl = ref?.reverseUrl ?? '';
-                                final hasRefObv = refObvUrl.isNotEmpty;
-                                final hasRefRev = refRevUrl.isNotEmpty;
-                                final hasRef    = hasRefObv || hasRefRev;
-                                // MF-V4-2: Auto-flip to reverse for series coins
-                                // when obverse is blank but reverse exists. Mirrors
-                                // Cards behavior so the distinctive design shows first.
-                                final showObverse = _vaultShowObverse
-                                    && (hasRefObv || !hasRefRev);
-                                final refUrl    = showObverse
-                                    ? (hasRefObv ? refObvUrl : '')
-                                    : (hasRefRev ? refRevUrl : '');
-                                final hasRefActive = refUrl.isNotEmpty;
-
-                                return Column(children: [
-                                  // Badge (above toggles, centered)
-                                  if (hasRef) Container(
-                                    alignment: Alignment.center,
-                                    margin: EdgeInsets.only(bottom: 6),
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: Color(0xFF1A237E).withAlpha(20),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: Color(0xFF1A237E), width: 1),
-                                      ),
-                                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                        Icon(Icons.collections_outlined, size: 11, color: Color(0xFF1A237E)),
-                                        SizedBox(width: 4),
-                                        Text('REFERENCE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF1A237E), letterSpacing: 0.8)),
-                                      ]),
-                                    ),
-                                  ),
-                                  // Obverse / Reverse toggle
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      _vaultToggleButton('Obverse', showObverse, hasRefObv, () {
-                                        setState(() => _vaultShowObverse = true);
-                                        setDlg(() {});
-                                      }),
-                                      SizedBox(width: 8),
-                                      _vaultToggleButton('Reverse', !showObverse, hasRefRev, () {
-                                        setState(() => _vaultShowObverse = false);
-                                        setDlg(() {});
-                                      }),
-                                    ],
-                                  ),
-
-                                  SizedBox(height: 12),
-                                  // Image
-                                  Expanded(
-                                    child: GestureDetector(
-                                      onTap: hasRefActive
-                                          ? () => _showImageLightbox(refUrl,
-                                                label: showObverse ? 'Obverse' : 'Reverse',
-                                                isMicroscope: false)
-                                          : null,
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: hasRefActive
-                                            ? Stack(fit: StackFit.expand, children: [
-                                                Image.network(refUrl, fit: BoxFit.contain,
-                                                  loadingBuilder: (ctx, child, prog) => prog == null
-                                                      ? child
-                                                      : Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
-                                                  errorBuilder: (ctx, err, st) => _vaultPlaceholder(
-                                                      showObverse ? 'Obverse' : 'Reverse', isError: true),
-                                                ),
-                                                Positioned(bottom: 8, right: 8,
-                                                  child: Container(
-                                                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                                    decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
-                                                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                                      Icon(Icons.zoom_in, size: 12, color: Colors.white),
-                                                      SizedBox(width: 3),
-                                                      Text('Enlarge', style: TextStyle(fontSize: 10, color: Colors.white)),
-                                                    ]),
-                                                  ),
-                                                ),
-                                              ])
-                                            : snap.connectionState == ConnectionState.waiting
-                                                ? Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2))
-                                                : _vaultPlaceholder(showObverse ? 'Obverse' : 'Reverse'),
-                                      ),
-                                    ),
-                                  ),
-                                  // Attribution
-                                  if (hasRef && ref!.attribution != null) ...[
-                                    SizedBox(height: 6),
-                                    Text(ref.attribution!,
-                                        style: TextStyle(fontSize: 9, color: _subtext, fontStyle: FontStyle.italic),
-                                        textAlign: TextAlign.center),
-                                  ],
-                                  SizedBox(height: 12),
-                                  // Upload buttons
-                                  Row(children: [
-                                    Expanded(child: _vaultUploadButton(
-                                      label: '+ Add My Photo',
-                                      icon: Icons.add_photo_alternate_outlined,
-                                      progress: _uploadProgressObverse,
-                                      onTap: () async {
-                                        final newUrl = await _onUploadVaultImage(side: 'obverse', field: _F.imageObverse,
-                                          setProgress: (p) { setState(() => _uploadProgressObverse = p); setDlg(() {}); });
-                                        if (newUrl != null) {
-                                          data[_F.imageObverse] = newUrl;
-                                          data['image_url_obverse'] = newUrl;
-                                          setState(() {});
-                                          setDlg(() {});
-                                        }
-                                      },
-                                    )),
-                                    SizedBox(width: 8),
-                                    Expanded(child: _vaultUploadButton(
-                                      label: '+ Add Reverse',
-                                      icon: Icons.add_photo_alternate_outlined,
-                                      progress: _uploadProgressReverse,
-                                      onTap: () async {
-                                        final newUrl = await _onUploadVaultImage(side: 'reverse', field: _F.imageReverse,
-                                          setProgress: (p) { setState(() => _uploadProgressReverse = p); setDlg(() {}); });
-                                        if (newUrl != null) {
-                                          data[_F.imageReverse] = newUrl;
-                                          data['image_url_reverse'] = newUrl;
-                                          setState(() {});
-                                          setDlg(() {});
-                                        }
-                                      },
-                                    )),
-                                  ]),
-                                ]);
-                              },
-                            )
-                          // User HAS their own photo -- show it directly
-                          : Column(children: [
-                              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                                _vaultToggleButton('Obverse', showObv, hasObv, () {
-                                  setState(() => _vaultShowObverse = true);
-                                  setDlg(() {});
-                                }),
-                                SizedBox(width: 8),
-                                _vaultToggleButton('Reverse', !showObv, hasRev, () {
-                                  setState(() => _vaultShowObverse = false);
-                                  setDlg(() {});
-                                }),
-                              ]),
-                              SizedBox(height: 12),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: hasActive ? () => _showImageLightbox(activeUrl,
-                                      label: showObv ? 'Obverse' : 'Reverse',
-                                      isMicroscope: data['scan_source'] == 'microscope') : null,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: hasActive
-                                        ? Stack(fit: StackFit.expand, children: [
-                                            SignedStorageImage(
-                                              url: activeUrl,
-                                              fit: BoxFit.contain,
-                                              placeholderBuilder: (_) => Center(
-                                                child: CircularProgressIndicator(color: _accent, strokeWidth: 2),
-                                              ),
-                                              errorBuilder: (_) => _vaultPlaceholder(
-                                                showObv ? 'Obverse' : 'Reverse',
-                                                isError: true,
-                                              ),
-                                            ),
-                                            Positioned(bottom: 8, right: 8,
-                                              child: Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
-                                                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                                  Icon(Icons.zoom_in, size: 12, color: Colors.white),
-                                                  SizedBox(width: 3),
-                                                  Text('Enlarge', style: TextStyle(fontSize: 10, color: Colors.white)),
-                                                ]),
-                                              ),
-                                            ),
-                                          ])
-                                        : _vaultPlaceholder(showObv ? 'Obverse' : 'Reverse'),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 12),
-                              Row(children: [
-                                Expanded(child: _vaultUploadButton(
-                                  label: hasObv ? 'Replace Obverse' : '+ Obverse',
-                                  icon: hasObv ? Icons.refresh : Icons.add_photo_alternate_outlined,
-                                  progress: _uploadProgressObverse,
-                                  onTap: () async {
-                                    final newUrl = await _onUploadVaultImage(side: 'obverse', field: _F.imageObverse,
-                                      setProgress: (p) { setState(() => _uploadProgressObverse = p); setDlg(() {}); });
-                                    if (newUrl != null) {
-                                      data[_F.imageObverse] = newUrl;
-                                      data['image_url_obverse'] = newUrl;
-                                      setState(() {});
-                                      setDlg(() {});
-                                    }
-                                  },
-                                )),
-                                SizedBox(width: 8),
-                                Expanded(child: _vaultUploadButton(
-                                  label: hasRev ? 'Replace Reverse' : '+ Reverse',
-                                  icon: hasRev ? Icons.refresh : Icons.add_photo_alternate_outlined,
-                                  progress: _uploadProgressReverse,
-                                  onTap: () async {
-                                    final newUrl = await _onUploadVaultImage(side: 'reverse', field: _F.imageReverse,
-                                      setProgress: (p) { setState(() => _uploadProgressReverse = p); setDlg(() {}); });
-                                    if (newUrl != null) {
-                                      data[_F.imageReverse] = newUrl;
-                                      data['image_url_reverse'] = newUrl;
-                                      setState(() {});
-                                      setDlg(() {});
-                                    }
-                                  },
-                                )),
-                              ]),
-                            ]),
-                    ),
-
-                    // Right: scrollable details
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: EdgeInsets.all(24),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          _buildMetricStrip(data),
-                          SizedBox(height: 12),
-                          _buildPcgsBar(data),
-                          SizedBox(height: 20),
-                          _buildDetailGrid(data),
-                          _buildCoinSetSection(data, onPhotoUploaded: () => setDlg(() {})),
-                          _buildRollBanner(data),
-                          _buildSimilarCoinsInspector(),
-                        ]),
-                      ),
-                    ),
-                  ]),
-                ),
-              ]),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // _buildInspectorSection was removed — inspector is now rendered directly
-  // inside showDialog via the _buildMetricStrip / _buildDetailGrid helpers below.
-
-  // --- Metric strip --------------------------------------------------------
-  Widget _buildMetricStrip(Map<String, dynamic> data) {
-    final liveMelt = MeltValueService.compute(
-      metalContent: data[_F.metalContent]?.toString() ?? '',
-      denomination: data[_F.denomination]?.toString() ?? '',
-      spotPrices: _spotPrices,
-    );
-    final meltStr  = liveMelt != null
-        ? '\$${liveMelt.toStringAsFixed(2)}'
-        : (data[_F.meltValue]?.toString().isNotEmpty == true
-            ? data[_F.meltValue].toString()
-            : 'N/A');
-    return Row(children: [
-      Expanded(child: _metricCard('Est. Value', (data[_F.aiValue] ?? data['ai_estimated_value'] ?? data['estValue'] ?? (data['ai_est_value'] != null ? '\$${(data['ai_est_value'] is num ? (data['ai_est_value'] as num).toStringAsFixed(2) : data['ai_est_value'])}' : null))?.toString() ?? '--', Color(0xFF1A73E8), Icons.attach_money)),
-      SizedBox(width: 10),
-      Expanded(child: _metricCard('Melt Value', meltStr, Color(0xFF34A853), Icons.blur_circular_outlined)),
-      SizedBox(width: 10),
-      Expanded(child: _metricCard('Grade', data[_F.condition]?.toString() ?? '--', Color(0xFFF9AB00), Icons.grade_outlined)),
-      SizedBox(width: 10),
-      Expanded(child: _metricCard(
-          'Live eBay',
-          _ebayPrices[_selectedCoinId] ?? 'Check >',
-          Color(0xFFE53935),
-          Icons.shopping_cart_outlined,
-          onTap: () => _onSearchEbay(data),
-      )),
-    ]);
-  }
-
-  Widget _metricCard(String label, String value, Color accent, IconData icon, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: accent.withAlpha(15),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: accent.withAlpha(60)),
-      ),
-      child: Row(children: [
-        Icon(icon, color: accent, size: 20),
-        SizedBox(width: 10),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: TextStyle(fontSize: 11, color: accent, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
-          SizedBox(height: 2),
-          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _text)),
-        ]),
-      ]),
-    ));
-  }
-
-  // --- PCGS feature bar ----------------------------------------------------
-  Widget _buildPcgsBar(Map<String, dynamic> data) {
-    final svc = data[_F.gradingService]?.toString() ?? '';
-    if (!svc.toUpperCase().contains('PCGS')) return SizedBox.shrink();
-
-    final isNfc  = data[_F.isNfcSecure] == true;
-    final pop    = data[_F.population]?.toString() ?? '';
-    final pcgsNo = data[_F.pcgsNumber]?.toString() ?? '';
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Color(0xFF003087).withAlpha(12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Color(0xFF003087).withAlpha(50)),
-      ),
-      child: Wrap(spacing: 16, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-        // PCGS label
-        Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.verified_outlined, size: 16, color: Color(0xFF003087)),
-          SizedBox(width: 5),
-          Text('PCGS Certified', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF003087))),
-        ]),
-        // NFC badge
-        if (isNfc)
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: Color(0xFF34A853).withAlpha(20),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Color(0xFF34A853).withAlpha(80)),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.nfc, size: 13, color: Color(0xFF34A853)),
-              SizedBox(width: 4),
-              Text('NFC Secured', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF34A853))),
-            ]),
-          ),
-        // Population
-        if (pop.isNotEmpty)
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.bar_chart, size: 14, color: _subtext),
-            SizedBox(width: 4),
-            Text('Pop: $pop', style: TextStyle(fontSize: 12, color: _subtext, fontWeight: FontWeight.w500)),
-          ]),
-        // CoinFacts link
-        if (pcgsNo.isNotEmpty)
-          GestureDetector(
-            onTap: () async {
-              final uri = Uri.parse('https://www.pcgs.com/coinfacts/coin/$pcgsNo');
-              if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open browser.')));
-              }
-            },
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.open_in_new, size: 13, color: _accent),
-              SizedBox(width: 4),
-              Text('CoinFacts', style: TextStyle(fontSize: 12, color: _accent, fontWeight: FontWeight.w600, decoration: TextDecoration.underline)),
-            ]),
-          ),
-      ]),
-    );
-  }
-
-  // --- Sectioned detail grid ------------------------------------------------
-  Widget _buildDetailGrid(Map<String, dynamic> data) {
-    Widget section(String title, List<List<String?>> fields) {
-      final cells = fields.where((f) => (f[1] ?? '').isNotEmpty).toList();
-      if (cells.isEmpty) return SizedBox.shrink();
-      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _subtext, letterSpacing: 1.0)),
-        SizedBox(height: 8),
-        Wrap(spacing: 16, runSpacing: 12,
-          children: cells.map((f) => _fieldCell(f[0]!, f[1]!)).toList()),
-        SizedBox(height: 20),
-      ]);
-    }
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      section('IDENTITY', [
-        ['Year',          data[_F.year]?.toString().replaceAll(RegExp(r'\.0$'), '')],
-        ['Mint Mark',     data[_F.mintMark]?.toString()],
-        // Capitalise denomination (e.g. 'penny' > 'Penny', '$1' stays '$1')
-        ['Denomination',  _capitalizeDenom(data[_F.denomination]?.toString())],
-        ['Country',       data[_F.country]?.toString()],
-        ['Series',        data[_F.programSeries]?.toString()],
-        ['Theme/Subject', data[_F.themeSubject]?.toString()],
-        ['Variety',       data[_F.variety]?.toString()],
-        ['Metal',         data[_F.metalContent]?.toString()],
-        ['Quantity',      (data['Quantity'] ?? data['quantity'] ?? '1').toString()],
-      ]),
-      section('CONDITION & AUTHENTICATION', [
-        ['Condition',    data[_F.condition]?.toString()],
-        ['Strike Type',  data[_F.strikeType]?.toString()],
-        ['Holder',       data[_F.holderType]?.toString()],
-        ['Grading Svc',  data[_F.gradingService]?.toString()],
-        ['Cert #',       data[_F.gradingCert]?.toString()],
-        ['PCGS #',       data[_F.pcgsNumber]?.toString()],
-        ['Population',   data[_F.population]?.toString()],
-      ]),
-      section('PURCHASE & STORAGE', [
-        // Format cost as currency ($XX.XX)
-        ['Cost',        _formatCost(data[_F.cost]?.toString())],
-        ['Date',        data[_F.purchaseDate]?.toString()],
-        ['Retailer',    data[_F.retailer]?.toString()],
-        ['Item #',      data[_F.retailerItemNo]?.toString()],
-        ['Invoice #',   data[_F.retailerInvoice]?.toString()],
-        ['Storage',     data[_F.storageLocation]?.toString()],
-        ['Ref #',       data[_F.personalRef]?.toString()],
-        ['Notes',       (data['Notes'] ?? data['notes'] ?? data[_F.personalNotes] ?? data['personalNotes'])?.toString()],
-      ]),
-    ]);
-  }
-
-  /// Format a raw cost string as USD currency.
-  /// Handles: '25', '25.00', '$25.00', '$25', ''
-  String? _formatCost(String? raw) {
-    if (raw == null || raw.trim().isEmpty || raw == 'null') return null;
-    if (raw.startsWith(r'$')) return raw; // already formatted
-    final n = double.tryParse(raw.replaceAll(RegExp(r'[^\d.]'), ''));
-    if (n == null) return raw;
-    return '\$${n.toStringAsFixed(2)}';
-  }
-
-  /// Capitalise the first letter of a denomination string.
-  /// e.g. 'penny' > 'Penny', '$1' > '$1' (unchanged).
-  String? _capitalizeDenom(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return null;
-    final t = raw.trim();
-    if (t.startsWith(r'$') || t.startsWith(r'0')) return t; // currency / number: leave as-is
-    return t.isNotEmpty ? t[0].toUpperCase() + t.substring(1) : t;
-  }
-
-  Widget _fieldCell(String label, String value) => SizedBox(
-    width: 160,
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: TextStyle(fontSize: 10, color: _subtext)),
-      SizedBox(height: 2),
-      Text(value, style: TextStyle(fontSize: 13, color: _text, fontWeight: FontWeight.w500)),
-    ]),
-  );
-
-  // _metric removed — replaced by _metricCard (the used variant with accent+icon)
 
   // --- Dropdown helper -----------------------------------------------------
   Widget _styledDropdown<T>({
@@ -4437,26 +3859,53 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       ),
     );
   }
+  void _openCoinDetails({
+    required String coinId,
+    required Map<String, dynamic> data,
+    required DocumentSnapshot? snapshot,
+    required List<CollectionRow> docs,
+  }) {
+    final coin = CoinModel.fromMap(data, coinId);
+    UnifiedCoinDetailScreen.show(
+      context,
+      coin: coin,
+      snapshot: snapshot,
+      initialParentIndex: resolveParentIndex(docs, coinId),
+      collectionRows: docs,
+      cachedCoinsDocs: _cachedCoinsDocs,
+      legacyOpen: () => CoinDetailScreen.show(
+        context,
+        coin: coin,
+        spotPrices: _spotPrices,
+        onNavigateToAiChat: widget.onNavigateWithQuery != null
+            ? (q) => widget.onNavigateWithQuery!('AI Deepdive', q)
+            : null,
+        onDeleted: () => setState(() {}),
+        onEdited: () => setState(() {}),
+      ),
+    );
+  }
 
-  /// Opens eBay SOLD listings in the browser using an EPN affiliate link
-  /// so Numista.AI earns commission on any resulting purchase.
-  void _onSearchEbay(Map<String, dynamic> data) async {
-    try {
-      final coin = CoinModel.fromMap(data, _selectedCoinId ?? '');
-      final url  = await EpnService.generateSearchUrl(coin, soldOnly: true);
-      final uri  = Uri.parse(url);
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Could not open eBay.'), backgroundColor: _red));
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Couldn\'t open eBay. Please try again.'), backgroundColor: _red));
-      }
-    }
+  void _openCoinDetailsForRow(
+    CollectionRow crw,
+    List<CollectionRow> docs,
+  ) {
+    final targetId = crw.isVirtualChild ? crw.parentDocId : crw.id;
+    if (targetId == null || targetId.isEmpty) return;
+
+    final targetDoc = crw.isVirtualChild
+        ? _cachedCoinsDocs.where((d) => d.id == targetId).firstOrNull
+        : crw.snapshot;
+
+    if (crw.isVirtualChild && targetDoc == null) return; // Parent missing — skip
+
+    final data = (targetDoc?.data() as Map<String, dynamic>?) ?? crw.data;
+    _openCoinDetails(
+      coinId: targetId,
+      data: data,
+      snapshot: targetDoc,
+      docs: docs,
+    );
   }
 
   void _showGenerateReportModal() {
@@ -4476,13 +3925,12 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   /// or an inviting "Add Your Photo" prompt otherwise.
   // ignore: unused_element — kept for CoinDetailScreen integration (Phase 2)
   Widget _buildCoinVaultGallery(Map<String, dynamic> data) {
-    final hasUserPhoto = CanonicalMintAssetService.hasUserUploadedPhotos(data);
-    final canon = hasUserPhoto ? null : CanonicalMintAssetService.resolveFromMap(data);
-    final obvUrl = canon?.obverseUrl ?? (data[_F.imageObverse]?.toString() ?? '');
-    final revUrl = canon?.reverseUrl ?? (data[_F.imageReverse]?.toString() ?? '');
-    final hasObv = obvUrl.isNotEmpty && obvUrl.startsWith('http');
-    final hasRev = revUrl.isNotEmpty && revUrl.startsWith('http');
-    final hasAny = hasUserPhoto || canon != null || hasObv || hasRev;
+    final sel = CoinPicturePicker.select(data);
+    final obvUrl = sel.primaryObverseUrl ?? '';
+    final revUrl = sel.primaryReverseUrl ?? '';
+    final hasObv = obvUrl.isNotEmpty && isOwnedStorageUrl(obvUrl);
+    final hasRev = revUrl.isNotEmpty && isOwnedStorageUrl(revUrl);
+    final hasAny = sel.hasAny;
 
     // If switching to reverse but no reverse exists, stay on obverse
     final showObverse = _vaultShowObverse || (!hasRev && hasObv);
@@ -4492,22 +3940,24 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     final scanSource   = data['scan_source']?.toString();
     final isMicroscope = scanSource == 'microscope';
 
-    // When no user photo exists, try to fetch a reference image from GCS index
-    if (!hasAny) {
-      final year  = _rowField(data, 'year', _F.year).replaceAll(RegExp(r'\.0$'), '');
-      final mint  = _rowField(data, 'mint_mark', _F.mintMark);
-      final denom = _rowField(data, 'denomination', _F.denomination);
-      final series = _rowField(data, 'program_series', _F.programSeries);
-      final subject = _rowField(data, 'theme_subject', _F.themeSubject);
+    final year  = _rowField(data, 'year', _F.year).replaceAll(RegExp(r'\.0$'), '');
+    final mint  = _rowField(data, 'mint_mark', _F.mintMark);
+    final denom = _rowField(data, 'denomination', _F.denomination);
+    final series = _rowField(data, 'program_series', _F.programSeries);
+    final subject = _rowField(data, 'theme_subject', _F.themeSubject);
 
-      return FutureBuilder<CoinImageResult>(
-        future: CoinImageService.fetchReferenceImages(
+    Future<CoinImageResult> fetchRef() => CoinImageService.fetchReferenceImages(
           year:         year,
           mint:         mint.isEmpty ? null : mint,
           denomination: denom.isEmpty ? null : denom,
           series:       series.isEmpty ? null : series,
           subject:      subject.isEmpty ? null : subject,
-        ),
+        );
+
+    // When no user photo exists, try to fetch a reference image from GCS index
+    if (!hasAny) {
+      return FutureBuilder<CoinImageResult>(
+        future: fetchRef(),
         builder: (context, snap) {
           final ref = snap.data;
           final refObvUrl = ref?.obverseUrl ?? '';
@@ -4794,9 +4244,62 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                               ),
                             ),
                           ),
-                          errorBuilder: (_) => _vaultPlaceholder(
-                            showObverse ? 'Obverse' : 'Reverse',
-                            isError: true,
+                          errorBuilder: (_) => FutureBuilder<CoinImageResult>(
+                            future: fetchRef(),
+                            builder: (ctx, refSnap) {
+                              final fallbackSel = CoinPicturePicker.select(
+                                data,
+                                referenceResult: refSnap.data,
+                                ignoreUserPhotos: true,
+                              );
+                              final fbUrl = showObverse
+                                  ? (fallbackSel.primaryObverseUrl ?? fallbackSel.primaryReverseUrl ?? '')
+                                  : (fallbackSel.primaryReverseUrl ?? fallbackSel.primaryObverseUrl ?? '');
+                              if (fbUrl.isNotEmpty && isOwnedStorageUrl(fbUrl)) {
+                                return Stack(
+                                  children: [
+                                    SignedStorageImage(
+                                      url: fbUrl,
+                                      width: double.infinity,
+                                      height: 220,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_) => _vaultPlaceholder(
+                                        showObverse ? 'Obverse' : 'Reverse',
+                                        isError: true,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 8,
+                                      left: 8,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black54,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'Reference fallback',
+                                          style: TextStyle(fontSize: 10, color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+                              if (refSnap.connectionState == ConnectionState.waiting) {
+                                return Container(
+                                  height: 220,
+                                  color: Color(0xFFF0F2F6),
+                                  child: Center(
+                                    child: CircularProgressIndicator(color: _accent, strokeWidth: 2),
+                                  ),
+                                );
+                              }
+                              return _vaultPlaceholder(
+                                showObverse ? 'Obverse' : 'Reverse',
+                                isError: true,
+                              );
+                            },
                           ),
                         ),
                         Positioned(
@@ -5282,444 +4785,6 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     );
   }
 
-
-  Future<void> _fetchInspectorSimilar(Map<String, dynamic> data) async {
-    final denom   = data[_F.denomination]?.toString() ?? '';
-    final yearRaw = data[_F.year]?.toString() ?? '';
-    final year    = int.tryParse(yearRaw.replaceAll(RegExp(r'\.0$'), ''));
-    if (denom.isEmpty) return;
-
-    // MF-V3-2: dual-read subject + series so the carousel can filter
-    final theme  = _rowField(data, 'theme_subject', _F.themeSubject);
-    final series = _rowField(data, 'program_series', _F.programSeries);
-
-    setState(() {
-      _loadingInspectorSimilar = true;
-      _inspectorSimilar = [];
-    });
-
-    final imgs = await ReferenceLibraryService.fetchSimilar(
-        denomination: denom,
-        year: year,
-        subject: theme.isEmpty ? null : theme,
-        series: series.isEmpty ? null : series);
-    if (mounted) {
-      setState(() {
-        _inspectorSimilar = imgs;
-        _loadingInspectorSimilar = false;
-      });
-    }
-  }
-
-  // --- Coin Set Viewer section ---------------------------------------------
-  // -- Roll banner ----------------------------------------------------------
-  /// Shows a compact info strip when the selected coin is part of a roll/batch.
-  Widget _buildRollBanner(Map<String, dynamic> data) {
-    final rollId   = data['roll_id'] as String?;
-    if (rollId == null || rollId.isEmpty) return SizedBox.shrink();
-    final rollType = data['roll_type'] as String? ?? 'roll';
-    final typeLabel = switch (rollType) {
-      'identical'  => 'Identical Roll',
-      'sequential' => 'Sequential Year Roll',
-      'lot'        => 'Unopened Lot',
-      _            => 'Batch Entry',
-    };
-    final typeIcon = switch (rollType) {
-      'identical'  => Icons.content_copy_outlined,
-      'sequential' => Icons.linear_scale_outlined,
-      'lot'        => Icons.inventory_2_outlined,
-      _            => Icons.currency_exchange,
-    };
-    const purple = Color(0xFF8B5CF6);
-    return Container(
-      margin: EdgeInsets.only(top: 24),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: purple.withAlpha(15),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: purple.withAlpha(60)),
-      ),
-      child: Row(children: [
-        Icon(typeIcon, color: purple, size: 18),
-        SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(typeLabel, style: TextStyle(fontWeight: FontWeight.w700, color: purple, fontSize: 13)),
-          Text('Roll ID: $rollId', style: TextStyle(color: purple.withAlpha(160), fontSize: 11)),
-        ])),
-        TextButton(
-          style: TextButton.styleFrom(foregroundColor: purple),
-          onPressed: () => setState(() => _searchQuery = rollId),
-          child: Text('View All >', style: TextStyle(fontSize: 12)),
-        ),
-      ]),
-    );
-  }
-
-  Widget _buildCoinSetSection(Map<String, dynamic> data, {VoidCallback? onPhotoUploaded}) {
-    final rawContents = data['set_contents'];
-    Widget? setContentsWidget;
-    if (rawContents is List && rawContents.isNotEmpty) {
-      setContentsWidget = Padding(
-        padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
-        child: SetContentsPanel(data: data),
-      );
-    }
-
-    final isSet = data['is_set'] == true || data['isSet'] == true;
-    final parentSetId = data['parent_set_id'] as String?;
-    final setId = data['set_id'] as String?;
-
-    // If this is a member coin belonging to a set, render a clean banner instead of calling CoinSetViewer
-    if (!isSet && (parentSetId != null || (setId != null && setId.isNotEmpty))) {
-      final setName = data['parent_set_name'] ?? data['set_name'] ?? 'Custom Coin Set';
-      final targetSetId = parentSetId ?? setId;
-      return Container(
-        margin: const EdgeInsets.only(top: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2563EB).withAlpha(15),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFF2563EB).withAlpha(60)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.folder_special_outlined, color: Color(0xFF2563EB), size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Part of Set', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF2563EB), fontSize: 13)),
-                  Text(setName.toString(), style: TextStyle(color: _text.withAlpha(180), fontSize: 12)),
-                ],
-              ),
-            ),
-            if (targetSetId != null && targetSetId.isNotEmpty)
-              TextButton(
-                style: TextButton.styleFrom(foregroundColor: const Color(0xFF2563EB)),
-                onPressed: () {
-                  setState(() => _searchQuery = targetSetId);
-                },
-                child: const Text('View Set >', style: TextStyle(fontSize: 12)),
-              ),
-          ],
-        ),
-      );
-    }
-
-    if (isSet && setContentsWidget == null && setId != null && setId.isNotEmpty) {
-      setContentsWidget = Padding(
-        padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Divider(color: _border),
-            const SizedBox(height: 16),
-            CoinSetViewer(setId: setId),
-          ],
-        ),
-      );
-    }
-
-    if (setContentsWidget == null && !isSet) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ?setContentsWidget,
-        if (isSet) ...[
-          const SizedBox(height: 16),
-          Divider(color: _border),
-          const SizedBox(height: 16),
-          Text('Set Photos', style: TextStyle(fontWeight: FontWeight.bold, color: _text, fontSize: 16)),
-          const SizedBox(height: 8),
-          if (data['owner_photos'] != null && (data['owner_photos'] as List).isNotEmpty)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: (data['owner_photos'] as List).map((p) {
-                return Container(
-                  width: 80,
-                  height: 80,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: SignedStorageImage(
-                    url: p['url'] ?? '',
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                  ),
-                );
-              }).toList(),
-            ),
-          const SizedBox(height: 8),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.add_a_photo, size: 16),
-            label: const Text('Upload Set Photo'),
-            onPressed: () => _uploadSetOwnerPhoto(data, onPhotoUploaded: onPhotoUploaded),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Future<void> _uploadSetOwnerPhoto(Map<String, dynamic> data, {VoidCallback? onPhotoUploaded}) async {
-    final coinId = _selectedCoinId;
-    if (coinId == null) return;
-    
-    final bool isMobile = !identical(0, 0.0) ? false : (Theme.of(context).platform == TargetPlatform.android || Theme.of(context).platform == TargetPlatform.iOS);
-    Uint8List? bytes;
-    String ext = 'jpg';
-    
-    if (isMobile) {
-      final source = await showModalBottomSheet<ImageSource>(
-        context: context,
-        builder: (_) => SafeArea(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            ListTile(leading: const Icon(Icons.camera_alt), title: const Text('Take Photo'), onTap: () => Navigator.pop(context, ImageSource.camera)),
-            ListTile(leading: const Icon(Icons.photo_library),  title: const Text('Choose from Gallery'), onTap: () => Navigator.pop(context, ImageSource.gallery)),
-          ]),
-        ),
-      );
-      if (source == null) return;
-      final picked = await ImagePicker().pickImage(source: source, imageQuality: 90, maxWidth: 2000);
-      if (picked == null) return;
-      bytes = await picked.readAsBytes();
-      ext = picked.path.split('.').last.toLowerCase();
-    } else {
-      final result = await FilePicker.pickFiles(type: FileType.image, withData: true, allowMultiple: false);
-      if (result == null || result.files.isEmpty) return;
-      bytes = result.files.first.bytes;
-      ext = result.files.first.extension?.toLowerCase() ?? 'jpg';
-    }
-    
-    if (bytes == null) return;
-    Uint8List uploadBytes = bytes;
-    
-    // HEIC→JPEG conversion via server (M6: route owner-photo upload through conversion)
-    if (ext == 'heic' || ext == 'heif') {
-      try {
-        final uri = Uri.parse('$kApiBaseUrl/api/convert_heic');
-        final response = await HttpAuthClient.multipartPost(
-          uri,
-          files: [
-            http.MultipartFile.fromBytes('image', uploadBytes, filename: 'photo.$ext'),
-          ],
-          timeout: const Duration(seconds: 30),
-        );
-        if (response.statusCode == 200 && response.headers['x-converted'] == 'true') {
-          uploadBytes = Uint8List.fromList(await response.stream.toBytes());
-          ext = 'jpg';
-        }
-      } catch (_) {
-        // Conversion failed; upload original HEIC as-is
-      }
-    }
-
-    final photoId = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
-    final userEmail = AuthService.userEmail;
-    
-    try {
-      final refCompressed = FirebaseStorage.instance.ref('users/$userEmail/coins/$coinId/owner_photo_$photoId.$ext');
-      await refCompressed.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
-      final compressedUrl = 'gs://${refCompressed.bucket}/${refCompressed.fullPath}';
-      
-      final refOriginal = FirebaseStorage.instance.ref('users/$userEmail/coins/$coinId/owner_photo_${photoId}_original.$ext');
-      await refOriginal.putData(uploadBytes, SettableMetadata(contentType: 'image/$ext'));
-      final originalUrl = 'gs://${refOriginal.bucket}/${refOriginal.fullPath}';
-      
-      if (!mounted) return;
-      String caption = '';
-      await showDialog(
-        context: context,
-        builder: (ctx) {
-          final ctrl = TextEditingController();
-          return AlertDialog(
-            title: const Text('Add a Caption (Optional)'),
-            content: TextField(controller: ctrl, decoration: const InputDecoration(hintText: 'Enter caption...')),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Skip')),
-              TextButton(onPressed: () {
-                caption = ctrl.text.trim();
-                Navigator.pop(ctx);
-              }, child: const Text('Save')),
-            ],
-          );
-        }
-      );
-      
-      final photoMap = {
-        'id': photoId,
-        'url': compressedUrl,
-        'original_url': originalUrl,
-        'caption': caption,
-        'uploaded_at': DateTime.now().toIso8601String(),
-      };
-      
-      await FirebaseFirestore.instance.runTransaction((tx) async {
-        final docRef = FirebaseFirestore.instance.collection(AuthService.coinsPath).doc(coinId);
-        final snapshot = await tx.get(docRef);
-        if (!snapshot.exists) return;
-        List<dynamic> photos = snapshot.data()?['owner_photos'] ?? [];
-        photos.add(photoMap);
-        tx.update(docRef, {'owner_photos': photos});
-      });
-      
-      final currentList = List<dynamic>.from(data['owner_photos'] ?? []);
-      currentList.add(photoMap);
-      data['owner_photos'] = currentList;
-      onPhotoUploaded?.call();
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo uploaded successfully'), backgroundColor: Colors.green));
-        setState(() {}); 
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Photo upload failed. Please try again.')), backgroundColor: Colors.red));
-      }
-    }
-  }
-
-  // --- Similar Coins widget for the inspector ------------------------------
-  Widget _buildSimilarCoinsInspector() {
-    if (!_loadingInspectorSimilar && _inspectorSimilar.isEmpty) {
-      return SizedBox.shrink();
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(height: 24),
-        Divider(color: _border),
-        SizedBox(height: 16),
-        Row(
-          children: [
-            Icon(Icons.photo_library_outlined, color: _accent, size: 16),
-            SizedBox(width: 8),
-            Text(
-              'Similar in Reference Library',
-              style: TextStyle(
-                  color: _text,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600),
-            ),
-            if (_loadingInspectorSimilar) ...[
-              SizedBox(width: 12),
-              SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                    color: _accent, strokeWidth: 2),
-              ),
-            ],
-          ],
-        ),
-        SizedBox(height: 12),
-        if (!_loadingInspectorSimilar && _inspectorSimilar.isNotEmpty)
-          SizedBox(
-            height: 120,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _inspectorSimilar.length,
-              separatorBuilder: (_, _) => SizedBox(width: 10),
-              itemBuilder: (ctx, i) {
-                final img = _inspectorSimilar[i];
-                return GestureDetector(
-                  onTap: () => _showRefImageDialog(ctx, img),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      width: 100,
-                      color: _bg,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.network(
-                            img.gcsUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Icon(
-                                Icons.broken_image_outlined,
-                                color: _subtext,
-                                size: 28),
-                          ),
-                          if (img.year != null && img.year!.isNotEmpty &&
-                              img.year != 'Unknown')
-                            Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                    vertical: 2, horizontal: 4),
-                                color: Colors.black54,
-                                child: Text(
-                                  img.year!,
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        SizedBox(height: 4),
-        Text(
-          'Tap to expand  *  Kaggle reference datasets',
-          style: TextStyle(fontSize: 10, color: _subtext.withAlpha(160),
-              fontStyle: FontStyle.italic),
-        ),
-      ],
-    );
-  }
-
-  void _showRefImageDialog(BuildContext ctx, ReferenceImage img) {
-    showDialog(
-      context: ctx,
-      builder: (_) => Dialog(
-        insetPadding: EdgeInsets.all(24),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: 380),
-                child: Image.network(
-                  img.gcsUrl,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Icon(Icons.broken_image_outlined,
-                        color: _subtext, size: 56),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(img.caption,
-                    style: TextStyle(fontSize: 12, color: _subtext)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text('Close'),
-              ),
-              SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // ── Segmented Tab Selection Control ──────────────────────────────────────────

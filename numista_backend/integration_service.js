@@ -27,7 +27,7 @@ try {
 const db = admin.firestore();
 
 // Initialize Google GenAI
-const genai = new GoogleGenAI();
+const genai = new GoogleGenAI(process.env.GOOGLE_API_KEY ? { apiKey: process.env.GOOGLE_API_KEY } : {});
 
 /**
  * Verifies coin authenticity using Gemini.
@@ -49,8 +49,12 @@ async function verifyCoinAuthenticity(coinDescription, imageBase64) {
     }
 
     try {
+        const config = String(MODEL_NAME || '').trim().toLowerCase().startsWith('gemini-4-')
+            ? { thinkingConfig: { thinkingLevel: 'low' } }
+            : undefined;
         const result = await genai.models.generateContent({
             model: MODEL_NAME,
+            ...(config ? { config } : {}),
             contents: [{ role: 'user', parts }]
         });
         

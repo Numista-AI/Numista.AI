@@ -7,6 +7,7 @@ import '../../services/melt_value_service.dart';
 import '../../services/wishlist_service.dart';
 import '../../utils/catalog_image_guard.dart';
 import '../../utils/mint_helpers.dart';
+import '../../widgets/morgan_owl_avatar.dart';
 import '../unified_coin_detail_screen.dart';
 
 class CatalogBrowseScreen extends StatefulWidget {
@@ -597,12 +598,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
               height: 64,
               child: ElevatedButton.icon(
                 onPressed: () => _openAskMorgan(initialPrompt: _searchQuery.isNotEmpty ? 'Tell me about $_searchQuery' : null),
-                icon: Image.asset(
-                  'assets/morgan_avatar.png',
-                  width: 32,
-                  height: 32,
-                  errorBuilder: (c, e, s) => const Icon(Icons.psychology, color: Colors.white, size: 28),
-                ),
+                icon: const MorganOwlAvatar(size: 32),
                 label: const Text('Ask Morgan', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0B2545),

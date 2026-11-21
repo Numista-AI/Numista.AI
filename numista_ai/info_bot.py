@@ -6,7 +6,7 @@ from google.genai import types
 
 PROJECT_ID = os.getenv("GCP_PROJECT", "studio-9101802118-8c9a8")
 LOCATION = os.getenv("GCP_LOCATION", "global")
-GEMINI_MODEL = "gemini-4-hydrogen"
+GEMINI_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-4-hydrogen")
 EMBEDDING_MODEL = "gemini-embedding-2"
 
 _client = None
@@ -59,8 +59,12 @@ USER QUERY: {query}
             model=GEMINI_MODEL,
             contents=prompt,
             config=types.GenerateContentConfig(
-                temperature=0.3,
                 max_output_tokens=800,
+                thinking_config=(
+                    types.ThinkingConfig(thinking_level="low")
+                    if str(GEMINI_MODEL).strip().lower().startswith("gemini-4-")
+                    else None
+                ),
             )
         )
 

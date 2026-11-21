@@ -58,9 +58,13 @@ def analyze_variety_crop(base64_image: str, year: str = "", mint_mark: str = "",
     try:
         from google import genai
         from google.genai import types
-        from config import GEMINI_FLASH_MODEL
+        from config import GEMINI_FLASH_MODEL, gemini4_thinking_config
 
-        client = genai.Client()
+        client = genai.Client(
+            vertexai=True,
+            project=os.getenv("GOOGLE_CLOUD_PROJECT", "studio-9101802118-8c9a8"),
+            location=os.getenv("GEMINI_LOCATION", "global"),
+        )
         prompt = f"""
         You are a master numismatic die-variety and error specialist.
         Analyze this macro image / USB microscope crop for coin: Year='{year}', Mint='{mint_mark}', Series='{series}'.
@@ -94,7 +98,11 @@ def analyze_variety_crop(base64_image: str, year: str = "", mint_mark: str = "",
             contents=[
                 types.Part.from_bytes(data=raw_bytes, mime_type="image/jpeg"),
                 prompt
-            ]
+            ],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                thinking_config=gemini4_thinking_config(GEMINI_FLASH_MODEL, "low"),
+            ),
         )
 
         text_out = response.text.strip()

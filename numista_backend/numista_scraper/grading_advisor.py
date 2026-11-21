@@ -163,7 +163,6 @@ Return ONLY valid structured JSON conforming to the schema.
             config=genai_types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=CoinGradingResponse,
-                temperature=0.1,
                 thinking_config=genai_types.ThinkingConfig(thinking_level="medium"),
             )
         )
@@ -182,8 +181,7 @@ Return ONLY valid structured JSON conforming to the schema.
                     config=genai_types.GenerateContentConfig(
                         response_mime_type="application/json",
                         response_schema=CoinGradingResponse,
-                        temperature=0.1,
-                        thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                        thinking_config=genai_types.ThinkingConfig(thinking_level="low"),
                     )
                 )
             except Exception as e2:
