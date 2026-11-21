@@ -1562,11 +1562,26 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           final year = data['Year']?.toString() ?? '';
                           final title = TextSanitizer.fixMojibake('$year $denom'.trim());
 
-                          final coinCpg = _parseNumber(data['cpgRetail']);
-                          final gVal = coinCpg;
-                          final displayValue = gVal > 0 
-                              ? gVal 
-                              : _parseAiValue(data['AI Estimated Value']?.toString() ?? '');
+                          final coinCpg = _parseNumber(data['cpgRetail'] ?? data['cpg_retail']);
+                          final aiVal = _parseAiValue(
+                            (data['AI Estimated Value'] ?? data['ai_estimated_value'] ?? '').toString(),
+                          );
+                          double displayValue = coinCpg > 0 ? coinCpg : aiVal;
+                          if (displayValue <= 0) {
+                            final isUs = CollectionCardValuationRow.isUsOrigin(data);
+                            final liveMelt = MeltValueService.compute(
+                                  metalContent: (data['Metal Content'] ?? data['metal_content'] ?? '').toString(),
+                                  denomination: denom,
+                                  spotPrices: _spotPrices,
+                                  programSeries: (data['Program/Series'] ?? data['program_series'] ?? '').toString(),
+                                  themeSubject: (data['Theme/Subject'] ?? data['theme_subject'] ?? '').toString(),
+                                  qty: int.tryParse((data['Quantity'] ?? data['qty'] ?? '1').toString()) ?? 1,
+                                  coinData: data,
+                                ) ??
+                                0.0;
+                            final faceVal = isUs ? CollectionCardValuationRow.resolveFaceValue(denom) : 0.0;
+                            displayValue = math.max(liveMelt, faceVal);
+                          }
 
                           return UnifiedCollectionItem(
                             title: title.isNotEmpty ? title : 'Coin',
@@ -1623,6 +1638,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
                         // Take top 10
                         final recentAdditions = combinedItems.take(10).toList();
+                        final allTabCurrencyFmt =
+                            intl.NumberFormat.currency(symbol: r'$', decimalDigits: 2);
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1643,7 +1660,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                 _buildDashboardCard(
                                   'Total Inventory Value',
                                   'ESTIMATED PORTFOLIO VALUE',
-                                  '\$${grandTotalValue.toStringAsFixed(2)}',
+                                  allTabCurrencyFmt.format(grandTotalValue),
                                   'Based on AI, cost, and specialty appraisals',
                                   Icons.account_balance_wallet_rounded,
                                   _accent,
@@ -1652,7 +1669,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   'Coins',
                                   'COIN COLLECTION',
                                   '$coinsCount Items',
-                                  'Valued at \$${coinsValue.toStringAsFixed(2)}',
+                                  'Valued at ${allTabCurrencyFmt.format(coinsValue)}',
                                   Icons.monetization_on_rounded,
                                   Colors.amber,
                                 ),
@@ -1660,7 +1677,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   'Currency',
                                   'PAPER BANKNOTES',
                                   '$currencyCount Items',
-                                  'Valued at \$${currencyValue.toStringAsFixed(2)}',
+                                  'Valued at ${allTabCurrencyFmt.format(currencyValue)}',
                                   Icons.money_rounded,
                                   Colors.green,
                                 ),
@@ -1668,7 +1685,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   'Non-Legal Tender',
                                   'OTHER ITEMS',
                                   '$otherItemsCount Items',
-                                  'Valued at \$${worldValue.toStringAsFixed(2)}',
+                                  'Valued at ${allTabCurrencyFmt.format(worldValue)}',
                                   Icons.language_rounded,
                                   Colors.teal,
                                 ),
@@ -1779,8 +1796,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          '\$${item.value.toStringAsFixed(2)}',
-                                          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                                          item.value > 0
+                                              ? allTabCurrencyFmt.format(item.value)
+                                              : 'Pending',
+                                          style: TextStyle(
+                                            color: item.value > 0 ? Colors.green : const Color(0xFFD97706),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
                                         ),
                                         if (isTappable) ...[
                                           SizedBox(width: 4),
@@ -3023,9 +3046,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 220,
-        mainAxisSpacing: 8,
+        mainAxisSpacing: 6,
         crossAxisSpacing: 10,
-        mainAxisExtent: 178,
+        mainAxisExtent: 162,
       ),
       itemCount: docs.length,
       itemBuilder: (context, index) {

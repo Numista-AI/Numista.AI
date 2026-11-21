@@ -514,8 +514,22 @@ class _LoginScreenState extends State<LoginScreen>
             labelColor: Colors.white,
             unselectedLabelColor: _sub,
             labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            labelPadding: const EdgeInsets.symmetric(horizontal: 8),
             dividerColor: Colors.transparent,
-            tabs: const [Tab(text: 'Sign In'), Tab(text: 'Create Account')],
+            tabs: const [
+              Tab(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Sign In', maxLines: 1),
+                ),
+              ),
+              Tab(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Create Account', maxLines: 1),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 28),
@@ -668,10 +682,14 @@ class _LoginScreenState extends State<LoginScreen>
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => _pinKeyboardFocus.requestFocus(),
-                    child: _PinBoxRow(
-                      filled: List.generate(6, (i) => i < _pinCtrl.text.length),
-                      digits: _pinDigits,
-                      showDigits: _pinBoxVisible,
+                    child: ListenableBuilder(
+                      listenable: _pinKeyboardFocus,
+                      builder: (context, _) => _PinBoxRow(
+                        filled: List.generate(6, (i) => i < _pinCtrl.text.length),
+                        digits: _pinDigits,
+                        showDigits: _pinBoxVisible,
+                        hasFocus: _pinKeyboardFocus.hasFocus,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -1490,28 +1508,37 @@ class PinBoxRow extends StatelessWidget {
   final List<bool> filled;
   final List<String> digits;
   final bool showDigits;
+  final bool hasFocus;
 
   const PinBoxRow({
     super.key,
     required this.filled,
     required this.digits,
     required this.showDigits,
+    this.hasFocus = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final activeIndex = filled.where((f) => f).length.clamp(0, 5);
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(6, (i) {
+          final isCurrentFocus = hasFocus && !filled[i] && i == activeIndex;
+          final borderColor = filled[i]
+              ? const Color(0xFFF63366)
+              : (isCurrentFocus
+                  ? const Color(0xFF1D4F91)
+                  : (hasFocus ? const Color(0xFF93C5FD) : Colors.grey.shade400));
           return Container(
             width: 44,
             height: 50,
             margin: const EdgeInsets.symmetric(horizontal: 3),
             decoration: BoxDecoration(
               border: Border.all(
-                color: filled[i] ? const Color(0xFFF63366) : Colors.grey.shade400,
+                color: borderColor,
                 width: 2,
               ),
               borderRadius: BorderRadius.circular(8),

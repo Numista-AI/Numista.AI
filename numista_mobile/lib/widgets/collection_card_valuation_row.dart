@@ -233,45 +233,55 @@ class CollectionCardValuationRow extends StatelessWidget {
       ),
     );
 
-    return Row(
-      children: [
-        priceWidget,
-        if (showPendingChip) ...[
-          const SizedBox(width: 4),
-          Tooltip(
-            message: 'Value pending AI estimate',
-            child: Container(
-              key: const Key('valuation_pending_chip'), // v2.1 MF-SAG-C3
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(
-                color: chipBgColor,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: chipBorderColor),
-              ),
-              child: Text(
-                'Pending',
-                maxLines: 1,
-                softWrap: false,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: chipTextColor,
-                  fontWeight: FontWeight.bold,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final content = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            priceWidget,
+            if (showPendingChip) ...[
+              const SizedBox(width: 4),
+              Tooltip(
+                message: 'Value pending AI estimate',
+                child: Container(
+                  key: const Key('valuation_pending_chip'), // v2.1 MF-SAG-C3
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: chipBgColor,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: chipBorderColor),
+                  ),
+                  child: Text(
+                    'Pending',
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: chipTextColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
+            if (condition.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              GradeBadgeWidget(
+                gradeCode: condition,
+                compact: true,
+              ),
+            ],
+          ],
+        );
+        return SizedBox(
+          width: constraints.maxWidth.isFinite ? constraints.maxWidth : null,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: content,
           ),
-        ],
-        const Spacer(),
-        if (condition.isNotEmpty) ...[
-          const SizedBox(width: 4),
-          Flexible(
-            child: GradeBadgeWidget(
-              gradeCode: condition,
-              compact: true,
-            ),
-          ),
-        ],
-      ],
+        );
+      },
     );
   }
 }

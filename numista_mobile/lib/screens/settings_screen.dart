@@ -2018,12 +2018,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            '🧠 Learned Preferences & AI Memory',
-                            style: TextStyle(
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          Flexible(
+                            child: Text(
+                              'Learned Preferences & AI Memory',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),

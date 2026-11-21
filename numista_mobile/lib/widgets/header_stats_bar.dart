@@ -200,13 +200,24 @@ class _HeaderStatsBarState extends State<HeaderStatsBar> {
           valChip,
         ];
 
+        final row = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: chips,
+        );
+        if (constraints.maxWidth >= 600) {
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: row,
+            ),
+          );
+        }
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: chips,
-          ),
+          child: row,
         );
       },
     );
