@@ -53,6 +53,9 @@ import 'coin_detail_screen.dart';
 import 'catalog/catalog_browse_screen.dart';
 import '../theme/numista_theme.dart';
 import '../services/ui_variant_service.dart';
+import '../services/morgan_first_service.dart';
+import '../widgets/morgan_full_site_toggle.dart';
+import 'morgan_first_home_screen.dart';
 import '../utils/numista_error_helper.dart';
 
 
@@ -452,7 +455,19 @@ class _BaseLayoutState extends State<BaseLayout> {
       bodyWidget = _buildBodyForRoute();
     }
     if (MorganPrivacyMask.isRouteSensitive(_activeRoute)) {
-      return MorganPrivacyMask(reason: _activeRoute, child: bodyWidget);
+      bodyWidget = MorganPrivacyMask(reason: _activeRoute, child: bodyWidget);
+    }
+    if (!widget.isDemoMode &&
+        MorganFirstService.current.eligible &&
+        !MorganFirstService.current.showMorganHome) {
+      return Column(
+        children: [
+          FullSiteMorganBar(
+            onBackToMorgan: () => MorganFirstService.setPreference('morgan'),
+          ),
+          Expanded(child: bodyWidget),
+        ],
+      );
     }
     return bodyWidget;
   }
@@ -659,7 +674,20 @@ class _BaseLayoutState extends State<BaseLayout> {
         : (user?.email?.split('@').first ?? 'Collector');
     final email = user?.email ?? '';
 
-    final rootContent = StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+    final rootContent = ValueListenableBuilder<MorganHomeFlagsState>(
+      valueListenable: MorganFirstService.state,
+      builder: (context, mfState, _) {
+        if (!widget.isDemoMode && mfState.showMorganHome) {
+          return MorganFirstHomeScreen(
+            onSwitchToFullSite: () =>
+                MorganFirstService.setPreference('full_site'),
+            onSeeMyCoins: () {
+              MorganFirstService.setPreference('full_site');
+              _navigateTo('My Collection');
+            },
+          );
+        }
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: !widget.testSkipFirebase && email.isNotEmpty
           ? FirebaseFirestore.instance
               .collection('users')
@@ -687,6 +715,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                 : _buildDesktopLayout(email, displayName);
           },
         );
+      },
+    );
       },
     );
 
@@ -1522,11 +1552,13 @@ class _BaseLayoutState extends State<BaseLayout> {
       if (isDemo) {
         GuestSeedService.deactivateBrowseDemo();
         UiVariantService.reset();
+        MorganFirstService.reset();
         if (ctx.mounted) {
           AuthGate.navigateTo(ctx);
         }
       } else {
         UiVariantService.reset();
+        MorganFirstService.reset();
         await AuthService.signOut();
       }
     }

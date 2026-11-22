@@ -273,12 +273,6 @@ class MorganSettingsPanel extends StatelessWidget {
                   onChanged: settings.setAllowVisionRescue,
                 ),
                 _SettingRow(
-                  identifier: 'morgan_setting_mic',
-                  label: 'Allow Morgan to hear me (Voice Microphone)',
-                  value: settings.allowVoiceMic,
-                  onChanged: settings.setAllowVoiceMic,
-                ),
-                _SettingRow(
                   identifier: 'morgan_setting_tts',
                   label: 'Allow Morgan to speak aloud (Voice Speaker)',
                   value: settings.allowVoiceTts,

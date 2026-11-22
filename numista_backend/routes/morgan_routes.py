@@ -1027,3 +1027,117 @@ async def api_morgan_copilot(
         vision_downgraded=vision_downgraded,
     )
 
+
+# ── Morgan-First UX v3.2: Server-Side Flags & Home Preference (AG-1) ─────────
+
+MORGAN_HOME_ALLOWLIST = {"eric.seaman@yahoo.com", "eric@numista.ai"}
+
+
+class MorganHomePreferenceRequest(BaseModel):
+    preferred_home: str
+
+
+@morgan_router.get("/api/morgan/home_flags")
+async def api_get_morgan_home_flags(
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    """
+    Returns Morgan-First server-side flags (all default False) and the caller's
+    saved Morgan | Full site preference. Client reads this; never writes flags.
+    """
+    flags = {
+        "morgan_home_allowlist": False,
+        "morgan_home_new_users": False,
+        "morgan_home_everyone": False,
+    }
+    new_users_cutoff_ts = None
+    try:
+        flag_snap = db.collection("app_config").document("morgan_first_flags").get()
+        if flag_snap.exists:
+            raw = flag_snap.to_dict() or {}
+            flags["morgan_home_allowlist"] = bool(raw.get("morgan_home_allowlist", False))
+            flags["morgan_home_new_users"] = bool(raw.get("morgan_home_new_users", False))
+            flags["morgan_home_everyone"] = bool(raw.get("morgan_home_everyone", False))
+            new_users_cutoff_ts = raw.get("new_users_cutoff_ts")
+    except Exception as exc:
+        logger.warning(f"[morgan_home_flags] failed to read flags, failing safe to off: {exc}")
+
+    caller_email = (user.get("email") or "").strip().lower()
+    caller_uid = (user.get("uid") or user.get("user_id") or "").strip()
+    sign_in_provider = ((user.get("firebase") or {}).get("sign_in_provider") or "").strip()
+    is_demo_or_anon = (
+        sign_in_provider == "anonymous"
+        or caller_uid == "dev_guest_uid"
+        or not caller_email
+    )
+
+    eligible = False
+    if not is_demo_or_anon:
+        if flags["morgan_home_everyone"]:
+            eligible = True
+        elif flags["morgan_home_allowlist"] and caller_email in MORGAN_HOME_ALLOWLIST:
+            eligible = True
+        elif flags["morgan_home_new_users"] and new_users_cutoff_ts is not None:
+            auth_time = user.get("auth_time") or 0
+            try:
+                if float(auth_time) >= float(new_users_cutoff_ts):
+                    eligible = True
+            except (TypeError, ValueError):
+                eligible = False
+
+    preferred_home = "morgan" if eligible else "full_site"
+    if eligible and caller_email:
+        try:
+            pref_snap = (
+                db.collection("users")
+                .document(caller_email)
+                .collection("settings")
+                .document("morgan_home_pref")
+                .get()
+            )
+            if pref_snap.exists:
+                saved = (pref_snap.to_dict() or {}).get("preferred_home")
+                if saved in ("morgan", "full_site"):
+                    preferred_home = saved
+        except Exception as exc:
+            logger.warning(f"[morgan_home_flags] failed to read preference: {exc}")
+
+    return {
+        "flags": flags,
+        "eligible": eligible,
+        "preferred_home": preferred_home,
+        "show_morgan_home": bool(eligible and preferred_home == "morgan"),
+    }
+
+
+@morgan_router.post("/api/morgan/home_preference")
+async def api_set_morgan_home_preference(
+    req: MorganHomePreferenceRequest,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    """
+    Saves the authenticated user's Morgan | Full site preference on the server.
+    Identity is derived strictly from the verified Bearer token.
+    """
+    if req.preferred_home not in ("morgan", "full_site"):
+        raise HTTPException(status_code=400, detail="preferred_home must be 'morgan' or 'full_site'")
+    caller_email = _get_user_email(user)
+    try:
+        (
+            db.collection("users")
+            .document(caller_email)
+            .collection("settings")
+            .document("morgan_home_pref")
+            .set(
+                {
+                    "preferred_home": req.preferred_home,
+                    "updated_at": firestore.SERVER_TIMESTAMP,
+                }
+            )
+        )
+    except Exception as exc:
+        logger.error(f"[morgan_home_preference] failed to save: {exc}")
+        raise HTTPException(status_code=500, detail="Failed to save home preference")
+    return {"status": "ok", "preferred_home": req.preferred_home}
+
+

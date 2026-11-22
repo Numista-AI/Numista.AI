@@ -2395,44 +2395,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   ),
                 ),
               ),
-              if (SttVoiceService.instance.isSupported)
-                Semantics(
-                  identifier: 'morgan_mic_button',
-                  button: true,
-                  label: SttVoiceService.instance.isSpeakingLocked
-                      ? 'Morgan is speaking — microphone paused'
-                      : SttVoiceService.instance.isListening
-                          ? 'Stop voice listening'
-                          : 'Speak to Morgan',
-                  child: ConstrainedBox(
-                    constraints:
-                        const BoxConstraints(minWidth: 48, minHeight: 56),
-                    child: IconButton(
-                      icon: Icon(
-                        SttVoiceService.instance.isListening
-                            ? Icons.mic_rounded
-                            : Icons.mic_none_rounded,
-                        color: SttVoiceService.instance.isSpeakingLocked
-                            ? _sub
-                            : SttVoiceService.instance.isListening
-                                ? const Color(0xFFDC2626)
-                                : _textPrimary,
-                      ),
-                      tooltip: SttVoiceService.instance.isSpeakingLocked
-                          ? 'Paused while Morgan speaks'
-                          : 'Voice input',
-                      onPressed: () async {
-                        await showMorganConsentModalIfNeeded(context);
-                        final stt = SttVoiceService.instance;
-                        if (stt.isListening) {
-                          stt.stopListening();
-                        } else {
-                          stt.startListening();
-                        }
-                      },
-                    ),
-                  ),
-                ),
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -2449,9 +2411,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                     enableSuggestions: true,
                     style: TextStyle(color: _textPrimary, fontSize: 16),
                     decoration: InputDecoration(
-                      hintText: SttVoiceService.instance.isPausedForTts
-                          ? 'Morgan is speaking…'
-                          : 'Ask Morgan or type here…',
+                      hintText: 'Type your question',
                       hintStyle: TextStyle(color: _sub, fontSize: 16),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 13),

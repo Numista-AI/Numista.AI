@@ -446,12 +446,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         ),
                       ),
                       SizedBox(width: 14),
-                      Text(
-                        'Loading your home',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0B1A2E),
+                      Expanded(
+                        child: Text(
+                          'Loading your home',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0B1A2E),
+                          ),
                         ),
                       ),
                     ],
@@ -567,28 +569,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
       }
     }
 
-    final micBtn = OutlinedButton.icon(
-      onPressed: () {
-        _morganFocusNode.requestFocus();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Voice input coming soon — type your question above.'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      },
-      icon: const Icon(Icons.mic_none, color: Color(0xFF0B1A2E), size: 22),
-      label: const Text(
-        'Microphone',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0B1A2E)),
-      ),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(140, 56),
-        side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-
     final photoBtn = OutlinedButton.icon(
       onPressed: widget.onTakePhoto,
       icon: const Icon(Icons.photo_camera_outlined, color: Color(0xFF0B1A2E), size: 22),
@@ -609,7 +589,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       onSubmitted: (_) => submitQuery(),
       style: const TextStyle(fontSize: 18, color: Color(0xFF0B1A2E)),
       decoration: InputDecoration(
-        hintText: 'Type or say your question...',
+        hintText: 'Type your question',
         hintStyle: const TextStyle(fontSize: 18, color: Color(0xFF0B1A2E)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         enabledBorder: OutlineInputBorder(
@@ -667,19 +647,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
           if (isPhone) ...[
             queryField,
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(child: micBtn),
-                const SizedBox(width: 10),
-                Expanded(child: photoBtn),
-              ],
-            ),
+            SizedBox(width: double.infinity, child: photoBtn),
           ] else
             Row(
               children: [
                 Expanded(child: queryField),
-                const SizedBox(width: 10),
-                micBtn,
                 const SizedBox(width: 10),
                 photoBtn,
               ],
