@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:numista_ai/constants.dart';
+import 'package:numista_ai/services/camera_capture_service.dart';
 import 'package:numista_ai/services/http_auth_client.dart';
 import 'package:numista_ai/services/morgan_first_service.dart';
 import 'package:numista_ai/widgets/morgan_full_site_toggle.dart';
@@ -19,7 +20,8 @@ class MorganProposedCoin {
   final String denomination;
   final String mintMark;
   final String condition;
-  final double confidencePct;
+  final double? confidencePct;
+  final bool isTypedEntry;
   final String certNumber;
   final String gradingService;
   final Uint8List? frontBytes;
@@ -31,7 +33,8 @@ class MorganProposedCoin {
     required this.denomination,
     required this.mintMark,
     required this.condition,
-    required this.confidencePct,
+    this.confidencePct,
+    this.isTypedEntry = false,
     this.certNumber = '',
     this.gradingService = '',
     this.frontBytes,
@@ -45,6 +48,7 @@ class MorganProposedCoin {
     String? mintMark,
     String? condition,
     double? confidencePct,
+    bool? isTypedEntry,
     String? certNumber,
     String? gradingService,
     Uint8List? frontBytes,
@@ -57,6 +61,7 @@ class MorganProposedCoin {
       mintMark: mintMark ?? this.mintMark,
       condition: condition ?? this.condition,
       confidencePct: confidencePct ?? this.confidencePct,
+      isTypedEntry: isTypedEntry ?? this.isTypedEntry,
       certNumber: certNumber ?? this.certNumber,
       gradingService: gradingService ?? this.gradingService,
       frontBytes: frontBytes ?? this.frontBytes,
@@ -72,7 +77,8 @@ class MorganFirstHomeScreen extends StatefulWidget {
   final Future<Map<String, dynamic>> Function(String proposalId)? confirmFn;
   final Future<Map<String, dynamic>> Function(
       Uint8List front, Uint8List? back, bool isScan)? identifyPhotoFn;
-  final List<String>? availableCameras;
+  final Future<List<CameraDeviceInfo>> Function()? listCamerasFn;
+  final Future<CameraCaptureResult?> Function(String? deviceId)? capturePhotoFn;
 
   const MorganFirstHomeScreen({
     super.key,
@@ -81,7 +87,8 @@ class MorganFirstHomeScreen extends StatefulWidget {
     this.proposeFn,
     this.confirmFn,
     this.identifyPhotoFn,
-    this.availableCameras,
+    this.listCamerasFn,
+    this.capturePhotoFn,
   });
 
   @override
@@ -107,7 +114,10 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
   Uint8List? _backBytes;
   bool _hasPlasticLabel = false;
   Uint8List? _labelBytes;
-  late String _selectedCamera;
+  List<CameraDeviceInfo> _cameras = const [
+    CameraDeviceInfo(deviceId: 'default', label: 'Default Camera'),
+  ];
+  String _selectedCameraId = 'default';
   bool _showCameraHelp = false;
 
   // Confirm / Fix details
@@ -120,13 +130,21 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
   @override
   void initState() {
     super.initState();
-    final cams = _cameras;
-    _selectedCamera = cams.first;
+    _loadCameras();
   }
 
-  List<String> get _cameras =>
-      widget.availableCameras ??
-      const ['Default Camera', 'USB Microscope Camera'];
+  Future<void> _loadCameras() async {
+    try {
+      final list = widget.listCamerasFn != null
+          ? await widget.listCamerasFn!()
+          : await CameraCaptureService.listCameras();
+      if (!mounted || list.isEmpty) return;
+      setState(() {
+        _cameras = list;
+        _selectedCameraId = list.first.deviceId;
+      });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -162,25 +180,65 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
     } else if (lower.contains('carson city') ||
         RegExp(r'\bcc\b').hasMatch(lower)) {
       mint = 'CC';
+    } else if (lower.contains('new orleans') ||
+        RegExp(r'\bo\b').hasMatch(lower)) {
+      mint = 'O';
+    } else if (lower.contains('west point') ||
+        RegExp(r'\bw\b').hasMatch(lower)) {
+      mint = 'W';
     } else if (lower.contains('philadelphia') ||
         RegExp(r'\bp\b').hasMatch(lower)) {
       mint = 'P';
     }
+
     String cond = 'Circulated';
-    if (lower.contains('uncirculated') || lower.contains('mint state')) {
+    if (lower.contains('mint state') || lower.contains('uncirculated')) {
       cond = 'Uncirculated';
-    } else if (lower.contains('about fine') || lower.contains('fine')) {
+    } else if (lower.contains('about uncirculated')) {
+      cond = 'About Uncirculated';
+    } else if (lower.contains('extremely fine')) {
+      cond = 'Extremely Fine';
+    } else if (lower.contains('very fine')) {
+      cond = 'Very Fine';
+    } else if (lower.contains('about fine')) {
+      cond = 'About Fine';
+    } else if (lower.contains('very good')) {
+      cond = 'Very Good';
+    } else if (lower.contains('fine')) {
       cond = 'Fine';
     } else if (lower.contains('good')) {
       cond = 'Good';
     }
+
+    String denom = 'Coin';
+    if (lower.contains('morgan dollar')) {
+      denom = 'Morgan Dollar';
+    } else if (lower.contains('peace dollar')) {
+      denom = 'Peace Dollar';
+    } else if (lower.contains('silver eagle') || lower.contains('ase')) {
+      denom = 'American Silver Eagle';
+    } else if (lower.contains('half dollar')) {
+      denom = 'Half Dollar';
+    } else if (lower.contains('quarter')) {
+      denom = 'Quarter Dollar';
+    } else if (lower.contains('dime')) {
+      denom = 'Dime';
+    } else if (lower.contains('nickel')) {
+      denom = 'Nickel';
+    } else if (lower.contains('cent') || lower.contains('penny')) {
+      denom = 'Cent';
+    } else if (lower.contains('dollar')) {
+      denom = 'Dollar';
+    }
+
+    final displayName = '$year $denom'.trim();
     return {
       'Year': year,
-      'Denomination': text,
+      'Denomination': denom,
       'Mint Mark': mint,
       'Condition': cond,
-      'name': text,
-      'confidence': 85,
+      'Personal Notes': text,
+      'name': displayName.isNotEmpty ? displayName : text,
     };
   }
 
@@ -193,7 +251,13 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
     });
     try {
       final parsed = _parseTypedCoin(text);
-      final prop = await _callPropose(parsed);
+      final prop = await _callPropose({
+        'Year': parsed['Year'],
+        'Denomination': parsed['Denomination'],
+        'Mint Mark': parsed['Mint Mark'],
+        'Condition': parsed['Condition'],
+        'Personal Notes': parsed['Personal Notes'],
+      });
       final propId = (prop['proposal_id'] ?? '').toString();
       if (!mounted) return;
       setState(() {
@@ -204,7 +268,8 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
           denomination: parsed['Denomination'] as String,
           mintMark: parsed['Mint Mark'] as String,
           condition: parsed['Condition'] as String,
-          confidencePct: (parsed['confidence'] as num).toDouble(),
+          confidencePct: null,
+          isTypedEntry: true,
         );
         _step = _MorganStep.confirmCard;
       });
@@ -215,7 +280,25 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
     }
   }
 
-  Future<void> _pickImage(String slot) async {
+  Future<void> _captureFromCamera(String slot) async {
+    CameraCaptureResult? result;
+    if (widget.capturePhotoFn != null) {
+      result = await widget.capturePhotoFn!(_selectedCameraId);
+    } else if (mounted) {
+      result = await CameraCaptureService.capturePhoto(
+        context,
+        preferredDeviceId: _selectedCameraId,
+      );
+    }
+    if (result == null || !mounted) return;
+    setState(() {
+      if (slot == 'front') _frontBytes = result!.bytes;
+      if (slot == 'back') _backBytes = result!.bytes;
+      if (slot == 'label') _labelBytes = result!.bytes;
+    });
+  }
+
+  Future<void> _pickFileImage(String slot) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
@@ -240,29 +323,27 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
         idResult = await widget.identifyPhotoFn!(
             _frontBytes!, _backBytes, _isScanMode);
       } else {
-        final req = http.MultipartRequest(
-          'POST',
+        final files = <http.MultipartFile>[
+          http.MultipartFile.fromBytes(
+            'image_a',
+            _frontBytes!,
+            filename: 'front.jpg',
+          ),
+          if (_backBytes != null)
+            http.MultipartFile.fromBytes(
+              'image_b',
+              _backBytes!,
+              filename: 'back.jpg',
+            ),
+        ];
+        final streamed = await HttpAuthClient.multipartPost(
           Uri.parse('$kApiBaseUrl/api/identify_coin_photo'),
+          files: files,
+          fields: const {
+            'user_email': '',
+            'save_to_collection': 'false',
+          },
         );
-        req.fields['user_email'] = '';
-        req.fields['save_to_collection'] = 'false';
-        req.files.add(http.MultipartFile.fromBytes(
-          'image_a',
-          _frontBytes!,
-          filename: 'front.jpg',
-        ));
-        if (_backBytes != null) {
-          req.files.add(http.MultipartFile.fromBytes(
-            'image_b',
-            _backBytes!,
-            filename: 'back.jpg',
-          ));
-        }
-        final token = await HttpAuthClient.getIdToken();
-        if (token != null && token.isNotEmpty) {
-          req.headers['Authorization'] = 'Bearer $token';
-        }
-        final streamed = await req.send();
         final resp = await http.Response.fromStream(streamed);
         if (resp.statusCode != 200) {
           throw Exception('Identify failed (${resp.statusCode})');
@@ -738,16 +819,16 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             key: const Key('choose_camera_dropdown'),
-            initialValue: _selectedCamera,
+            initialValue: _selectedCameraId,
             items: _cameras
                 .map((c) => DropdownMenuItem(
-                      value: c,
-                      child: Text(c,
+                      value: c.deviceId,
+                      child: Text(c.label,
                           style: const TextStyle(fontSize: 18, color: _navy)),
                     ))
                 .toList(),
             onChanged: (v) {
-              if (v != null) setState(() => _selectedCamera = v);
+              if (v != null) setState(() => _selectedCameraId = v);
             },
             decoration: InputDecoration(
               border: OutlineInputBorder(
@@ -789,14 +870,14 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
           children: [
             OutlinedButton.icon(
               key: const Key('pick_front_btn'),
-              onPressed: () => _pickImage('front'),
+              onPressed: () => _captureFromCamera('front'),
               icon: Icon(
                   _frontBytes != null
                       ? Icons.check_circle
                       : Icons.photo_camera_outlined,
                   color: _blue),
               label: Text(
-                _frontBytes != null ? 'Front photo ready' : '1. Front photo',
+                _frontBytes != null ? 'Front photo ready' : '1. Take front photo',
                 style: const TextStyle(
                     fontSize: 18, fontWeight: FontWeight.w700, color: _navy),
               ),
@@ -807,7 +888,7 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
             ),
             OutlinedButton.icon(
               key: const Key('pick_back_btn'),
-              onPressed: () => _pickImage('back'),
+              onPressed: () => _captureFromCamera('back'),
               icon: Icon(
                   _backBytes != null
                       ? Icons.check_circle
@@ -816,13 +897,21 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
               label: Text(
                 _backBytes != null
                     ? 'Back photo ready'
-                    : '2. Back photo (optional)',
+                    : '2. Take back photo (optional)',
                 style: const TextStyle(
                     fontSize: 18, fontWeight: FontWeight.w700, color: _navy),
               ),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(200, 56),
                 side: const BorderSide(color: _blue, width: 1.5),
+              ),
+            ),
+            TextButton(
+              key: const Key('pick_front_file_btn'),
+              onPressed: () => _pickFileImage('front'),
+              child: const Text(
+                'Or choose a photo file',
+                style: TextStyle(fontSize: 18, color: _blue),
               ),
             ),
           ],
@@ -839,7 +928,7 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
         ),
         if (_hasPlasticLabel)
           OutlinedButton.icon(
-            onPressed: () => _pickImage('label'),
+            onPressed: () => _captureFromCamera('label'),
             icon: Icon(
                 _labelBytes != null
                     ? Icons.check_circle
@@ -907,10 +996,18 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
     final p = _proposed;
     if (p == null) return const SizedBox.shrink();
 
-    final confWords = MorganFirstService.confidenceWords(p.confidencePct);
-    final subline = MorganFirstService.confidenceSubline(p.confidencePct);
-    final canAdd = MorganFirstService.canAddForConfidence(p.confidencePct);
-    final highlightFix = MorganFirstService.highlightFixFirst(p.confidencePct);
+    final confWords = (p.isTypedEntry || p.confidencePct == null)
+        ? 'You typed this, please check it.'
+        : MorganFirstService.confidenceWords(p.confidencePct!);
+    final subline = (p.isTypedEntry || p.confidencePct == null)
+        ? null
+        : MorganFirstService.confidenceSubline(p.confidencePct!);
+    final canAdd = (p.isTypedEntry || p.confidencePct == null)
+        ? true
+        : MorganFirstService.canAddForConfidence(p.confidencePct!);
+    final highlightFix = (p.isTypedEntry || p.confidencePct == null)
+        ? false
+        : MorganFirstService.highlightFixFirst(p.confidencePct!);
 
     final addBtn = ElevatedButton(
       key: const Key('confirm_add_btn'),

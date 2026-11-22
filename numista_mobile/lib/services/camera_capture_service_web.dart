@@ -8,7 +8,28 @@ import 'camera_capture_service.dart';
 import 'package:image_picker/image_picker.dart';
 
 
-Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
+Future<List<CameraDeviceInfo>> listCamerasPlatform() async {
+  final devices = await _enumerateSafeWebVideoDevices();
+  if (devices.isEmpty) {
+    return const [
+      CameraDeviceInfo(deviceId: '', label: 'Default Camera'),
+    ];
+  }
+  return [
+    for (int i = 0; i < devices.length; i++)
+      CameraDeviceInfo(
+        deviceId: devices[i].deviceId,
+        label: devices[i].label.trim().isNotEmpty
+            ? devices[i].label.trim()
+            : 'Camera ${i + 1}',
+      ),
+  ];
+}
+
+Future<CameraCaptureResult?> capturePhotoPlatform(
+  BuildContext context, {
+  String? preferredDeviceId,
+}) async {
   final completer = Completer<CameraCaptureResult?>();
 
   // 1. Create HTML5 Video Element
@@ -40,7 +61,10 @@ Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
     }
   }.jsify() as web.MediaStreamConstraints;
 
-  _requestPreferredWebCameraStream(constraints).then((streamObj) {
+  _requestPreferredWebCameraStream(
+    constraints,
+    preferredDeviceId: preferredDeviceId,
+  ).then((streamObj) {
     localStream = streamObj;
     video.srcObject = streamObj;
     
@@ -342,8 +366,23 @@ Future<List<web.MediaDeviceInfo>> _enumerateSafeWebVideoDevices() async {
 }
 
 Future<web.MediaStream> _requestPreferredWebCameraStream(
-  web.MediaStreamConstraints fallbackConstraints,
-) async {
+  web.MediaStreamConstraints fallbackConstraints, {
+  String? preferredDeviceId,
+}) async {
+  if (preferredDeviceId != null && preferredDeviceId.trim().isNotEmpty) {
+    try {
+      final explicit = {
+        'video': {
+          'width': {'ideal': 1280},
+          'height': {'ideal': 720},
+          'deviceId': {'exact': preferredDeviceId.trim()},
+        }
+      }.jsify() as web.MediaStreamConstraints;
+      return await web.window.navigator.mediaDevices.getUserMedia(explicit).toDart;
+    } catch (_) {
+      // Fall through to preferred/generic selection
+    }
+  }
   final preSafe = await _enumerateSafeWebVideoDevices();
   final labeledSafe =
       preSafe.where((d) => d.label.trim().isNotEmpty && d.deviceId.isNotEmpty).toList();

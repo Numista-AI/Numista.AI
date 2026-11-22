@@ -197,6 +197,36 @@ def test_at02_existing_users_and_demo_unchanged_when_allowlist_on(env_setup):
     assert res_eric.json()["show_morgan_home"] is True
 
 
+def test_f6_new_users_uses_creation_time_not_auth_time(env_setup):
+    client, mem_db = env_setup
+    cutoff_s = 1_800_000_000.0
+    mem_db.store["app_config/morgan_first_flags"] = {
+        "morgan_home_allowlist": False,
+        "morgan_home_new_users": True,
+        "morgan_home_everyone": False,
+        "new_users_cutoff_ts": cutoff_s,
+    }
+
+    # Old account signing in AFTER cutoff (auth_time > cutoff, creation_timestamp < cutoff) -> NOT eligible
+    old_user = MagicMock()
+    old_user.user_metadata = SimpleNamespace(creation_timestamp=(cutoff_s - 86400) * 1000.0)
+    # New account created AFTER cutoff -> eligible
+    new_user = MagicMock()
+    new_user.user_metadata = SimpleNamespace(creation_timestamp=(cutoff_s + 3600) * 1000.0)
+
+    def _get_user(uid):
+        return old_user if uid == "uid-other" else new_user
+
+    with patch("routes.morgan_routes.firebase_auth.get_user", side_effect=_get_user):
+        res_old = client.get("/api/morgan/home_flags", headers={"Authorization": "Bearer tok-other"})
+        assert res_old.status_code == 200
+        assert res_old.json()["eligible"] is False
+
+        res_new = client.get("/api/morgan/home_flags", headers={"Authorization": "Bearer tok-eric"})
+        assert res_new.status_code == 200
+        assert res_new.json()["eligible"] is True
+
+
 def test_at09_p5_add_confirm_and_idempotency(env_setup):
     client, mem_db = env_setup
     # Propose must NOT write to coins
@@ -320,12 +350,30 @@ def test_at14_old_morgan_write_tools_closed(env_setup):
     )
     assert res_unlogged.status_code == 403
 
-    # 3. INTERNAL_UNDO with valid log moves coin to trash (soft delete)
+    # 3. INTERNAL_UNDO with stale (>30 min) log is rejected 403 (session-limited per F7)
+    from datetime import datetime, timedelta, timezone
+    mem_db.store["users/eric.seaman@yahoo.com/coins/c_old"] = {"Year": "1921", "Denomination": "Dollar"}
+    mem_db.store["users/eric.seaman@yahoo.com/morgan_action_log/log_old"] = {
+        "who": "uid-eric",
+        "action": "add",
+        "coin_id": "c_old",
+        "confirm_time": datetime.now(timezone.utc) - timedelta(hours=2),
+    }
+    res_stale = client.post(
+        "/api/deep_dive",
+        headers={"Authorization": "Bearer tok-eric"},
+        json={"user_email": "eric.seaman@yahoo.com", "query": "INTERNAL_UNDO:c_old"},
+    )
+    assert res_stale.status_code == 403
+    assert "users/eric.seaman@yahoo.com/coins/c_old" in mem_db.store
+
+    # 4. INTERNAL_UNDO with valid current-session log moves coin to trash (soft delete)
     mem_db.store["users/eric.seaman@yahoo.com/coins/c1"] = {"Year": "1921", "Denomination": "Dollar"}
     mem_db.store["users/eric.seaman@yahoo.com/morgan_action_log/log1"] = {
         "who": "uid-eric",
         "action": "add",
         "coin_id": "c1",
+        "confirm_time": datetime.now(timezone.utc),
     }
     res_undo = client.post(
         "/api/deep_dive",
@@ -347,10 +395,12 @@ def test_at14_old_morgan_write_tools_closed(env_setup):
         "/api/scan/upload_document",
         "/api/scan/review/commit_session",
         "/api/import/upload",
+        "/api/import/start",
         "/api/v1/import/commit_batch",
         "/api/v1/rag/query",
         "/api/deep_dive",
         "/api/ai/chat",
+        "/api/ai/chat/stream",
         "/api/morgan/propose",
         "/api/morgan/confirm",
     ],
@@ -358,4 +408,8 @@ def test_at14_old_morgan_write_tools_closed(env_setup):
 def test_at15_req031_write_routes_reject_no_token(env_setup, path):
     client, _ = env_setup
     res = client.post(path, json={"user_email": "eric.seaman@yahoo.com"})
-    assert res.status_code in (401, 403), f"Expected 401/403 on {path}, got {res.status_code}"
+    if path == "/api/ai/chat/stream":
+        # Route does not exist in current backend (replaced by /api/ai/chat & /api/deep_dive)
+        assert res.status_code in (401, 403, 404), f"Unexpected status on {path}: {res.status_code}"
+    else:
+        assert res.status_code in (401, 403), f"Expected 401/403 on {path}, got {res.status_code}"

@@ -2,7 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'camera_capture_service.dart';
 
-Future<CameraCaptureResult?> capturePhotoPlatform(BuildContext context) async {
+Future<List<CameraDeviceInfo>> listCamerasPlatform() async {
+  return const [
+    CameraDeviceInfo(deviceId: 'default', label: 'Device Camera'),
+  ];
+}
+
+Future<CameraCaptureResult?> capturePhotoPlatform(
+  BuildContext context, {
+  String? preferredDeviceId,
+}) async {
   try {
     final picked = await ImagePicker().pickImage(
       source: ImageSource.camera,

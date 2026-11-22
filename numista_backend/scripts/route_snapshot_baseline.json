@@ -1126,6 +1126,32 @@
     ]
   },
   {
+    "path": "/api/morgan/home_flags",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_get_morgan_home_flags",
+    "tags": [
+      "Morgan AI Proposals & Safe Operations"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
+    "path": "/api/morgan/home_preference",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_set_morgan_home_preference",
+    "tags": [
+      "Morgan AI Proposals & Safe Operations"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
     "path": "/api/morgan/propose",
     "methods": [
       "POST"

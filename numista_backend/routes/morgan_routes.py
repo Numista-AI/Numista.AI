@@ -19,6 +19,7 @@ from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from google.cloud import firestore
+from firebase_admin import auth as firebase_auth
 
 from config import gemini4_thinking_config
 from routes.deps import (
@@ -1078,11 +1079,22 @@ async def api_get_morgan_home_flags(
         elif flags["morgan_home_allowlist"] and caller_email in MORGAN_HOME_ALLOWLIST:
             eligible = True
         elif flags["morgan_home_new_users"] and new_users_cutoff_ts is not None:
-            auth_time = user.get("auth_time") or 0
+            # F6: Use Firebase account creation timestamp (ms -> s), NEVER auth_time (last sign-in).
             try:
-                if float(auth_time) >= float(new_users_cutoff_ts):
-                    eligible = True
-            except (TypeError, ValueError):
+                cutoff_s = float(new_users_cutoff_ts)
+                created_ms = None
+                meta_dict = user.get("user_metadata")
+                if isinstance(meta_dict, dict) and meta_dict.get("creation_timestamp") is not None:
+                    created_ms = float(meta_dict["creation_timestamp"])
+                elif caller_uid:
+                    fb_user = firebase_auth.get_user(caller_uid)
+                    if getattr(fb_user, "user_metadata", None) and fb_user.user_metadata.creation_timestamp is not None:
+                        created_ms = float(fb_user.user_metadata.creation_timestamp)
+                if created_ms is not None:
+                    created_s = created_ms / 1000.0 if created_ms > 1e11 else created_ms
+                    eligible = created_s >= cutoff_s
+            except Exception as exc:
+                logger.warning(f"[morgan_home_flags] failed to verify account creation time: {exc}")
                 eligible = False
 
     preferred_home = "morgan" if eligible else "full_site"

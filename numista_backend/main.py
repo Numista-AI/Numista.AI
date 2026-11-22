@@ -3125,16 +3125,34 @@ async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None))
         # -- 0b. Handle Direct Button Commands (Undo / Quick Actions) ----------------
         if request.query.startswith("INTERNAL_UNDO:"):
             target_id = request.query.split(":", 1)[1].strip()
-            # G0-3 & G0-4: Verify action log shows coin was added by Morgan for this user
+            # G0-3 & G0-4: Verify action log shows coin was added by Morgan for this user in this session (<=30 min)
             log_ref = db.collection('users').document(owner_key).collection('morgan_action_log')
             verified = False
             verified_coin_id = None
+
+            def _in_current_session(entry_dict: dict, max_age_s: int = 1800) -> bool:
+                raw_ts = entry_dict.get("confirm_time") or entry_dict.get("created_at")
+                if raw_ts is None:
+                    return False
+                try:
+                    if hasattr(raw_ts, "timestamp"):
+                        ts_sec = float(raw_ts.timestamp())
+                    elif isinstance(raw_ts, (int, float)):
+                        ts_sec = float(raw_ts)
+                    elif isinstance(raw_ts, str):
+                        ts_sec = datetime.fromisoformat(raw_ts.replace("Z", "+00:00")).timestamp()
+                    else:
+                        return False
+                    age = datetime.now(timezone.utc).timestamp() - ts_sec
+                    return 0 <= age <= max_age_s
+                except Exception:
+                    return False
 
             # 1. By log doc id
             log_doc = log_ref.document(target_id).get()
             if log_doc.exists:
                 entry = log_doc.to_dict() or {}
-                if entry.get("action") == "add" and (entry.get("who") == caller_uid or is_admin):
+                if entry.get("action") == "add" and (entry.get("who") == caller_uid or is_admin) and _in_current_session(entry):
                     verified = True
                     verified_coin_id = entry.get("coin_id")
 
@@ -3143,7 +3161,7 @@ async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None))
                 matched_logs = list(log_ref.where("coin_id", "==", target_id).where("action", "==", "add").stream())
                 for m in matched_logs:
                     entry = m.to_dict() or {}
-                    if entry.get("who") == caller_uid or is_admin:
+                    if (entry.get("who") == caller_uid or is_admin) and _in_current_session(entry):
                         verified = True
                         verified_coin_id = target_id
                         break
@@ -3153,13 +3171,13 @@ async def deep_dive(request: DeepDiveRequest, authorization: str = Header(None))
                 matched_logs = list(log_ref.where("proposal_id", "==", target_id).where("action", "==", "add").stream())
                 for m in matched_logs:
                     entry = m.to_dict() or {}
-                    if entry.get("who") == caller_uid or is_admin:
+                    if (entry.get("who") == caller_uid or is_admin) and _in_current_session(entry):
                         verified = True
                         verified_coin_id = entry.get("coin_id")
                         break
 
             if not verified or not verified_coin_id:
-                raise HTTPException(status_code=403, detail="Unauthorized undo: Action not found in session log")
+                raise HTTPException(status_code=403, detail="Unauthorized undo: Action not found in current session log")
 
             # G0-3: Soft delete: move to trash
             coin_ref = db.collection('users').document(owner_key).collection('coins').document(verified_coin_id)

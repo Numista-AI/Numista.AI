@@ -64,7 +64,7 @@ test.describe('05 - Navigation & State Persistence (UX-HOME-SIDEBAR v2.1)', () =
 
     await clickSemanticTarget(page, /^AI Deepdive$/i);
     await expect(
-      page.getByRole('textbox', { name: /Ask Morgan or type here/i })
+      page.getByRole('textbox', { name: /Type your question/i })
     ).toBeVisible({ timeout: 10000 });
     await expect(
       page.getByRole('img', { name: /AI Deepdive/i })

@@ -2406,7 +2406,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   child: TextField(
                     controller: _controller,
                     focusNode: _focusNode,
-                    spellCheckConfiguration: const SpellCheckConfiguration(),
                     autocorrect: true,
                     enableSuggestions: true,
                     style: TextStyle(color: _textPrimary, fontSize: 16),

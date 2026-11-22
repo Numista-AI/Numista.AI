@@ -9,8 +9,24 @@ class CameraCaptureResult {
   const CameraCaptureResult({required this.bytes, required this.name});
 }
 
+class CameraDeviceInfo {
+  final String deviceId;
+  final String label;
+  const CameraDeviceInfo({required this.deviceId, required this.label});
+}
+
 class CameraCaptureService {
-  static Future<CameraCaptureResult?> capturePhoto(BuildContext context) async {
-    return platform.capturePhotoPlatform(context);
+  static Future<List<CameraDeviceInfo>> listCameras() async {
+    return platform.listCamerasPlatform();
+  }
+
+  static Future<CameraCaptureResult?> capturePhoto(
+    BuildContext context, {
+    String? preferredDeviceId,
+  }) async {
+    return platform.capturePhotoPlatform(
+      context,
+      preferredDeviceId: preferredDeviceId,
+    );
   }
 }
