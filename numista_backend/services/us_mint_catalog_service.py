@@ -318,17 +318,19 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "retailer": "United States Mint",
     },
     "26GC": {
-        "title": "2026 American Innovation $1 Coin Reverse Proof",
-        "formal_name": "2026 American Innovation $1 Coin Reverse Proof Coin",
+        "title": "2026 American Innovation $1 Coin Reverse Proof Set",
+        "formal_name": "American Innovation $1 Coin 2026 Reverse Proof Set",
         "year": 2026,
         "mint_mark": "S",
         "mint_facility": "San Francisco (S)",
-        "denomination": "Dollar",
+        "denomination": "Set",
         "program_series": "American Innovation $1",
-        "theme_subject": "American Innovation $1 Coin",
+        "theme_subject": "American Innovation Reverse Proof Set (Iowa, Wisconsin, California, Minnesota)",
         "strike_type": "Reverse Proof",
         "condition": "Reverse Proof",
         "metal_content": "Manganese-Brass",
+        "is_set": True,
+        "item_type": "set",
         "issue_price": "$60.00",
         "retailer": "United States Mint",
         "thumbnail_url": "https://storage.googleapis.com/numista-reference-library/reference_library/us_mint_official/2026_products/26gc_b.webp",
@@ -398,6 +400,82 @@ US_MINT_PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
         "retailer": "United States Mint",
     },
 }
+
+# Unambiguous single-mint SKUs with a definitive strike_type (excludes multi-mint sets like 26RJ)
+SINGLE_MINT_DEFINITIVE_SKUS = frozenset({
+    "26XL", "26XM", "26EA", "26XE", "26XH", "26XJ", "26XK", "26XN",
+    "26SQRP", "26XF", "26GC", "26AGA", "26AGB",
+    "23RH", "24XL", "24XM", "24EA",
+})
+
+
+def _extract_mint_display_name(facility: str) -> str:
+    """Extracts clean facility name (e.g., 'Philadelphia (P)' -> 'Philadelphia')."""
+    if not facility:
+        return ""
+    return re.sub(r"\s*\([^)]*\)\s*$", "", str(facility)).strip()
+
+
+def _apply_definitive_sku_overrides(
+    item: Dict[str, Any], catalog_match: Dict[str, Any], sku_code: str
+) -> None:
+    """Enforces catalog mint and strike/variety on unambiguous single-mint SKUs."""
+    if sku_code not in SINGLE_MINT_DEFINITIVE_SKUS:
+        return
+
+    # RC-3: Symmetric Mint Mark / facility override
+    if "mint_mark" in catalog_match:
+        cat_mm = str(catalog_match["mint_mark"])
+        cat_mint = _extract_mint_display_name(catalog_match.get("mint_facility", ""))
+        curr_mm = str(item.get("Mint Mark") or "").strip()
+        curr_mm_snake = str(item.get("mint_mark") or "").strip()
+        curr_mint = str(item.get("mint") or "").strip()
+
+        mm_conflict = (curr_mm and curr_mm != cat_mm) or (curr_mm_snake and curr_mm_snake != cat_mm)
+        mint_conflict = bool(cat_mint and curr_mint and curr_mint.lower() != cat_mint.lower())
+        if mm_conflict or mint_conflict:
+            logger.warning(
+                "CATALOG_OVERRIDE_MINT sku=%s before_mm=%r after_mm=%r before_mint=%r after_mint=%r",
+                sku_code,
+                curr_mm or curr_mm_snake,
+                cat_mm,
+                curr_mint,
+                cat_mint,
+            )
+
+        item["Mint Mark"] = cat_mm
+        if "mint_mark" in item or mm_conflict:
+            item["mint_mark"] = cat_mm
+        if cat_mint:
+            item["mint"] = cat_mint
+
+    # RC-2: Definitive Strike Type & Variety override
+    cat_strike = str(catalog_match.get("strike_type") or "").strip()
+    if cat_strike:
+        curr_strike = str(item.get("Strike Type") or "").strip()
+        if curr_strike and curr_strike.lower() != cat_strike.lower() and curr_strike not in ("Unspecified", "Business"):
+            logger.warning(
+                "CATALOG_OVERRIDE_STRIKE sku=%s before=%r after=%r",
+                sku_code,
+                curr_strike,
+                cat_strike,
+            )
+        item["Strike Type"] = cat_strike
+
+        if cat_strike == "Proof":
+            curr_var = str(item.get("Variety") or "").strip()
+            if "reverse" in curr_var.lower():
+                cleaned_var = re.sub(r"\bW-Reverse\s+PROOF\b", "W-Proof", curr_var, flags=re.IGNORECASE)
+                if "reverse" in cleaned_var.lower():
+                    cleaned_var = re.sub(r"\breverse\b", "", cleaned_var, flags=re.IGNORECASE).strip(" /-|")
+                cleaned_var = re.sub(r"\s{2,}", " ", cleaned_var).strip()
+                logger.warning(
+                    "CATALOG_OVERRIDE_VARIETY sku=%s before=%r after=%r",
+                    sku_code,
+                    curr_var,
+                    cleaned_var,
+                )
+                item["Variety"] = cleaned_var
 
 # Common truncation expansions in US Mint invoices & packing slips
 US_MINT_TRUNCATION_MAP: Dict[str, str] = {
@@ -496,6 +574,7 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
 
     # Attempt catalog match by item code first
     catalog_match = lookup_us_mint_item(raw_item_no)
+    matched_sku = normalize_item_code(raw_item_no) if catalog_match else ""
 
     # If item number not present in Retailer Item No, search description and personal notes for known codes (e.g. 26XL, 26SQRP)
     raw_notes = str(item.get("Personal Notes") or item.get("personalNotes") or "").strip()
@@ -504,6 +583,7 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
         for code in US_MINT_PRODUCT_CATALOG:
             if re.search(rf"\b{code}\b", search_corpus, re.IGNORECASE):
                 catalog_match = US_MINT_PRODUCT_CATALOG[code]
+                matched_sku = normalize_item_code(code)
                 if not raw_item_no or raw_item_no.upper() in ("N/A", "UNKNOWN", "NONE"):
                     item["Retailer Item No."] = code
                 break
@@ -534,6 +614,9 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
         # Mint facility / mark
         if not item.get("Mint Mark") and "mint_mark" in catalog_match:
             item["Mint Mark"] = catalog_match["mint_mark"]
+
+        # Symmetric RC-2 & RC-3 catalog overrides for unambiguous single-mint SKUs
+        _apply_definitive_sku_overrides(item, catalog_match, matched_sku)
 
         # Retailer normalization
         if not retailer or retailer in ("Unknown", ""):

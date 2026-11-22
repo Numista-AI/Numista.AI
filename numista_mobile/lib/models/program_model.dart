@@ -351,8 +351,11 @@ class CoinProgram {
       if (progLower.contains('collectible') || progLower.contains('numismatic')) {
         const collectibleSeries = [
           'silver eagle',
+          'gold eagle',
+          'american gold eagle',
           'peace dollar',
           'morgan dollar',
+          'morgan and peace',
           'american buffalo',
           'buffalo gold',
           'innovation dollar',

@@ -353,31 +353,103 @@ class SlotResolver {
   ///                         No state → returns '' → isMatch returns false (no tick).
   ///   7. trump    — Semiquincentennial Trump $1
   ///   Default: '' → isMatch returns false, not match-all.
-  static String _deriveCoinFamily(String progSeries, String themeSub) {
+  static String _deriveCoinFamily(String progSeries, String themeSub, {String title = ''}) {
     final ps = progSeries.toLowerCase();
-    final th = themeSub.toLowerCase();
-    // Order preserved: buffalo → ase → age → peace → morgan → innovation → trump
-    if (ps.contains('american buffalo') || ps.contains('buffalo gold') ||
-        th.contains('buffalo')) { return 'buffalo'; }
-    if (ps.contains('american silver eagle') || ps.contains('silver eagle') ||
-        th.contains('silver eagle')) { return 'ase'; }
-    if (ps.contains('american gold eagle') || ps.contains('gold eagle') ||
-        th.contains('gold eagle')) { return 'age'; }
-    if (ps.contains('peace dollar') || ps.contains('peace silver') ||
-        th.contains('peace')) { return 'peace'; }
-    if (ps.contains('morgan dollar') || ps.contains('morgan silver') ||
-        th.contains('morgan')) { return 'morgan'; }
-    if (ps.contains('american innovation') || ps.contains('innovation dollar') ||
-        th.contains('innovation')) {
-      if (th.contains('iowa'))       { return 'innovation:iowa'; }
-      if (th.contains('wisconsin'))  { return 'innovation:wisconsin'; }
-      if (th.contains('california')) { return 'innovation:california'; }
-      if (th.contains('minnesota'))  { return 'innovation:minnesota'; }
-      return ''; // No state → no tick
+    final th = '$themeSub $title'.trim().toLowerCase();
+    final all = '$ps $th'.trim();
+
+    // Order preserved: buffalo -> ase -> age -> peace -> morgan -> innovation -> trump
+    if (all.contains('american buffalo') || all.contains('buffalo gold') ||
+        all.contains('buffalo')) {
+      return 'buffalo';
     }
-    if (ps.contains('trump') || ps.contains('semiquincentennial president') ||
-        th.contains('trump')) { return 'trump'; }
+    if (all.contains('silver eagle') ||
+        (all.contains('american eagle') && all.contains('silver'))) {
+      return 'ase';
+    }
+    if (all.contains('gold eagle') ||
+        (all.contains('american eagle') && all.contains('gold'))) {
+      return 'age';
+    }
+
+    // Peace vs Morgan: handle combined "Morgan and Peace Silver Dollars" safely.
+    // If both appear in theme/title (ambiguous combined record), return ''.
+    final hasPeaceInSubject  = th.contains('peace');
+    final hasMorganInSubject = th.contains('morgan');
+    if (hasPeaceInSubject && !hasMorganInSubject) return 'peace';
+    if (hasMorganInSubject && !hasPeaceInSubject) return 'morgan';
+    if (!ps.contains('morgan and peace')) {
+      if (ps.contains('peace dollar') || ps.contains('peace silver')) return 'peace';
+      if (ps.contains('morgan dollar') || ps.contains('morgan silver')) return 'morgan';
+    }
+
+    if (all.contains('american innovation') || all.contains('innovation dollar') ||
+        th.contains('innovation')) {
+      const states = ['iowa', 'wisconsin', 'california', 'minnesota'];
+      final matched = states
+          .where((s) => RegExp(r'(?:^|\b)' + s + r'(?:\b|$)').hasMatch(th))
+          .toList();
+      if (matched.length == 1) return 'innovation:${matched.first}';
+      return ''; // No state or multi-state -> no tick
+    }
+
+    if (all.contains('trump') || ps.contains('semiquincentennial president')) {
+      return 'trump';
+    }
     return '';
+  }
+
+  static bool _matches2026CollectiblesSlot(
+      Map<String, dynamic> item, CoinProgram program, ProgramCoin coinSlot) {
+    // Step 1: Hard year guard (2026 only; blank/wrong year fails)
+    final slotYear = (coinSlot.year ?? '').trim();
+    if (slotYear.isNotEmpty) {
+      final rawYear = (item['Year']?.toString() ??
+                       item['year']?.toString() ??
+                       item['date']?.toString() ?? '').trim();
+      final normYear = (rawYear == '1776-1976') ? '1976' : rawYear;
+      if (normYear.isEmpty || normYear != slotYear) return false;
+    }
+
+    // Step 2: Slot product_family must be known
+    final slotFamily = coinSlot.productFamily.trim().toLowerCase();
+    if (slotFamily.isEmpty) return false;
+
+    // Step 3: Derive coin family (with Innovation state + Peace/Morgan disambiguation)
+    final progSeries = (item['Program/Series']?.toString() ??
+                        item['program_series']?.toString() ?? '').trim();
+    final themeSub   = (item['Theme/Subject']?.toString() ??
+                        item['theme_subject']?.toString() ?? '').trim();
+    final title      = (item['Title']?.toString() ??
+                        item['name']?.toString() ??
+                        item['official_title']?.toString() ?? '').trim();
+
+    final coinFamily = _deriveCoinFamily(progSeries, themeSub, title: title);
+    if (coinFamily.isEmpty || coinFamily != slotFamily) return false;
+
+    // Step 4: Finish guard (mutual exclusion across RP / EU / Cong / Standard Proof)
+    final cNameLower = coinSlot.name.toLowerCase();
+    final variety    = (item['Variety']?.toString() ?? item['variety']?.toString() ?? '').toLowerCase();
+    final strikeType = (item['Strike Type']?.toString() ?? item['strike_type']?.toString() ?? '').toLowerCase();
+    final finishHint = '$variety $strikeType'.trim();
+
+    final slotIsRP   = cNameLower.contains('reverse proof');
+    final slotIsEU   = cNameLower.contains('enhanced uncirculated');
+    final slotIsCong = cNameLower.contains('congratulations');
+
+    final coinIsRP   = finishHint.contains('reverse proof') || finishHint.contains('reverse-proof');
+    final coinIsEU   = finishHint.contains('enhanced') || RegExp(r'(^|\W)eu($|\W)').hasMatch(finishHint);
+    final coinIsCong = finishHint.contains('congratulations') || finishHint.contains('cong');
+
+    if (slotIsRP   && !coinIsRP)   return false;
+    if (slotIsEU   && !coinIsEU)   return false;
+    if (slotIsCong && !coinIsCong) return false;
+    if (coinIsRP   && !slotIsRP)   return false;
+    if (coinIsEU   && !slotIsEU)   return false;
+    if (coinIsCong && !slotIsCong) return false;
+
+    // Step 5: Row matched; variety/mint-level discrimination runs next in matchesVariety()
+    return true;
   }
 
   static bool _matches2026CurrencySlot(
@@ -512,6 +584,9 @@ class SlotResolver {
       if (program.id == '2026_semiquincentennial_currency') {
         return _matches2026CurrencySlot(item, program, coinSlot);
       }
+      if (program.id == '2026_semiquincentennial_collectibles') {
+        return _matches2026CollectiblesSlot(item, program, coinSlot);
+      }
       if (_isProgramMultiDesign(program)) {
         return _fastPathSubjectMatchesSlot(item, program, coinSlot);
       }
@@ -586,40 +661,11 @@ class SlotResolver {
     final bool seriesMatched = program.matchesDbSeries(progSeries);
     if (!seriesMatched && progSeries.isNotEmpty) { return false; }
 
-    // 3b. TEMPORARY: Collectibles product-family guard.
-    // matchesDbSeries() answers "is this coin in this program?" but not
-    // "is this coin in THIS SPECIFIC SLOT?" For the collectibles program,
-    // one W-Proof coin would paint every W-PROOF hole (AGE, Buffalo, ASE).
-    // Fix: require exact productFamily match + finish guard.
-    // Next commit: productFamily on every slot in all programs + delete _isMatch.
+    // 3b. Collectibles dedicated slot matcher (year + productFamily + finish guard).
+    // Returns immediately so multi-design collectibles do NOT fall through into
+    // _fastPathSubjectMatchesSlot(), which requires exact Theme/Subject == slot.name.
     if (program.id == '2026_semiquincentennial_collectibles') {
-      final slotFamily = coinSlot.productFamily;
-      if (slotFamily.isEmpty) { return false; } // Unknown slot → reject safely
-
-      final coinFamily = _deriveCoinFamily(progSeries, themeSub);
-      if (coinFamily.isEmpty || coinFamily != slotFamily) { return false; }
-
-      // Stage 2: finish guard — RP coin cannot tick EU slot and vice versa.
-      final cNameLower = coinSlot.name.toLowerCase();
-      final variety = (item['Variety']?.toString() ?? item['variety']?.toString() ?? '').toLowerCase();
-      final strikeType = (item['Strike Type']?.toString() ?? item['strike_type']?.toString() ?? '').toLowerCase();
-      final finishHint = '$variety $strikeType'.trim();
-
-      final slotIsRP   = cNameLower.contains('reverse proof');
-      final slotIsEU   = cNameLower.contains('enhanced uncirculated');
-      final slotIsCong = cNameLower.contains('congratulations');
-      final coinIsRP   = finishHint.contains('reverse proof') || finishHint.contains('reverse-proof');
-      final coinIsEU   = finishHint.contains('enhanced') || finishHint.contains(' eu');
-      final coinIsCong = finishHint.contains('congratulations') || finishHint.contains('cong');
-
-      if (slotIsRP   && !coinIsRP)   { return false; }
-      if (slotIsEU   && !coinIsEU)   { return false; }
-      if (slotIsCong && !coinIsCong) { return false; }
-      if (coinIsRP   && !slotIsRP)   { return false; }
-      if (coinIsEU   && !slotIsEU)   { return false; }
-      if (coinIsCong && !slotIsCong) { return false; }
-
-      // Family + finish matched — year guard falls through below
+      return _matches2026CollectiblesSlot(item, program, coinSlot);
     }
 
     // 4. Year Alignment Guard — hard equality when slot has a year.

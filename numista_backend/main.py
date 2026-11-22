@@ -2099,9 +2099,9 @@ async def process_invoice(
              - Ignore "S & H" (e.g. "$9.95") and "Total Amount" (e.g. "$182.95", "$70.95") as line item coin cost.
           6. Description & Finish Resolution:
              - "Peace Silver Dollar 2026 Rever" (Item 26XL) -> Year: 2026, Denomination: "Peace Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Reverse Proof", Mint Mark: "" (Philadelphia - P), Metal Content: "99.9% Silver".
-             - "American Eagle 2026 One Ounce" (Item 26EA) -> Year: 2026, Denomination: "American Silver Eagle", Program/Series: "American Silver Eagle", Strike Type: "Proof", Metal Content: "99.9% Silver".
+             - "American Eagle 2026 One Ounce" (Item 26EA) -> Year: 2026, Denomination: "American Silver Eagle", Program/Series: "American Silver Eagle", Strike Type: "Proof" (NEVER "Reverse Proof" -- 26EA is a standard West Point Proof with 250 privy), Variety: "250 Privy / W-Proof", Mint Mark: "W", Metal Content: "99.9% Silver".
              - "Morgan Silver Enhanced Un" (Item 26XE) -> Year: 2026, Denomination: "Morgan Dollar", Program/Series: "Morgan and Peace Silver Dollars", Strike Type: "Enhanced Uncirculated", Condition: "Enhanced Uncirculated", Variety: "Liberty Bell 250 Privy, 1776~2026 Dual Date", Metal Content: "99.9% Silver (0.859 oz ASW)".
-             - "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll" (Item 26SQRP) -> Year: 2026, Denomination: "Dollar", Program/Series: "Presidential $1 Coins", Strike Type: "Circulating", Condition: "Uncirculated", Metal Content: "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)", Cost: "$61.00".
+             - "2026 Semiquincentennial President Donald J. Trump $1 Coin 25-Coin Roll" (Item 26SQRP) -> Year: 2026, Denomination: "Dollar", Program/Series: "Presidential $1 Coins", Mint Mark: "" (Philadelphia -- 26SQRD does not exist; trailing "D" in truncated title means "Dollar", NOT Denver), Strike Type: "Circulating", Condition: "Uncirculated", Metal Content: "Manganese-Brass (88.5% Cu, 6% Zn, 3.5% Mn, 2% Ni)", Cost: "$61.00".
           7. Quantity Extraction:
              - Extract the quantity shipped from the "Ship" column (e.g. "2") or "Quantity Shipped" section into the "Quantity" field (integer, default 1).
 

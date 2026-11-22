@@ -272,4 +272,555 @@ void main() {
     });
 
   });
+
+  // ── Full 15-coin / 19-slot regression suite (v2.1 §10.1, §10.2, §10.5) ─────
+
+  ChecklistVariety cv(String id) => ChecklistVariety(id: id, label: id);
+
+  final fullCollectibles19Program = CoinProgram(
+    id: '2026_semiquincentennial_collectibles',
+    url: '',
+    name: '2026 America250 - Numismatic Collectibles',
+    years: '2026',
+    category: 'America250',
+    mintMarkLocations: 'Obverse or edge',
+    coins: [
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_morgan_silver_dollar_reverse_proof_2026',
+        name: '2026 Morgan Silver Dollar Reverse Proof',
+        year: '2026',
+        productFamily: 'morgan',
+        varieties: [cv('P-REVERSE-PROOF')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_peace_silver_dollar_reverse_proof_2026',
+        name: '2026 Peace Silver Dollar Reverse Proof',
+        year: '2026',
+        productFamily: 'peace',
+        varieties: [cv('P-REVERSE-PROOF')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_morgan_silver_dollar_enhanced_uncirculated_2026',
+        name: '2026 Morgan Silver Dollar Enhanced Uncirculated',
+        year: '2026',
+        productFamily: 'morgan',
+        varieties: [cv('EU')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_peace_silver_dollar_enhanced_uncirculated_2026',
+        name: '2026 Peace Silver Dollar Enhanced Uncirculated',
+        year: '2026',
+        productFamily: 'peace',
+        varieties: [cv('EU')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_american_eagle_one_ounce_silver_proof_coin_2026',
+        name: '2026 American Eagle One Ounce Silver Proof Coin',
+        year: '2026',
+        productFamily: 'ase',
+        varieties: [cv('W-PROOF')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_american_eagle_one_ounce_silver_enhanced_uncirculated_coin_2026',
+        name: '2026 American Eagle One Ounce Silver Enhanced Uncirculated Coin',
+        year: '2026',
+        productFamily: 'ase',
+        varieties: [cv('W-EU')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_american_eagle_one_ounce_silver_proof_coin_congratulations_set_2026',
+        name: '2026 American Eagle One Ounce Silver Proof Coin (Congratulations Set)',
+        year: '2026',
+        productFamily: 'ase',
+        varieties: [cv('P-PROOF-CONG')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_american_eagle_one_ounce_gold_proof_coin_2026',
+        name: '2026 American Eagle One Ounce Gold Proof Coin',
+        year: '2026',
+        productFamily: 'age',
+        varieties: [cv('W-PROOF')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_american_eagle_one_ounce_gold_enhanced_uncirculated_coin_2026',
+        name: '2026 American Eagle One Ounce Gold Enhanced Uncirculated Coin',
+        year: '2026',
+        productFamily: 'age',
+        varieties: [cv('W-EU')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_american_buffalo_one_ounce_gold_proof_coin_2026',
+        name: '2026 American Buffalo One Ounce Gold Proof Coin',
+        year: '2026',
+        productFamily: 'buffalo',
+        varieties: [cv('W-PROOF')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_american_innovation_1_iowa_2026',
+        name: r'2026 American Innovation $1 — Iowa',
+        year: '2026',
+        productFamily: 'innovation:iowa',
+        varieties: [cv('P'), cv('D')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_american_innovation_1_wisconsin_2026',
+        name: r'2026 American Innovation $1 — Wisconsin',
+        year: '2026',
+        productFamily: 'innovation:wisconsin',
+        varieties: [cv('P'), cv('D')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_american_innovation_1_california_2026',
+        name: r'2026 American Innovation $1 — California',
+        year: '2026',
+        productFamily: 'innovation:california',
+        varieties: [cv('P'), cv('D')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_american_innovation_1_minnesota_2026',
+        name: r'2026 American Innovation $1 — Minnesota',
+        year: '2026',
+        productFamily: 'innovation:minnesota',
+        varieties: [cv('P'), cv('D')],
+      ),
+      ProgramCoin(
+        id: '2026_semiquincentennial_collectibles_2026_semiquincentennial_president_donald_j_trump_1_coin_2026',
+        name: r'2026 Semiquincentennial President Donald J. Trump $1 Coin',
+        year: '2026',
+        productFamily: 'trump',
+        varieties: [cv('P')],
+      ),
+    ],
+  );
+
+  final fullCurrency39Program = CoinProgram(
+    id: '2026_semiquincentennial_currency',
+    url: '',
+    name: '2026 America250 - Circulating Currency',
+    years: '2026',
+    category: 'America250',
+    mintMarkLocations: 'Obverse',
+    coins: [
+      ProgramCoin(id: '2026_cent', name: '1776 ~ 2026 Collectible Cent', year: '2026', varieties: [cv('P-UNC'), cv('D-UNC'), cv('S-PROOF')]),
+      ProgramCoin(id: '2026_nickel', name: '1776 ~ 2026 Jefferson Nickel', year: '2026', varieties: [cv('P-UNC'), cv('D-UNC'), cv('S-PROOF')]),
+      ProgramCoin(id: '2026_dime', name: 'Emerging Liberty Dime', year: '2026', varieties: [cv('P-UNC'), cv('D-UNC'), cv('S-PROOF'), cv('S-SILVER')]),
+      ProgramCoin(id: '2026_quarter_mayflower', name: 'America250 Quarter #1: Mayflower Compact', year: '2026', varieties: [cv('P-UNC'), cv('D-UNC'), cv('S-PROOF'), cv('S-SILVER')]),
+      ProgramCoin(id: '2026_quarter_valleyforge', name: 'America250 Quarter #2: Revolutionary War', year: '2026', varieties: [cv('P-UNC'), cv('D-UNC'), cv('S-PROOF'), cv('S-SILVER')]),
+      ProgramCoin(id: '2026_quarter_declaration', name: 'America250 Quarter #3: Declaration of Independence', year: '2026', varieties: [cv('P-UNC'), cv('D-UNC'), cv('S-PROOF'), cv('S-SILVER'), cv('P-PRIVY-JULY4'), cv('D-PRIVY-JULY4')]),
+      ProgramCoin(id: '2026_quarter_constitution', name: 'America250 Quarter #4: U.S. Constitution', year: '2026', varieties: [cv('P-UNC'), cv('D-UNC'), cv('S-PROOF'), cv('S-SILVER')]),
+      ProgramCoin(id: '2026_quarter_gettysburg', name: 'America250 Quarter #5: Gettysburg Address', year: '2026', varieties: [cv('P-UNC'), cv('D-UNC'), cv('S-PROOF'), cv('S-SILVER')]),
+      ProgramCoin(id: '2026_half_dollar', name: 'Enduring Liberty Half Dollar', year: '2026', varieties: [cv('P-UNC'), cv('D-UNC'), cv('S-PROOF'), cv('S-SILVER')]),
+      ProgramCoin(id: '2026_native_american_dollar', name: r'Native American \ Coin - Polly Cooper (Oneida Allies at Valley Forge)', year: '2026', varieties: [cv('P-UNC'), cv('D-UNC'), cv('S-PROOF')]),
+    ],
+  );
+
+  // Verbatim payloads from eric.seaman@yahoo.com Firestore docs
+  final eric26XL = <String, dynamic>{
+    'id': 'a59853c1-b72b-414d-8b8e-de6813c29996',
+    'Program/Series': 'Peace Dollar',
+    'Theme/Subject': 'America250',
+    'Year': '2026',
+    'Mint Mark': 'P',
+    'mint_mark': 'P',
+    'mint': 'Philadelphia',
+    'Condition': 'Reverse Proof',
+    'Variety': 'Reverse Proof',
+    'Denomination': 'Dollar',
+    'Country': 'United States',
+  };
+
+  final eric26XE = <String, dynamic>{
+    'id': 'be10e44ce5b4ff4b46c92426cc7f59a254ed675c',
+    'Program/Series': 'Morgan Dollar',
+    'Theme/Subject': 'Morgan Dollar Enhanced Uncirculated (Liberty Bell 250 Privy, 1776~2026)',
+    'Year': '2026',
+    'mint': 'West Point',
+    'Strike Type': 'Enhanced Uncirculated',
+    'Condition': 'Enhanced Uncirculated',
+    'Variety': 'Liberty Bell 250 Privy, 1776~2026 Dual Date',
+    'Denomination': 'Dollar',
+    'Country': 'United States',
+    'Quantity': 2,
+  };
+
+  final eric26EaRaw = <String, dynamic>{
+    'id': 'e91efa62-4e8d-4920-a928-c0c97659bcdc',
+    'Program/Series': 'American Silver Eagle',
+    'Theme/Subject': 'America250',
+    'Year': '2026',
+    'Mint Mark': 'W',
+    'mint_mark': 'W',
+    'mint': 'West Point',
+    'Condition': 'Proof',
+    'Strike Type': '',
+    'Variety': '250 Privy / W-Reverse PROOF',
+    'Denomination': 'Dollar',
+    'Country': 'United States',
+  };
+
+  final eric26EaFixed = <String, dynamic>{
+    ...eric26EaRaw,
+    'Strike Type': 'Proof',
+    'Variety': '250 Privy / W-Proof',
+  };
+
+  final eric26SqrpRaw = <String, dynamic>{
+    'id': '7a32932ebc4e94a586534e7180cd1c4372c4f17d',
+    'Program/Series': 'Semiquincentennial President',
+    'Theme/Subject': 'Donald J. Trump Semiquincentennial 250th Anniversary Roll (July 4th Privy eligible)',
+    'Year': '2026',
+    'Mint Mark': 'D',
+    'mint_mark': 'D',
+    'mint': 'Denver',
+    'Strike Type': 'Circulating',
+    'Condition': 'Uncirculated',
+    'Denomination': 'Dollar',
+    'Country': 'United States',
+    'Quantity': 25,
+  };
+
+  final eric26SqrpFixed = <String, dynamic>{
+    ...eric26SqrpRaw,
+    'Mint Mark': '',
+    'mint_mark': '',
+    'mint': 'Philadelphia',
+  };
+
+  // Deferred & excluded 2026 items from eric.seaman@yahoo.com
+  final eric26GcPending = <String, dynamic>{
+    'id': '0e68ecba760df66bf824ec1ba2c86b32318d002d',
+    'Program/Series': 'American Innovation',
+    'Year': '2026',
+    'Denomination': 'Dollar',
+    'Condition': 'Unspecified / Raw',
+    'Country': 'United States',
+  };
+
+  final ericMayflowerQuarter = <String, dynamic>{
+    'id': '0172d0ee64284a12a8aa269ce805ec07',
+    'Program/Series': 'United States Semiquincentennial (250th Anniversary)',
+    'Theme/Subject': 'Mayflower Compact & Pilgrim Couple',
+    'Year': '2026',
+    'Mint Mark': 'P',
+    'mint_mark': 'P',
+    'mint': 'Philadelphia',
+    'Denomination': 'Quarter Dollar',
+    'Condition': 'UNC',
+    'Country': 'United States',
+  };
+
+  final ericEnduringHalf = <String, dynamic>{
+    'id': '8f2197d5d03a428db24486b4ee375a5e',
+    'Program/Series': 'United States Semiquincentennial (250th Anniversary)',
+    'Theme/Subject': '250th Anniversary of American Independence',
+    'Year': '2026',
+    'Mint Mark': 'D',
+    'mint_mark': 'D',
+    'mint': 'Denver',
+    'Denomination': 'Half Dollar',
+    'Condition': 'MS-66',
+    'Country': 'United States',
+  };
+
+  final eric26RJ_1 = <String, dynamic>{
+    ...annualSet2026,
+    'id': '71e2d4ae92bc4312a4198a3a0cc21fcb',
+  };
+
+  final eric26RJ_2 = <String, dynamic>{
+    'id': '91f8821265bfe8a33fbd97e21f102c67fdf849fd',
+    'Program/Series': 'Uncirculated Coin Set',
+    'Year': '2026',
+    'Denomination': 'Set',
+    'Condition': 'Uncirculated',
+    'Country': 'United States',
+  };
+
+  final ericRooseveltP = <String, dynamic>{
+    'id': 'nAnGLwGvhfIOibf6kIft',
+    'Program/Series': 'Roosevelt Dimes',
+    'Theme/Subject': 'Franklin D. Roosevelt',
+    'Year': '2026',
+    'Mint Mark': 'P',
+    'mint_mark': 'P',
+    'Denomination': 'Dime',
+    'Condition': 'UNC',
+    'Country': 'United States',
+  };
+
+  final ericRooseveltD = <String, dynamic>{
+    'id': 'rv9SCUTahBuqJkkiJyga',
+    'Program/Series': 'Roosevelt Dimes',
+    'Theme/Subject': 'Franklin D. Roosevelt',
+    'Year': '2026',
+    'Mint Mark': 'D',
+    'mint_mark': 'D',
+    'Denomination': 'Dime',
+    'Condition': 'UNC',
+    'Country': 'United States',
+  };
+
+  List<String> ownedKeys(CoinProgram prog, List<Map<String, dynamic>> coins) {
+    final inv = SlotResolver.resolveProgramInventory(program: prog, coins: coins);
+    return inv.entries.where((e) => e.value.isOwned).map((e) => e.key).toList()..sort();
+  }
+
+  group('Full 19-slot Collectibles integration & regression (v2.1 §10)', () {
+    test('Full 15-coin program triggers _isProgramMultiDesign (19 total slots)', () {
+      expect(fullCollectibles19Program.coins.length, equals(15));
+      final inv = SlotResolver.resolveProgramInventory(
+        program: fullCollectibles19Program,
+        coins: const [],
+      );
+      expect(inv.length, equals(19));
+    });
+
+    test('Eric 4 remediated coins + 7 excluded/deferred yield exactly 4 / 19 on legacy path', () {
+      final owned = ownedKeys(fullCollectibles19Program, [
+        eric26XL,
+        eric26XE,
+        eric26EaFixed,
+        eric26SqrpFixed,
+        eric26GcPending,
+        ericMayflowerQuarter,
+        ericEnduringHalf,
+        eric26RJ_1,
+        eric26RJ_2,
+        ericRooseveltP,
+        ericRooseveltD,
+      ]);
+      expect(owned, equals([
+        '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_american_eagle_one_ounce_silver_proof_coin_2026_W-PROOF',
+        '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_morgan_silver_dollar_enhanced_uncirculated_2026_EU',
+        '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_peace_silver_dollar_reverse_proof_2026_P-REVERSE-PROOF',
+        '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_semiquincentennial_president_donald_j_trump_1_coin_2026_P',
+      ]));
+    });
+
+    test('Code-only intermediate state: Eric raw un-remediated payloads yield 2 / 19 (26XL + 26XE)', () {
+      final owned = ownedKeys(fullCollectibles19Program, [
+        eric26XL,
+        eric26XE,
+        eric26EaRaw,
+        eric26SqrpRaw,
+      ]);
+      expect(owned, equals([
+        '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_morgan_silver_dollar_enhanced_uncirculated_2026_EU',
+        '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_peace_silver_dollar_reverse_proof_2026_P-REVERSE-PROOF',
+      ]));
+    });
+
+    test('program_id fast path matches all 4 Eric coins + grokbot Gold Eagle EU shape', () {
+      final pidCoins = [
+        {...eric26XL, 'program_id': '2026_semiquincentennial_collectibles'},
+        {...eric26XE, 'program_id': '2026_semiquincentennial_collectibles'},
+        {...eric26EaFixed, 'program_id': '2026_semiquincentennial_collectibles'},
+        {...eric26SqrpFixed, 'program_id': '2026_semiquincentennial_collectibles'},
+        {
+          'id': 'b71de3f2-2809-4186-a718-f3f723218f57',
+          'program_id': '2026_semiquincentennial_collectibles',
+          'Program/Series': '2026 America250 - Numismatic Collectibles',
+          'Theme/Subject': '2026 American Eagle One Ounce Gold Enhanced Uncirculated Coin',
+          'Year': '2026',
+          'Mint Mark': 'W',
+          'mint': 'West Point',
+          'Strike Type': 'Enhanced Uncirculated',
+          'Variety': 'Enhanced Uncirculated',
+          'Denomination': 'Dollar',
+          'Country': 'United States',
+        },
+      ];
+      final owned = ownedKeys(fullCollectibles19Program, pidCoins);
+      expect(owned.length, equals(5));
+      expect(
+        owned.contains(
+          '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_american_eagle_one_ounce_gold_enhanced_uncirculated_coin_2026_W-EU',
+        ),
+        isTrue,
+      );
+    });
+
+    test('Per-state Innovation payloads (8 positives) each tick exactly 1 / 19 slot', () {
+      final stateCases = <List<String>>[
+        ['Iowa', 'iowa', 'P'],
+        ['Iowa', 'iowa', 'D'],
+        ['Wisconsin', 'wisconsin', 'P'],
+        ['Wisconsin', 'wisconsin', 'D'],
+        ['California', 'california', 'P'],
+        ['California', 'california', 'D'],
+        ['Minnesota', 'minnesota', 'P'],
+        ['Minnesota', 'minnesota', 'D'],
+      ];
+      for (final sc in stateCases) {
+        final stateLabel = sc[0];
+        final stateKey = sc[1];
+        final mint = sc[2];
+        final coin = <String, dynamic>{
+          'Program/Series': 'American Innovation',
+          'Theme/Subject': stateLabel,
+          'Year': '2026',
+          'Mint Mark': mint,
+          'Denomination': 'Dollar',
+          'Country': 'United States',
+        };
+        final owned = ownedKeys(fullCollectibles19Program, [coin]);
+        expect(
+          owned,
+          equals([
+            '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_american_innovation_1_${stateKey}_2026_$mint',
+          ]),
+          reason: 'Expected $stateLabel $mint to match only its own slot',
+        );
+      }
+
+      // Blank-theme Innovation and S-mint Reverse Proof 26GC must yield 0 / 19
+      expect(ownedKeys(fullCollectibles19Program, [eric26GcPending]), isEmpty);
+      expect(
+        ownedKeys(fullCollectibles19Program, [
+          {
+            'Program/Series': r'American Innovation $1',
+            'Theme/Subject': 'Iowa',
+            'Year': '2026',
+            'Mint Mark': 'S',
+            'Strike Type': 'Reverse Proof',
+            'Condition': 'Reverse Proof',
+            'Denomination': 'Dollar',
+            'Country': 'United States',
+          },
+        ]),
+        isEmpty,
+      );
+    });
+
+    test('Morgan and Peace Silver Dollars combined series & Gold Eagle / Buffalo / Congrats', () {
+      final morganPeacePeaceRP = <String, dynamic>{
+        'Program/Series': 'Morgan and Peace Silver Dollars',
+        'Theme/Subject': 'Peace Dollar Reverse Proof',
+        'Year': '2026',
+        'Mint Mark': '',
+        'mint': 'Philadelphia',
+        'Strike Type': 'Reverse Proof',
+        'Denomination': 'Dollar',
+        'Country': 'United States',
+      };
+      expect(
+        ownedKeys(fullCollectibles19Program, [morganPeacePeaceRP]),
+        equals([
+          '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_peace_silver_dollar_reverse_proof_2026_P-REVERSE-PROOF',
+        ]),
+      );
+
+      final morganPeaceMorganEU = <String, dynamic>{
+        'Program/Series': 'Morgan and Peace Silver Dollars',
+        'Theme/Subject': 'Morgan Dollar Enhanced Uncirculated',
+        'Year': '2026',
+        'Mint Mark': '',
+        'mint': 'West Point',
+        'Strike Type': 'Enhanced Uncirculated',
+        'Denomination': 'Dollar',
+        'Country': 'United States',
+      };
+      expect(
+        ownedKeys(fullCollectibles19Program, [morganPeaceMorganEU]),
+        equals([
+          '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_morgan_silver_dollar_enhanced_uncirculated_2026_EU',
+        ]),
+      );
+
+      // Ambiguous combined series+theme referencing both Morgan & Peace (Hmq76a3zTbPlMMTZwHr2) -> 0 / 19
+      final ambiguousMorganPeace = <String, dynamic>{
+        'Program/Series': 'Morgan and Peace Silver Dollars',
+        'Theme/Subject': '2026 Morgan and Peace Silver Dollars Dollar',
+        'Year': '2026',
+        'Mint Mark': '',
+        'Strike Type': 'Reverse Proof',
+        'Denomination': 'Dollar',
+        'Country': 'United States',
+      };
+      expect(ownedKeys(fullCollectibles19Program, [ambiguousMorganPeace]), isEmpty);
+
+      // Gold Eagle Proof (26EB), Gold Eagle EU (26EH), Buffalo Proof (26EL), ASE Congrats (26RF)
+      final coin26EB = <String, dynamic>{
+        'Program/Series': 'American Gold Eagle',
+        'Theme/Subject': 'America250',
+        'Year': '2026',
+        'Mint Mark': 'W',
+        'Strike Type': 'Proof',
+        'Denomination': 'Dollar',
+        'Country': 'United States',
+      };
+      final coin26EH = <String, dynamic>{
+        'Program/Series': 'American Gold Eagle',
+        'Theme/Subject': 'America250',
+        'Year': '2026',
+        'Mint Mark': 'W',
+        'Strike Type': 'Enhanced Uncirculated',
+        'Denomination': 'Dollar',
+        'Country': 'United States',
+      };
+      final coin26EL = <String, dynamic>{
+        'Program/Series': 'American Buffalo',
+        'Theme/Subject': 'America250',
+        'Year': '2026',
+        'Mint Mark': 'W',
+        'Strike Type': 'Proof',
+        'Denomination': 'Dollar',
+        'Country': 'United States',
+      };
+      final coin26RF = <String, dynamic>{
+        'Program/Series': 'American Silver Eagle',
+        'Theme/Subject': 'Congratulations Set',
+        'Year': '2026',
+        'Mint Mark': '',
+        'mint': 'Philadelphia',
+        'Strike Type': 'Proof',
+        'Variety': 'Congratulations Set',
+        'Denomination': 'Dollar',
+        'Country': 'United States',
+      };
+      expect(
+        ownedKeys(fullCollectibles19Program, [coin26EB, coin26EH, coin26EL, coin26RF]),
+        equals([
+          '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_american_buffalo_one_ounce_gold_proof_coin_2026_W-PROOF',
+          '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_american_eagle_one_ounce_gold_enhanced_uncirculated_coin_2026_W-EU',
+          '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_american_eagle_one_ounce_gold_proof_coin_2026_W-PROOF',
+          '2026_semiquincentennial_collectibles_2026_semiquincentennial_collectibles_2026_american_eagle_one_ounce_silver_proof_coin_congratulations_set_2026_P-PROOF-CONG',
+        ]),
+      );
+    });
+
+    test('All 6 excluded 2026 coins yield 0 / 19 in Collectibles', () {
+      final owned = ownedKeys(fullCollectibles19Program, [
+        ericMayflowerQuarter,
+        ericEnduringHalf,
+        eric26RJ_1,
+        eric26RJ_2,
+        ericRooseveltP,
+        ericRooseveltD,
+      ]);
+      expect(owned, isEmpty);
+    });
+
+    test('Sibling Circulating Currency baseline remains pinned at 20 / 39 (v2.1 §10.5 R3)', () {
+      final allEric2026Coins = [
+        eric26XL,
+        eric26XE,
+        eric26EaFixed,
+        eric26SqrpFixed,
+        eric26GcPending,
+        ericMayflowerQuarter,
+        ericEnduringHalf,
+        eric26RJ_1,
+        eric26RJ_2,
+        ericRooseveltP,
+        ericRooseveltD,
+      ];
+      final inv = SlotResolver.resolveProgramInventory(
+        program: fullCurrency39Program,
+        coins: allEric2026Coins,
+      );
+      expect(inv.length, equals(39));
+      expect(inv.values.where((r) => r.isOwned).length, equals(20));
+    });
+  });
 }
