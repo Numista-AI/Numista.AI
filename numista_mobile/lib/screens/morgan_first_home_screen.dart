@@ -79,6 +79,7 @@ class MorganFirstHomeScreen extends StatefulWidget {
       Uint8List front, Uint8List? back, bool isScan)? identifyPhotoFn;
   final Future<List<CameraDeviceInfo>> Function()? listCamerasFn;
   final Future<CameraCaptureResult?> Function(String? deviceId)? capturePhotoFn;
+  final Future<Uint8List?> Function(String slot)? pickFileFn;
 
   const MorganFirstHomeScreen({
     super.key,
@@ -89,7 +90,101 @@ class MorganFirstHomeScreen extends StatefulWidget {
     this.identifyPhotoFn,
     this.listCamerasFn,
     this.capturePhotoFn,
+    this.pickFileFn,
   });
+
+  /// Pure typed-coin parser (G1): extracts Year, Denomination + Series, Mint Mark,
+  /// and Condition without inventing confidence.
+  static Map<String, dynamic> parseTypedCoin(String raw) {
+    final text = raw.trim();
+    final yearMatch = RegExp(r'\b(1[789]\d{2}|20\d{2})\b').firstMatch(text);
+    final year = yearMatch?.group(1) ?? '';
+    String mint = '';
+    final lower = text.toLowerCase();
+    // Support both "1881-S" / "1921-D" hyphenated mint marks and word/token mint marks
+    final hyphenMint = RegExp(r'\b\d{4}-(cc|[dswop])\b').firstMatch(lower);
+    if (hyphenMint != null) {
+      mint = hyphenMint.group(1)!.toUpperCase();
+    } else if (lower.contains('denver') || RegExp(r'\bd\b').hasMatch(lower)) {
+      mint = 'D';
+    } else if (lower.contains('san francisco') ||
+        RegExp(r'\bs\b').hasMatch(lower)) {
+      mint = 'S';
+    } else if (lower.contains('carson city') ||
+        RegExp(r'\bcc\b').hasMatch(lower)) {
+      mint = 'CC';
+    } else if (lower.contains('new orleans') ||
+        RegExp(r'\bo\b').hasMatch(lower)) {
+      mint = 'O';
+    } else if (lower.contains('west point') ||
+        RegExp(r'\bw\b').hasMatch(lower)) {
+      mint = 'W';
+    } else if (lower.contains('philadelphia') ||
+        RegExp(r'\bp\b').hasMatch(lower)) {
+      mint = 'P';
+    }
+
+    // Condition: check "about uncirculated" / "au" BEFORE "uncirculated"
+    String cond = 'Circulated';
+    if (lower.contains('about uncirculated') || RegExp(r'\bau\b').hasMatch(lower)) {
+      cond = 'AU';
+    } else if (lower.contains('mint state') ||
+        RegExp(r'\bms\b').hasMatch(lower) ||
+        lower.contains('uncirculated')) {
+      cond = 'Uncirculated';
+    } else if (lower.contains('extremely fine') || RegExp(r'\bef\b|\bxf\b').hasMatch(lower)) {
+      cond = 'Extremely Fine';
+    } else if (lower.contains('very fine') || RegExp(r'\bvf\b').hasMatch(lower)) {
+      cond = 'Very Fine';
+    } else if (lower.contains('about fine')) {
+      cond = 'About Fine';
+    } else if (lower.contains('very good') || RegExp(r'\bvg\b').hasMatch(lower)) {
+      cond = 'Very Good';
+    } else if (RegExp(r'\bfine\b').hasMatch(lower)) {
+      cond = 'Fine';
+    } else if (RegExp(r'\bgood\b').hasMatch(lower)) {
+      cond = 'Good';
+    }
+
+    // Denomination + Series together (whole-word/series match; never substring 'ase' on 'purchased')
+    String denom = 'Coin';
+    String series = '';
+    if (lower.contains('morgan dollar') || RegExp(r'\bmorgan\b').hasMatch(lower)) {
+      denom = 'Dollar';
+      series = 'Morgan Dollar';
+    } else if (lower.contains('peace dollar') || RegExp(r'\bpeace\b').hasMatch(lower)) {
+      denom = 'Dollar';
+      series = 'Peace Dollar';
+    } else if (lower.contains('silver eagle') || RegExp(r'\base\b').hasMatch(lower)) {
+      denom = 'Dollar';
+      series = 'American Silver Eagle';
+    } else if (lower.contains('half dollar') ||
+        RegExp(r'\b(kennedy|franklin|walking liberty)\b').hasMatch(lower)) {
+      denom = 'Half Dollar';
+    } else if (RegExp(r'\bquarter\b').hasMatch(lower)) {
+      denom = 'Quarter Dollar';
+    } else if (RegExp(r'\bdime\b|\b(mercury|roosevelt)\b').hasMatch(lower)) {
+      denom = 'Dime';
+    } else if (RegExp(r'\bnickel\b|\b(jefferson|buffalo)\b').hasMatch(lower)) {
+      denom = 'Nickel';
+    } else if (RegExp(r'\b(cent|penny|lincoln|wheat)\b').hasMatch(lower)) {
+      denom = 'Cent';
+    } else if (RegExp(r'\bdollar\b').hasMatch(lower)) {
+      denom = 'Dollar';
+    }
+
+    final labelPart = series.isNotEmpty ? series : denom;
+    final displayName = '$year $labelPart'.trim();
+    return {
+      'Year': year,
+      'Denomination': denom,
+      'Series': series,
+      'Mint Mark': mint,
+      'Condition': cond,
+      'Personal Notes': text,
+      'name': displayName.isNotEmpty ? displayName : text,
+    };
+  }
 
   @override
   State<MorganFirstHomeScreen> createState() => _MorganFirstHomeScreenState();
@@ -166,82 +261,6 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
     return MorganFirstService.confirmProposal(proposalId);
   }
 
-  Map<String, dynamic> _parseTypedCoin(String raw) {
-    final text = raw.trim();
-    final yearMatch = RegExp(r'\b(1[789]\d{2}|20\d{2})\b').firstMatch(text);
-    final year = yearMatch?.group(1) ?? '';
-    String mint = '';
-    final lower = text.toLowerCase();
-    if (lower.contains('denver') || RegExp(r'\bd\b').hasMatch(lower)) {
-      mint = 'D';
-    } else if (lower.contains('san francisco') ||
-        RegExp(r'\bs\b').hasMatch(lower)) {
-      mint = 'S';
-    } else if (lower.contains('carson city') ||
-        RegExp(r'\bcc\b').hasMatch(lower)) {
-      mint = 'CC';
-    } else if (lower.contains('new orleans') ||
-        RegExp(r'\bo\b').hasMatch(lower)) {
-      mint = 'O';
-    } else if (lower.contains('west point') ||
-        RegExp(r'\bw\b').hasMatch(lower)) {
-      mint = 'W';
-    } else if (lower.contains('philadelphia') ||
-        RegExp(r'\bp\b').hasMatch(lower)) {
-      mint = 'P';
-    }
-
-    String cond = 'Circulated';
-    if (lower.contains('mint state') || lower.contains('uncirculated')) {
-      cond = 'Uncirculated';
-    } else if (lower.contains('about uncirculated')) {
-      cond = 'About Uncirculated';
-    } else if (lower.contains('extremely fine')) {
-      cond = 'Extremely Fine';
-    } else if (lower.contains('very fine')) {
-      cond = 'Very Fine';
-    } else if (lower.contains('about fine')) {
-      cond = 'About Fine';
-    } else if (lower.contains('very good')) {
-      cond = 'Very Good';
-    } else if (lower.contains('fine')) {
-      cond = 'Fine';
-    } else if (lower.contains('good')) {
-      cond = 'Good';
-    }
-
-    String denom = 'Coin';
-    if (lower.contains('morgan dollar')) {
-      denom = 'Morgan Dollar';
-    } else if (lower.contains('peace dollar')) {
-      denom = 'Peace Dollar';
-    } else if (lower.contains('silver eagle') || lower.contains('ase')) {
-      denom = 'American Silver Eagle';
-    } else if (lower.contains('half dollar')) {
-      denom = 'Half Dollar';
-    } else if (lower.contains('quarter')) {
-      denom = 'Quarter Dollar';
-    } else if (lower.contains('dime')) {
-      denom = 'Dime';
-    } else if (lower.contains('nickel')) {
-      denom = 'Nickel';
-    } else if (lower.contains('cent') || lower.contains('penny')) {
-      denom = 'Cent';
-    } else if (lower.contains('dollar')) {
-      denom = 'Dollar';
-    }
-
-    final displayName = '$year $denom'.trim();
-    return {
-      'Year': year,
-      'Denomination': denom,
-      'Mint Mark': mint,
-      'Condition': cond,
-      'Personal Notes': text,
-      'name': displayName.isNotEmpty ? displayName : text,
-    };
-  }
-
   Future<void> _submitTypedCoin() async {
     final text = _typeCtrl.text.trim();
     if (text.isEmpty || _busy) return;
@@ -250,10 +269,11 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
       _errorMsg = null;
     });
     try {
-      final parsed = _parseTypedCoin(text);
+      final parsed = MorganFirstHomeScreen.parseTypedCoin(text);
       final prop = await _callPropose({
         'Year': parsed['Year'],
         'Denomination': parsed['Denomination'],
+        if ((parsed['Series'] as String).isNotEmpty) 'Series': parsed['Series'],
         'Mint Mark': parsed['Mint Mark'],
         'Condition': parsed['Condition'],
         'Personal Notes': parsed['Personal Notes'],
@@ -299,11 +319,16 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
   }
 
   Future<void> _pickFileImage(String slot) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-    final bytes = await picked.readAsBytes();
-    if (!mounted) return;
+    Uint8List? bytes;
+    if (widget.pickFileFn != null) {
+      bytes = await widget.pickFileFn!(slot);
+    } else {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery);
+      if (picked == null) return;
+      bytes = await picked.readAsBytes();
+    }
+    if (bytes == null || !mounted) return;
     setState(() {
       if (slot == 'front') _frontBytes = bytes;
       if (slot == 'back') _backBytes = bytes;
@@ -865,54 +890,76 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
           const SizedBox(height: 14),
         ],
         Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: 16,
+          runSpacing: 16,
           children: [
-            OutlinedButton.icon(
-              key: const Key('pick_front_btn'),
-              onPressed: () => _captureFromCamera('front'),
-              icon: Icon(
-                  _frontBytes != null
-                      ? Icons.check_circle
-                      : Icons.photo_camera_outlined,
-                  color: _blue),
-              label: Text(
-                _frontBytes != null ? 'Front photo ready' : '1. Take front photo',
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700, color: _navy),
-              ),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(180, 56),
-                side: const BorderSide(color: _blue, width: 1.5),
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                OutlinedButton.icon(
+                  key: const Key('pick_front_btn'),
+                  onPressed: () => _captureFromCamera('front'),
+                  icon: Icon(
+                      _frontBytes != null
+                          ? Icons.check_circle
+                          : Icons.photo_camera_outlined,
+                      color: _blue),
+                  label: Text(
+                    _frontBytes != null
+                        ? 'Front photo ready'
+                        : '1. Take front photo',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w700, color: _navy),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(180, 56),
+                    side: const BorderSide(color: _blue, width: 1.5),
+                  ),
+                ),
+                TextButton(
+                  key: const Key('pick_front_file_btn'),
+                  onPressed: () => _pickFileImage('front'),
+                  child: const Text(
+                    'Or choose a photo file',
+                    style: TextStyle(fontSize: 18, color: _blue),
+                  ),
+                ),
+              ],
             ),
-            OutlinedButton.icon(
-              key: const Key('pick_back_btn'),
-              onPressed: () => _captureFromCamera('back'),
-              icon: Icon(
-                  _backBytes != null
-                      ? Icons.check_circle
-                      : Icons.photo_camera_outlined,
-                  color: _blue),
-              label: Text(
-                _backBytes != null
-                    ? 'Back photo ready'
-                    : '2. Take back photo (optional)',
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700, color: _navy),
-              ),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(200, 56),
-                side: const BorderSide(color: _blue, width: 1.5),
-              ),
-            ),
-            TextButton(
-              key: const Key('pick_front_file_btn'),
-              onPressed: () => _pickFileImage('front'),
-              child: const Text(
-                'Or choose a photo file',
-                style: TextStyle(fontSize: 18, color: _blue),
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                OutlinedButton.icon(
+                  key: const Key('pick_back_btn'),
+                  onPressed: () => _captureFromCamera('back'),
+                  icon: Icon(
+                      _backBytes != null
+                          ? Icons.check_circle
+                          : Icons.photo_camera_outlined,
+                      color: _blue),
+                  label: Text(
+                    _backBytes != null
+                        ? 'Back photo ready'
+                        : '2. Take back photo (optional)',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w700, color: _navy),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(200, 56),
+                    side: const BorderSide(color: _blue, width: 1.5),
+                  ),
+                ),
+                TextButton(
+                  key: const Key('pick_back_file_btn'),
+                  onPressed: () => _pickFileImage('back'),
+                  child: const Text(
+                    'Or choose a photo file',
+                    style: TextStyle(fontSize: 18, color: _blue),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

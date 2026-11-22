@@ -112,9 +112,10 @@ void main() {
     await tester.tap(find.byKey(const Key('type_submit_btn')));
     await tester.pumpAndSettle();
 
-    // F2: Parsed into clean fields (not whole sentence as Denomination) & NO invented 85%
+    // F2/G1: Parsed into clean fields (not whole sentence as Denomination) & NO invented 85%
     expect(proposeBodies.last['coin_data']['Year'], '1921');
-    expect(proposeBodies.last['coin_data']['Denomination'], 'Morgan Dollar');
+    expect(proposeBodies.last['coin_data']['Denomination'], 'Dollar');
+    expect(proposeBodies.last['coin_data']['Series'], 'Morgan Dollar');
     expect(proposeBodies.last['coin_data']['Mint Mark'], 'D');
     expect(proposeBodies.last['coin_data']['Condition'], 'About Fine');
     expect(find.byKey(const Key('morgan_confirm_card')), findsOneWidget);
@@ -193,6 +194,7 @@ void main() {
       return http.StreamedResponse(Stream.value(utf8.encode('{}')), 404);
     });
 
+    String? pickedFileSlot;
     await tester.pumpWidget(
       MaterialApp(
         home: MorganFirstHomeScreen(
@@ -209,6 +211,11 @@ void main() {
               name: 'coin.png',
             );
           },
+          pickFileFn: (slot) async {
+            pickedFileSlot = slot;
+            return base64Decode(
+                'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+          },
         ),
       ),
     );
@@ -218,15 +225,25 @@ void main() {
     await tester.tap(find.byKey(const Key('tile_scan')));
     await tester.pumpAndSettle();
 
+    // G3: Both front and reverse have 'Or choose a photo file'
+    expect(find.byKey(const Key('pick_front_file_btn')), findsOneWidget);
+    expect(find.byKey(const Key('pick_back_file_btn')), findsOneWidget);
+    expect(find.text('Or choose a photo file'), findsNWidgets(2));
+
     await tester.tap(find.byKey(const Key('choose_camera_dropdown')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('USB Microscope').last);
     await tester.pumpAndSettle();
 
-    // Capture front photo using selected camera deviceId
+    // Capture front photo using selected camera deviceId, and reverse via file picker (G3)
     await tester.tap(find.byKey(const Key('pick_front_btn')));
     await tester.pumpAndSettle();
     expect(capturedDeviceId, 'cam-2');
+
+    await tester.tap(find.byKey(const Key('pick_back_file_btn')));
+    await tester.pumpAndSettle();
+    expect(pickedFileSlot, 'back');
+    expect(find.text('Back photo ready'), findsOneWidget);
 
     // Submit for identification -> calls real /api/identify_coin_photo + /api/morgan/propose
     await tester.tap(find.byKey(const Key('identify_photo_btn')));
@@ -331,14 +348,18 @@ void main() {
       expect(find.text('Type your question'), findsOneWidget);
       expect(find.text('Back to Morgan'), findsOneWidget);
 
-      // 3. AiChatScreen (Ask Morgan chat box)
+      // 3. AiChatScreen (Ask Morgan chat box) — G2: default restores spellCheckConfiguration
+      expect(const AiChatScreen(isPopout: false).disableSpellCheckForTest, isFalse);
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: size.width,
               height: size.height,
-              child: const AiChatScreen(isPopout: false),
+              child: const AiChatScreen(
+                isPopout: false,
+                disableSpellCheckForTest: true,
+              ),
             ),
           ),
         ),
@@ -360,5 +381,29 @@ void main() {
     }
     await tester.pump(const Duration(seconds: 26));
     await tester.binding.setSurfaceSize(null);
+  });
+
+  test('G1 typed-coin parser cases: AU, whole-word ASE, and 1881-S Morgan without dollar', () {
+    final auCase = MorganFirstHomeScreen.parseTypedCoin(
+        '1921 Morgan dollar, about uncirculated');
+    expect(auCase['Condition'], 'AU');
+    expect(auCase['Denomination'], 'Dollar');
+    expect(auCase['Series'], 'Morgan Dollar');
+
+    final purchasedCase =
+        MorganFirstHomeScreen.parseTypedCoin('purchased 1921 dime');
+    expect(purchasedCase['Denomination'], 'Dime');
+    expect(purchasedCase['Series'], '');
+
+    final morganNoDollar =
+        MorganFirstHomeScreen.parseTypedCoin('1881-S Morgan');
+    expect(morganNoDollar['Year'], '1881');
+    expect(morganNoDollar['Mint Mark'], 'S');
+    expect(morganNoDollar['Denomination'], 'Dollar');
+    expect(morganNoDollar['Series'], 'Morgan Dollar');
+
+    final aseWholeWord = MorganFirstHomeScreen.parseTypedCoin('2024 ASE');
+    expect(aseWholeWord['Denomination'], 'Dollar');
+    expect(aseWholeWord['Series'], 'American Silver Eagle');
   });
 }

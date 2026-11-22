@@ -70,6 +70,8 @@ class AiChatScreen extends StatefulWidget {
   final VoidCallback? onNavigateToCollection;
   /// Optional callback to open a catalog entry by NAC1 code (Wave 2 Component C).
   final ValueChanged<String>? onOpenCatalogNac;
+  @visibleForTesting
+  final bool disableSpellCheckForTest;
 
   const AiChatScreen({
     super.key,
@@ -85,6 +87,7 @@ class AiChatScreen extends StatefulWidget {
     this.onDragEnd,
     this.onNavigateToCollection,
     this.onOpenCatalogNac,
+    this.disableSpellCheckForTest = false,
   });
 
   @override
@@ -2406,6 +2409,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   child: TextField(
                     controller: _controller,
                     focusNode: _focusNode,
+                    spellCheckConfiguration: widget.disableSpellCheckForTest
+                        ? const SpellCheckConfiguration.disabled()
+                        : const SpellCheckConfiguration(),
                     autocorrect: true,
                     enableSuggestions: true,
                     style: TextStyle(color: _textPrimary, fontSize: 16),
