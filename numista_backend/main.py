@@ -138,6 +138,7 @@ from routes.morgan_routes import (
     create_proposal,
     execute_morgan_web_lookup,
 )
+from routes.analytics_routes import analytics_router
 from routes.catalog_routes import public_router as catalog_public_router, write_router as catalog_write_router
 from routes.deps import (
     get_current_user,
@@ -151,6 +152,7 @@ from routes.deps import (
 )
 
 app.include_router(morgan_router)
+app.include_router(analytics_router)
 app.include_router(catalog_public_router)
 app.include_router(catalog_write_router)
 app.include_router(subaccount_router)
@@ -5779,6 +5781,8 @@ SLAB / CERTIFIED HOLDER DETECTION (CRITICAL FIRST STEP):
 Check immediately whether either image shows a third-party grading service slab/holder (PCGS, NGC, CAC, or CACG).
 If a certified slab label is visible:
 1. THE SLAB LABEL WINS over any visual coin design impression. Read Year, Denomination, Grade, Grading Service, and Certification Number directly from the label!
+   - For US coins, ALWAYS translate abbreviated slab denomination codes to official US Mint denomination names:
+     "1C" -> "Cent", "5C" -> "Five Cents", "10C" -> "Dime", "25C" -> "Quarter Dollar", "50C" -> "Half Dollar", "$1" -> "Dollar".
 2. Grading Service MUST be one of: "PCGS", "NGC", "CACG", "CAC", or "None".
 3. Certification Number format:
    - NGC: Typically 7 digits with a 3-digit line item, e.g. "8321797-003" or "1234567-001" or 7 digits.
@@ -6248,18 +6252,26 @@ async def commit_group_photo(
     coin_ids = []
     added_coins = []  # List of (orig_index, coin_id) to maintain indexing integrity (SF3)
     results = []
+    from services.denomination_normalizer import normalize_denomination, normalize_condition, infer_classic_us_series
     for i, coin in enumerate(request.coins):
         try:
+            canon_denom, _, _ = normalize_denomination(coin.denomination, item_type="coin")
+            canon_cond = normalize_condition(coin.condition or "Ungraded / Raw")
+            canon_series = infer_classic_us_series(
+                year=coin.year,
+                canonical_denom=canon_denom,
+                existing_series=coin.program_series or "",
+            )
             result = execute_add_coin(
                 user_email=user_email,
                 year=coin.year,
-                denomination=coin.denomination,
+                denomination=canon_denom or coin.denomination,
                 mint_mark=coin.mint_mark or "",
-                program_series=coin.program_series or "",
+                program_series=canon_series or (coin.program_series or ""),
                 theme_subject=coin.theme_subject or "",
                 variety=coin.variety or "",
                 storage_location=request.storage_location or "",
-                condition=coin.condition or "Ungraded / Raw",
+                condition=canon_cond or "Ungraded / Raw",
                 cost="$0.00",
                 personal_notes="",
                 quantity=1,
@@ -6683,7 +6695,7 @@ async def identify_coin_photo(
     raw_c = pass1.get("country", "")
     norm_c, is_frn, rev_need = _normalize_country_metadata(raw_c)
 
-    from services.denomination_normalizer import normalize_denomination
+    from services.denomination_normalizer import normalize_denomination, normalize_coin_fields
     raw_denom_input = override_denom or final_denom
     norm_denom, was_corrected, orig_denom = normalize_denomination(raw_denom_input, country=norm_c, item_type="coin")
 
@@ -6764,6 +6776,7 @@ async def identify_coin_photo(
         "source":         "AI Photo Identifier",
         "deep_dive_status": "PENDING",
     }
+    ai_coin = normalize_coin_fields(ai_coin)
 
     # -- 5. Optionally save to Firestore + GCS ---------------------------------
     coin_id      = str(uuid.uuid4())

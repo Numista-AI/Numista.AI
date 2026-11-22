@@ -14,11 +14,11 @@ import '../services/portfolio_snapshot_service.dart';
 import '../services/set_expansion_helper.dart';
 import '../services/batch_valuation_service.dart';
 import '../widgets/collection_card_image.dart';
-import '../services/beta_checklist_service.dart';
 import '../services/coin_programs_data.dart';
 import '../models/program_model.dart';
 import '../utils/slot_resolver.dart';
-import '../widgets/beta_welcome_dialog.dart';
+import '../services/display_preferences_service.dart';
+import '../widgets/morgan_owl_avatar.dart';
 
 class HomeDashboard extends StatefulWidget {
   /// Called when the user taps "Ask Morgan" — routes to 'AI Deepdive'.
@@ -138,7 +138,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   Map<String, double> _spotPrices = {};
 
-  bool _showCollectionValue = false;
   final TextEditingController _morganQueryCtrl = TextEditingController();
   final FocusNode _morganFocusNode = FocusNode();
   int _streamNonce = 0;
@@ -146,19 +145,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
   @override
   void initState() {
     super.initState();
+    DisplayPreferencesService.instance.ensureLoaded();
     if (widget.testStream != null) {
       return;
     }
     _fetchSpotPrices();
     // Restore persisted progress so Resume banner appears after page refresh
     BatchValuationService.instance.restoreFromFirestore();
-    // Auto-prompt Beta Welcome Dialog for new or uninitiated testers
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      BetaChecklistService.syncExistingAccountProgress();
-      if (await BetaWelcomeDialog.shouldAutoShow()) {
-        if (mounted) BetaWelcomeDialog.show(context);
-      }
-    });
   }
 
   @override
@@ -276,7 +269,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               final finalVal = math.max(coinValue, liveMelt);
 
               // Valuation fields (NET-372: CPG Retail only, bid removed)
-              final coinCpg = _parseCurrency(data['cpgRetail']);
+              final coinCpg = _parseCurrency(data['cpg_retail'] ?? data['cpgRetail']);
               final finalCpg = coinCpg > 0 ? coinCpg : finalVal;
 
               if (!isPending) {
@@ -303,7 +296,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 finalVal = _parseCurrency(data['Cost']);
               }
 
-              final curCpg = _parseCurrency(data['cpgRetail']);
+              final curCpg = _parseCurrency(data['cpg_retail'] ?? data['cpgRetail']);
 
               cpgTotal += curCpg > 0 ? curCpg : finalVal;
 
@@ -317,7 +310,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               final purchPrice = _parseCurrency(data['purchase_price']);
               final finalVal = estVal > 0 ? estVal : purchPrice;
 
-              final wCpg = _parseCurrency(data['cpgRetail']);
+              final wCpg = _parseCurrency(data['cpg_retail'] ?? data['cpgRetail']);
 
               cpgTotal += wCpg > 0 ? wCpg : finalVal;
 
@@ -641,14 +634,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
         children: [
           Row(
             children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF1D4F91), width: 2),
-                ),
-                child: const Icon(Icons.psychology_outlined, color: Color(0xFF1D4F91), size: 30),
+              const MorganOwlAvatar(
+                size: 56,
+                borderWidth: 2,
+                borderColor: Color(0xFF1D4F91),
               ),
               const SizedBox(width: 14),
               const Expanded(
@@ -705,89 +694,97 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 
   Widget _buildCollectionValueCard(int totalCoins, double portfolioValue) {
-    final formattedWords =
-        '${intl.NumberFormat('#,##0').format(portfolioValue.round())} dollars';
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F6FA),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1D4F91), width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Collection value',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0B1A2E),
-            ),
+    final formattedCurrency =
+        intl.NumberFormat.currency(symbol: r'$', decimalDigits: 2)
+            .format(portfolioValue);
+    return ValueListenableBuilder<bool>(
+      valueListenable: DisplayPreferencesService.instance.showCollectionValue,
+      builder: (context, showValue, _) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F6FA),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF1D4F91), width: 1.5),
           ),
-          const SizedBox(height: 8),
-          if (totalCoins == 0)
-            const Text(
-              'No coins yet. Value stays hidden for your safety once you add some.',
-              style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
-            )
-          else if (!_showCollectionValue) ...[
-            const Text(
-              'Hidden for your safety',
-              style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
-            ),
-            const SizedBox(height: 14),
-            OutlinedButton(
-              onPressed: () => setState(() => _showCollectionValue = true),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(140, 56),
-                backgroundColor: const Color(0xFFFFFFFF),
-                side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text(
-                'Show value',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Collection value',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
                   color: Color(0xFF0B1A2E),
                 ),
               ),
-            ),
-          ] else ...[
-            Text(
-              formattedWords,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF0B1A2E),
-              ),
-            ),
-            const SizedBox(height: 14),
-            OutlinedButton(
-              onPressed: () => setState(() => _showCollectionValue = false),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(140, 56),
-                backgroundColor: const Color(0xFFFFFFFF),
-                side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+              const SizedBox(height: 8),
+              if (totalCoins == 0)
+                const Text(
+                  'No coins yet. Add coins to track your collection value.',
+                  style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
+                )
+              else if (!showValue) ...[
+                const Text(
+                  'Hidden for your safety',
+                  style: TextStyle(fontSize: 20, color: Color(0xFF0B1A2E)),
                 ),
-              ),
-              child: const Text(
-                'Hide value',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0B1A2E),
+                const SizedBox(height: 14),
+                OutlinedButton(
+                  onPressed: () => DisplayPreferencesService.instance
+                      .setShowCollectionValue(true),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(140, 56),
+                    backgroundColor: const Color(0xFFFFFFFF),
+                    side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Show value',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0B1A2E),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ],
-      ),
+              ] else ...[
+                Text(
+                  formattedCurrency,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0B1A2E),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                OutlinedButton(
+                  onPressed: () => DisplayPreferencesService.instance
+                      .setShowCollectionValue(false),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(140, 56),
+                    backgroundColor: const Color(0xFFFFFFFF),
+                    side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Hide value',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0B1A2E),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 

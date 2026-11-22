@@ -11,6 +11,7 @@ import '../services/wizard_service.dart';
 import '../widgets/wizard_overlay.dart';
 import 'home_dashboard.dart';
 import 'my_collection_screen.dart';
+import 'analytics_screen.dart';
 import 'microscope_scan_screen.dart';
 import 'program_manager_screen.dart';
 import 'settings_screen.dart';
@@ -36,7 +37,7 @@ import 'admin_feedback_screen.dart';
 import 'my_tickets_screen.dart';
 import 'support_portal_screen.dart';
 import '../models/coin_model.dart';
-import '../widgets/beta_feedback_widget.dart';
+import '../widgets/morgan_owl_avatar.dart';
 import '../widgets/auth_gate.dart';
 import '../services/feedback_trigger_observer.dart';
 import '../services/beta_feedback_service.dart' show FeedbackTriggerReason;
@@ -468,6 +469,10 @@ class _BaseLayoutState extends State<BaseLayout> {
           reviewQueueCount: _reviewQueueCount,
           isReviewCountLoading: _isReviewCountLoading,
         );
+      case 'Analytics':
+        return AnalyticsScreen(
+          onExpandMorganToFullChat: () => _navigateTo('AI Deepdive'),
+        );
       case 'My Collection':
         return MyCollectionScreen(
           initialTab: _myCollectionTab,
@@ -539,6 +544,7 @@ class _BaseLayoutState extends State<BaseLayout> {
         return const AdminGradeFlagsScreen();
       case 'Admin: Beta Dashboard':
       case 'Beta Feedback Inbox':
+      case 'Feedback Inbox':
         return const AdminFeedbackScreen();
       case 'Customer Service':
         return CustomerServiceScreen(
@@ -574,6 +580,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       case 'AI Photo Identification':
         maxWidth = 1100.0;
         break;
+      case 'Analytics':
       case 'My Collection':
       case 'Currency Collection':
         maxWidth = 1440.0;
@@ -805,11 +812,6 @@ class _BaseLayoutState extends State<BaseLayout> {
               onSearch: _onMorganSearch,
               onSearchResultTap: _handleMorganSearchResultTap,
             ),
-            if (!widget.testSkipFirebase)
-              BetaFeedbackWidget(
-                currentRoute: _activeRoute,
-                pageTitle: _activeRoute,
-              ),
           ],
         ),
       ),
@@ -849,25 +851,33 @@ class _BaseLayoutState extends State<BaseLayout> {
                         : MainAxisAlignment.spaceBetween,
                     children: [
                       if (!_isSidebarCollapsed)
-                        RichText(
-                          text: const TextSpan(
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF0B1A2E),
-                            ),
-                            children: [
-                              TextSpan(text: 'Numista.'),
-                              TextSpan(
-                                text: 'Ai',
-                                style: TextStyle(color: Color(0xFF1D4F91)),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: RichText(
+                              text: const TextSpan(
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0B1A2E),
+                                ),
+                                children: [
+                                  TextSpan(text: 'Numista.'),
+                                  TextSpan(
+                                    text: 'Ai',
+                                    style: TextStyle(color: Color(0xFF1D4F91)),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         )
                       else
-                        Image.asset('assets/logo_owl.png',
-                            height: 36, fit: BoxFit.contain),
+                        Flexible(
+                          child: Image.asset('assets/logo_owl.png',
+                              height: 36, fit: BoxFit.contain),
+                        ),
                       SizedBox(
                         width: 48,
                         height: 48,
@@ -949,6 +959,8 @@ class _BaseLayoutState extends State<BaseLayout> {
                             child: _buildNavItem('My Collection',
                                 icon: Icons.layers_outlined),
                           ),
+                          _buildNavItem('Analytics',
+                              icon: Icons.insights_rounded),
                           WizardNavPulse(
                             active: ws?.step.targetRoute == 'Coin Programs',
                             child: _buildNavItem('Coin Programs',
@@ -1023,7 +1035,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                                       icon: Icons.how_to_vote_outlined),
                                   _buildNavItem('Admin Grade Flags',
                                       icon: Icons.admin_panel_settings_outlined),
-                                  _buildNavItem('Beta Feedback Inbox',
+                                  _buildNavItem('Feedback Inbox',
                                       icon: Icons.rate_review_outlined),
                                   _buildNavItem('Admin: Support Portal',
                                       icon: Icons.support_agent_outlined),
@@ -1036,23 +1048,25 @@ class _BaseLayoutState extends State<BaseLayout> {
                     ),
                   ),
                 ),
-                // ── Morgan sidebar button ──────────────────────────────────
-                if (!_isSidebarCollapsed)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-                    child: _MorganSidebarButton(onTap: _showMorganDialog),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Tooltip(
-                      message: 'Ask Morgan AI',
-                      child: IconButton(
-                        icon: Image.asset('assets/logo_owl.png', height: 28),
-                        onPressed: _showMorganDialog,
+                // ── Morgan sidebar button (hidden on Home and Analytics — Single-Morgan-Per-Screen rule) ──
+                if (_activeRoute != 'Home Dashboard' && _activeRoute != 'Home' && _activeRoute != 'Analytics') ...[
+                  if (!_isSidebarCollapsed)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                      child: _MorganSidebarButton(onTap: _showMorganDialog),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Tooltip(
+                        message: 'Ask Morgan AI',
+                        child: IconButton(
+                          icon: const MorganOwlAvatar(size: 28),
+                          onPressed: _showMorganDialog,
+                        ),
                       ),
                     ),
-                  ),
+                ],
 
                 if (!_isSidebarCollapsed) ...[
                   Padding(
@@ -1071,7 +1085,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                         ),
                         icon: Icon(Icons.feedback_outlined, size: 14, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFFFFD700) : const Color(0xFF4338CA)),
                         label: const Text(
-                          'Send Beta Feedback',
+                          'Send Feedback',
                           style: TextStyle(fontSize: NumistaTheme.textBodySm, fontWeight: FontWeight.w600),
                         ),
                         onPressed: () {
@@ -1208,11 +1222,6 @@ class _BaseLayoutState extends State<BaseLayout> {
                       reducedMotionOverride:
                           MorganSettingsService.instance.reduceMotion,
                     ),
-                    if (!widget.testSkipFirebase)
-                      BetaFeedbackWidget(
-                        currentRoute: _activeRoute,
-                        pageTitle: _activeRoute,
-                      ),
                     if (_isMorganPopoutOpen &&
                         (!_isMorganDocked || MediaQuery.sizeOf(context).width < 1024))
                       widget.testPopoutBuilder != null
@@ -1297,7 +1306,7 @@ class _BaseLayoutState extends State<BaseLayout> {
             'Human AI Trainer Review Board',
             'AI Trainer Board',
             'Admin: Grade Flags',
-            'Beta Feedback Inbox',
+            'Feedback Inbox',
             'Settings & Backup',
             'Our Team',
             'Customer Service',
@@ -1803,10 +1812,10 @@ class PhoneMenuOverlay extends StatelessWidget {
           onTap: () => onSelectRoute('Admin: Grade Flags'),
         ),
         _buildMenuRow(
-          label: 'Beta Feedback Inbox',
+          label: 'Feedback Inbox',
           icon: Icons.rate_review_outlined,
-          isActive: activeRoute == 'Beta Feedback Inbox',
-          onTap: () => onSelectRoute('Beta Feedback Inbox'),
+          isActive: activeRoute == 'Feedback Inbox' || activeRoute == 'Beta Feedback Inbox',
+          onTap: () => onSelectRoute('Feedback Inbox'),
         ),
         _buildMenuRow(
           label: 'Admin: Support Portal',

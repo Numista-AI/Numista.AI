@@ -227,6 +227,19 @@
     ]
   },
   {
+    "path": "/api/analytics/morgan",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_morgan_analytics",
+    "tags": [
+      "Analytics & Morgan Analytics"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
     "path": "/api/analyze/grade-coin",
     "methods": [
       "POST"

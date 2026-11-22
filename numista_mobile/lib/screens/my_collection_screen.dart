@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:intl/intl.dart' as intl;
 import '../utils/numista_error_helper.dart';
 import '../utils/text_sanitizer.dart';
@@ -12,6 +13,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/valuation_mode_service.dart';
+import '../services/morgan_action_bus.dart';
 import 'currency_collection_screen.dart';
 import 'unified_coin_detail_screen.dart';
 import '../services/world_item_service.dart';
@@ -28,6 +30,7 @@ import '../services/http_auth_client.dart';
 import 'dart:convert';
 import '../services/melt_value_service.dart';
 import '../services/batch_valuation_service.dart';
+import '../services/coin_normalizer_service.dart';
 import '../services/photo_sharing_service.dart';
 import '../services/estate_report_service.dart';
 import '../services/estate_profile_service.dart';
@@ -117,6 +120,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   String? _selectedCoinId;
   CollectionLimitMode _limitMode = CollectionLimitMode.all;
   String  _searchQuery      = '';
+  Set<String>? _morganCoinIdsFilter;
   // _showInspector removed — inspector is now always expanded in the dialog
   // Default: sort by date added, newest first (column index -1 = special Added sort)
   // Users can click any column header to override.
@@ -159,6 +163,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Map<String, double> _spotPrices = {};
   Map<String, dynamic> _completionStats = {};
   bool _isLoadingCompletion = true;
+  bool _shownRemainingValuationPrompt = false;
 
   Future<void> _fetchSpotPrices() async {
     try {
@@ -255,6 +260,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     _isCardView = widget.initialIsCardViewForTest;
     if (widget.initialTab != null) {
       _currentTab = widget.initialTab!;
+    } else {
+      _loadDefaultTab();
+    }
+    _loadSortPreferences();
+    final pendingIds = MorganActionBus.instance.pendingCollectionCoinIdsFilter;
+    if (pendingIds != null && pendingIds.isNotEmpty) {
+      _morganCoinIdsFilter = Set<String>.from(pendingIds);
+      MorganActionBus.instance.pendingCollectionCoinIdsFilter = null;
     }
     MorganScreenStateRegistry.instance.markScreenHydrated(
       route: 'My Collection',
@@ -269,9 +282,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           isEnabled: true,
           onInvoke: ([params]) async {
             final q = params?['query']?.toString() ?? '';
+            final rawIds = params?['coinIds'] as List<dynamic>?;
             if (mounted) {
               _searchCtrl.text = q;
-              setState(() => _searchQuery = q.toLowerCase());
+              setState(() {
+                _searchQuery = q.toLowerCase();
+                if (rawIds != null) {
+                  _morganCoinIdsFilter = rawIds.map((e) => e.toString()).toSet();
+                }
+              });
               MorganScreenStateRegistry.instance.updateContextData({
                 'activeSearchQuery': q.toLowerCase(),
               });
@@ -320,6 +339,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       _fetchSpotPrices();
       _fetchCompletionStats();
     }
+
+    CoinNormalizerService.remainingUnvaluedCount
+        .addListener(_onRemainingUnvaluedChanged);
+    _onRemainingUnvaluedChanged();
 
     // Debounced search: 150ms after last keystroke before applying filter.
     // Short enough to feel instant; long enough to avoid per-character rebuilds.
@@ -540,8 +563,31 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     }
   }
 
+  void _onRemainingUnvaluedChanged() {
+    final rem = CoinNormalizerService.remainingUnvaluedCount.value;
+    if (!mounted || rem <= 0 || _shownRemainingValuationPrompt) return;
+    _shownRemainingValuationPrompt = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$rem unvalued coins remain after auto-cleanup. Value the rest now?',
+          ),
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: 'Value All',
+            onPressed: () => BatchValuationService.instance.start(),
+          ),
+        ),
+      );
+    });
+  }
+
   @override
   void dispose() {
+    CoinNormalizerService.remainingUnvaluedCount
+        .removeListener(_onRemainingUnvaluedChanged);
     _authSub?.cancel();
     _coinsSnapSub?.cancel();
     _coinsTimeoutTimer?.cancel();
@@ -899,11 +945,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       return true;
     }).toList();
 
+    // Phase 2.5: Analytics / Morgan coinIds filter
+    final idFiltered = (_morganCoinIdsFilter == null || _morganCoinIdsFilter!.isEmpty)
+        ? originFiltered
+        : originFiltered.where((row) => _morganCoinIdsFilter!.contains(row.id)).toList();
+
     // Phase 3: Search filter (both PascalCase _F keys and snake_case helper keys)
-    if (_searchQuery.isEmpty) return originFiltered;
+    if (_searchQuery.isEmpty) return idFiltered;
     final trimmedQuery = _searchQuery.trim();
     final denomCanonical = DenominationCanon.colloquialMap[trimmedQuery];
-    return originFiltered.where((row) {
+    return idFiltered.where((row) {
       final m = row.data;
       return [
         _F.year, 'year',
@@ -1148,21 +1199,25 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         ? ''
         : (FirebaseAuth.instance.currentUser?.email ?? '');
 
+    final isNarrow = MediaQuery.sizeOf(context).width < 600;
     return Scaffold(
       backgroundColor: _bg,
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(32),
+        padding: EdgeInsets.symmetric(
+          horizontal: isNarrow ? 12 : 24,
+          vertical: 10,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header & Segmented Tab Picker
             LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 900;
+                final isWide = constraints.maxWidth > 720;
                 final headerText = Text(
                   'My Collection',
                   style: TextStyle(
-                    fontSize: 36,
+                    fontSize: isWide ? 28 : 22,
                     fontWeight: FontWeight.w900,
                     color: _text,
                   ),
@@ -1178,7 +1233,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     children: [
                       headerText,
                       if (_currentTab == 'Coins' && _cachedCoinsDocs.isNotEmpty) ...[
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: HeaderStatsBar(
                             docs: _sorted(_filtered(_cachedCoinsDocs)),
@@ -1192,7 +1247,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             isFiltered: _searchQuery.isNotEmpty || _coinOriginFilter != 'All',
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                       ],
                       picker,
                     ],
@@ -1204,12 +1259,13 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          headerText,
-                          picker,
+                          Flexible(child: headerText),
+                          const SizedBox(width: 8),
+                          Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: picker)),
                         ],
                       ),
                       if (_currentTab == 'Coins' && _cachedCoinsDocs.isNotEmpty) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 6),
                         HeaderStatsBar(
                           docs: _sorted(_filtered(_cachedCoinsDocs)),
                           totalCoinsCount: expandCollection(
@@ -1227,23 +1283,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 }
               },
             ),
-            const SizedBox(height: 8),
-
-            // Beta banner (slimmed to 20px)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
-              decoration: BoxDecoration(
-                  color: _accent, borderRadius: BorderRadius.circular(4)),
-              child: const Text('BETA TESTING', style: TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 9,
-                  color: Colors.white, letterSpacing: 1.0)),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
 
             // Tab View Dispatcher
             _buildTabContent(email),
-            SizedBox(height: 32),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -1295,104 +1339,118 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   }
 
   Widget _buildCoinsTab(List<CollectionRow> rows, List<CollectionRow> allRows, {bool advanced = false}) {
+    final mediaSize = MediaQuery.sizeOf(context);
+    final isWideViewport = mediaSize.width >= 900;
+    final chromeReserve = isWideViewport ? 196.0 : 320.0;
+    final double gridHeight = math.max(
+      isWideViewport ? 576.0 : 420.0,
+      mediaSize.height - chromeReserve,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildFiltersRow(_cachedCoinsDocs),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
 
         // Toolbar: origin sub-filter + view toggle + column visibility toggle + AI Report button
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Origin Sub-Filter Chips (All | U.S. | World)
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: _border),
-                borderRadius: BorderRadius.circular(6),
+        SizedBox(
+          width: double.infinity,
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              // Origin Sub-Filter Chips (All | U.S. | World)
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: _border),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _toggleSegment(
+                      label: 'All Coins',
+                      icon: Icons.public,
+                      active: _coinOriginFilter == 'All',
+                      onTap: () => setState(() => _coinOriginFilter = 'All'),
+                      isLeft: true,
+                    ),
+                    _toggleSegment(
+                      label: 'U.S.',
+                      icon: Icons.flag_outlined,
+                      active: _coinOriginFilter == 'U.S.',
+                      onTap: () => setState(() => _coinOriginFilter = 'U.S.'),
+                      isLeft: false,
+                    ),
+                    _toggleSegment(
+                      label: 'World',
+                      icon: Icons.language,
+                      active: _coinOriginFilter == 'World',
+                      onTap: () => setState(() => _coinOriginFilter = 'World'),
+                      isLeft: false,
+                    ),
+                  ],
+                ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _toggleSegment(
-                    label: 'All Coins',
-                    icon: Icons.public,
-                    active: _coinOriginFilter == 'All',
-                    onTap: () => setState(() => _coinOriginFilter = 'All'),
-                    isLeft: true,
-                  ),
-                  _toggleSegment(
-                    label: 'U.S.',
-                    icon: Icons.flag_outlined,
-                    active: _coinOriginFilter == 'U.S.',
-                    onTap: () => setState(() => _coinOriginFilter = 'U.S.'),
-                    isLeft: false,
-                  ),
-                  _toggleSegment(
-                    label: 'World',
-                    icon: Icons.language,
-                    active: _coinOriginFilter == 'World',
-                    onTap: () => setState(() => _coinOriginFilter = 'World'),
-                    isLeft: false,
-                  ),
-                ],
-              ),
-            ),
 
-            Row(
-              children: [
-                // Card / Table View Toggle
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: _border),
-                    borderRadius: BorderRadius.circular(6),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  // Card / Table View Toggle
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: _border),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _toggleSegment(
+                          label: 'Table',
+                          icon: Icons.table_chart_outlined,
+                          active: !_isCardView,
+                          onTap: () => setState(() => _isCardView = false),
+                          isLeft: true,
+                        ),
+                        _toggleSegment(
+                          label: 'Cards',
+                          icon: Icons.grid_view_outlined,
+                          active: _isCardView,
+                          onTap: () => setState(() => _isCardView = true),
+                          isLeft: false,
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _toggleSegment(
-                        label: 'Table',
-                        icon: Icons.table_chart_outlined,
-                        active: !_isCardView,
-                        onTap: () => setState(() => _isCardView = false),
-                        isLeft: true,
-                      ),
-                      _toggleSegment(
-                        label: 'Cards',
-                        icon: Icons.grid_view_outlined,
-                        active: _isCardView,
-                        onTap: () => setState(() => _isCardView = true),
-                        isLeft: false,
-                      ),
-                    ],
+                  // Column visibility toggle (only relevant when table is visible)
+                  if (!_isCardView) ...[
+                    _columnToggleButton(),
+                    _buildPanButtonsToolbar(),
+                  ],
+                  ElevatedButton.icon(
+                    onPressed: () => _showGenerateReportModal(),
+                    icon: const Icon(Icons.auto_awesome, size: 15),
+                    label: const Text('Generate AI Report Now'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF63366),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                // Column visibility toggle (only relevant when table is visible)
-                if (!_isCardView) ...[
-                  _columnToggleButton(),
-                  const SizedBox(width: 12),
-                  _buildPanButtonsToolbar(),
-                  const SizedBox(width: 12),
                 ],
-                ElevatedButton.icon(
-                  onPressed: () => _showGenerateReportModal(),
-                  icon: const Icon(Icons.auto_awesome, size: 16),
-                  label: const Text('Generate AI Report Now'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF63366),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4)),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
 
         // Data view -- three distinct states
         if (_cachedCoinsDocs.isEmpty)
@@ -1404,7 +1462,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 style: TextStyle(color: _subtext))))
         else
           SizedBox(
-            height: 520,
+            height: gridHeight,
             child: _isCardView
                 ? _buildCardGrid(rows, advanced: advanced)
                 : Builder(
@@ -1525,11 +1583,26 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                           final year = data['Year']?.toString() ?? '';
                           final title = TextSanitizer.fixMojibake('$year $denom'.trim());
 
-                          final coinCpg = _parseNumber(data['cpgRetail']);
-                          final gVal = coinCpg;
-                          final displayValue = gVal > 0 
-                              ? gVal 
-                              : _parseAiValue(data['AI Estimated Value']?.toString() ?? '');
+                          final coinCpg = _parseNumber(data['cpgRetail'] ?? data['cpg_retail']);
+                          final aiVal = _parseAiValue(
+                            (data['AI Estimated Value'] ?? data['ai_estimated_value'] ?? '').toString(),
+                          );
+                          double displayValue = coinCpg > 0 ? coinCpg : aiVal;
+                          if (displayValue <= 0) {
+                            final isUs = CollectionCardValuationRow.isUsOrigin(data);
+                            final liveMelt = MeltValueService.compute(
+                                  metalContent: (data['Metal Content'] ?? data['metal_content'] ?? '').toString(),
+                                  denomination: denom,
+                                  spotPrices: _spotPrices,
+                                  programSeries: (data['Program/Series'] ?? data['program_series'] ?? '').toString(),
+                                  themeSubject: (data['Theme/Subject'] ?? data['theme_subject'] ?? '').toString(),
+                                  qty: int.tryParse((data['Quantity'] ?? data['qty'] ?? '1').toString()) ?? 1,
+                                  coinData: data,
+                                ) ??
+                                0.0;
+                            final faceVal = isUs ? CollectionCardValuationRow.resolveFaceValue(denom) : 0.0;
+                            displayValue = math.max(liveMelt, faceVal);
+                          }
 
                           return UnifiedCollectionItem(
                             title: title.isNotEmpty ? title : 'Coin',
@@ -1586,6 +1659,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
                         // Take top 10
                         final recentAdditions = combinedItems.take(10).toList();
+                        final allTabCurrencyFmt =
+                            intl.NumberFormat.currency(symbol: r'$', decimalDigits: 2);
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1606,7 +1681,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                 _buildDashboardCard(
                                   'Total Inventory Value',
                                   'ESTIMATED PORTFOLIO VALUE',
-                                  '\$${grandTotalValue.toStringAsFixed(2)}',
+                                  allTabCurrencyFmt.format(grandTotalValue),
                                   'Based on AI, cost, and specialty appraisals',
                                   Icons.account_balance_wallet_rounded,
                                   _accent,
@@ -1615,7 +1690,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   'Coins',
                                   'COIN COLLECTION',
                                   '$coinsCount Items',
-                                  'Valued at \$${coinsValue.toStringAsFixed(2)}',
+                                  'Valued at ${allTabCurrencyFmt.format(coinsValue)}',
                                   Icons.monetization_on_rounded,
                                   Colors.amber,
                                 ),
@@ -1623,7 +1698,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   'Currency',
                                   'PAPER BANKNOTES',
                                   '$currencyCount Items',
-                                  'Valued at \$${currencyValue.toStringAsFixed(2)}',
+                                  'Valued at ${allTabCurrencyFmt.format(currencyValue)}',
                                   Icons.money_rounded,
                                   Colors.green,
                                 ),
@@ -1631,7 +1706,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                   'Non-Legal Tender',
                                   'OTHER ITEMS',
                                   '$otherItemsCount Items',
-                                  'Valued at \$${worldValue.toStringAsFixed(2)}',
+                                  'Valued at ${allTabCurrencyFmt.format(worldValue)}',
                                   Icons.language_rounded,
                                   Colors.teal,
                                 ),
@@ -1742,8 +1817,14 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          '\$${item.value.toStringAsFixed(2)}',
-                                          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                                          item.value > 0
+                                              ? allTabCurrencyFmt.format(item.value)
+                                              : 'Pending',
+                                          style: TextStyle(
+                                            color: item.value > 0 ? Colors.green : const Color(0xFFD97706),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
                                         ),
                                         if (isTappable) ...[
                                           SizedBox(width: 4),
@@ -2298,7 +2379,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             ),
             SizedBox(height: 8),
             Text(
-              'Check your internet connection and try refreshing.\nIf the problem persists, contact support at beta@numista.ai',
+              'Check your internet connection and try refreshing.\nIf the problem persists, contact support at support@numista.ai',
               textAlign: TextAlign.center,
               style: TextStyle(color: _subtext, height: 1.5),
             ),
@@ -2347,10 +2428,10 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
   Widget _buildFiltersRow(List<QueryDocumentSnapshot> allDocs) {
     return Row(children: [
       SizedBox(
-        width: 140,
+        width: 118,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Show:', style: TextStyle(color: _text, fontSize: 14)),
-          SizedBox(height: 8),
+          Text('Show:', style: TextStyle(color: _text, fontSize: 13)),
+          const SizedBox(height: 4),
           _styledDropdown<CollectionLimitMode>(
             value: _limitMode,
             items: const [CollectionLimitMode.all, CollectionLimitMode.last100, CollectionLimitMode.last50],
@@ -2364,17 +2445,17 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
           ),
         ]),
       ),
-      SizedBox(width: 24),
+      const SizedBox(width: 12),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Icon(Icons.search, size: 16, color: _text),
-            SizedBox(width: 4),
-            Text('Search', style: TextStyle(color: _text, fontSize: 14)),
+            Icon(Icons.search, size: 15, color: _text),
+            const SizedBox(width: 4),
+            Text('Search', style: TextStyle(color: _text, fontSize: 13)),
           ]),
-          SizedBox(height: 8),
+          const SizedBox(height: 4),
           SizedBox(
-            height: 44,
+            height: 40,
             child: TextField(
               controller: _searchCtrl,
               focusNode: _searchFocus,
@@ -2986,9 +3067,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 220,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.75,
+        mainAxisSpacing: 6,
+        crossAxisSpacing: 10,
+        mainAxisExtent: 162,
       ),
       itemCount: docs.length,
       itemBuilder: (context, index) {
@@ -3041,7 +3122,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
             },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -3106,7 +3187,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 6),
                   if (m['parent_set_id'] != null && m['parent_set_id'].toString().isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
@@ -3165,10 +3246,11 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 11, color: _subtext),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   CollectionCardValuationRow(
                     data: m,
                     condition: condition,
+                    spotPrices: _spotPrices,
                   ),
                 ],
               ),

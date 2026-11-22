@@ -16,13 +16,20 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
+import 'package:flutter/foundation.dart';
 import '../config/ai_config.dart';
 import '../utils/mint_helpers.dart';
 import 'auth_service.dart';
+import 'batch_valuation_service.dart';
+import 'coin_data_normalizer.dart';
 import 'guest_seed_service.dart';
 
 class CoinNormalizerService {
   static const int _batchSize = 8;
+  static const int _deterministicPageSize = 400;
+
+  /// Exposed for subtle UI prompt when > 10 unvalued coins remain after cleanup cap.
+  static final ValueNotifier<int> remainingUnvaluedCount = ValueNotifier<int>(0);
 
   // Prevent re-running in the same browser session (BaseLayout is re-created
   // on sign-in, so without this guard we'd fetch all coins on every login).
@@ -47,6 +54,9 @@ class CoinNormalizerService {
 
     // ── Phase 1: Fix combined Year+Mint on ALL coins (no AI, idempotent) ──────
     await _fixYearMintAll(col);
+
+    // ── Phase 1.5: Deterministic US Mint / metal / zero-AI / verify_link pass ─
+    await _runDeterministicCanonPass(col);
 
     // ── Phase 2: AI normalization for coins that still need it ─────────────────
     // Only fetch un-normalised coins (avoids reading all 3,700 docs again).
@@ -78,6 +88,106 @@ class CoinNormalizerService {
     print('[Normalizer] ✅ Normalization complete.');
   }
 
+
+  /// Deterministic idempotent pass (`_norm_v2`) bounded to `<= 400` writes
+  /// per batch and `<= 10` auto-enqueued single-coin valuations per session.
+  static Future<void> _runDeterministicCanonPass(
+    CollectionReference<Map<String, dynamic>> col,
+  ) async {
+    final userEmail = AuthService.userEmail;
+    if (userEmail.isEmpty) return;
+
+    final markerRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userEmail)
+        .collection('meta')
+        .doc('norm_v2');
+
+    bool initialSweepDone = false;
+    try {
+      final markerSnap = await markerRef.get();
+      initialSweepDone = markerSnap.data()?['completed'] == true;
+    } catch (_) {}
+
+    int skippedByCap = 0;
+
+    if (!initialSweepDone) {
+      DocumentSnapshot<Map<String, dynamic>>? lastDoc;
+      while (true) {
+        Query<Map<String, dynamic>> q =
+            col.orderBy(FieldPath.documentId).limit(_deterministicPageSize);
+        if (lastDoc != null) {
+          q = q.startAfterDocument(lastDoc);
+        }
+        final snap = await q.get();
+        if (snap.docs.isEmpty) break;
+
+        final writeBatch = FirebaseFirestore.instance.batch();
+        int ops = 0;
+        for (final doc in snap.docs) {
+          final data = doc.data();
+          if (data['_norm_v2'] != true) {
+            final patch = CoinDataNormalizer.computeNormV2Patch(data);
+            writeBatch.set(doc.reference, patch, SetOptions(merge: true));
+            ops++;
+          }
+          final merged = CoinDataNormalizer.normalizeCoinMap(data);
+          if (CoinDataNormalizer.needsValuation(merged)) {
+            final enqueued = BatchValuationService.instance.enqueueSingleCoin(
+              userEmail,
+              doc.id,
+              merged,
+              fromCleanup: true,
+            );
+            if (!enqueued) {
+              skippedByCap++;
+            }
+          }
+        }
+        if (ops > 0) {
+          await writeBatch.commit();
+        }
+        if (snap.docs.length < _deterministicPageSize) break;
+        lastDoc = snap.docs.last;
+      }
+
+      try {
+        await markerRef.set({
+          'completed': true,
+          'updated_at': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (_) {}
+    } else {
+      // Incremental pass only for explicitly re-flagged docs (`_norm_v2: false`).
+      final flagged =
+          await col.where('_norm_v2', isEqualTo: false).limit(_deterministicPageSize).get();
+      if (flagged.docs.isNotEmpty) {
+        final writeBatch = FirebaseFirestore.instance.batch();
+        for (final doc in flagged.docs) {
+          final data = doc.data();
+          final patch = CoinDataNormalizer.computeNormV2Patch(data);
+          writeBatch.set(doc.reference, patch, SetOptions(merge: true));
+          final merged = CoinDataNormalizer.normalizeCoinMap(data);
+          if (CoinDataNormalizer.needsValuation(merged)) {
+            final enqueued = BatchValuationService.instance.enqueueSingleCoin(
+              userEmail,
+              doc.id,
+              merged,
+              fromCleanup: true,
+            );
+            if (!enqueued) {
+              skippedByCap++;
+            }
+          }
+        }
+        await writeBatch.commit();
+      }
+    }
+
+    if (skippedByCap > 0) {
+      remainingUnvaluedCount.value = skippedByCap;
+    }
+  }
 
   // ── Year+Mint split regex ─────────────────────────────────────────────────
   static final _yearMintRe =

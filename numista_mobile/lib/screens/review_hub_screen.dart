@@ -12,6 +12,7 @@ import '../utils/numista_error_helper.dart';
 import '../utils/review_field_keys.dart';
 import '../services/morgan_screen_state_registry.dart';
 import '../widgets/grade_badge_widget.dart';
+import '../widgets/morgan_owl_avatar.dart';
 
 /// Top-level convenience alias for ReviewHubScreen.formatCurrency
 String formatCurrency(num amount) => ReviewHubScreen.formatCurrency(amount);
@@ -2034,20 +2035,10 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFFC9A227).withAlpha(30),
-              shape: BoxShape.circle,
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/morgan_avatar.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.psychology_outlined, color: Color(0xFFFFD700), size: 24),
-              ),
-            ),
+          const MorganOwlAvatar(
+            size: 40,
+            borderWidth: 1.5,
+            borderColor: Color(0xFFC9A227),
           ),
           const SizedBox(width: 14),
           Expanded(

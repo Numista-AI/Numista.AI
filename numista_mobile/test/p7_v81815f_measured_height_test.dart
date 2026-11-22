@@ -175,7 +175,7 @@ void main() {
                           ),
                           icon: const Icon(Icons.feedback_outlined, size: 14),
                           label: const Text(
-                            'Send Beta Feedback',
+                            'Send Feedback',
                             style: TextStyle(fontSize: NumistaTheme.textBodySm, fontWeight: FontWeight.w600),
                           ),
                           onPressed: () {},
@@ -210,7 +210,7 @@ void main() {
           );
           await tester.pumpAndSettle();
 
-          final feedbackFinder = find.widgetWithText(ElevatedButton, 'Send Beta Feedback');
+          final feedbackFinder = find.widgetWithText(ElevatedButton, 'Send Feedback');
           expect(feedbackFinder, findsOneWidget);
           final feedbackSize = tester.getSize(feedbackFinder);
           expect(feedbackSize.height, greaterThanOrEqualTo(48.0));
@@ -388,12 +388,12 @@ void main() {
       );
     });
 
-    test('base_layout.dart has Send Beta Feedback and Sign Out with 48px min height', () {
+    test('base_layout.dart has Send Feedback and Sign Out with 48px min height', () {
       final file = File('lib/screens/base_layout.dart');
       expect(file.existsSync(), isTrue);
       final text = file.readAsStringSync();
 
-      expect(text.contains('Send Beta Feedback'), isTrue);
+      expect(text.contains('Send Feedback'), isTrue);
       expect(text.contains('minimumSize: const Size(double.infinity, 48)'), isTrue);
       expect(text.contains('visualDensity: VisualDensity.standard'), isTrue);
     });

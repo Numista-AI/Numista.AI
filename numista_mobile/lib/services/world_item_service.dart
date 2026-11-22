@@ -23,7 +23,6 @@ import 'http_auth_client.dart';
 
 import '../constants.dart';
 import 'auth_service.dart';
-import 'beta_checklist_service.dart';
 import 'guest_seed_service.dart';
 
 // ── Data Models ───────────────────────────────────────────────────────────────
@@ -443,10 +442,6 @@ class WorldItemService {
   static Future<String?> save(WorldItem item) async {
     try {
       final ref = await _col.add(item.toFirestore());
-      BetaChecklistService.autoCompleteTask('task_13_world_items');
-      if (item.itemCategory == WorldItemType.foreignBanknote) {
-        BetaChecklistService.autoCompleteTask('task_12_currency');
-      }
       return ref.id;
     } catch (e) {
       debugPrint('[WorldItemService] save error: $e');

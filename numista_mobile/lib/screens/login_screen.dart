@@ -13,6 +13,7 @@ import 'privacy_screen.dart';
 import 'terms_screen.dart';
 import 'public_info_screens.dart';
 import '../widgets/auth_gate.dart';
+import '../widgets/morgan_owl_avatar.dart';
 import '../theme/numista_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -249,11 +250,28 @@ class _LoginScreenState extends State<LoginScreen>
                   flex: 4,
                   child: Container(
                     color: _surface,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 64),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: _showResetForm ? _buildResetForm() : _buildAuthForm(),
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 40),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 440),
+                          child: Container(
+                            padding: const EdgeInsets.all(28),
+                            decoration: BoxDecoration(
+                              color: _surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: _border),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0F172A).withAlpha(12),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: _showResetForm ? _buildResetForm() : _buildAuthForm(),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -285,16 +303,7 @@ class _LoginScreenState extends State<LoginScreen>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Image.asset(
-                                'assets/logo_owl.png',
-                                height: 52,
-                                gaplessPlayback: true,
-                                errorBuilder: (context, error, stackTrace) => const SizedBox(
-                                  height: 52,
-                                  width: 52,
-                                  child: Icon(Icons.circle_outlined, size: 52, color: Color(0xFF3B82F6)),
-                                ),
-                              ),
+                              _buildBrandMedallion(52),
                               const SizedBox(width: 14),
                               const Flexible(
                                 child: Column(
@@ -327,17 +336,17 @@ class _LoginScreenState extends State<LoginScreen>
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: _border),
                             ),
-                            child: FittedBox(
+                            child: const FittedBox(
                               fit: BoxFit.scaleDown,
-                              child: const Row(
+                              child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  _StatBadge(value: '100+', label: 'Coin\nTypes'),
+                                  _StatBadge(value: '274', label: 'U.S. Coin &\nNote Series'),
                                   _StatDivider(),
-                                  _StatBadge(value: '3,202', label: 'Reference\nItems'),
+                                  _StatBadge(value: '3,202', label: 'Cataloged\nIssues'),
                                   _StatDivider(),
-                                  _StatBadge(value: 'AI+', label: 'Community\nVerified'),
+                                  _StatBadge(value: 'U.S. & World', label: 'AI Photo &\nSlabs'),
                                 ],
                               ),
                             ),
@@ -378,17 +387,8 @@ class _LoginScreenState extends State<LoginScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Logo
-            Image.asset(
-              'assets/logo_owl.png',
-              height: 90,
-              gaplessPlayback: true,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(
-                height: 90,
-                width: 90,
-                child: Icon(Icons.circle_outlined, size: 90, color: Color(0xFF3B82F6)),
-              ),
-            ),
+            // Logo medallion
+            _buildBrandMedallion(92),
             const SizedBox(height: 20),
 
             // Headline
@@ -410,11 +410,26 @@ class _LoginScreenState extends State<LoginScreen>
 
             // Feature bullets
             ...const [
-              ('🤖', 'AI-estimated values for every coin in your collection'),
-              ('📊', 'Organize thousands of coins instantly'),
-              ('📋', 'Estate documentation, reports, and lateral transfer'),
-              ('💬', 'Morgan AI numismatic assistant — research any coin'),
-              ('🧑‍🏫', 'Human AI Trainer Review Board — community-powered accuracy'),
+              (
+                Icon(Icons.auto_graph_rounded, color: Color(0xFF1D4F91), size: 20),
+                'AI-estimated values for every coin in your collection',
+              ),
+              (
+                Icon(Icons.collections_bookmark_outlined, color: Color(0xFF1D4F91), size: 20),
+                'Organize thousands of coins instantly',
+              ),
+              (
+                Icon(Icons.verified_user_outlined, color: Color(0xFF1D4F91), size: 20),
+                'Estate documentation, reports, and lateral transfer',
+              ),
+              (
+                MorganOwlAvatar(size: 26),
+                'Morgan AI numismatic assistant — research any coin',
+              ),
+              (
+                Icon(Icons.how_to_vote_outlined, color: Color(0xFF1D4F91), size: 20),
+                'Human AI Trainer Review Board — community-powered accuracy',
+              ),
             ].map((f) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
               child: Row(
@@ -427,9 +442,7 @@ class _LoginScreenState extends State<LoginScreen>
                       color: _blueSoft,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Center(
-                      child: Text(f.$1, style: const TextStyle(fontSize: 16)),
-                    ),
+                    child: Center(child: f.$1),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -449,7 +462,7 @@ class _LoginScreenState extends State<LoginScreen>
 
             // Stats strip
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
               decoration: BoxDecoration(
                 color: _surface,
                 borderRadius: BorderRadius.circular(12),
@@ -461,13 +474,18 @@ class _LoginScreenState extends State<LoginScreen>
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _StatBadge(value: '100+', label: 'Coin Types\nRecognized'),
+                  Flexible(child: _StatBadge(value: '274', label: 'U.S. Coin & Note\nSeries')),
                   _StatDivider(),
-                  _StatBadge(value: '3,202', label: 'Reference\nItems'),
+                  Flexible(child: _StatBadge(value: '3,202', label: 'Cataloged Date &\nMint Issues')),
                   _StatDivider(),
-                  _StatBadge(value: 'AI+', label: 'Community\nVerified'),
+                  Flexible(child: _StatBadge(value: 'U.S. & World', label: 'AI Photo & Slab\nRecognition')),
                 ],
               ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Coverage includes U.S. Mint reference catalogs plus AI recognition for world coins & slabs.',
+              style: TextStyle(color: _sub, fontSize: NumistaTheme.textBodySm, height: 1.35),
             ),
           ],
         ),
@@ -496,8 +514,22 @@ class _LoginScreenState extends State<LoginScreen>
             labelColor: Colors.white,
             unselectedLabelColor: _sub,
             labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            labelPadding: const EdgeInsets.symmetric(horizontal: 8),
             dividerColor: Colors.transparent,
-            tabs: const [Tab(text: 'Sign In'), Tab(text: 'Create Account')],
+            tabs: const [
+              Tab(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Sign In', maxLines: 1),
+                ),
+              ),
+              Tab(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Create Account', maxLines: 1),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 28),
@@ -650,10 +682,14 @@ class _LoginScreenState extends State<LoginScreen>
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => _pinKeyboardFocus.requestFocus(),
-                    child: _PinBoxRow(
-                      filled: List.generate(6, (i) => i < _pinCtrl.text.length),
-                      digits: _pinDigits,
-                      showDigits: _pinBoxVisible,
+                    child: ListenableBuilder(
+                      listenable: _pinKeyboardFocus,
+                      builder: (context, _) => _PinBoxRow(
+                        filled: List.generate(6, (i) => i < _pinCtrl.text.length),
+                        digits: _pinDigits,
+                        showDigits: _pinBoxVisible,
+                        hasFocus: _pinKeyboardFocus.hasFocus,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -882,6 +918,42 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ─── Widget helpers ───────────────────────────────────────────────────────
+  Widget _buildBrandMedallion(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: _surface,
+        border: Border.all(color: const Color(0xFFC9A227), width: 2.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1D4F91).withAlpha(24),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: Padding(
+          padding: EdgeInsets.all(size * 0.06),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/logo_owl.png',
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Icons.shield_outlined,
+                size: size * 0.56,
+                color: const Color(0xFF1D4F91),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _label(String text) => Text(text,
       style: const TextStyle(color: _sub, fontSize: NumistaTheme.textBodySm, fontWeight: FontWeight.w600, letterSpacing: 0.5));
 
@@ -899,7 +971,7 @@ class _LoginScreenState extends State<LoginScreen>
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _border)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _border)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _blue, width: 1.5)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF1D4F91), width: 2.0)),
         ),
       );
 
@@ -929,7 +1001,7 @@ class _LoginScreenState extends State<LoginScreen>
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _border)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _border)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _blue, width: 1.5)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF1D4F91), width: 2.0)),
           suffixIcon: IconButton(
             icon: Icon(visible ? Icons.visibility_off : Icons.visibility, color: _grey, size: 18),
             onPressed: onToggle,
@@ -1064,7 +1136,10 @@ class _StatBadge extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1565C0))),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1565C0))),
+        ),
         const SizedBox(height: 4),
         Text(label, style: const TextStyle(fontSize: NumistaTheme.textBodySm, color: Color(0xFF64748B), height: 1.3), textAlign: TextAlign.center),
       ],
@@ -1433,28 +1508,37 @@ class PinBoxRow extends StatelessWidget {
   final List<bool> filled;
   final List<String> digits;
   final bool showDigits;
+  final bool hasFocus;
 
   const PinBoxRow({
     super.key,
     required this.filled,
     required this.digits,
     required this.showDigits,
+    this.hasFocus = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final activeIndex = filled.where((f) => f).length.clamp(0, 5);
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(6, (i) {
+          final isCurrentFocus = hasFocus && !filled[i] && i == activeIndex;
+          final borderColor = filled[i]
+              ? const Color(0xFFF63366)
+              : (isCurrentFocus
+                  ? const Color(0xFF1D4F91)
+                  : (hasFocus ? const Color(0xFF93C5FD) : Colors.grey.shade400));
           return Container(
             width: 44,
             height: 50,
             margin: const EdgeInsets.symmetric(horizontal: 3),
             decoration: BoxDecoration(
               border: Border.all(
-                color: filled[i] ? const Color(0xFFF63366) : Colors.grey.shade400,
+                color: borderColor,
                 width: 2,
               ),
               borderRadius: BorderRadius.circular(8),
