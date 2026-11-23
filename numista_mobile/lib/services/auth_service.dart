@@ -19,7 +19,7 @@ class AuthService {
   static bool isBetaFor({required DateTime? creationUtc, required bool isAnonymous}) {
     if (isAnonymous) return false;
     if (creationUtc == null) return false;
-    return creationUtc.isBefore(DateTime.utc(2026, 11, 26, 5));
+    return creationUtc.isBefore(DateTime.utc(2026, 12, 15, 5));
   }
 
   static bool get isBetaTester {
