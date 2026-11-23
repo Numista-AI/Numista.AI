@@ -3,13 +3,18 @@ import 'package:numista_ai/services/auth_service.dart';
 
 void main() {
   group('AuthService isBetaFor Pure Helper', () {
-    test('1 second before cutoff -> true', () {
-      final dt = DateTime.utc(2026, 11, 26, 4, 59, 59);
+    test('14 Dec 2026 evening UTC (pre-cutoff) -> true', () {
+      final dt = DateTime.utc(2026, 12, 14, 23, 59, 59);
       expect(AuthService.isBetaFor(creationUtc: dt, isAnonymous: false), isTrue);
     });
 
-    test('exactly at cutoff -> false', () {
-      final dt = DateTime.utc(2026, 11, 26, 5, 0, 0);
+    test('1 second before cutoff (14 Dec 2026 11:59:59 PM ET) -> true', () {
+      final dt = DateTime.utc(2026, 12, 15, 4, 59, 59);
+      expect(AuthService.isBetaFor(creationUtc: dt, isAnonymous: false), isTrue);
+    });
+
+    test('exactly at cutoff (15 Dec 2026 12:00:00 AM ET) -> false', () {
+      final dt = DateTime.utc(2026, 12, 15, 5, 0, 0);
       expect(AuthService.isBetaFor(creationUtc: dt, isAnonymous: false), isFalse);
     });
 

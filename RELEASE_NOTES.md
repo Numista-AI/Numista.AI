@@ -500,7 +500,7 @@
 - Security: the admin claim is now the only way to gain admin access — the email allowlist has been removed
 - Security: the transfer Certificate of Transfer PDF can only be downloaded by the sender or recipient
 - Security: Stripe billing portal now reads your account from the sign-in token, not a URL parameter
-- Beta: "Founding Beta" status is now per-account and permanent for accounts created before 26 Nov 2026
+- Beta: "Founding Beta" status is now per-account and permanent for accounts created before 15 Dec 2026
 - Accuracy: removed unverified eBay integration and arbitrage claims from sign-in and features pages
 
 ## v4.402 — 2026-09-30
