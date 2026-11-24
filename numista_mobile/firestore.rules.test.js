@@ -253,6 +253,15 @@ test("DENY: owner_cannot_self_grant_estate — beta_tester blocked on user doc",
   );
 });
 
+// Clients cannot WRITE or forge exclude_from_founding_beta (server-only exclusion key)
+test("DENY: owner cannot write or forge exclude_from_founding_beta on user doc update", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, `users/${ownerEmail}`), { exclude_from_founding_beta: true })
+  );
+});
+
 // ─── Cross-user reads ─────────────────────────────────────────────────────────
 
 test("DENY: other user reads owner coins", async () => {
@@ -459,6 +468,7 @@ for (const [key, val] of [
   ["subscription_status", "active"],
   ["grace_period_until", 9999999999],
   ["locked_pending_upgrade", false],
+  ["exclude_from_founding_beta", true],
 ]) {
   test(`DENY: owner cannot set '${key}' on own user doc create (AMEND-A C-3)`, async () => {
     const db = ownerCtx.firestore();

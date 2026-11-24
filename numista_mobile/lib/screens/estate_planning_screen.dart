@@ -13,7 +13,9 @@ import '../services/estate_data_service.dart';
 import '../services/estate_report_service.dart';
 import '../services/estate_fiduciary_service.dart';
 import '../services/valuation_mode_service.dart';
+import '../services/stripe_service.dart';
 import '../widgets/signed_storage_image.dart';
+import 'public_info_screens.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme-aware color tokens
@@ -116,9 +118,74 @@ class _StateInfo {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EstatePlanningScreen — main entry point
+const Set<String> kEstateStaffAllowlist = {
+  'eric@numista.ai',
+  'grokbot@numista.ai',
+};
+
+const Set<String> kEstateStaffUidAllowlist = {};
+
+bool isEstateStaff({String? email, String? uid}) {
+  final normalized = (email ?? '').trim().toLowerCase();
+  if (normalized.isNotEmpty && kEstateStaffAllowlist.contains(normalized)) {
+    return true;
+  }
+  final normalizedUid = (uid ?? '').trim();
+  return normalizedUid.isNotEmpty &&
+      kEstateStaffUidAllowlist.contains(normalizedUid);
+}
+
+bool hasEstateAccess({
+  required String subscriptionTier,
+  required bool isLifetime,
+  bool isBetaTester = false,
+  bool isAiQcAccount = false,
+  String? email,
+  String? uid,
+}) {
+  return subscriptionTier == 'family_estate' ||
+      isLifetime ||
+      isBetaTester ||
+      isAiQcAccount ||
+      isEstateStaff(email: email, uid: uid);
+}
+
+/// NET-827 v2.0.7: what the Estate screen shows. Founding Beta (and every other server rule)
+/// arrives only as [serverAccess] from /api/stripe/subscription-status; [localAccess] is the
+/// C5 rule (server-only Firestore fields incl. beta_tester/is_ai_qc_account + staff allowlist).
+/// Fails closed.
+enum EstateGateView { loading, open, locked }
+
+EstateGateView estateGateView({
+  required bool tierLoaded,
+  required bool serverChecked,
+  required bool serverAccess,
+  required bool localAccess,
+}) {
+  if (!tierLoaded) return EstateGateView.loading;
+  if (serverAccess || localAccess) return EstateGateView.open;
+  if (!serverChecked) return EstateGateView.loading;
+  return EstateGateView.locked;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 class EstatePlanningScreen extends StatefulWidget {
-  const EstatePlanningScreen({super.key});
+  @visibleForTesting
+  final Stream<Map<String, dynamic>>? tierStreamOverride;
+  @visibleForTesting
+  final String? userEmailOverride;
+  @visibleForTesting
+  final String? userUidOverride;
+  @visibleForTesting
+  final Future<bool> Function(String uid)? estateAccessFetcherOverride;
+
+  const EstatePlanningScreen({
+    super.key,
+    this.tierStreamOverride,
+    this.userEmailOverride,
+    this.userUidOverride,
+    this.estateAccessFetcherOverride,
+  });
 
   @override
   State<EstatePlanningScreen> createState() => _EstatePlanningScreenState();
@@ -128,30 +195,70 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
   String get _uid =>
-      FirebaseAuth.instance.currentUser?.email ?? '';
+      widget.userEmailOverride ??
+      FirebaseAuth.instance.currentUser?.email ??
+      '';
 
   // ── Subscription tier & Flag-driven entitlements ─────────────────────────────
   String _subscriptionTier = '';
   bool   _isLifetime       = false;
-  bool   _isAiQc           = false;
   bool   _isBetaTester     = false;
+  bool   _isAiQcAccount    = false;
   bool   _tierLoaded       = false;
-  StreamSubscription<DocumentSnapshot>? _tierSub;
+  StreamSubscription<Map<String, dynamic>>? _tierSub;
 
-  bool get _hasEstateAccess =>
-      _subscriptionTier == 'family_estate' ||
-      _subscriptionTier == 'estate'        ||
-      _subscriptionTier == 'pro'           ||
-      _isLifetime                           ||
-      _isAiQc                               ||
-      _isBetaTester                         ||
-      _uid.endsWith('@numista.ai');
+  bool get _hasEstateAccess => hasEstateAccess(
+        subscriptionTier: _subscriptionTier,
+        isLifetime: _isLifetime,
+        isBetaTester: _isBetaTester,
+        isAiQcAccount: _isAiQcAccount,
+        email: _uid,
+        uid: widget.userUidOverride ?? FirebaseAuth.instance.currentUser?.uid,
+      );
+
+  // NET-827 v2.0.7: server-computed Estate entitlement.
+  bool   _serverEstateAccess = false;
+  bool   _serverChecked      = false;
+
+  EstateGateView get _gateView => estateGateView(
+        tierLoaded: _tierLoaded,
+        serverChecked: _serverChecked,
+        serverAccess: _serverEstateAccess,
+        localAccess: _tierLoaded && _hasEstateAccess,
+      );
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 4, vsync: this);
     _listenToTier();
+    _checkServerEstateAccess();
+  }
+
+  /// Asks the server once. Fail closed: no uid, an error or a failed reply leaves
+  /// _serverEstateAccess false.
+  Future<void> _checkServerEstateAccess() async {
+    String uid = '';
+    try {
+      uid = (widget.userUidOverride ?? FirebaseAuth.instance.currentUser?.uid ?? '').trim();
+    } catch (_) {
+      uid = '';
+    }
+    bool ok = false;
+    if (uid.isNotEmpty) {
+      try {
+        final fetch = widget.estateAccessFetcherOverride ??
+            ((String u) => StripeService.fetchEstateAccess(uid: u));
+        ok = await fetch(uid);
+      } catch (_) {
+        ok = false;
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _serverEstateAccess = ok;
+      _serverChecked = true;
+    });
   }
 
   void _listenToTier() {
@@ -159,27 +266,36 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
       setState(() { _tierLoaded = true; });
       return;
     }
-    _tierSub = FirebaseFirestore.instance
-        .collection('users')
-        .doc(_uid)
-        .snapshots()
-        .listen((snap) {
+    final stream = widget.tierStreamOverride ??
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(_uid)
+            .snapshots()
+            .map((snap) => snap.data() ?? <String, dynamic>{});
+    _tierSub = stream.listen((data) {
       if (!mounted) return;
-      final data = snap.data() ?? {};
       final stripeTier = (data['stripe_tier'] as String?) ?? (data['tier'] as String?) ?? 'free';
       final isLife     = data['is_lifetime_family_estate'] == true;
-      final isQc       = data['is_ai_qc_account'] == true;
       final isBeta     = data['beta_tester'] == true;
+      final isAiQc     = data['is_ai_qc_account'] == true;
 
       setState(() {
         _subscriptionTier = stripeTier;
         _isLifetime       = isLife;
-        _isAiQc           = isQc;
         _isBetaTester     = isBeta;
+        _isAiQcAccount    = isAiQc;
         _tierLoaded       = true;
       });
     }, onError: (_) {
-      if (mounted) setState(() { _subscriptionTier = 'family_estate'; _tierLoaded = true; });
+      if (mounted) {
+        setState(() {
+          _subscriptionTier = 'free';
+          _isLifetime = false;
+          _isBetaTester = false;
+          _isAiQcAccount = false;
+          _tierLoaded = true;
+        });
+      }
     });
   }
 
@@ -200,9 +316,9 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
           children: [
             _buildHeader(),
             Expanded(
-              child: !_tierLoaded
+              child: _gateView == EstateGateView.loading
                   ? const Center(child: CircularProgressIndicator(color: _kGold))
-                  : _hasEstateAccess
+                  : _gateView == EstateGateView.open
                       ? TabBarView(
                           controller: _tabs,
                           children: [
@@ -316,23 +432,23 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Estate Tier',
+                            Text('Lifetime Family Estate',
                                 style: TextStyle(
                                     color: _kGold,
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700)),
-                            Text('Billed annually',
+                            Text('One-time purchase (excluded from promo codes)',
                                 style: TextStyle(
                                     color: _kTextSecondary(context), fontSize: 11)),
                           ],
                         ),
                       ),
-                      Text('\$9.99',
+                      Text(r'$500',
                           style: TextStyle(
                               color: _kTextPrimary(context),
                               fontSize: 22,
                               fontWeight: FontWeight.w800)),
-                      Text('/mo',
+                      Text(' one-time',
                           style: TextStyle(
                               color: _kTextSecondary(context), fontSize: 13)),
                     ],
@@ -348,11 +464,9 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Estate Tier billing coming soon \u2014 contact support@numista.ai'),
-                          backgroundColor: Color(0xFF161B27),
-                          duration: Duration(seconds: 5),
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PublicInfoShell(targetRoute: '/pricing'),
                         ),
                       );
                     },
@@ -364,7 +478,7 @@ class _EstatePlanningScreenState extends State<EstatePlanningScreen>
                       textStyle: const TextStyle(
                           fontSize: 16, fontWeight: FontWeight.w800),
                     ),
-                    child: const Text('Get Estate Tier'),
+                    child: const Text('View Plans & Upgrade'),
                   ),
                 ),
                 SizedBox(height: 12),

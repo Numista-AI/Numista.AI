@@ -90,7 +90,9 @@ service cloud.firestore {
               'deepdive_count', 'invoice_scan_count', 'last_usage_date',
               'creation_timestamp', '_auth_created_ms', '_auth_is_anonymous',
               'stripe_customer_id', 'stripe_subscription_id', 'subscription_status',
-              'grace_period_until', 'locked_pending_upgrade'];
+              'grace_period_until', 'locked_pending_upgrade',
+              // NET-827 v2.0.7: 1 Dec test-purchase exclusion; clients cannot WRITE or forge this key
+              'exclude_from_founding_beta'];
     }
     function _noEntitlementChange() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(_serverOnlyKeys());
