@@ -508,7 +508,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
                                 itemCount: _filteredEntries.length,
                                 itemBuilder: (context, index) {
                                   final item = _filteredEntries[index];
-                                  return _CatalogCard(
+                                  return CatalogItemCard(
                                     item: item,
                                     onTap: () => _showItemDetailModal(item),
                                   );
@@ -973,62 +973,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
   }
 
   Widget _buildModalImage(Map<String, dynamic> item) {
-    final primaryImg = item['primary_image'] as Map?;
-    final typeImg = item['type_image'] as Map?;
-
-    final imgMap = primaryImg ?? typeImg;
-    final isTypeImage = primaryImg == null && typeImg != null;
-
-    if (imgMap != null && imgMap['url'] is String && isApprovedCatalogImageUrl(imgMap['url'] as String)) {
-      final url = imgMap['url'] as String;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Center(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                url,
-                height: 220,
-                fit: BoxFit.contain,
-                errorBuilder: (c, e, s) => _buildNoPhotoBox(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            imgMap['source'] as String? ?? 'Numista.Ai reference photo',
-            style: const TextStyle(fontSize: 14, color: Color(0xFF6B6B6B)),
-          ),
-          if (isTypeImage)
-            const Text(
-              'Representative photo — date may differ',
-              style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Color(0xFF1F5FAD)),
-            ),
-        ],
-      );
-    }
-    return _buildNoPhotoBox();
-  }
-
-  Widget _buildNoPhotoBox() {
-    return Center(
-      child: Container(
-        width: 120,
-        height: 120,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFF8A8A8A), width: 2.5, style: BorderStyle.solid),
-        ),
-        child: const Center(
-          child: Text(
-            'No photo yet',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 15, color: Color(0xFF6B6B6B), fontWeight: FontWeight.w500),
-          ),
-        ),
-      ),
-    );
+    return CatalogDetailImagesView(item: item);
   }
 
   Widget _buildDetailRow(String label, String? val) {
@@ -1138,11 +1083,290 @@ class _TypeTab extends StatelessWidget {
   }
 }
 
-class _CatalogCard extends StatelessWidget {
+const String kRepresentativePhotoLabel =
+    'Representative photo \u2014 date or mint may differ';
+
+class ResolvedCatalogImage {
+  final Map<dynamic, dynamic> imageMap;
+  final String imageUrl;
+  final bool isTypeImage;
+  final String side;
+
+  const ResolvedCatalogImage({
+    required this.imageMap,
+    required this.imageUrl,
+    required this.isTypeImage,
+    required this.side,
+  });
+}
+
+String? _firstApprovedImageUrl(
+  Map<dynamic, dynamic>? imgMap,
+  List<String> keys,
+) {
+  if (imgMap == null) return null;
+  for (final key in keys) {
+    final candidate = imgMap[key];
+    if (candidate is String && isApprovedCatalogImageUrl(candidate)) {
+      return candidate.trim();
+    }
+  }
+  return null;
+}
+
+ResolvedCatalogImage? _resolveObverseImage(
+  Map<String, dynamic> item, {
+  required List<String> keyPriority,
+}) {
+  final primaryImg = item['primary_image'] as Map?;
+  final primaryUrl = _firstApprovedImageUrl(primaryImg, keyPriority);
+  if (primaryImg != null && primaryUrl != null) {
+    return ResolvedCatalogImage(
+      imageMap: primaryImg,
+      imageUrl: primaryUrl,
+      isTypeImage: false,
+      side: 'obverse',
+    );
+  }
+  final typeImg = item['type_image'] as Map?;
+  final typeUrl = _firstApprovedImageUrl(typeImg, keyPriority);
+  if (typeImg != null && typeUrl != null) {
+    return ResolvedCatalogImage(
+      imageMap: typeImg,
+      imageUrl: typeUrl,
+      isTypeImage: true,
+      side: 'obverse',
+    );
+  }
+  return null;
+}
+
+/// Resolves the catalog card image: approved `primary_image` first, else
+/// approved `type_image` (prefers `thumb_url`, falls back to `url`).
+ResolvedCatalogImage? resolveCatalogCardImage(Map<String, dynamic> item) {
+  return _resolveObverseImage(item, keyPriority: const ['thumb_url', 'url']);
+}
+
+/// Resolves the detail modal image list: card obverse first (prefers `full_url`,
+/// else `url`), followed by every approved `extra_images[]` entry with `side=reverse`.
+List<ResolvedCatalogImage> resolveCatalogDetailImages(
+  Map<String, dynamic> item,
+) {
+  final result = <ResolvedCatalogImage>[];
+  final obverse = _resolveObverseImage(
+    item,
+    keyPriority: const ['full_url', 'url'],
+  );
+  if (obverse != null) {
+    result.add(obverse);
+  }
+  final extras = item['extra_images'];
+  if (extras is List) {
+    for (final rawExtra in extras) {
+      if (rawExtra is! Map) continue;
+      final side = (rawExtra['side']?.toString() ?? '').trim().toLowerCase();
+      if (side != 'reverse') continue;
+      final revUrl = _firstApprovedImageUrl(
+        rawExtra,
+        const ['full_url', 'url'],
+      );
+      if (revUrl != null) {
+        result.add(
+          ResolvedCatalogImage(
+            imageMap: rawExtra,
+            imageUrl: revUrl,
+            isTypeImage: false,
+            side: 'reverse',
+          ),
+        );
+      }
+    }
+  }
+  return result;
+}
+
+String resolveCatalogImageCaption(Map<dynamic, dynamic> imgMap) {
+  final credit = imgMap['credit']?.toString().trim();
+  if (credit != null && credit.isNotEmpty) return credit;
+  final source = imgMap['source']?.toString().trim();
+  if (source != null && source.isNotEmpty) return source;
+  return 'Numista.Ai reference photo';
+}
+
+bool isRepresentativeCatalogImage(ResolvedCatalogImage resolved) {
+  final uniqueSide = resolved.imageMap['unique_side'];
+  if (uniqueSide is bool) return !uniqueSide;
+  return resolved.isTypeImage;
+}
+
+Widget _buildApprovedCatalogImageWidget(
+  String imageUrl, {
+  Key? imageKey,
+  double? height,
+  BoxFit fit = BoxFit.contain,
+  required Widget Function() fallbackBuilder,
+}) {
+  if (imageUrl.startsWith('assets/')) {
+    return Image.asset(
+      imageUrl,
+      key: imageKey,
+      height: height,
+      fit: fit,
+      errorBuilder: (c, e, s) => fallbackBuilder(),
+    );
+  }
+  return Image.network(
+    imageUrl,
+    key: imageKey,
+    height: height,
+    fit: fit,
+    errorBuilder: (c, e, s) => fallbackBuilder(),
+  );
+}
+
+Widget _buildCatalogNoPhotoBox({
+  double size = 120,
+  double borderWidth = 2.5,
+  double fontSize = 15,
+}) {
+  return Center(
+    child: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFF8A8A8A),
+          width: borderWidth,
+          style: BorderStyle.solid,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          'No photo yet',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: fontSize,
+            color: const Color(0xFF6B6B6B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildCatalogCaptionLine(
+  ResolvedCatalogImage resolved, {
+  int? maxLines,
+  double fontSize = 14,
+  TextAlign? textAlign,
+  Key? linkKey,
+  Key? plainKey,
+}) {
+  final caption = resolveCatalogImageCaption(resolved.imageMap);
+  final rawSourceUrl = resolved.imageMap['source_url']?.toString().trim();
+  final overflow = maxLines != null ? TextOverflow.ellipsis : null;
+
+  if (isApprovedSourceUrl(rawSourceUrl)) {
+    final approvedUrl = rawSourceUrl!;
+    return InkWell(
+      key: linkKey,
+      onTap: () async {
+        final uri = Uri.tryParse(approvedUrl);
+        if (uri != null) {
+          await launchUrl(uri);
+        }
+      },
+      child: Text(
+        caption,
+        maxLines: maxLines,
+        overflow: overflow,
+        textAlign: textAlign,
+        style: TextStyle(
+          fontSize: fontSize,
+          color: const Color(0xFF1F5FAD),
+          decoration: TextDecoration.underline,
+        ),
+      ),
+    );
+  }
+  return Text(
+    caption,
+    key: plainKey,
+    maxLines: maxLines,
+    overflow: overflow,
+    textAlign: textAlign,
+    style: TextStyle(fontSize: fontSize, color: const Color(0xFF6B6B6B)),
+  );
+}
+
+class CatalogDetailImagesView extends StatelessWidget {
+  final Map<String, dynamic> item;
+
+  const CatalogDetailImagesView({super.key, required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final images = resolveCatalogDetailImages(item);
+    if (images.isEmpty) {
+      return _buildCatalogNoPhotoBox(size: 120, borderWidth: 2.5, fontSize: 15);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        for (int index = 0; index < images.length; index++) ...[
+          if (index > 0) const SizedBox(height: 16),
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: _buildApprovedCatalogImageWidget(
+                images[index].imageUrl,
+                imageKey: Key('catalog_detail_image_$index'),
+                height: 220,
+                fit: BoxFit.contain,
+                fallbackBuilder: () => _buildCatalogNoPhotoBox(
+                  size: 120,
+                  borderWidth: 2.5,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildCatalogCaptionLine(
+            images[index],
+            fontSize: 14,
+            textAlign: TextAlign.center,
+            linkKey: Key('catalog_detail_source_link_$index'),
+            plainKey: Key('catalog_detail_source_plain_$index'),
+          ),
+          if (isRepresentativeCatalogImage(images[index]))
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                kRepresentativePhotoLabel,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  color: Color(0xFF1F5FAD),
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class CatalogItemCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onTap;
 
-  const _CatalogCard({
+  const CatalogItemCard({
+    super.key,
     required this.item,
     required this.onTap,
   });
@@ -1151,8 +1375,13 @@ class _CatalogCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final primaryImg = item['primary_image'] as Map?;
     final typeImg = item['type_image'] as Map?;
-    final imgMap = primaryImg ?? typeImg;
-    final isTypeImage = primaryImg == null && typeImg != null;
+    final resolvedImage = resolveCatalogCardImage(item);
+    final isLegacyLocalTypePlaceholder = resolvedImage == null &&
+        primaryImg == null &&
+        typeImg != null &&
+        typeImg['url'] == null &&
+        typeImg['thumb_url'] == null &&
+        typeImg['file'] is String;
 
     final badge = item['status_badge'] as String?;
     final year = item['year']?.toString() ?? 'Undated';
@@ -1181,13 +1410,12 @@ class _CatalogCard extends StatelessWidget {
             // Image
             Expanded(
               child: Center(
-                child: imgMap != null &&
-                        imgMap['url'] is String &&
-                        isApprovedCatalogImageUrl(imgMap['url'] as String)
-                    ? Image.network(
-                        imgMap['url'] as String,
+                child: resolvedImage != null
+                    ? _buildApprovedCatalogImageWidget(
+                        resolvedImage.imageUrl,
+                        imageKey: const Key('catalog_card_image'),
                         fit: BoxFit.contain,
-                        errorBuilder: (c, e, s) => _buildPlaceholder(),
+                        fallbackBuilder: _buildPlaceholder,
                       )
                     : _buildPlaceholder(),
               ),
@@ -1220,7 +1448,30 @@ class _CatalogCard extends StatelessWidget {
               style: const TextStyle(fontSize: 15, color: Color(0xFF475569)),
             ),
 
-            if (isTypeImage)
+            if (resolvedImage != null) ...[
+              const SizedBox(height: 4),
+              _buildCatalogCaptionLine(
+                resolvedImage,
+                maxLines: 1,
+                fontSize: 11,
+                linkKey: const Key('catalog_card_source_link'),
+                plainKey: const Key('catalog_card_source_plain'),
+              ),
+              if (isRepresentativeCatalogImage(resolvedImage))
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Text(
+                    kRepresentativePhotoLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF6B6B6B),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+            ] else if (isLegacyLocalTypePlaceholder)
               const Padding(
                 padding: EdgeInsets.only(top: 4),
                 child: Text(

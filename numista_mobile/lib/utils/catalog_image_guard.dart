@@ -10,11 +10,21 @@ bool _hasRawDotSegment(String url) {
 
 bool isApprovedCatalogImageUrl(String rawUrl) {
   final url = rawUrl.trim();
-  if (url.isEmpty || url.contains('\\')) return false;
+  // Reject raw backslashes, query strings (?), and fragments (#) before parsing (CR3 D2).
+  if (url.isEmpty ||
+      url.contains('\\') ||
+      url.contains('?') ||
+      url.contains('#')) {
+    return false;
+  }
   if (_hasRawDotSegment(url)) return false;
   final lower = url.toLowerCase();
-  // Reject encoded traversal / separators before any parsing.
-  if (lower.contains('%2e') || lower.contains('%2f') || lower.contains('%5c')) {
+  // Reject encoded traversal, path separators, ?, and # before any parsing (CR3 N2).
+  if (lower.contains('%2e') ||
+      lower.contains('%2f') ||
+      lower.contains('%5c') ||
+      lower.contains('%3f') ||
+      lower.contains('%23')) {
     return false;
   }
 
@@ -26,7 +36,12 @@ bool isApprovedCatalogImageUrl(String rawUrl) {
   }
 
   final uri = Uri.tryParse(url);
-  if (uri == null || uri.scheme != 'https') return false;
+  if (uri == null || uri.scheme != 'https' || !lower.startsWith('https://')) {
+    return false;
+  }
+  if (uri.hasQuery || uri.hasFragment) return false;
+  final authority = url.substring('https://'.length).split('/').first;
+  if (authority.contains('@') || authority.contains(':')) return false;
   if (uri.userInfo.isNotEmpty || uri.hasPort) return false;
   if (uri.host.toLowerCase() != 'storage.googleapis.com') {
     return false; // firebasestorage.googleapis.com (private originals) rejected
@@ -47,4 +62,30 @@ bool isApprovedCatalogImageUrl(String rawUrl) {
     default:
       return false;
   }
+}
+
+/// Allow-listed HTTPS provenance source hosts for clickable source_url links (CR3 P5).
+const Set<String> _approvedSourceHosts = <String>{
+  'usmint.gov',
+  'www.usmint.gov',
+  'commons.wikimedia.org',
+};
+
+/// Returns true only when [rawUrl] is an https URL targeting an exact approved
+/// source host with no userinfo and no explicit port (including :443).
+bool isApprovedSourceUrl(String? rawUrl) {
+  if (rawUrl == null) return false;
+  final url = rawUrl.trim();
+  if (url.isEmpty || url.contains('\\')) return false;
+  if (!url.toLowerCase().startsWith('https://')) return false;
+
+  final uri = Uri.tryParse(url);
+  if (uri == null || uri.scheme != 'https') return false;
+  final afterScheme = url.substring('https://'.length);
+  final authority = afterScheme.split(RegExp(r'[/?#]')).first;
+  if (authority.isEmpty || authority.contains('@') || authority.contains(':')) {
+    return false;
+  }
+  if (uri.userInfo.isNotEmpty || uri.hasPort) return false;
+  return _approvedSourceHosts.contains(uri.host.toLowerCase());
 }

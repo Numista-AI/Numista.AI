@@ -9,6 +9,18 @@ import json
 import os
 import re
 import sys
+from urllib.parse import urlsplit
+
+try:
+    from tools.catalog.image_license_allowlist import is_certified_license
+except ImportError:
+    try:
+        from image_license_allowlist import is_certified_license
+    except ImportError:
+        _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+        if _THIS_DIR not in sys.path:
+            sys.path.insert(0, _THIS_DIR)
+        from image_license_allowlist import is_certified_license
 
 DEFAULT_INPUT_PATH = os.path.join(
     r"1 NUMISTA.AI", "Grok CoS to Antigravity", "INBOX", "NET-747_inputs", "entries_master_20261103.jsonl"
@@ -70,6 +82,127 @@ BOUND_12 = {
 
 FORBIDDEN_PATH_SUBSTRINGS = ["seed_images/", "/workspace", "gs://", "users/", "googleapis"]
 
+APPROVED_GCS_BUCKETS = frozenset({
+    "us_mint_coin_images",
+    "numista-reference-library",
+})
+
+IMAGE_URL_KEYS = ("url", "full_url", "thumb_url")
+
+PRIMARY_IMAGE_KEYS = [
+    "url",
+    "full_url",
+    "thumb_url",
+    "file",
+    "side",
+    "unique_side",
+    "license",
+    "credit",
+    "source",
+    "source_url",
+    "resolution",
+]
+TYPE_IMAGE_KEYS = [
+    "url",
+    "full_url",
+    "thumb_url",
+    "file",
+    "side",
+    "unique_side",
+    "license",
+    "credit",
+    "source",
+    "source_url",
+    "note",
+    "resolution",
+]
+SECONDARY_IMAGE_KEYS = ["url", "file", "side", "resolution", "source", "unique_side"]
+EXTRA_IMAGE_KEYS = [
+    "url",
+    "full_url",
+    "thumb_url",
+    "side",
+    "unique_side",
+    "license",
+    "credit",
+    "source",
+    "source_url",
+    "resolution",
+]
+
+
+def _has_raw_dot_segment(url):
+    path_part = url.split("?", 1)[0].split("#", 1)[0]
+    return any(seg in (".", "..") for seg in path_part.split("/"))
+
+
+def is_approved_image_url(raw_url):
+    """Strict allow-list check matching Dart isApprovedCatalogImageUrl, minus uploads-studio."""
+    if not isinstance(raw_url, str):
+        return False
+    url = raw_url.strip()
+    if not url:
+        return False
+    # Reject raw backslashes, query strings, fragments, and dot-segments before parsing.
+    if "\\" in url or "?" in url or "#" in url:
+        return False
+    if _has_raw_dot_segment(url):
+        return False
+    lower = url.lower()
+    if (
+        "%2e" in lower
+        or "%2f" in lower
+        or "%5c" in lower
+        or "%3f" in lower
+        or "%23" in lower
+    ):
+        return False
+
+    # Bundled local catalog assets stay accepted (no traversal or bare directory prefix).
+    if url.startswith("assets/catalog/images/"):
+        segs = url.split("/")
+        return len(segs) >= 4 and not any(s in ("", ".", "..") for s in segs)
+
+    if any(ch.isspace() for ch in url):
+        return False
+    parsed = urlsplit(url)
+    if parsed.scheme != "https":
+        return False
+    if (
+        parsed.username is not None
+        or parsed.password is not None
+        or parsed.port is not None
+        or "@" in parsed.netloc
+        or ":" in parsed.netloc
+    ):
+        return False
+    if parsed.netloc.lower() != "storage.googleapis.com":
+        return False
+    if (parsed.hostname or "").lower() != "storage.googleapis.com":
+        return False
+    if parsed.query or parsed.fragment:
+        return False
+    if not parsed.path.startswith("/") or parsed.path.startswith("//"):
+        return False
+
+    segs = parsed.path[1:].split("/")
+    if len(segs) < 2 or any(s in ("", ".", "..") for s in segs):
+        return False
+    return segs[0] in APPROVED_GCS_BUCKETS
+
+
+def _is_gcs_hosted_value(val):
+    if not isinstance(val, str):
+        return False
+    lower = val.lower()
+    return (
+        "storage.googleapis.com" in lower
+        or "firebasestorage.googleapis.com" in lower
+        or "googleapis.com" in lower
+        or "gs://" in lower
+    )
+
+
 def sanitize_image_path(val):
     if not val or not isinstance(val, str):
         return val
@@ -82,19 +215,90 @@ def sanitize_image_path(val):
             return f"reference_images/{base}" if base else None
     return val
 
-def sanitize_image_dict(img_dict, allowed_keys):
+
+def sanitize_image_dict(
+    img_dict,
+    allowed_keys,
+    *,
+    nac_code=None,
+    field_name=None,
+    dropped_report=None,
+):
     if not img_dict or not isinstance(img_dict, dict):
         return None
+
+    # Fail-closed GCS URL & certified-license gate (D1, D2, D3, N1)
+    has_gcs_url = False
+    for uk in IMAGE_URL_KEYS:
+        if uk not in img_dict:
+            continue
+        raw_val = img_dict[uk]
+        if raw_val is None or raw_val == "":
+            continue
+        if _is_gcs_hosted_value(raw_val):
+            has_gcs_url = True
+            if not is_approved_image_url(raw_val):
+                if dropped_report is not None:
+                    dropped_report.append({
+                        "nac_code": nac_code,
+                        "field": field_name,
+                        "key": uk,
+                        "reason": "unapproved_gcs_url",
+                    })
+                return None
+
+    if has_gcs_url and not is_certified_license(img_dict.get("license")):
+        if dropped_report is not None:
+            dropped_report.append({
+                "nac_code": nac_code,
+                "field": field_name,
+                "key": "license",
+                "reason": "uncertified_or_missing_license",
+            })
+        return None
+
     out = {}
     for k in allowed_keys:
         if k in img_dict:
             v = img_dict[k]
             if k == "source" and v == "collection photo, owner removed":
                 v = "Numista.Ai reference photo"
-            elif k in ("url", "full_url", "file"):
+            elif k in ("url", "full_url", "thumb_url", "file"):
                 v = sanitize_image_path(v)
             out[k] = v
     return out if out else None
+
+
+def audit_catalog_images(records):
+    """Validates all image objects across catalog records and returns dropped entries."""
+    dropped = []
+    field_specs = (
+        ("primary_image", PRIMARY_IMAGE_KEYS),
+        ("type_image", TYPE_IMAGE_KEYS),
+        ("secondary_image", SECONDARY_IMAGE_KEYS),
+    )
+    for row in records:
+        nac_code = row.get("nac_code")
+        for field_name, keys in field_specs:
+            val = row.get(field_name)
+            if isinstance(val, dict):
+                sanitize_image_dict(
+                    val,
+                    keys,
+                    nac_code=nac_code,
+                    field_name=field_name,
+                    dropped_report=dropped,
+                )
+        for idx, extra in enumerate(row.get("extra_images") or []):
+            if isinstance(extra, dict):
+                sanitize_image_dict(
+                    extra,
+                    EXTRA_IMAGE_KEYS,
+                    nac_code=nac_code,
+                    field_name=f"extra_images[{idx}]",
+                    dropped_report=dropped,
+                )
+    return dropped
 
 def build_public_catalog(input_path, output_path):
     print(f"Reading master entries from: {input_path}")
@@ -102,6 +306,7 @@ def build_public_catalog(input_path, output_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
     records = []
+    dropped_images = []
     album_renames_count = 0
     source_rewrites_count = 0
     composition_scrub_count = 0
@@ -128,29 +333,53 @@ def build_public_catalog(input_path, output_path):
                 history = history.replace("This large collection includes", "This large holding includes")
 
             # 3. Images sanitization
-            # primary_image keys: url, full_url, file, side, unique_side, license, credit, source, source_url, resolution
-            primary_keys = ["url", "full_url", "file", "side", "unique_side", "license", "credit", "source", "source_url", "resolution"]
-            primary_image = sanitize_image_dict(row.get("primary_image"), primary_keys)
+            # primary_image keys: url, full_url, thumb_url, file, side, unique_side, license, credit, source, source_url, resolution
+            primary_keys = PRIMARY_IMAGE_KEYS
+            primary_image = sanitize_image_dict(
+                row.get("primary_image"),
+                primary_keys,
+                nac_code=nac_code,
+                field_name="primary_image",
+                dropped_report=dropped_images,
+            )
             if row.get("primary_image") and row.get("primary_image", {}).get("source") == "collection photo, owner removed":
                 source_rewrites_count += 1
 
-            # type_image keys: url, file, side, note, resolution, source
-            type_keys = ["url", "file", "side", "note", "resolution", "source"]
-            type_image = sanitize_image_dict(row.get("type_image"), type_keys)
+            # type_image keys: url, full_url, thumb_url, file, side, unique_side, license, credit, source, source_url, note, resolution
+            type_keys = TYPE_IMAGE_KEYS
+            type_image = sanitize_image_dict(
+                row.get("type_image"),
+                type_keys,
+                nac_code=nac_code,
+                field_name="type_image",
+                dropped_report=dropped_images,
+            )
             if row.get("type_image") and row.get("type_image", {}).get("source") == "collection photo, owner removed":
                 source_rewrites_count += 1
 
             # secondary_image keys: url, file, side, resolution, source, unique_side
-            secondary_keys = ["url", "file", "side", "resolution", "source", "unique_side"]
-            secondary_image = sanitize_image_dict(row.get("secondary_image"), secondary_keys)
+            secondary_keys = SECONDARY_IMAGE_KEYS
+            secondary_image = sanitize_image_dict(
+                row.get("secondary_image"),
+                secondary_keys,
+                nac_code=nac_code,
+                field_name="secondary_image",
+                dropped_report=dropped_images,
+            )
             if row.get("secondary_image") and row.get("secondary_image", {}).get("source") == "collection photo, owner removed":
                 source_rewrites_count += 1
 
-            # extra_images: [{url, full_url, side, unique_side, license, credit, source_url, resolution}]
-            extra_keys = ["url", "full_url", "side", "unique_side", "license", "credit", "source_url", "resolution"]
+            # extra_images: [{url, full_url, thumb_url, side, unique_side, license, credit, source, source_url, resolution}]
+            extra_keys = EXTRA_IMAGE_KEYS
             extra_images = []
-            for e in (row.get("extra_images") or []):
-                cleaned_e = sanitize_image_dict(e, extra_keys)
+            for idx, e in enumerate(row.get("extra_images") or []):
+                cleaned_e = sanitize_image_dict(
+                    e,
+                    extra_keys,
+                    nac_code=nac_code,
+                    field_name=f"extra_images[{idx}]",
+                    dropped_report=dropped_images,
+                )
                 if cleaned_e:
                     extra_images.append(cleaned_e)
 
@@ -287,7 +516,11 @@ def build_public_catalog(input_path, output_path):
         json.dump(records, f, indent=2, ensure_ascii=False)
 
     print(f"Successfully generated {len(records)} sanitized records to: {output_path}")
-    print(f"Stats: Album renames: {album_renames_count}, Source rewrites: {source_rewrites_count}, Composition scrubs: {composition_scrub_count}, Pre-Federal: {pre_fed_count}")
+    print(f"Stats: Album renames: {album_renames_count}, Source rewrites: {source_rewrites_count}, Composition scrubs: {composition_scrub_count}, Pre-Federal: {pre_fed_count}, Dropped images: {len(dropped_images)}")
+    if dropped_images:
+        print("Dropped image objects report:")
+        for d in dropped_images:
+            print(f"  - {d['nac_code']} ({d['field']}.{d['key']}): {d['reason']}")
     return 0
 
 if __name__ == "__main__":

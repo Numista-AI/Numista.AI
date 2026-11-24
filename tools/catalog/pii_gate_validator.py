@@ -6,10 +6,22 @@ Enforces Section 3.3 and C1-C4 rules with negative planted-leak tests.
 """
 
 import argparse
+import copy
 import json
 import os
 import re
 import sys
+
+try:
+    from tools.catalog.build_public_catalog import is_approved_image_url
+except ImportError:
+    try:
+        from build_public_catalog import is_approved_image_url
+    except ImportError:
+        _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+        if _THIS_DIR not in sys.path:
+            sys.path.insert(0, _THIS_DIR)
+        from build_public_catalog import is_approved_image_url
 
 DEFAULT_INPUT_PATH = os.path.join(
     "numista_mobile", "assets", "catalog", "catalog_public_v1.json"
@@ -77,6 +89,43 @@ def scan_text_for_leaks(text):
             hits.append((token_pattern, m.group(0), snippet))
     return hits
 
+APPROVED_IMAGE_URL_PLACEHOLDER = "__APPROVED_IMAGE_URL__"
+IMAGE_URL_FIELD_KEYS = ("url", "full_url", "thumb_url")
+
+
+def _mask_approved_urls_recursive(node, parent_key=None):
+    if isinstance(node, list):
+        for item in node:
+            _mask_approved_urls_recursive(item, parent_key=parent_key)
+    elif isinstance(node, dict):
+        if parent_key != "sources":
+            for uk in IMAGE_URL_FIELD_KEYS:
+                val = node.get(uk)
+                if isinstance(val, str) and is_approved_image_url(val):
+                    node[uk] = APPROVED_IMAGE_URL_PLACEHOLDER
+        for k, v in node.items():
+            if isinstance(v, (dict, list)):
+                _mask_approved_urls_recursive(v, parent_key=k)
+
+
+def mask_approved_image_urls(doc):
+    """
+    Returns a deep copy of parsed JSON doc with ONLY approved image URL values in
+    `url`, `full_url`, and `thumb_url` (outside `sources`) replaced by a safe placeholder.
+    All other fields (history, sources, labels, notes, etc.) remain unmasked.
+    """
+    masked_doc = copy.deepcopy(doc)
+    _mask_approved_urls_recursive(masked_doc)
+    return masked_doc
+
+
+def scan_document_for_leaks(doc):
+    """Masks approved image URLs on a copy of parsed JSON doc, then scans for leaks."""
+    masked_doc = mask_approved_image_urls(doc)
+    serialized = json.dumps(masked_doc, ensure_ascii=False)
+    return scan_text_for_leaks(serialized)
+
+
 def run_dry_run(input_path):
     print(f"--- Running Dry-Run on {input_path} ---")
     with open(input_path, "r", encoding="utf-8") as f:
@@ -88,8 +137,14 @@ def run_dry_run(input_path):
         count = text.count(wl)
         print(f"  [{count:3d} hits] '{wl}'")
 
-    # Scan for non-whitelisted leaks
-    leaks = scan_text_for_leaks(text)
+    try:
+        doc = json.loads(text)
+    except json.JSONDecodeError as exc:
+        print(f"FAIL: Invalid JSON input ({exc})")
+        return 1
+
+    # Scan masked copy for non-whitelisted leaks (N2)
+    leaks = scan_document_for_leaks(doc)
     print(f"\nNon-whitelisted hits: {len(leaks)}")
     if leaks:
         for pat, matched, snip in leaks[:10]:
@@ -159,7 +214,13 @@ def main():
     with open(args.input, "r", encoding="utf-8") as f:
         text = f.read()
 
-    leaks = scan_text_for_leaks(text)
+    try:
+        doc = json.loads(text)
+    except json.JSONDecodeError as exc:
+        print(f"GATE FAILED: Invalid JSON input ({exc})", file=sys.stderr)
+        sys.exit(1)
+
+    leaks = scan_document_for_leaks(doc)
     if leaks:
         print(f"GATE FAILED: {len(leaks)} non-whitelisted leaks detected!", file=sys.stderr)
         for pat, matched, snip in leaks:
