@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/coin_model.dart';
 import '../../services/melt_value_service.dart';
@@ -19,6 +20,10 @@ class CatalogBrowseScreen extends StatefulWidget {
     this.initialQuery,
     this.initialNacCode,
   });
+
+  @visibleForTesting
+  static Widget buildMintageRowForTest(Map<String, dynamic> item) =>
+      _CatalogBrowseScreenState._buildMintageRowStatic(item);
 
   @override
   State<CatalogBrowseScreen> createState() => _CatalogBrowseScreenState();
@@ -1056,11 +1061,36 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
     );
   }
 
-  Widget _buildMintageRow(Map<String, dynamic> item) {
+  static final NumberFormat _mintageNumberFormat =
+      NumberFormat.decimalPattern('en_US');
+
+  static String? _formatMintageValue(dynamic value) {
+    if (value is int ||
+        (value is double &&
+            value.isFinite &&
+            value == value.truncateToDouble())) {
+      return _mintageNumberFormat.format((value as num).toInt());
+    }
+    if (value is double && value.isFinite) {
+      return value.toString();
+    }
+    if (value is String) {
+      return value.trim().isEmpty ? null : value;
+    }
+    return null;
+  }
+
+  Widget _buildMintageRow(Map<String, dynamic> item) =>
+      _buildMintageRowStatic(item);
+
+  static Widget _buildMintageRowStatic(Map<String, dynamic> item) {
     final mintage = item['mintage'] as Map?;
-    final val = mintage?['value']?.toString();
-    final label = mintage?['label'] as String?;
-    final sourceUrl = mintage?['source_url'] as String?;
+    final formattedValue = _formatMintageValue(mintage?['value']);
+    final rawLabel = mintage?['label'];
+    final trimmedLabel = rawLabel is String ? rawLabel.trim() : '';
+    final hasLabel = trimmedLabel.isNotEmpty;
+    final rawSourceUrl = mintage?['source_url'];
+    final sourceUrl = rawSourceUrl is String ? rawSourceUrl.trim() : null;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1075,23 +1105,71 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
             ),
           ),
           Expanded(
-            child: val != null && val.isNotEmpty
-                ? Row(
+            child: formattedValue != null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(val, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0B2545))),
-                      if (sourceUrl != null && sourceUrl.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap: () async {
-                            final uri = Uri.tryParse(sourceUrl);
-                            if (uri != null) await launchUrl(uri);
-                          },
-                          child: const Text('(source)', style: TextStyle(color: Color(0xFF1F5FAD), decoration: TextDecoration.underline)),
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          Text(
+                            formattedValue,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0B2545),
+                            ),
+                          ),
+                          if (sourceUrl != null && sourceUrl.isNotEmpty)
+                            InkWell(
+                              onTap: () async {
+                                final uri = Uri.tryParse(sourceUrl);
+                                if (uri != null) await launchUrl(uri);
+                              },
+                              child: const Text(
+                                '(source)',
+                                style: TextStyle(
+                                  color: Color(0xFF1F5FAD),
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (hasLabel) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                trimmedLabel,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF6B6B6B),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],
                   )
-                : Text(label ?? 'Needs source', style: const TextStyle(fontSize: 16, color: Color(0xFF6B6B6B))),
+                : Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          hasLabel ? trimmedLabel : 'Needs source',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF6B6B6B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
