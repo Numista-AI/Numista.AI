@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 import tier_gatekeeper
+import routes.payment_routes as payment_routes
 from main import app  # as tests/test_idor_fixes.py:18
 from routes.deps import get_current_user  # as tests/test_idor_fixes.py:19
 from tier_gatekeeper import (
@@ -43,7 +44,7 @@ def fake_db():
     snap.exists = False
     snap.to_dict.return_value = None
     db.collection.return_value.document.return_value.get.return_value = snap
-    with patch.object(tier_gatekeeper, "db", db):
+    with patch.object(tier_gatekeeper, "db", db), patch.object(payment_routes, "db", db):
         yield db, snap
 
 
@@ -125,7 +126,7 @@ _NET827_PATCH = {
 
 def test_p1_founding_plus_estate_plain():
     p = {**_B, "stripe_tier": "estate"}
-    assert get_user_tier(p) == "founding_beta"
+    assert get_user_tier(p) == "estate"
     assert get_user_allowance(p) == {"coins": None, "deepdive": 1500, "invoice_scan": 750}
 
 
@@ -183,18 +184,18 @@ def test_p8_lifetime_combinations():
     assert get_user_allowance(p1) == {"coins": None, "deepdive": 5000, "invoice_scan": 2500}
 
     p2 = {"is_lifetime_family_estate": True, **_B}
-    assert get_user_tier(p2) == "founding_beta"
+    assert get_user_tier(p2) == "family_estate"
     assert get_user_allowance(p2) == {"coins": None, "deepdive": 1500, "invoice_scan": 750}
 
     p3 = {"is_lifetime_family_estate": True}
     assert get_user_tier(p3) == "family_estate"
-    assert get_user_allowance(p3) == {"coins": 2500, "deepdive": 1500, "invoice_scan": 750}
+    assert get_user_allowance(p3) == {"coins": None, "deepdive": 1500, "invoice_scan": 750}
 
 
 def test_p9_post_cutoff_plus_estate():
     p = {"_auth_created_ms": 1797310800000, "_auth_is_anonymous": False, "stripe_tier": "estate"}
     assert get_user_tier(p) == "estate"
-    assert get_user_allowance(p) == {"coins": 1000, "deepdive": 500, "invoice_scan": 250}
+    assert get_user_allowance(p) == {"coins": None, "deepdive": 500, "invoice_scan": 250}
     with patch.dict(tier_gatekeeper.TIER_COIN_LIMITS, _NET827_PATCH):
         assert get_user_tier(p) == "estate"
         assert get_user_allowance(p) == {"coins": None, "deepdive": 500, "invoice_scan": 250}
@@ -262,15 +263,14 @@ def test_l4_within_limit():
 
 def test_l5_check_and_enforce_coin_limit():
     with (
-        patch("tier_gatekeeper.get_user_profile", return_value={"beta_tester": True}),
+        patch("tier_gatekeeper.load_entitlement_profile", return_value=({"beta_tester": True}, {})),
         patch("tier_gatekeeper.get_coin_count", return_value=5000),
     ):
         assert check_and_enforce_coin_limit("u1") is True
 
     with (
-        patch("tier_gatekeeper.get_user_profile", return_value={}),
+        patch("tier_gatekeeper.load_entitlement_profile", return_value=({}, {})),
         patch("tier_gatekeeper.get_coin_count", return_value=11),
-        patch("tier_gatekeeper.create_upgrade_checkout_session", return_value=None),
     ):
         with pytest.raises(HTTPException) as exc:
             check_and_enforce_coin_limit("u1")
@@ -284,9 +284,13 @@ def test_l6_cutoff_constant_est():
 
 
 def test_l7_daily_usage_none_limit_guard(fake_db):
+    _, snap = fake_db
+    snap.exists = True
+    snap.to_dict.return_value = {}
     with (
         patch.dict(tier_gatekeeper.TIER_DAILY_ALLOWANCES, {"pro": {"deepdive": None, "invoice_scan": None}}),
-        patch("tier_gatekeeper.get_user_profile", return_value={"stripe_tier": "pro"}),
+        patch("tier_gatekeeper.load_entitlement_profile", return_value=({"stripe_tier": "pro"}, {})),
+        patch.object(tier_gatekeeper, "_run_txn", side_effect=lambda db, fn: fn(MagicMock())),
     ):
         assert check_and_increment_daily_usage("u1", "deepdive") is True
 
@@ -451,7 +455,7 @@ def test_r6_auth_down_returns_503(fake_db, no_count):
 def test_r7_loader_raises_returns_503(fake_db, no_count):
     app.dependency_overrides[get_current_user] = lambda: _tok("user_A", "user_a@example.com")
     client = TestClient(app, raise_server_exceptions=False)
-    with patch("routes.payment_routes.get_user_profile", side_effect=AuthFactsUnavailable("x")):
+    with patch("routes.payment_routes._own_status", side_effect=AuthFactsUnavailable("x")):
         resp = client.get("/api/stripe/subscription-status?uid=user_A")
     assert resp.status_code == 503
 
@@ -518,7 +522,7 @@ def test_r12_eric_gold_example(fake_db, no_count):
         body = resp.json()
         assert body["coin_limit"] is None
         assert body["daily_ai_allowance"] == {"deepdive": 1500, "invoice_scan": 750}
-        assert body["stripe_tier"] == "founding_beta"
+        assert body["stripe_tier"] == "estate"
 
         with patch.dict(tier_gatekeeper.TIER_COIN_LIMITS, _NET827_PATCH):
             resp2 = client.get("/api/stripe/subscription-status?uid=user_A")
@@ -545,15 +549,18 @@ def test_r13_eric_silver_example(fake_db, no_count):
 
 
 def test_l8_power_user_flag_ignored_by_check_and_enforce_coin_limit():
-    with patch("tier_gatekeeper.get_user_profile", return_value={"power_user": True}), \
+    with patch("tier_gatekeeper.load_entitlement_profile", return_value=({"power_user": True}, {})), \
          patch("tier_gatekeeper.get_coin_count", return_value=11):
         with pytest.raises(HTTPException) as exc:
             check_and_enforce_coin_limit("u1")
         assert exc.value.status_code == 403
 
 
-def test_l9_power_user_flag_ignored_by_check_and_increment_daily_usage():
+def test_l9_power_user_flag_ignored_by_check_and_increment_daily_usage(fake_db):
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    profile = {"power_user": True, "deepdive_count": 3, "last_usage_date": today_str}
-    with patch("tier_gatekeeper.get_user_profile", return_value=profile):
+    _, snap = fake_db
+    snap.exists = True
+    snap.to_dict.return_value = {"deepdive_count": 3, "last_usage_date": today_str}
+    with patch("tier_gatekeeper.load_entitlement_profile", return_value=({"power_user": True}, {})), \
+         patch.object(tier_gatekeeper, "_run_txn", side_effect=lambda db, fn: fn(MagicMock())):
         assert check_and_increment_daily_usage("u1", "deepdive") is False

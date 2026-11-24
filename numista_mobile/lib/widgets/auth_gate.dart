@@ -121,6 +121,11 @@ class _AuthGateState extends State<AuthGate> {
               'INTEGRITY: Browse Demo still active after deactivateBrowseDemo(). '
               'User: ${snapshot.data!.uid}. deactivateBrowseDemo() has a logic defect.');
 
+          // NET-827 C7: allow signed-in users visiting /pricing to reach CHECKOUT-UI.
+          if (widget.publicRoute == '/pricing') {
+            return PublicInfoShell(targetRoute: widget.publicRoute!);
+          }
+
           if (_welcomeDone) {
             return const BaseLayout();
           }

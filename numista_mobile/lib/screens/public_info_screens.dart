@@ -1,12 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/guest_seed_service.dart';
+import '../services/stripe_service.dart';
 import '../widgets/auth_gate.dart';
 
 /// Clean public shell providing branded informational views (/about, /features, /pricing, /faq).
 class PublicInfoShell extends StatelessWidget {
   final String targetRoute;
+  @visibleForTesting
+  final DateTime? nowUtcOverride;
+  @visibleForTesting
+  final Future<SubscriptionStatusSnapshot?> Function(String uid)? statusFetcherOverride;
+  @visibleForTesting
+  final Future<CheckoutLaunchResult> Function({
+    required String tier,
+    String interval,
+    String? promoCode,
+  })? checkoutStarterOverride;
+  @visibleForTesting
+  final Future<bool> Function()? portalStarterOverride;
+  @visibleForTesting
+  final bool? isSignedInOverride;
+  @visibleForTesting
+  final String? uidOverride;
 
-  const PublicInfoShell({super.key, required this.targetRoute});
+  const PublicInfoShell({
+    super.key,
+    required this.targetRoute,
+    this.nowUtcOverride,
+    this.statusFetcherOverride,
+    this.checkoutStarterOverride,
+    this.portalStarterOverride,
+    this.isSignedInOverride,
+    this.uidOverride,
+  });
 
   static const Color _bg = Color(0xFFF8FAFC);
   static const Color _surface = Colors.white;
@@ -15,8 +42,25 @@ class PublicInfoShell extends StatelessWidget {
   static const Color _bronze = Color(0xFF8C7355);
   static const Color _blue = Color(0xFF1E3A8A);
 
+  String? _resolvedSignedInUid() {
+    if (isSignedInOverride != null) {
+      if (!isSignedInOverride!) return null;
+      final explicit = (uidOverride ?? '').trim();
+      return explicit.isNotEmpty ? explicit : 'uid_override';
+    }
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null || user.isAnonymous) return null;
+      return user.uid;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final signedInUid = _resolvedSignedInUid();
+    final isSignedIn = signedInUid != null;
     return Scaffold(
       backgroundColor: _bg,
       appBar: PreferredSize(
@@ -69,46 +113,64 @@ class PublicInfoShell extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  alignment: WrapAlignment.end,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () async {
-                        await GuestSeedService.activateBrowseDemo();
-                        if (context.mounted) {
-                          AuthGate.navigateTo(context, isDemo: true);
-                        }
-                      },
-                      icon: const Icon(Icons.explore_outlined, size: 16, color: _bronze),
-                      label: const Text(
-                        'Explore Demo Vault',
-                        style: TextStyle(
-                          color: _bronze,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
+                if (isSignedIn)
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _blue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _blue,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    onPressed: () {
+                      AuthGate.navigateTo(context);
+                    },
+                    icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                    label: const Text('Back to Vault', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () async {
+                          await GuestSeedService.activateBrowseDemo();
+                          if (context.mounted) {
+                            AuthGate.navigateTo(context, isDemo: true);
+                          }
+                        },
+                        icon: const Icon(Icons.explore_outlined, size: 16, color: _bronze),
+                        label: const Text(
+                          'Explore Demo Vault',
+                          style: TextStyle(
+                            color: _bronze,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
-                      onPressed: () {
-                        AuthGate.navigateTo(context, initialAuthTab: 1);
-                      },
-                      child: const Text('Get Started', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _blue,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () {
+                          AuthGate.navigateTo(context, initialAuthTab: 1);
+                        },
+                        child: const Text('Get Started', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -120,7 +182,7 @@ class PublicInfoShell extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 860),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-              child: _buildRouteContent(context),
+              child: _buildRouteContent(context, signedInUid: signedInUid),
             ),
           ),
         ),
@@ -128,12 +190,18 @@ class PublicInfoShell extends StatelessWidget {
     );
   }
 
-  Widget _buildRouteContent(BuildContext context) {
+  Widget _buildRouteContent(BuildContext context, {String? signedInUid}) {
     switch (targetRoute) {
       case '/features':
         return const _FeaturesView();
       case '/pricing':
-        return const _PricingView();
+        return _PricingView(
+          signedInUid: signedInUid,
+          nowUtcOverride: nowUtcOverride,
+          statusFetcherOverride: statusFetcherOverride,
+          checkoutStarterOverride: checkoutStarterOverride,
+          portalStarterOverride: portalStarterOverride,
+        );
       case '/faq':
         return const _FaqView();
       case '/about':
@@ -348,18 +416,152 @@ class _FeaturesView extends StatelessWidget {
 }
 
 // ─── 3. Pricing View ──────────────────────────────────────────────────────────
-class _PricingView extends StatelessWidget {
-  const _PricingView();
+class _PricingView extends StatefulWidget {
+  final String? signedInUid;
+  final DateTime? nowUtcOverride;
+  final Future<SubscriptionStatusSnapshot?> Function(String uid)? statusFetcherOverride;
+  final Future<CheckoutLaunchResult> Function({
+    required String tier,
+    String interval,
+    String? promoCode,
+  })? checkoutStarterOverride;
+  final Future<bool> Function()? portalStarterOverride;
+
+  const _PricingView({
+    this.signedInUid,
+    this.nowUtcOverride,
+    this.statusFetcherOverride,
+    this.checkoutStarterOverride,
+    this.portalStarterOverride,
+  });
+
+  @override
+  State<_PricingView> createState() => _PricingViewState();
+}
+
+class _PricingViewState extends State<_PricingView> {
+  static final DateTime _christmasStartUtc = DateTime.utc(2026, 12, 15, 5);
+  static final DateTime _christmasEndUtc = DateTime.utc(2027, 1, 16, 5);
+
+  bool _isYearly = false;
+  bool _showPromoInput = false;
+  bool _loadingStatus = false;
+  bool _submitting = false;
+  String? _actionMessage;
+  bool _actionIsError = false;
+  SubscriptionStatusSnapshot? _status;
+  final TextEditingController _promoCtrl = TextEditingController();
+
+  bool get _inChristmasWindow {
+    final nowUtc = widget.nowUtcOverride ?? DateTime.now().toUtc();
+    return !nowUtc.isBefore(_christmasStartUtc) && nowUtc.isBefore(_christmasEndUtc);
+  }
+
+  bool get _isSignedIn => widget.signedInUid != null && widget.signedInUid!.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isSignedIn) {
+      _loadStatus();
+    }
+  }
+
+  @override
+  void dispose() {
+    _promoCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadStatus() async {
+    final uid = widget.signedInUid;
+    if (uid == null || uid.isEmpty) return;
+    setState(() => _loadingStatus = true);
+    try {
+      final fetcher = widget.statusFetcherOverride ??
+          ((String id) => StripeService.fetchSubscriptionStatus(uid: id));
+      final snap = await fetcher(uid);
+      if (mounted) {
+        setState(() {
+          _status = snap;
+          _loadingStatus = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loadingStatus = false);
+      }
+    }
+  }
+
+  Future<void> _handleCheckout({required String tier, required bool isLifetime}) async {
+    if (!_isSignedIn) {
+      AuthGate.navigateTo(context, initialAuthTab: 1);
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _actionMessage = null;
+      _actionIsError = false;
+    });
+    final promo = _promoCtrl.text.trim();
+    final starter = widget.checkoutStarterOverride ??
+        ({required String tier, String interval = 'month', String? promoCode}) =>
+            StripeService.startCheckout(
+              tier: tier,
+              interval: interval,
+              promoCode: promoCode,
+            );
+    final res = await starter(
+      tier: tier,
+      interval: isLifetime ? 'year' : (_isYearly ? 'year' : 'month'),
+      promoCode: promo.isEmpty ? null : promo,
+    );
+    if (!mounted) return;
+    setState(() {
+      _submitting = false;
+      if (!res.ok) {
+        _actionIsError = true;
+        _actionMessage = res.message ?? 'Unable to start checkout.';
+      } else {
+        _actionIsError = false;
+        _actionMessage = 'Redirecting to secure Stripe Checkout...';
+      }
+    });
+  }
+
+  Future<void> _handleManageBilling() async {
+    setState(() {
+      _submitting = true;
+      _actionMessage = null;
+      _actionIsError = false;
+    });
+    final portal = widget.portalStarterOverride ?? (() => StripeService.launchCustomerPortal());
+    final ok = await portal();
+    if (!mounted) return;
+    setState(() {
+      _submitting = false;
+      if (!ok) {
+        _actionIsError = true;
+        _actionMessage = 'Unable to open Stripe billing portal.';
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isFoundingBeta = _status?.stripeTier == 'founding_beta';
+    final hasPaidOrLifetime =
+        (_status?.hasPaidSubscription ?? false) || (_status?.lifetimeFamilyEstate ?? false);
+    final intervalLabel = _isYearly ? 'Yearly' : 'Monthly';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _tagBadge('ACCESS & PRICING'),
+        _tagBadge('PLANS & PRICING'),
         const SizedBox(height: 12),
         const Text(
-          'Early Access Included — Plans TBA',
+          'Simple Plans for Every Collection Size',
           style: TextStyle(
             color: Color(0xFF0F172A),
             fontSize: 32,
@@ -367,57 +569,440 @@ class _PricingView extends StatelessWidget {
             height: 1.25,
           ),
         ),
-        const SizedBox(height: 28),
-        _contentCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF059669).withAlpha(25),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFF059669).withAlpha(90)),
-                    ),
-                    child: const Text(
-                      'EARLY ACCESS',
-                      style: TextStyle(
-                        color: Color(0xFF059669),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                        letterSpacing: 1.0,
+        const SizedBox(height: 10),
+        const Text(
+          'Start free with up to 10 items, upgrade as your vault grows, or choose Lifetime Family Estate.',
+          style: TextStyle(color: Color(0xFF475569), fontSize: 15, height: 1.5),
+        ),
+        const SizedBox(height: 20),
+
+        // Placeholder Founding Beta Banner (for Eric confirmation before merge)
+        if (_isSignedIn && isFoundingBeta) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFF059669).withAlpha(18),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF059669).withAlpha(110)),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Founding Beta Member — Lifetime Access (including Estate) Included',
+                  style: TextStyle(
+                    color: Color(0xFF065F46),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Thank you for joining early. Your Founding Beta account includes unlimited items and Legal Estate Suite at no charge.',
+                  style: TextStyle(color: Color(0xFF065F46), fontSize: 13.5, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+
+        // Placeholder CHRISTMAS2026 Banner (shown automatically only inside Dec 15 - Jan 15 window)
+        if (_inChristmasWindow) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFD97706)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'CHRISTMAS2026 Holiday Sale — 50% Off ($intervalLabel Plans)',
+                        style: const TextStyle(
+                          color: Color(0xFF78350F),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
-                  const Spacer(),
-                  const Text(
-                    '\$0 / month',
-                    style: TextStyle(
-                      color: Color(0xFF0F172A),
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _showPromoInput = true;
+                          _promoCtrl.text = 'CHRISTMAS2026';
+                        });
+                      },
+                      child: const Text('Use CHRISTMAS2026'),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  r'Sale prices with code CHRISTMAS2026: Copper $1.99/mo or $19.99/yr, Silver $3.99/mo or $39.99/yr, Platinum $4.99/mo or $49.50/yr, Gold $7.99/mo or $75.00/yr.',
+                  style: TextStyle(color: Color(0xFF78350F), fontSize: 13.5, height: 1.5),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  r'Offer ends January 15, 2027. Discount applies to the first year (yearly plans: $39.99 / $79.99 / $99.00 / $150.00 renewal) or first 12 months (monthly plans: $3.99 / $7.99 / $9.99 / $15.99 renewal), then automatically renews at full regular price. Lifetime Family Estate ($500) is excluded.',
+                  style: TextStyle(color: Color(0xFF92400E), fontSize: 12.5, height: 1.45),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+
+        // Billing Interval Toggle + Optional Promo Code + Manage Billing
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            ChoiceChip(
+              key: const Key('billing_toggle_monthly'),
+              label: const Text('Monthly'),
+              selected: !_isYearly,
+              onSelected: (_) => setState(() => _isYearly = false),
+            ),
+            ChoiceChip(
+              key: const Key('billing_toggle_yearly'),
+              label: const Text('Yearly'),
+              selected: _isYearly,
+              onSelected: (_) => setState(() => _isYearly = true),
+            ),
+            TextButton.icon(
+              onPressed: () => setState(() => _showPromoInput = !_showPromoInput),
+              icon: const Icon(Icons.local_offer_outlined, size: 16),
+              label: const Text('Have a promo code?'),
+            ),
+            if (_isSignedIn && hasPaidOrLifetime)
+              OutlinedButton.icon(
+                key: const Key('pricing_manage_billing_btn'),
+                onPressed: _submitting ? null : _handleManageBilling,
+                icon: const Icon(Icons.manage_accounts_outlined, size: 16),
+                label: const Text('Manage Billing'),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Numista.AI is currently in early access. Collection tracking, AI photo identification, and market value estimates are included for registered members.',
-                style: TextStyle(color: Color(0xFF0F172A), fontSize: 15, height: 1.6),
+          ],
+        ),
+
+        if (_showPromoInput) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: 320,
+            child: TextField(
+              key: const Key('pricing_promo_field'),
+              controller: _promoCtrl,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Promo code',
+                hintText: 'Enter promo code',
+                border: OutlineInputBorder(),
+                isDense: true,
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Long-term pricing and plans will be announced prior to general release. Founding Member accounts will be grandfathered—you will not be asked to pay for your existing early access.',
-                style: TextStyle(color: Color(0xFF0F172A), fontSize: 15, height: 1.6),
+            ),
+          ),
+        ],
+
+        if (_loadingStatus) ...[
+          const SizedBox(height: 12),
+          const LinearProgressIndicator(minHeight: 2),
+        ],
+
+        if (_actionMessage != null) ...[
+          const SizedBox(height: 14),
+          Container(
+            key: const Key('pricing_action_banner'),
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _actionIsError ? const Color(0xFFFEE2E2) : const Color(0xFFDBEAFE),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _actionIsError ? const Color(0xFFDC2626) : const Color(0xFF1E3A8A),
+              ),
+            ),
+            child: Text(
+              _actionMessage!,
+              style: TextStyle(
+                color: _actionIsError ? const Color(0xFF991B1B) : const Color(0xFF1E3A8A),
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 24),
+
+        // 1. Free Plan (Q-G1: lists Free = 10 items on current main; invents no Guest number)
+        _buildPlanCard(
+          displayName: 'Free',
+          badge: 'FREE STARTER',
+          priceText: r'$0',
+          promoNote: null,
+          features: const [
+            '10 items in your vault',
+            'AI coin identification (3 deep dives / day, 1 invoice scan / day)',
+            'Sign in required to subscribe or buy Lifetime',
+          ],
+          ctaKey: const Key('plan_cta_free'),
+          ctaLabel: _isSignedIn ? 'Included' : 'Sign in to Subscribe',
+          onPressed: _isSignedIn ? null : () => AuthGate.navigateTo(context, initialAuthTab: 1),
+        ),
+        const SizedBox(height: 16),
+
+        // 2. Copper
+        _buildPlanCard(
+          displayName: 'Copper',
+          badge: 'UP TO 100 ITEMS',
+          priceText: _isYearly ? r'$39.99/yr' : r'$3.99/mo',
+          promoNote: _inChristmasWindow
+              ? (_isYearly
+                  ? r'Sale $19.99/yr first year with CHRISTMAS2026 (renews at $39.99/yr)'
+                  : r'Sale $1.99/mo first 12 months with CHRISTMAS2026 (renews at $3.99/mo)')
+              : null,
+          features: const [
+            '100 items in your vault',
+            '25 AI deep dives / day · 15 invoice scans / day',
+          ],
+          ctaKey: const Key('plan_cta_pro'),
+          ctaLabel: !_isSignedIn
+              ? 'Sign in to Subscribe'
+              : (isFoundingBeta ? 'Included with Founding Beta' : 'Subscribe'),
+          onPressed: (!_isSignedIn)
+              ? () => AuthGate.navigateTo(context, initialAuthTab: 1)
+              : (isFoundingBeta || _submitting
+                  ? null
+                  : () => _handleCheckout(tier: 'pro', isLifetime: false)),
+        ),
+        const SizedBox(height: 16),
+
+        // 3. Silver
+        _buildPlanCard(
+          displayName: 'Silver',
+          badge: 'UP TO 249 ITEMS',
+          priceText: _isYearly ? r'$79.99/yr' : r'$7.99/mo',
+          promoNote: _inChristmasWindow
+              ? (_isYearly
+                  ? r'Sale $39.99/yr first year with CHRISTMAS2026 (renews at $79.99/yr)'
+                  : r'Sale $3.99/mo first 12 months with CHRISTMAS2026 (renews at $7.99/mo)')
+              : null,
+          features: const [
+            '249 items in your vault',
+            '50 AI deep dives / day · 30 invoice scans / day',
+          ],
+          ctaKey: const Key('plan_cta_numismatist'),
+          ctaLabel: !_isSignedIn
+              ? 'Sign in to Subscribe'
+              : (isFoundingBeta ? 'Included with Founding Beta' : 'Subscribe'),
+          onPressed: (!_isSignedIn)
+              ? () => AuthGate.navigateTo(context, initialAuthTab: 1)
+              : (isFoundingBeta || _submitting
+                  ? null
+                  : () => _handleCheckout(tier: 'numismatist', isLifetime: false)),
+        ),
+        const SizedBox(height: 16),
+
+        // 4. Platinum
+        _buildPlanCard(
+          displayName: 'Platinum',
+          badge: 'UP TO 500 ITEMS',
+          priceText: _isYearly ? r'$99.00/yr' : r'$9.99/mo',
+          promoNote: _inChristmasWindow
+              ? (_isYearly
+                  ? r'Sale $49.50/yr first year with CHRISTMAS2026 (renews at $99.00/yr)'
+                  : r'Sale $4.99/mo first 12 months with CHRISTMAS2026 (renews at $9.99/mo)')
+              : null,
+          features: const [
+            '500 items in your vault',
+            '100 AI deep dives / day · 50 invoice scans / day',
+          ],
+          ctaKey: const Key('plan_cta_dealer'),
+          ctaLabel: !_isSignedIn
+              ? 'Sign in to Subscribe'
+              : (isFoundingBeta ? 'Included with Founding Beta' : 'Subscribe'),
+          onPressed: (!_isSignedIn)
+              ? () => AuthGate.navigateTo(context, initialAuthTab: 1)
+              : (isFoundingBeta || _submitting
+                  ? null
+                  : () => _handleCheckout(tier: 'dealer', isLifetime: false)),
+        ),
+        const SizedBox(height: 16),
+
+        // 5. Gold
+        _buildPlanCard(
+          displayName: 'Gold',
+          badge: 'TOP SUBSCRIPTION TIER',
+          priceText: _isYearly ? r'$150.00/yr' : r'$15.99/mo',
+          promoNote: _inChristmasWindow
+              ? (_isYearly
+                  ? r'Sale $75.00/yr first year with CHRISTMAS2026 (renews at $150.00/yr)'
+                  : r'Sale $7.99/mo first 12 months with CHRISTMAS2026 (renews at $15.99/mo)')
+              : null,
+          features: const [
+            'Unlimited items in your vault',
+            '500 AI deep dives / day · 250 invoice scans / day',
+            'Legal Estate Suite requires Lifetime Family Estate',
+          ],
+          ctaKey: const Key('plan_cta_estate'),
+          ctaLabel: !_isSignedIn
+              ? 'Sign in to Subscribe'
+              : (isFoundingBeta ? 'Included with Founding Beta' : 'Subscribe'),
+          onPressed: (!_isSignedIn)
+              ? () => AuthGate.navigateTo(context, initialAuthTab: 1)
+              : (isFoundingBeta || _submitting
+                  ? null
+                  : () => _handleCheckout(tier: 'estate', isLifetime: false)),
+        ),
+        const SizedBox(height: 16),
+
+        // 6. Lifetime Family Estate
+        _buildPlanCard(
+          displayName: 'Lifetime Family Estate',
+          badge: 'ONE-TIME · INCLUDES ESTATE SUITE',
+          priceText: r'$500.00 one-time',
+          promoNote: 'Excluded from CHRISTMAS2026 discount.',
+          features: const [
+            'Unlimited items forever + full Legal Estate Suite (PDF reports, fiduciary custody, spot checks)',
+            'Good standing rule: Open accounts in good standing can keep updating Estate Plans.',
+          ],
+          ctaKey: const Key('plan_cta_family_estate'),
+          ctaLabel: !_isSignedIn
+              ? 'Sign in to Buy'
+              : (isFoundingBeta ? 'Included with Founding Beta' : r'Buy Lifetime ($500)'),
+          onPressed: (!_isSignedIn)
+              ? () => AuthGate.navigateTo(context, initialAuthTab: 1)
+              : (isFoundingBeta || _submitting
+                  ? null
+                  : () => _handleCheckout(tier: 'family_estate', isLifetime: true)),
+        ),
+
+        const SizedBox(height: 20),
+        const Text(
+          'Applicable sales tax is calculated at checkout.',
+          style: TextStyle(color: Color(0xFF475569), fontSize: 13.5, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 20),
+        _contentCard(
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Why is Gold our top tier?',
+                style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Many people assume platinum is worth more than gold. It often was in the past, but gold has traded well above platinum in recent years. As a true numismatics site, we rank our plans the way the metals actually trade.',
+                style: TextStyle(color: Color(0xFF475569), fontSize: 14, height: 1.55),
               ),
             ],
           ),
         ),
         const SizedBox(height: 32),
-        _actionRow(context),
+        if (!_isSignedIn) _actionRow(context),
       ],
+    );
+  }
+
+  Widget _buildPlanCard({
+    required String displayName,
+    required String badge,
+    required String priceText,
+    required String? promoNote,
+    required List<String> features,
+    required Key ctaKey,
+    required String ctaLabel,
+    required VoidCallback? onPressed,
+  }) {
+    return _contentCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8C7355).withAlpha(22),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFF8C7355).withAlpha(90)),
+                ),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    color: Color(0xFF8C7355),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    letterSpacing: 0.9,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                priceText,
+                style: const TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            displayName,
+            style: const TextStyle(
+              color: Color(0xFF0F172A),
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (promoNote != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              promoNote,
+              style: const TextStyle(
+                color: Color(0xFF92400E),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          for (final f in features) ...[
+            Text(
+              '• $f',
+              style: const TextStyle(color: Color(0xFF334155), fontSize: 14, height: 1.5),
+            ),
+            const SizedBox(height: 4),
+          ],
+          const SizedBox(height: 12),
+          ElevatedButton(
+            key: ctaKey,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: onPressed,
+            child: Text(ctaLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 }

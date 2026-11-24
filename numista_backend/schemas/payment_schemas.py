@@ -7,4 +7,6 @@ from typing import Optional
 
 class StripeCheckoutRequest(BaseModel):
     user_email: Optional[str] = None
-    tier: str  # 'pro' or 'estate'
+    tier: str  # 'pro', 'numismatist', 'dealer', 'estate', or 'family_estate'
+    interval: Optional[str] = "month"
+    promo_code: Optional[str] = None
