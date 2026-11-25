@@ -30,7 +30,7 @@ OUTPUT_BUNDLE = Path("/content/m2_outputs.tar.gz")
 DINOV2_MODEL_ID = os.environ.get("M2_MODEL_ID", "facebook/dinov2-base")
 SIGLIP_MODEL_ID = os.environ.get("M2_SIGLIP_MODEL_ID", "google/siglip-base-patch16-384")
 REVIEW_OWNER = "TRK-002 SAG/Muse Review Queue"
-DEFAULT_SIMILARITY_THRESHOLD = float(os.environ.get("M2_SIMILARITY_THRESHOLD", "0.72"))
+DEFAULT_SIMILARITY_THRESHOLD = float(os.environ.get("M2_SIMILARITY_THRESHOLD", "0.84"))
 MAX_ASPECT_RATIO = float(os.environ.get("M2_MAX_ASPECT_RATIO", "1.30"))
 
 SUMMARY_BEGIN = "===M2_REMOTE_SUMMARY_BEGIN==="
@@ -223,13 +223,14 @@ def main() -> int:
     global_centroid = np.median(emb_matrix, axis=0)
     global_centroid = global_centroid / max(float(np.linalg.norm(global_centroid)), 1e-8)
 
-    # Trimmed/median centroids for groups with >= 3 images (used for cross-series matching)
+    # Trimmed/median centroids for groups with >= 5 images (used for physical side checks)
     group_centroids: dict[str, Any] = {}
     for grp, idxs in groups_all_indices.items():
-        if len(idxs) >= 3:
+        if len(idxs) >= 5:
             c_vec = np.median(emb_matrix[idxs], axis=0)
             group_centroids[grp] = c_vec / max(float(np.linalg.norm(c_vec)), 1e-8)
 
+    sim_mat = emb_matrix @ emb_matrix.T
     sims: list[float] = []
     for i, entry in enumerate(input_manifest):
         grp = str(entry.get("series_group") or "default").strip().lower()
@@ -241,44 +242,34 @@ def main() -> int:
             centroid = global_centroid
         sims.append(float(np.dot(emb_matrix[i], centroid)))
 
-    group_stats: dict[str, tuple[float, float]] = {}
-    for grp, idxs in groups_all_indices.items():
-        if len(idxs) >= 3:
-            arr = np.array([sims[j] for j in idxs], dtype=np.float32)
-            group_stats[grp] = (float(np.median(arr)), float(arr.std()))
-        else:
-            group_stats[grp] = (DEFAULT_SIMILARITY_THRESHOLD, 0.05)
-
     flagged_items: list[dict[str, Any]] = []
     seeded_total = 0
     seeded_recalled = 0
 
     for i, entry in enumerate(input_manifest):
         grp = str(entry.get("series_group") or "default").strip().lower()
+        side = str(entry.get("side") or "").strip().lower()
         sim_score = sims[i]
-        med_s, std_s = group_stats[grp]
-        adaptive_cutoff = med_s - 1.5 * std_s
         reasons: list[str] = []
 
-        # Signal 1: In-group cosine similarity / z-score outlier
-        if sim_score < DEFAULT_SIMILARITY_THRESHOLD:
-            reasons.append(f"below_threshold({sim_score:.3f}<{DEFAULT_SIMILARITY_THRESHOLD:.2f})")
-        if len(groups_all_indices[grp]) >= 3 and sim_score < adaptive_cutoff and std_s > 0.0:
-            reasons.append(f"outlier_z({sim_score:.3f}<{adaptive_cutoff:.3f})")
+        # Signal 1: Low in-group cosine similarity
+        if len(groups_all_indices[grp]) >= 3 and sim_score < DEFAULT_SIMILARITY_THRESHOLD:
+            reasons.append(f"low_group_similarity({sim_score:.3f}<{DEFAULT_SIMILARITY_THRESHOLD:.2f})")
 
-        # Signal 2: Cross-series/side better-match check
-        if grp in group_centroids:
-            best_other_grp = ""
-            best_other_sim = -1.0
-            for other_grp, o_vec in group_centroids.items():
-                if other_grp == grp:
+        # Signal 2: Near-duplicate ownership across same-side groups
+        if side:
+            dup_by_grp: dict[str, int] = defaultdict(int)
+            for j in range(len(input_manifest)):
+                if j == i:
                     continue
-                osim = float(np.dot(emb_matrix[i], o_vec))
-                if osim > best_other_sim:
-                    best_other_sim = osim
-                    best_other_grp = other_grp
-            if best_other_grp and best_other_sim > sim_score + 0.015:
-                reasons.append(f"cross_series_mismatch(better_match={best_other_grp}:{best_other_sim:.3f}>{sim_score:.3f})")
+                if sim_mat[i, j] >= 0.995 and str(input_manifest[j].get("side") or "").strip().lower() == side:
+                    dup_by_grp[str(input_manifest[j].get("series_group") or "default").strip().lower()] += 1
+            own_dups = dup_by_grp.get(grp, 0)
+            other_dups = [(og, cnt) for og, cnt in dup_by_grp.items() if og != grp]
+            if other_dups:
+                top_og, top_cnt = max(other_dups, key=lambda x: x[1])
+                if top_cnt >= max(5, own_dups * 2):
+                    reasons.append(f"duplicate_belongs_to_other_series({top_og}:{top_cnt}>>{own_dups})")
 
         # Signal 3: Geometric aspect ratio check (Rule 3 wide dual-coin / comparison image)
         ow = float(entry.get("orig_width") or 0)
@@ -288,23 +279,22 @@ def main() -> int:
             if aspect > MAX_ASPECT_RATIO:
                 reasons.append(f"non_square_aspect({aspect:.2f}>{MAX_ASPECT_RATIO:.2f})")
 
-        # Signal 4: SigLIP zero-shot visual-defect classification (indices 1..3)
+        # Signal 4: SigLIP zero-shot visual-defect classification (indices 1..3, strictly > clean_logit)
         logits_i = siglip_logits[i]
         clean_logit = logits_i[0]
         best_def_idx = int(np.argmax(logits_i[1:4])) + 1
-        if logits_i[best_def_idx] > clean_logit - 0.5:
-            reasons.append(f"siglip_{defect_labels[best_def_idx]}({logits_i[best_def_idx]:.2f}>=clean:{clean_logit:.2f})")
+        if logits_i[best_def_idx] > clean_logit:
+            reasons.append(f"siglip_{defect_labels[best_def_idx]}({logits_i[best_def_idx]:.2f}>clean:{clean_logit:.2f})")
 
         # Signal 5: Physical side-consistency check when entry claims `reverse`
-        if str(entry.get("side") or "").strip().lower() == "reverse":
+        if side == "reverse":
             max_obv_sim = max(
                 (float(np.dot(emb_matrix[i], o_vec)) for o_grp, o_vec in group_centroids.items() if o_grp.endswith("::obverse")),
                 default=0.0,
             )
             obv_logit, rev_logit = logits_i[4], logits_i[5]
             if max_obv_sim >= 0.85 or obv_logit > rev_logit + 0.5:
-                reasons.append(f"side_mismatch_obverse_detected(obv_sim={max_obv_sim:.3f},obv={obv_logit:.2f}>rev={rev_logit:.2f})")
-            reasons.append(f"siglip_{defect_labels[best_def_idx]}({logits_i[best_def_idx]:.2f}>=clean:{clean_logit:.2f})")
+                reasons.append(f"side_mismatch_obverse_detected(obv_sim={max_obv_sim:.3f},obv={obv_logit:.2f},rev={rev_logit:.2f})")
 
         is_flagged = bool(reasons)
         is_bad = bool(entry.get("is_known_bad", False))
