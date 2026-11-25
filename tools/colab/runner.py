@@ -34,6 +34,7 @@ from tools.colab.guards import (
 )
 from tools.colab.jobs.m1_framing import evaluate_framing_metrics, pack_m1_pilot_inputs
 from tools.colab.jobs.m2_embeddings import pack_m2_pilot_inputs
+from tools.colab.jobs.m3_cropper import pack_m3_pilot_inputs
 from tools.colab.jobs.m4_ocr import pack_m4_pilot_inputs
 
 MILESTONE_SCRIPTS: dict[str, tuple[Path, str]] = {
@@ -282,6 +283,10 @@ def _run_staged_milestone_live(
         provenance = pack_m2_pilot_inputs(input_dir, inputs_tar, limit=limit)
         remote_script = jobs_dir / "m2_embeddings_remote.py"
         remote_in, remote_out = "/content/m2_inputs.tar", "/content/m2_outputs.tar.gz"
+    elif milestone == "M3":
+        provenance = pack_m3_pilot_inputs(input_dir, inputs_tar)
+        remote_script = jobs_dir / "m3_cropper_remote.py"
+        remote_in, remote_out = "/content/m3_inputs.tar", "/content/m3_outputs.tar.gz"
     elif milestone == "M4":
         provenance = pack_m4_pilot_inputs(input_dir, inputs_tar, max_pages=limit)
         remote_script = jobs_dir / "m4_ocr_remote.py"
@@ -323,6 +328,17 @@ def _run_staged_milestone_live(
             "m2_flagged_count": eval_data["flagged_count"],
             "m2_known_bad_recall_pct": eval_data["known_bad_recall_pct"],
             "m2_at07_passed": eval_data["at07_passed"],
+        }
+    elif milestone == "M3":
+        eval_data = json.loads((output_dir / "eval_metrics.json").read_text(encoding="utf-8"))
+        extra = {
+            "m3_annotation_count": eval_data["annotation_count"],
+            "m3_val_images": eval_data["val_images"],
+            "m3_precision_50": eval_data["precision_50"],
+            "m3_recall_50": eval_data["recall_50"],
+            "m3_f1_50": eval_data["f1_50"],
+            "m3_map50": eval_data["mAP50"],
+            "m3_onnx_exported": eval_data["onnx_exported"],
         }
     else:
         ocr_report = json.loads((output_dir / "ocr_error_report.json").read_text(encoding="utf-8"))
@@ -410,7 +426,7 @@ def run_job(
         )
 
         t0 = time.monotonic()
-        if milestone in ("M1", "M2", "M4"):
+        if milestone in ("M1", "M2", "M3", "M4"):
             if input_dir is None:
                 raise GuardViolation(f"Live {milestone} pilot requires --input-dir pointing to staged inputs.")
             sessions_clean, input_provenance, milestone_extra = _run_staged_milestone_live(
@@ -503,6 +519,11 @@ def run_job(
         summary_lines.append(
             f"- M2 Advisory Audit: `{milestone_extra['m2_flagged_count']}/{milestone_extra['m2_total_images']}` flagged "
             f"(known-bad recall `{milestone_extra['m2_known_bad_recall_pct']}%`, AT-07 passed `{milestone_extra['m2_at07_passed']}`)\n"
+        )
+    elif milestone == "M3" and milestone_extra:
+        summary_lines.append(
+            f"- M3 RT-DETR Eval: mAP@50 `{milestone_extra['m3_map50']}`, P@50 `{milestone_extra['m3_precision_50']}`, "
+            f"R@50 `{milestone_extra['m3_recall_50']}`, F1 `{milestone_extra['m3_f1_50']}`, ONNX `{milestone_extra['m3_onnx_exported']}`\n"
         )
     elif milestone == "M4" and milestone_extra:
         summary_lines.append(

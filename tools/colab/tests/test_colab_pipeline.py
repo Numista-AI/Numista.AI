@@ -401,3 +401,52 @@ def test_pack_m4_pilot_inputs_and_handcheck_scoring(tmp_path: Path) -> None:
     assert scored["sample_pages_checked"] == 10
     assert scored["cer"] == 0.0
     assert report_path.is_file()
+
+
+def test_generate_synthetic_binder_dataset_and_m3_pack(tmp_path: Path) -> None:
+    """Verify M3 synthetic binder-page generator enforces >=150 annotations and writes valid COCO boxes."""
+    import io
+    import tarfile
+    from PIL import Image, ImageDraw
+    from tools.colab.jobs.m3_cropper import generate_synthetic_binder_dataset, pack_m3_pilot_inputs
+
+    webp_tar = tmp_path / "coins.tar.gz"
+    with tarfile.open(webp_tar, "w:gz") as tf:
+        for i in range(4):
+            im = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(im)
+            draw.ellipse([20, 20, 180, 180], fill=(210, 180, 90, 255))
+            buf = io.BytesIO()
+            im.save(buf, format="WEBP")
+            raw = buf.getvalue()
+            ti = tarfile.TarInfo(name=f"webp/coin_{i}.webp")
+            ti.size = len(raw)
+            tf.addfile(ti, io.BytesIO(raw))
+
+    ds_dir = tmp_path / "m3_ds"
+    with pytest.raises(GuardViolation, match="staged annotations"):
+        generate_synthetic_binder_dataset(webp_tar, ds_dir, num_images=10, min_annotations=150)
+
+    meta = generate_synthetic_binder_dataset(
+        webp_tar,
+        ds_dir,
+        num_images=6,
+        canvas_size=512,
+        min_annotations=6,
+    )
+    assert meta["total_images"] == 6
+    assert meta["total_boxes"] >= 24
+    val_anns = json.loads((ds_dir / "val_annotations.json").read_text(encoding="utf-8"))
+    for rec in val_anns:
+        for ann in rec["annotations"]:
+            bx, by, bw, bh = ann["bbox"]
+            assert 0 <= bx and 0 <= by and bx + bw <= 512 and by + bh <= 512
+
+    out_tar = tmp_path / "m3_inputs.tar"
+    prov = pack_m3_pilot_inputs(ds_dir, out_tar, min_annotations=6)
+    assert prov[0]["total_images"] == 6
+    with tarfile.open(out_tar, "r") as tf:
+        names = tf.getnames()
+        assert "dataset_meta.json" in names
+        assert "train_annotations.json" in names
+        assert "val_annotations.json" in names
