@@ -450,3 +450,24 @@ def test_generate_synthetic_binder_dataset_and_m3_pack(tmp_path: Path) -> None:
         assert "dataset_meta.json" in names
         assert "train_annotations.json" in names
         assert "val_annotations.json" in names
+
+    # Verify FRASER URL page-pack schema for M4
+    from tools.colab.jobs.m4_ocr import pack_m4_pilot_inputs
+    fraser_json = tmp_path / "fraser_pack.json"
+    fraser_json.write_text(json.dumps({
+        "pack_name": "test_fraser",
+        "pages": [{
+            "seq": 1,
+            "pdf_url": "https://fraser.stlouisfed.org/files/docs/publications/books/1974_domesticforeigncoins_usmint.pdf",
+            "pdf_page": 34,
+            "printed_page": "30",
+            "doc_title": "1974 Mint Pamphlet",
+            "ground_truth_anchor": "3,403",
+        }],
+    }), encoding="utf-8")
+    m4_url_tar = tmp_path / "m4_urls.tar"
+    m4_prov = pack_m4_pilot_inputs(fraser_json, m4_url_tar, max_pages=20)
+    assert len(m4_prov) == 1
+    assert m4_prov[0]["pdf_page"] == 34
+    with tarfile.open(m4_url_tar, "r") as tf:
+        assert "input_manifest.json" in tf.getnames()

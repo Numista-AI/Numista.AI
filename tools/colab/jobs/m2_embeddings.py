@@ -78,6 +78,7 @@ def pack_m2_pilot_inputs(
 
             buf = io.BytesIO()
             with Image.open(io.BytesIO(raw_bytes)) as img:
+                orig_w, orig_h = img.size
                 rgb_img = img.convert("RGB")
                 if max(rgb_img.size) > max_side_px:
                     rgb_img.thumbnail((max_side_px, max_side_px), Image.Resampling.LANCZOS)
@@ -92,11 +93,15 @@ def pack_m2_pilot_inputs(
             staged_entries.append({
                 "staged_path": staged_rel,
                 "catalog_id": cat_id,
+                "nac_code": str(row.get("nac_code") or ""),
                 "series_group": str(row.get("series_group") or "default"),
                 "source_relpath": str(row["path"]),
                 "original_sha256": orig_sha256,
+                "orig_width": orig_w,
+                "orig_height": orig_h,
                 "is_known_bad": _parse_bool(row.get("is_known_bad", False)),
                 "known_bad_reason": str(row.get("known_bad_reason") or ""),
+                "publish_eligible": _parse_bool(row.get("publish_eligible", True)),
             })
             provenance.append({
                 "catalog_id": cat_id,

@@ -1,9 +1,9 @@
-"""Standalone DINOv2 M2 visual embedding audit worker for Google Colab GPU.
+"""Standalone DINOv2 + SigLIP M2 visual embedding audit worker for Google Colab GPU.
 
 Executes inside `/content` via `colab exec -s <job_id> -f m2_embeddings_remote.py`.
 Must remain 100% self-contained (zero `tools.colab` imports) and hold zero GCP credentials.
-Flags wrong-coin, slabbed, or obverse/reverse mismatches strictly as advisory-only output
-routed to `TRK-002 SAG/Muse Review Queue` (never mutates catalog data).
+ZERO leakage: `is_known_bad` labels are NEVER used during embedding, centroid construction,
+or anomaly flagging — only evaluated post-flagging for AT-07 recall scoring.
 """
 
 from __future__ import annotations
@@ -27,12 +27,21 @@ WORK_DIR = Path("/content/m2_work")
 OUT_DIR = Path("/content/m2_out")
 OUTPUT_BUNDLE = Path("/content/m2_outputs.tar.gz")
 
-MODEL_ID = os.environ.get("M2_MODEL_ID", "facebook/dinov2-base")
+DINOV2_MODEL_ID = os.environ.get("M2_MODEL_ID", "facebook/dinov2-base")
+SIGLIP_MODEL_ID = os.environ.get("M2_SIGLIP_MODEL_ID", "google/siglip-base-patch16-384")
 REVIEW_OWNER = "TRK-002 SAG/Muse Review Queue"
 DEFAULT_SIMILARITY_THRESHOLD = float(os.environ.get("M2_SIMILARITY_THRESHOLD", "0.72"))
+MAX_ASPECT_RATIO = float(os.environ.get("M2_MAX_ASPECT_RATIO", "1.30"))
 
 SUMMARY_BEGIN = "===M2_REMOTE_SUMMARY_BEGIN==="
 SUMMARY_END = "===M2_REMOTE_SUMMARY_END==="
+
+SIGLIP_PROMPTS: list[str] = [
+    "a single isolated round coin photographed straight-on against a plain neutral background",
+    "a coin sealed inside a rectangular plastic grading slab holder with text barcode label",
+    "a coin photographed against a colorful scenic sunset, landscape, or vivid colorful background",
+    "two coins side by side or a multi-image coin comparison diagram with text labels",
+]
 
 
 def _assert_zero_credentials() -> None:
@@ -50,6 +59,8 @@ def _ensure_dependencies() -> None:
         "transformers": "transformers",
         "PIL": "pillow",
         "numpy": "numpy",
+        "sentencepiece": "sentencepiece",
+        "google.protobuf": "protobuf",
     }
     missing = []
     for mod, pkg in required.items():
@@ -109,12 +120,12 @@ def _render_m2_contact_sheet(
         "<title>Numista.AI M2 Advisory Audit Contact Sheet</title></head>"
         "<body style='font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#111827;padding:20px;'>"
         f"<h1>M2 Visual Embedding Audit ({len(flags)}/{total_images} Flagged &mdash; Advisory Only)</h1>"
-        f"<p>Model: <b>{html.escape(MODEL_ID)} (Apache-2.0)</b> | GPU: <b>{html.escape(gpu_name)}</b> | "
-        f"Review Owner: <b>{html.escape(REVIEW_OWNER)}</b> | Known-Bad Recall: <b>{recall_str}</b> | "
-        f"Elapsed: <b>{elapsed_sec:.2f}s</b></p>"
+        f"<p>Models: <b>{html.escape(DINOV2_MODEL_ID)} + {html.escape(SIGLIP_MODEL_ID)} (Apache-2.0)</b> | "
+        f"GPU: <b>{html.escape(gpu_name)}</b> | Review Owner: <b>{html.escape(REVIEW_OWNER)}</b> | "
+        f"Known-Bad Recall: <b>{recall_str}</b> | Elapsed: <b>{elapsed_sec:.2f}s</b></p>"
         "<p><i>Policy notice: Advisory flags never modify or delete catalog records automatically.</i></p>"
         "<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;'>"
-        + ("".join(cards) if cards else "<p>No anomalies flagged above cutoff.</p>")
+        + ("".join(cards) if cards else "<p>No anomalies flagged.</p>")
         + "</div></body></html>\n"
     )
     out_path.write_bytes(page.encode("utf-8"))
@@ -130,7 +141,7 @@ def main() -> int:
     import numpy as np
     import torch
     from PIL import Image
-    from transformers import AutoImageProcessor, AutoModel
+    from transformers import AutoImageProcessor, AutoModel, AutoProcessor
 
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is NOT available on Colab runtime; aborting M2 embedding audit.")
@@ -149,62 +160,89 @@ def main() -> int:
     print(f"[m2_remote] Staged images: {len(input_manifest)}", flush=True)
 
     t0 = time.monotonic()
-    processor = AutoImageProcessor.from_pretrained(MODEL_ID)
-    model = AutoModel.from_pretrained(MODEL_ID, torch_dtype=torch.float16).to("cuda").eval()
 
+    # Pass 1: DINOv2 embeddings (Apache-2.0)
+    dino_proc = AutoImageProcessor.from_pretrained(DINOV2_MODEL_ID)
+    dino_model = AutoModel.from_pretrained(DINOV2_MODEL_ID, torch_dtype=torch.float16).to("cuda").eval()
     embeddings_list: list[Any] = []
     for idx, entry in enumerate(input_manifest, start=1):
         img_path = WORK_DIR / entry["staged_path"]
         with Image.open(img_path) as raw_img:
             rgb_img = raw_img.convert("RGB")
-        inputs = processor(images=rgb_img, return_tensors="pt")
+        inputs = dino_proc(images=rgb_img, return_tensors="pt")
         pixel_values = inputs["pixel_values"].to("cuda", dtype=torch.float16)
         with torch.no_grad():
-            outputs = model(pixel_values=pixel_values)
+            outputs = dino_model(pixel_values=pixel_values)
             cls_vec = outputs.last_hidden_state[:, 0, :].float()
             norm_vec = torch.nn.functional.normalize(cls_vec, p=2, dim=-1).cpu().numpy()[0]
         embeddings_list.append(norm_vec)
-        if idx % 50 == 0 or idx == len(input_manifest):
-            print(f"[m2_remote] Embedded {idx}/{len(input_manifest)}", flush=True)
+        if idx % 100 == 0 or idx == len(input_manifest):
+            print(f"[m2_remote] DINOv2 embedded {idx}/{len(input_manifest)}", flush=True)
+
+    del dino_model
+    torch.cuda.empty_cache()
+
+    # Pass 2: SigLIP zero-shot visual-defect logits (Apache-2.0)
+    siglip_proc = AutoProcessor.from_pretrained(SIGLIP_MODEL_ID)
+    siglip_model = AutoModel.from_pretrained(SIGLIP_MODEL_ID, torch_dtype=torch.float16).to("cuda").eval()
+    defect_labels = ["clean", "slabbed_with_logos", "sunset_non_neutral_bg", "both_sides_or_collage"]
+    siglip_logits: list[list[float]] = []
+
+    for idx, entry in enumerate(input_manifest, start=1):
+        img_path = WORK_DIR / entry["staged_path"]
+        with Image.open(img_path) as raw_img:
+            rgb_img = raw_img.convert("RGB")
+        inputs = siglip_proc(
+            text=SIGLIP_PROMPTS,
+            images=rgb_img,
+            padding="max_length",
+            return_tensors="pt",
+        ).to("cuda")
+        if "pixel_values" in inputs:
+            inputs["pixel_values"] = inputs["pixel_values"].to(dtype=torch.float16)
+        with torch.no_grad():
+            outputs = siglip_model(**inputs)
+            logits_row = outputs.logits_per_image[0].float().cpu().tolist()
+        siglip_logits.append([float(v) for v in logits_row])
+        if idx % 100 == 0 or idx == len(input_manifest):
+            print(f"[m2_remote] SigLIP scored {idx}/{len(input_manifest)}", flush=True)
+
+    del siglip_model
+    torch.cuda.empty_cache()
 
     emb_matrix = np.vstack(embeddings_list).astype(np.float32)
 
-    # Group clean candidates by series_group for centroid cosine similarity
-    groups_clean_indices: dict[str, list[int]] = defaultdict(list)
+    # Unsupervised series-group index (zero access to `is_known_bad`)
     groups_all_indices: dict[str, list[int]] = defaultdict(list)
     for i, entry in enumerate(input_manifest):
         grp = str(entry.get("series_group") or "default")
         groups_all_indices[grp].append(i)
-        if not bool(entry.get("is_known_bad", False)):
-            groups_clean_indices[grp].append(i)
 
-    global_clean_idx = [i for i, e in enumerate(input_manifest) if not bool(e.get("is_known_bad", False))]
-    if not global_clean_idx:
-        global_clean_idx = list(range(len(input_manifest)))
-    global_centroid = emb_matrix[global_clean_idx].mean(axis=0)
+    global_centroid = emb_matrix.mean(axis=0)
     global_centroid = global_centroid / max(float(np.linalg.norm(global_centroid)), 1e-8)
 
-    sims: list[float] = []
-    group_stats: dict[str, tuple[float, float]] = {}
+    # Full centroids for groups with >= 3 images (used for cross-series matching)
+    group_centroids: dict[str, Any] = {}
+    for grp, idxs in groups_all_indices.items():
+        if len(idxs) >= 3:
+            c_vec = emb_matrix[idxs].mean(axis=0)
+            group_centroids[grp] = c_vec / max(float(np.linalg.norm(c_vec)), 1e-8)
 
+    sims: list[float] = []
     for i, entry in enumerate(input_manifest):
         grp = str(entry.get("series_group") or "default")
-        clean_peers = [j for j in groups_clean_indices.get(grp, []) if j != i]
-        if len(clean_peers) >= 2:
-            centroid = emb_matrix[clean_peers].mean(axis=0)
-            centroid = centroid / max(float(np.linalg.norm(centroid)), 1e-8)
-        elif len(groups_all_indices[grp]) >= 3:
-            peers = [j for j in groups_all_indices[grp] if j != i]
+        peers = [j for j in groups_all_indices[grp] if j != i]
+        if len(peers) >= 2:
             centroid = emb_matrix[peers].mean(axis=0)
             centroid = centroid / max(float(np.linalg.norm(centroid)), 1e-8)
         else:
             centroid = global_centroid
         sims.append(float(np.dot(emb_matrix[i], centroid)))
 
+    group_stats: dict[str, tuple[float, float]] = {}
     for grp, idxs in groups_all_indices.items():
-        clean_grp_sims = [sims[j] for j in idxs if not bool(input_manifest[j].get("is_known_bad", False))]
-        if len(clean_grp_sims) >= 2:
-            arr = np.array(clean_grp_sims, dtype=np.float32)
+        if len(idxs) >= 3:
+            arr = np.array([sims[j] for j in idxs], dtype=np.float32)
             group_stats[grp] = (float(arr.mean()), float(arr.std()))
         else:
             group_stats[grp] = (DEFAULT_SIMILARITY_THRESHOLD, 0.05)
@@ -218,14 +256,45 @@ def main() -> int:
         sim_score = sims[i]
         mean_s, std_s = group_stats[grp]
         adaptive_cutoff = mean_s - 1.5 * std_s
-        is_bad = bool(entry.get("is_known_bad", False))
         reasons: list[str] = []
+
+        # Signal 1: In-group cosine similarity / z-score outlier
         if sim_score < DEFAULT_SIMILARITY_THRESHOLD:
             reasons.append(f"below_threshold({sim_score:.3f}<{DEFAULT_SIMILARITY_THRESHOLD:.2f})")
-        if sim_score < adaptive_cutoff and std_s > 0.0:
+        if len(groups_all_indices[grp]) >= 3 and sim_score < adaptive_cutoff and std_s > 0.0:
             reasons.append(f"outlier_z({sim_score:.3f}<{adaptive_cutoff:.3f})")
 
+        # Signal 2: Cross-series/side better-match check
+        if grp in group_centroids:
+            best_other_grp = ""
+            best_other_sim = -1.0
+            for other_grp, o_vec in group_centroids.items():
+                if other_grp == grp:
+                    continue
+                osim = float(np.dot(emb_matrix[i], o_vec))
+                if osim > best_other_sim:
+                    best_other_sim = osim
+                    best_other_grp = other_grp
+            if best_other_grp and best_other_sim > sim_score + 0.015:
+                reasons.append(f"cross_series_mismatch(better_match={best_other_grp}:{best_other_sim:.3f}>{sim_score:.3f})")
+
+        # Signal 3: Geometric aspect ratio check (Rule 3 wide dual-coin / comparison image)
+        ow = float(entry.get("orig_width") or 0)
+        oh = float(entry.get("orig_height") or 0)
+        if ow > 0 and oh > 0:
+            aspect = max(ow, oh) / min(ow, oh)
+            if aspect > MAX_ASPECT_RATIO:
+                reasons.append(f"non_square_aspect({aspect:.2f}>{MAX_ASPECT_RATIO:.2f})")
+
+        # Signal 4: SigLIP zero-shot visual-defect classification
+        logits_i = siglip_logits[i]
+        clean_logit = logits_i[0]
+        best_def_idx = int(np.argmax(logits_i[1:])) + 1
+        if logits_i[best_def_idx] > clean_logit - 0.5:
+            reasons.append(f"siglip_{defect_labels[best_def_idx]}({logits_i[best_def_idx]:.2f}>=clean:{clean_logit:.2f})")
+
         is_flagged = bool(reasons)
+        is_bad = bool(entry.get("is_known_bad", False))
         if is_bad:
             seeded_total += 1
             if is_flagged:
@@ -235,12 +304,14 @@ def main() -> int:
             img_path = WORK_DIR / entry["staged_path"]
             flagged_items.append({
                 "catalog_id": str(entry["catalog_id"]),
+                "nac_code": str(entry.get("nac_code") or ""),
                 "candidate_image": str(entry.get("source_relpath") or entry["staged_path"]),
                 "series_group": grp,
                 "reason": "; ".join(reasons),
                 "similarity_score": round(sim_score, 4),
                 "is_known_bad": is_bad,
                 "known_bad_reason": str(entry.get("known_bad_reason") or ""),
+                "publish_eligible": bool(entry.get("publish_eligible", True)),
                 "action": "review_only",
                 "auto_applied": False,
                 "_thumb_b64": _thumb_webp_b64(img_path),
@@ -279,7 +350,7 @@ def main() -> int:
         "known_bad_recall_pct": recall_pct,
         "at07_passed": at07_passed,
         "similarity_threshold": DEFAULT_SIMILARITY_THRESHOLD,
-        "model": MODEL_ID,
+        "model": f"{DINOV2_MODEL_ID} + {SIGLIP_MODEL_ID}",
         "license_spdx": "Apache-2.0",
         "gpu_name": gpu_name,
         "vram_total_mib": vram_mib,
@@ -294,6 +365,7 @@ def main() -> int:
         catalog_ids=np.array([str(e["catalog_id"]) for e in input_manifest]),
         embeddings=emb_matrix,
         similarity_scores=np.array(sims, dtype=np.float32),
+        siglip_logits=np.array(siglip_logits, dtype=np.float32),
     )
 
     with tarfile.open(OUTPUT_BUNDLE, "w:gz") as tf:

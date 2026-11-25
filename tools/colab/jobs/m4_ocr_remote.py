@@ -1,24 +1,28 @@
 """Standalone OlmOCR M4 bulk historical Mint pamphlet OCR worker for Google Colab GPU.
 
 Executes inside `/content` via `colab exec -s <job_id> -f m4_ocr_remote.py`.
+Supports both staged PDFs/images and public-domain FRASER PDF URL page manifests.
 Must remain 100% self-contained (zero `tools.colab` imports) and hold zero GCP credentials.
-Outputs citation-preserved Markdown + 10-page hand-check fixture (`ocr_error_report.json`).
 """
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tarfile
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any
 
 INPUT_TAR = Path("/content/m4_inputs.tar")
 WORK_DIR = Path("/content/m4_work")
+PDF_DIR = WORK_DIR / "pdfs"
 PAGES_DIR = WORK_DIR / "pages"
 OUT_DIR = Path("/content/m4_out")
 OUTPUT_BUNDLE = Path("/content/m4_outputs.tar.gz")
@@ -41,7 +45,7 @@ def _assert_zero_credentials() -> None:
         raise RuntimeError("Forbidden service key file detected in /content on Colab VM.")
 
 
-def _ensure_dependencies() -> None:
+def _ensure_dependencies(need_bnb: bool) -> None:
     required = {
         "pypdfium2": "pypdfium2",
         "transformers": "transformers",
@@ -49,6 +53,8 @@ def _ensure_dependencies() -> None:
         "PIL": "pillow",
         "qwen_vl_utils": "qwen-vl-utils",
     }
+    if need_bnb:
+        required["bitsandbytes"] = "bitsandbytes"
     missing = []
     for mod, pkg in required.items():
         try:
@@ -103,18 +109,62 @@ def _compute_error_metrics(refs: list[str], hyps: list[str]) -> dict[str, Any]:
     }
 
 
+def _download_pdf(url: str) -> Path:
+    PDF_DIR.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
+    dest = PDF_DIR / f"{key}.pdf"
+    if not dest.is_file() or dest.stat().st_size == 0:
+        print(f"[m4_remote] Downloading public PDF: {url}", flush=True)
+        req = urllib.request.Request(url, headers={"User-Agent": "NumistaAI-M4-OCR-Pilot/1.0"})
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            dest.write_bytes(resp.read())
+    return dest
+
+
 def _collect_page_tasks(input_manifest: list[dict[str, Any]]) -> list[dict[str, Any]]:
     import pypdfium2 as pdfium
     from PIL import Image
 
     PAGES_DIR.mkdir(parents=True, exist_ok=True)
     tasks: list[dict[str, Any]] = []
+    pdf_cache: dict[str, Any] = {}
 
     for entry in input_manifest:
         if len(tasks) >= MAX_PAGES:
             break
+        source_doc = str(entry.get("source_doc") or "mint_doc")
+
+        if entry.get("pdf_url"):
+            pdf_path = _download_pdf(str(entry["pdf_url"]))
+            key = str(pdf_path)
+            if key not in pdf_cache:
+                pdf_cache[key] = pdfium.PdfDocument(str(pdf_path))
+            pdf = pdf_cache[key]
+            page_num = int(entry["pdf_page"])
+            p_idx = page_num - 1
+            if not (0 <= p_idx < len(pdf)):
+                raise IndexError(f"Page {page_num} out of bounds for {entry['pdf_url']} (total {len(pdf)})")
+            page = pdf[p_idx]
+            bitmap = page.render(scale=150.0 / 72.0)
+            out_png = PAGES_DIR / f"seq_{len(tasks) + 1:03d}_p{page_num}.png"
+            bitmap.to_pil().convert("RGB").save(out_png, format="PNG")
+            textpage = page.get_textpage()
+            pdf_text_layer = textpage.get_text_range().strip()
+            tasks.append({
+                "seq": entry.get("seq", len(tasks) + 1),
+                "source_doc": source_doc,
+                "pdf_url": entry["pdf_url"],
+                "pdf_page": page_num,
+                "printed_page": str(entry.get("printed_page") or ""),
+                "target_series": str(entry.get("target_series") or ""),
+                "ground_truth_anchor": str(entry.get("ground_truth_anchor") or ""),
+                "pdf_text_layer": pdf_text_layer,
+                "page_image": out_png,
+                "reference_text": str(entry.get("reference_text") or ""),
+            })
+            continue
+
         src_path = WORK_DIR / entry["staged_path"]
-        source_doc = str(entry.get("source_doc") or src_path.name)
         ref_map = entry.get("reference_texts") or {}
         req_pages = entry.get("page_numbers")
 
@@ -131,12 +181,18 @@ def _collect_page_tasks(input_manifest: list[dict[str, Any]]) -> list[dict[str, 
                 page_num = p_idx + 1
                 page = pdf[p_idx]
                 bitmap = page.render(scale=150.0 / 72.0)
-                pil_img = bitmap.to_pil().convert("RGB")
                 out_png = PAGES_DIR / f"doc_{len(tasks) + 1:03d}_p{page_num}.png"
-                pil_img.save(out_png, format="PNG")
+                bitmap.to_pil().convert("RGB").save(out_png, format="PNG")
+                textpage = page.get_textpage()
                 tasks.append({
+                    "seq": len(tasks) + 1,
                     "source_doc": source_doc,
-                    "page_number": page_num,
+                    "pdf_url": "",
+                    "pdf_page": page_num,
+                    "printed_page": str(page_num),
+                    "target_series": "",
+                    "ground_truth_anchor": "",
+                    "pdf_text_layer": textpage.get_text_range().strip(),
                     "page_image": out_png,
                     "reference_text": str(ref_map.get(str(page_num), "")),
                 })
@@ -146,8 +202,14 @@ def _collect_page_tasks(input_manifest: list[dict[str, Any]]) -> list[dict[str, 
             with Image.open(src_path) as raw_img:
                 raw_img.convert("RGB").save(out_png, format="PNG")
             tasks.append({
+                "seq": len(tasks) + 1,
                 "source_doc": source_doc,
-                "page_number": page_num,
+                "pdf_url": "",
+                "pdf_page": page_num,
+                "printed_page": str(page_num),
+                "target_series": "",
+                "ground_truth_anchor": "",
+                "pdf_text_layer": "",
                 "page_image": out_png,
                 "reference_text": str(ref_map.get(str(page_num), "") or entry.get("reference_text") or ""),
             })
@@ -159,23 +221,25 @@ def main() -> int:
     if not INPUT_TAR.is_file():
         raise FileNotFoundError(f"Expected staged M4 input archive at {INPUT_TAR}")
 
-    _ensure_dependencies()
-
     import torch
-    from PIL import Image
-    from transformers import AutoProcessor
-
-    try:
-        from transformers import Qwen2VLForConditionalGeneration as VLMClass
-    except ImportError:
-        from transformers import AutoModelForImageTextToText as VLMClass
 
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is NOT available on Colab runtime; aborting M4 OCR.")
 
     gpu_name = torch.cuda.get_device_name(0)
     vram_mib = round(torch.cuda.get_device_properties(0).total_memory / (1024 * 1024), 1)
-    print(f"[m4_remote] GPU: {gpu_name} ({vram_mib} MiB)", flush=True)
+    use_4bit = vram_mib < 18000.0
+    print(f"[m4_remote] GPU: {gpu_name} ({vram_mib} MiB, 4bit={use_4bit})", flush=True)
+
+    _ensure_dependencies(need_bnb=use_4bit)
+
+    from PIL import Image
+    from transformers import AutoProcessor, BitsAndBytesConfig
+
+    try:
+        from transformers import Qwen2VLForConditionalGeneration as VLMClass
+    except ImportError:
+        from transformers import AutoModelForImageTextToText as VLMClass
 
     WORK_DIR.mkdir(parents=True, exist_ok=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -192,19 +256,24 @@ def main() -> int:
     t0 = time.monotonic()
     print(f"[m4_remote] Loading {MODEL_ID} (Apache-2.0)...", flush=True)
     processor = AutoProcessor.from_pretrained(MODEL_ID)
-    model = VLMClass.from_pretrained(
-        MODEL_ID,
-        torch_dtype=torch.float16,
-        device_map="auto",
-    ).eval()
+    if use_4bit:
+        bnb_cfg = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+        )
+        model = VLMClass.from_pretrained(MODEL_ID, quantization_config=bnb_cfg, device_map="auto").eval()
+    else:
+        model = VLMClass.from_pretrained(MODEL_ID, torch_dtype=torch.float16, device_map="auto").eval()
 
     prompt_text = (
-        "Transcribe this historical US Mint / numismatic document page verbatim into clean Markdown. "
-        "Preserve all headings, tables, coin denominations, years, mintmarks, and mintage figures exactly."
+        "Transcribe this historical US Mint document page verbatim into clean Markdown. "
+        "Preserve all headings, column headers, table alignment, coin denominations, years, mintmarks, and exact mintage figures."
     )
 
     page_results: list[dict[str, Any]] = []
     md_sections: list[str] = []
+    anchor_checks: list[dict[str, Any]] = []
 
     for idx, task in enumerate(page_tasks, start=1):
         with Image.open(task["page_image"]) as pil_img:
@@ -231,18 +300,36 @@ def main() -> int:
         generated_ids = output_ids[:, prompt_len:]
         ocr_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
 
+        # Check explicit >=4-digit numeric ground-truth anchors if present
+        nums = re.findall(r"\b\d{1,3}(?:,\d{3})+\b", task["ground_truth_anchor"])
+        matched_nums = [n for n in nums if n in ocr_text]
+        if nums:
+            anchor_checks.append({
+                "seq": task["seq"],
+                "expected_numbers": nums,
+                "matched_numbers": matched_nums,
+                "all_matched": len(matched_nums) == len(nums),
+            })
+
         page_results.append({
+            "seq": task["seq"],
             "source_doc": task["source_doc"],
-            "page_number": task["page_number"],
+            "pdf_url": task["pdf_url"],
+            "page_number": task["pdf_page"],
+            "printed_page": task["printed_page"],
+            "target_series": task["target_series"],
+            "ground_truth_anchor": task["ground_truth_anchor"],
+            "page_image_name": task["page_image"].name,
+            "pdf_text_layer": task["pdf_text_layer"],
             "ocr_text": ocr_text,
             "reference_text": task["reference_text"],
         })
         md_sections.append(
             f"<!-- source: {task['source_doc']} -->\n"
-            f"<!-- page: {task['page_number']} -->\n"
+            f"<!-- page: {task['pdf_page']} | printed: {task['printed_page']} -->\n"
             f"{ocr_text}\n\n"
         )
-        print(f"[m4_remote] OCR complete page {idx}/{len(page_tasks)} ({task['source_doc']} p.{task['page_number']})", flush=True)
+        print(f"[m4_remote] OCR complete page {idx}/{len(page_tasks)} ({task['source_doc']} p.{task['pdf_page']})", flush=True)
 
     elapsed_sec = round(time.monotonic() - t0, 2)
 
@@ -252,7 +339,6 @@ def main() -> int:
     pages_json_path = OUT_DIR / "ocr_pages.json"
     pages_json_path.write_bytes((json.dumps(page_results, indent=2) + "\n").encode("utf-8"))
 
-    # Evenly sample up to 10 pages for human/Muse hand-check verification
     n_pages = len(page_results)
     if n_pages <= MIN_HANDCHECK_PAGES:
         sample_indices = list(range(n_pages))
@@ -263,6 +349,11 @@ def main() -> int:
 
     handcheck_path = OUT_DIR / "handcheck_sample_10pages.json"
     handcheck_path.write_bytes((json.dumps(handcheck_sample, indent=2) + "\n").encode("utf-8"))
+
+    pages_tar = OUT_DIR / "handcheck_pages_png.tar.gz"
+    with tarfile.open(pages_tar, "w:gz") as tf:
+        for task in page_tasks:
+            tf.add(task["page_image"], arcname=task["page_image"].name)
 
     scored_pairs = [
         (it["reference_text"], it["ocr_text"])
@@ -282,6 +373,7 @@ def main() -> int:
             "pages_available": n_pages,
             "cer": None,
             "wer": None,
+            "anchor_checks": anchor_checks,
             "note": (
                 "Fill `reference_text` for >=10 entries in handcheck_sample_10pages.json and run "
                 "`python -m tools.colab.jobs.m4_ocr --score-handcheck <path>` to compute CER/WER."
@@ -292,7 +384,7 @@ def main() -> int:
     report_path.write_bytes((json.dumps(error_report, indent=2) + "\n").encode("utf-8"))
 
     with tarfile.open(OUTPUT_BUNDLE, "w:gz") as tf:
-        for fpath in (ocr_md_path, pages_json_path, handcheck_path, report_path):
+        for fpath in (ocr_md_path, pages_json_path, handcheck_path, report_path, pages_tar):
             tf.add(fpath, arcname=fpath.name)
 
     summary = {

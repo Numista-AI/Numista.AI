@@ -28,7 +28,7 @@ def pack_m4_pilot_inputs(
     *,
     max_pages: int = 25,
 ) -> list[dict[str, Any]]:
-    """Pack PDFs/images from a directory or JSON manifest into a tar bundle for Colab M4 OCR."""
+    """Pack PDFs/images, list manifests, or FRASER URL page packs into a tar bundle for Colab M4 OCR."""
     entries: list[dict[str, Any]] = []
     if source_path.is_dir():
         files = [
@@ -41,8 +41,37 @@ def pack_m4_pilot_inputs(
             entries.append({"path": fpath, "source_doc": fpath.relative_to(source_path).as_posix()})
     elif source_path.is_file() and source_path.suffix.lower() == ".json":
         loaded = json.loads(source_path.read_text(encoding="utf-8"))
+        if isinstance(loaded, dict) and isinstance(loaded.get("pages"), list):
+            # Catalog Manager FRASER URL page-pack schema
+            out_tar.parent.mkdir(parents=True, exist_ok=True)
+            pages = loaded["pages"][:max_pages]
+            staged_entries: list[dict[str, Any]] = []
+            provenance: list[dict[str, Any]] = []
+            for p in pages:
+                staged_entries.append({
+                    "seq": p.get("seq"),
+                    "pdf_url": str(p["pdf_url"]),
+                    "pdf_page": int(p["pdf_page"]),
+                    "printed_page": str(p.get("printed_page") or ""),
+                    "source_doc": str(p.get("doc_title") or p["pdf_url"]),
+                    "target_series": str(p.get("target_series") or ""),
+                    "license": str(p.get("license") or ""),
+                    "ground_truth_anchor": str(p.get("ground_truth_anchor") or ""),
+                    "reference_text": str(p.get("reference_text") or ""),
+                })
+                provenance.append({
+                    "source_doc": str(p.get("doc_title") or p["pdf_url"]),
+                    "pdf_url": str(p["pdf_url"]),
+                    "pdf_page": int(p["pdf_page"]),
+                })
+            with tarfile.open(out_tar, "w") as tf:
+                mbytes = (json.dumps(staged_entries, indent=2) + "\n").encode("utf-8")
+                minfo = tarfile.TarInfo(name="input_manifest.json")
+                minfo.size = len(mbytes)
+                tf.addfile(minfo, io.BytesIO(mbytes))
+            return provenance
         if not isinstance(loaded, list) or not loaded:
-            raise ValueError(f"M4 JSON manifest must be a non-empty list: {source_path}")
+            raise ValueError(f"M4 JSON manifest must be a non-empty list or pages dict: {source_path}")
         for item in loaded[:max_pages]:
             raw_p = Path(str(item["path"]))
             fpath = raw_p if raw_p.is_absolute() else (source_path.parent / raw_p)
