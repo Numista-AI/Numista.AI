@@ -134,7 +134,7 @@ def _collect_page_tasks(input_manifest: list[dict[str, Any]]) -> list[dict[str, 
             break
         source_doc = str(entry.get("source_doc") or "mint_doc")
 
-        if entry.get("pdf_url"):
+        if not entry.get("staged_path") and entry.get("pdf_url"):
             pdf_path = _download_pdf(str(entry["pdf_url"]))
             key = str(pdf_path)
             if key not in pdf_cache:
@@ -187,29 +187,29 @@ def _collect_page_tasks(input_manifest: list[dict[str, Any]]) -> list[dict[str, 
                 tasks.append({
                     "seq": len(tasks) + 1,
                     "source_doc": source_doc,
-                    "pdf_url": "",
+                    "pdf_url": str(entry.get("pdf_url") or ""),
                     "pdf_page": page_num,
-                    "printed_page": str(page_num),
-                    "target_series": "",
-                    "ground_truth_anchor": "",
+                    "printed_page": str(entry.get("printed_page") or page_num),
+                    "target_series": str(entry.get("target_series") or ""),
+                    "ground_truth_anchor": str(entry.get("ground_truth_anchor") or ""),
                     "pdf_text_layer": textpage.get_text_range().strip(),
                     "page_image": out_png,
                     "reference_text": str(ref_map.get(str(page_num), "")),
                 })
         else:
             page_num = int(entry.get("page_number") or 1)
-            out_png = PAGES_DIR / f"doc_{len(tasks) + 1:03d}_p{page_num}.png"
+            out_png = PAGES_DIR / f"seq_{len(tasks) + 1:03d}_p{page_num}.png"
             with Image.open(src_path) as raw_img:
                 raw_img.convert("RGB").save(out_png, format="PNG")
             tasks.append({
-                "seq": len(tasks) + 1,
+                "seq": entry.get("seq") or (len(tasks) + 1),
                 "source_doc": source_doc,
-                "pdf_url": "",
+                "pdf_url": str(entry.get("pdf_url") or ""),
                 "pdf_page": page_num,
-                "printed_page": str(page_num),
-                "target_series": "",
-                "ground_truth_anchor": "",
-                "pdf_text_layer": "",
+                "printed_page": str(entry.get("printed_page") or page_num),
+                "target_series": str(entry.get("target_series") or ""),
+                "ground_truth_anchor": str(entry.get("ground_truth_anchor") or ""),
+                "pdf_text_layer": str(entry.get("pdf_text_layer") or ""),
                 "page_image": out_png,
                 "reference_text": str(ref_map.get(str(page_num), "") or entry.get("reference_text") or ""),
             })

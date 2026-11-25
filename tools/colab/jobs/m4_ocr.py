@@ -80,6 +80,14 @@ def pack_m4_pilot_inputs(
                 "source_doc": str(item.get("source_doc") or fpath.name),
                 "page_numbers": item.get("page_numbers"),
                 "reference_texts": item.get("reference_texts") or {},
+                "seq": item.get("seq"),
+                "page_number": item.get("page_number"),
+                "printed_page": str(item.get("printed_page") or ""),
+                "target_series": str(item.get("target_series") or ""),
+                "ground_truth_anchor": str(item.get("ground_truth_anchor") or ""),
+                "pdf_text_layer": str(item.get("pdf_text_layer") or ""),
+                "pdf_url": str(item.get("pdf_url") or ""),
+                "reference_text": str(item.get("reference_text") or ""),
             })
     elif source_path.is_file() and source_path.suffix.lower() in _DOC_EXTS:
         entries.append({"path": source_path, "source_doc": source_path.name})
@@ -116,6 +124,14 @@ def pack_m4_pilot_inputs(
                 "original_sha256": orig_sha256,
                 "page_numbers": item.get("page_numbers"),
                 "reference_texts": item.get("reference_texts") or {},
+                "seq": item.get("seq"),
+                "page_number": item.get("page_number"),
+                "printed_page": item.get("printed_page", ""),
+                "target_series": item.get("target_series", ""),
+                "ground_truth_anchor": item.get("ground_truth_anchor", ""),
+                "pdf_text_layer": item.get("pdf_text_layer", ""),
+                "pdf_url": item.get("pdf_url", ""),
+                "reference_text": item.get("reference_text", ""),
             })
             provenance.append({
                 "source_doc": item["source_doc"],
