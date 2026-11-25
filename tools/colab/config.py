@@ -42,7 +42,14 @@ M3_PILOT_ANNOTATION_COUNT = 150
 
 # M4 (Muse #2): hand-check sample minimum and numeric CER/WER reporting
 M4_DEFAULT_MODEL = "OlmOCR"
-M4_OCR_HANDCHECK_MIN_SAMPLE = 5
+M4_OCR_HANDCHECK_MIN_SAMPLE: int = 10
+
+# One-line confirmation required by Muse / Eric BUILD approval (Condition #5)
+GCP_SECTION_17_CONFIRMATION: str = (
+    "Confirmed: Google Cloud Service Specific Terms Section 17 (effective Jan 1, 2027) "
+    "does not apply — pipeline runs via google-colab-cli (colab run) only with interactive MCP excluded, "
+    "holds zero GCP API/MCP credentials, and stages only Eric's own catalog data in Google Drive."
+)
 
 # Google Drive staging destination (Numista.Ai -> Colab_Staging)
 DRIVE_STAGING_FOLDER_ID = "1yAEA7ob4eUY_pkWqCj2m9ipXgvB5okcA"

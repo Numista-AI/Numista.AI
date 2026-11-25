@@ -15,6 +15,8 @@ from tools.colab.config import (
     DEFAULT_GPU,
     DRIVE_STAGING_FOLDER_ID,
     FULL_TIMEOUT_SEC,
+    GCP_SECTION_17_CONFIRMATION,
+    M2_REVIEW_OWNER,
     M3_DEFAULT_MODEL,
     M4_DEFAULT_MODEL,
     PILOT_TIMEOUT_SEC,
@@ -160,10 +162,16 @@ def run_job(
     timeout_sec: int | None = None,
     cumulative_cu: float = 0.0,
     dry_run: bool = False,
+    full_scale_authorized: bool = False,
 ) -> Path:
     """Execute a milestone batch job under all budget, license, timeout, and staging guards."""
     if milestone not in MILESTONE_SCRIPTS:
         raise GuardViolation(f"Unknown milestone {milestone!r}; expected one of {tuple(MILESTONE_SCRIPTS)}.")
+    if mode == "full" and not full_scale_authorized:
+        raise GuardViolation(
+            "Full-scale mode is blocked under PILOTS ONLY BUILD authorization; "
+            "pass full_scale_authorized=True only after pilot acceptance and a separate full-scale BUILD YES."
+        )
 
     script_path, default_model = MILESTONE_SCRIPTS[milestone]
     effective_timeout = timeout_sec if timeout_sec is not None else (
@@ -261,8 +269,16 @@ def run_job(
         f"- CU Balance: `{pre_balance:.2f}` -> `{post_balance:.2f}` (spent `{receipt['cu_spent']:.4f}`)\n"
         f"- Auto-Shutdown Verified: `{sessions_clean}`\n"
         f"- Duration: `{duration_sec:.2f}s`\n"
+        f"- Section 17 Terms Check: {GCP_SECTION_17_CONFIRMATION}\n"
     )
     (output_dir / "summary.md").write_bytes(summary_text.encode("utf-8"))
+
+    extra_meta: dict[str, Any] = {
+        "cu_spent": receipt["cu_spent"],
+        "auto_shutdown_verified": sessions_clean,
+    }
+    if milestone == "M2":
+        extra_meta["m2_review_owner"] = M2_REVIEW_OWNER
 
     manifest_path = build_manifest(
         job_id=job_id,
@@ -271,7 +287,7 @@ def run_job(
         output_dir=output_dir,
         model_name=default_model,
         input_provenance=[{"milestone": milestone, "mode": mode}],
-        extra_meta={"cu_spent": receipt["cu_spent"], "auto_shutdown_verified": sessions_clean},
+        extra_meta=extra_meta,
     )
     if not verify_manifest(manifest_path):
         raise GuardViolation(f"Manifest verification failed for {manifest_path}")

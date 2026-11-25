@@ -14,6 +14,7 @@ from tools.colab.config import (
     ALLOWED_GPUS,
     FULL_SCALE_CU_CAP,
     FULL_TIMEOUT_SEC,
+    GCP_SECTION_17_CONFIRMATION,
     HARD_STOP_BALANCE_FLOOR,
     MODEL_LICENSES,
     PILOT_CU_CAP,
@@ -63,11 +64,23 @@ def validate_model_license(model_name: str, allow_offline_gpl: bool = False) -> 
         raise GuardViolation(f"Unknown or unapproved model {model_name!r}; register license in config.py first.")
     if not info.commercial_ok:
         if allow_offline_gpl and "GPL" in info.spdx and "AGPL" not in info.spdx:
-            return {"model": model_name, "spdx": info.spdx, "commercial_ok": False, "offline_waiver": True}
+            return {
+                "model": model_name,
+                "spdx": info.spdx,
+                "commercial_ok": False,
+                "promotion_allowed": False,
+                "offline_waiver": True,
+            }
         raise GuardViolation(
             f"Model {model_name!r} has disallowed license {info.spdx!r} ({info.notes})."
         )
-    return {"model": model_name, "spdx": info.spdx, "commercial_ok": True, "offline_waiver": False}
+    return {
+        "model": model_name,
+        "spdx": info.spdx,
+        "commercial_ok": True,
+        "promotion_allowed": True,
+        "offline_waiver": False,
+    }
 
 
 def enforce_pre_run_guards(
@@ -158,6 +171,7 @@ def build_manifest(
         "milestone": milestone,
         "mode": mode,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "gcp_section_17_confirmation": GCP_SECTION_17_CONFIRMATION,
         "model": license_meta,
         "input_provenance": input_provenance,
         "files": files_entries,

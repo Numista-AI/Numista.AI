@@ -1,7 +1,7 @@
 """M4 — Bulk Historical Mint Pamphlet & Reference OCR (OlmOCR Apache-2.0 default).
 
-Enforces Muse pilot condition #2: requires a hand-checked sample of pilot
-OCR pages (>= 5) and reports numeric Character Error Rate (CER) and Word Error Rate (WER).
+Enforces Muse / CoS pilot condition #2: requires a hand-checked sample of pilot
+OCR pages (>= 10) and reports numeric Character Error Rate (CER) and Word Error Rate (WER).
 """
 
 from __future__ import annotations
@@ -66,6 +66,7 @@ def compute_ocr_error_rate(
     wer = round(word_edits / total_words, 4)
     return {
         "sample_pages": len(reference_pages),
+        "sample_pages_checked": len(reference_pages),
         "char_edits": char_edits,
         "total_chars": total_chars,
         "cer": cer,
@@ -84,13 +85,23 @@ def run_pilot_dry_run(output_dir: Path, job_id: str) -> Path:
         "1909-S VDB Lincoln Cent mintage 484,000",
         "1916-D Mercury Dime mintage 264,000",
         "1921 Peace Dollar High Relief mintage 1,006,473",
+        "1922-D Lincoln Cent mintage 7,160,000",
+        "1932-D Washington Quarter mintage 436,800",
+        "1938-D Walking Liberty Half Dollar mintage 491,600",
+        "1909-S Indian Head Cent mintage 309,000",
+        "1895 Proof Morgan Dollar mintage 880",
     ]
     hyps = [
         "1881-S Morgan Dollar mintage 12,760,000",
         "1893-S Morgan Dollar mintage 100,000",
         "1909-S VDB Lincoln Cent mintage 484,000",
         "1916-D Mercury Dime mintage 264,000",
-        "1921 Peace Dollar High Relief mintage 1,006,473",
+        "1921 Peace Dollar High Relief mintage 1,006,478",
+        "1922-D Lincoln Cent mintage 7,160,000",
+        "1932-D Washington Quarter mintage 436,800",
+        "1938-D Walking Liberty Half Dollar mintage 491,600",
+        "1909-S Indian Head Cent mintage 309,000",
+        "1895 Proof Morgan Dollar mintage 880",
     ]
     metrics = compute_ocr_error_rate(refs, hyps)
     md_lines = ["<!-- source: dry-run-mint-report.pdf -->\n"]
