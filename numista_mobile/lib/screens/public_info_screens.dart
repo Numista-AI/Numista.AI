@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/guest_seed_service.dart';
@@ -439,13 +440,18 @@ class _PricingView extends StatefulWidget {
   State<_PricingView> createState() => _PricingViewState();
 }
 
+enum _PricingStatusState { idle, loading, loaded, error }
+
 class _PricingViewState extends State<_PricingView> {
   static final DateTime _christmasStartUtc = DateTime.utc(2026, 12, 15, 5);
   static final DateTime _christmasEndUtc = DateTime.utc(2027, 1, 16, 5);
+  static const Duration _statusTimeout = Duration(seconds: 15);
 
   bool _isYearly = false;
   bool _showPromoInput = false;
-  bool _loadingStatus = false;
+  _PricingStatusState _statusState = _PricingStatusState.idle;
+  int _statusLoadSeq = 0;
+  Timer? _statusTimeoutTimer;
   bool _submitting = false;
   String? _actionMessage;
   bool _actionIsError = false;
@@ -463,40 +469,114 @@ class _PricingViewState extends State<_PricingView> {
   void initState() {
     super.initState();
     if (_isSignedIn) {
-      _loadStatus();
+      _statusState = _PricingStatusState.loading;
+      _loadStatus(fromInit: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _PricingView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.signedInUid != widget.signedInUid) {
+      _statusTimeoutTimer?.cancel();
+      _statusLoadSeq++;
+      _status = null;
+      if (_isSignedIn) {
+        _statusState = _PricingStatusState.loading;
+        _loadStatus(fromInit: true);
+      } else {
+        _statusState = _PricingStatusState.idle;
+      }
     }
   }
 
   @override
   void dispose() {
+    _statusTimeoutTimer?.cancel();
     _promoCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadStatus() async {
+  Future<void> _loadStatus({bool fromInit = false}) async {
     final uid = widget.signedInUid;
     if (uid == null || uid.isEmpty) return;
-    setState(() => _loadingStatus = true);
+    _statusTimeoutTimer?.cancel();
+    final seq = ++_statusLoadSeq;
+    if (fromInit) {
+      _status = null;
+      _statusState = _PricingStatusState.loading;
+    } else {
+      setState(() {
+        _status = null;
+        _statusState = _PricingStatusState.loading;
+      });
+    }
+    _statusTimeoutTimer = Timer(_statusTimeout, () {
+      if (!mounted || seq != _statusLoadSeq || _statusState != _PricingStatusState.loading) {
+        return;
+      }
+      setState(() {
+        _status = null;
+        _statusState = _PricingStatusState.error;
+      });
+    });
     try {
       final fetcher = widget.statusFetcherOverride ??
           ((String id) => StripeService.fetchSubscriptionStatus(uid: id));
       final snap = await fetcher(uid);
-      if (mounted) {
-        setState(() {
+      if (!mounted || seq != _statusLoadSeq) return;
+      _statusTimeoutTimer?.cancel();
+      setState(() {
+        if (snap == null) {
+          _status = null;
+          _statusState = _PricingStatusState.error;
+        } else {
           _status = snap;
-          _loadingStatus = false;
-        });
-      }
+          _statusState = _PricingStatusState.loaded;
+        }
+      });
     } catch (_) {
-      if (mounted) {
-        setState(() => _loadingStatus = false);
-      }
+      if (!mounted || seq != _statusLoadSeq) return;
+      _statusTimeoutTimer?.cancel();
+      setState(() {
+        _status = null;
+        _statusState = _PricingStatusState.error;
+      });
     }
+  }
+
+  String _paidCtaLabel({
+    required bool isStatusLoading,
+    required bool isFoundingBeta,
+    required String signedOutLabel,
+    required String eligibleLabel,
+  }) {
+    if (!_isSignedIn) return signedOutLabel;
+    if (isStatusLoading) return 'Checking account...';
+    if (isFoundingBeta) return 'Included with Founding Beta';
+    return eligibleLabel;
+  }
+
+  VoidCallback? _paidCtaOnPressed({
+    required bool canCheckout,
+    required String tier,
+    required bool isLifetime,
+  }) {
+    if (!_isSignedIn) {
+      return () => AuthGate.navigateTo(context, initialAuthTab: 1);
+    }
+    if (!canCheckout) return null;
+    return () => _handleCheckout(tier: tier, isLifetime: isLifetime);
   }
 
   Future<void> _handleCheckout({required String tier, required bool isLifetime}) async {
     if (!_isSignedIn) {
       AuthGate.navigateTo(context, initialAuthTab: 1);
+      return;
+    }
+    if (_statusState != _PricingStatusState.loaded ||
+        _status == null ||
+        _status!.stripeTier == 'founding_beta') {
       return;
     }
     setState(() {
@@ -550,9 +630,14 @@ class _PricingViewState extends State<_PricingView> {
 
   @override
   Widget build(BuildContext context) {
-    final isFoundingBeta = _status?.stripeTier == 'founding_beta';
+    final bool isStatusLoading = _isSignedIn && _statusState == _PricingStatusState.loading;
+    final bool isStatusError = _isSignedIn && _statusState == _PricingStatusState.error;
+    final bool isStatusLoaded =
+        _isSignedIn && _statusState == _PricingStatusState.loaded && _status != null;
+    final isFoundingBeta = isStatusLoaded && _status!.stripeTier == 'founding_beta';
     final hasPaidOrLifetime =
-        (_status?.hasPaidSubscription ?? false) || (_status?.lifetimeFamilyEstate ?? false);
+        isStatusLoaded && (_status!.hasPaidSubscription || _status!.lifetimeFamilyEstate);
+    final bool canCheckout = isStatusLoaded && !isFoundingBeta && !_submitting;
     final intervalLabel = _isYearly ? 'Yearly' : 'Monthly';
 
     return Column(
@@ -711,9 +796,77 @@ class _PricingViewState extends State<_PricingView> {
           ),
         ],
 
-        if (_loadingStatus) ...[
+        if (isStatusLoading) ...[
           const SizedBox(height: 12),
-          const LinearProgressIndicator(minHeight: 2),
+          Container(
+            key: const Key('pricing_status_loading_banner'),
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDBEAFE),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFF1E3A8A)),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Checking your account...',
+                      style: TextStyle(
+                        color: Color(0xFF1E3A8A),
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                LinearProgressIndicator(minHeight: 2),
+              ],
+            ),
+          ),
+        ],
+
+        if (isStatusError) ...[
+          const SizedBox(height: 12),
+          Container(
+            key: const Key('pricing_status_error_banner'),
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEE2E2),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFDC2626)),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Unable to verify your account status right now. Plan upgrades are paused until your account check succeeds.',
+                    style: TextStyle(
+                      color: Color(0xFF991B1B),
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton(
+                  key: const Key('pricing_status_retry_btn'),
+                  onPressed: _loadStatus,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
         ],
 
         if (_actionMessage != null) ...[
@@ -774,14 +927,17 @@ class _PricingViewState extends State<_PricingView> {
             '25 AI deep dives / day · 15 invoice scans / day',
           ],
           ctaKey: const Key('plan_cta_pro'),
-          ctaLabel: !_isSignedIn
-              ? 'Sign in to Subscribe'
-              : (isFoundingBeta ? 'Included with Founding Beta' : 'Subscribe'),
-          onPressed: (!_isSignedIn)
-              ? () => AuthGate.navigateTo(context, initialAuthTab: 1)
-              : (isFoundingBeta || _submitting
-                  ? null
-                  : () => _handleCheckout(tier: 'pro', isLifetime: false)),
+          ctaLabel: _paidCtaLabel(
+            isStatusLoading: isStatusLoading,
+            isFoundingBeta: isFoundingBeta,
+            signedOutLabel: 'Sign in to Subscribe',
+            eligibleLabel: 'Subscribe',
+          ),
+          onPressed: _paidCtaOnPressed(
+            canCheckout: canCheckout,
+            tier: 'pro',
+            isLifetime: false,
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -800,14 +956,17 @@ class _PricingViewState extends State<_PricingView> {
             '50 AI deep dives / day · 30 invoice scans / day',
           ],
           ctaKey: const Key('plan_cta_numismatist'),
-          ctaLabel: !_isSignedIn
-              ? 'Sign in to Subscribe'
-              : (isFoundingBeta ? 'Included with Founding Beta' : 'Subscribe'),
-          onPressed: (!_isSignedIn)
-              ? () => AuthGate.navigateTo(context, initialAuthTab: 1)
-              : (isFoundingBeta || _submitting
-                  ? null
-                  : () => _handleCheckout(tier: 'numismatist', isLifetime: false)),
+          ctaLabel: _paidCtaLabel(
+            isStatusLoading: isStatusLoading,
+            isFoundingBeta: isFoundingBeta,
+            signedOutLabel: 'Sign in to Subscribe',
+            eligibleLabel: 'Subscribe',
+          ),
+          onPressed: _paidCtaOnPressed(
+            canCheckout: canCheckout,
+            tier: 'numismatist',
+            isLifetime: false,
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -826,14 +985,17 @@ class _PricingViewState extends State<_PricingView> {
             '100 AI deep dives / day · 50 invoice scans / day',
           ],
           ctaKey: const Key('plan_cta_dealer'),
-          ctaLabel: !_isSignedIn
-              ? 'Sign in to Subscribe'
-              : (isFoundingBeta ? 'Included with Founding Beta' : 'Subscribe'),
-          onPressed: (!_isSignedIn)
-              ? () => AuthGate.navigateTo(context, initialAuthTab: 1)
-              : (isFoundingBeta || _submitting
-                  ? null
-                  : () => _handleCheckout(tier: 'dealer', isLifetime: false)),
+          ctaLabel: _paidCtaLabel(
+            isStatusLoading: isStatusLoading,
+            isFoundingBeta: isFoundingBeta,
+            signedOutLabel: 'Sign in to Subscribe',
+            eligibleLabel: 'Subscribe',
+          ),
+          onPressed: _paidCtaOnPressed(
+            canCheckout: canCheckout,
+            tier: 'dealer',
+            isLifetime: false,
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -853,14 +1015,17 @@ class _PricingViewState extends State<_PricingView> {
             'Legal Estate Suite requires Lifetime Family Estate',
           ],
           ctaKey: const Key('plan_cta_estate'),
-          ctaLabel: !_isSignedIn
-              ? 'Sign in to Subscribe'
-              : (isFoundingBeta ? 'Included with Founding Beta' : 'Subscribe'),
-          onPressed: (!_isSignedIn)
-              ? () => AuthGate.navigateTo(context, initialAuthTab: 1)
-              : (isFoundingBeta || _submitting
-                  ? null
-                  : () => _handleCheckout(tier: 'estate', isLifetime: false)),
+          ctaLabel: _paidCtaLabel(
+            isStatusLoading: isStatusLoading,
+            isFoundingBeta: isFoundingBeta,
+            signedOutLabel: 'Sign in to Subscribe',
+            eligibleLabel: 'Subscribe',
+          ),
+          onPressed: _paidCtaOnPressed(
+            canCheckout: canCheckout,
+            tier: 'estate',
+            isLifetime: false,
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -875,14 +1040,17 @@ class _PricingViewState extends State<_PricingView> {
             'Good standing rule: Open accounts in good standing can keep updating Estate Plans.',
           ],
           ctaKey: const Key('plan_cta_family_estate'),
-          ctaLabel: !_isSignedIn
-              ? 'Sign in to Buy'
-              : (isFoundingBeta ? 'Included with Founding Beta' : r'Buy Lifetime ($500)'),
-          onPressed: (!_isSignedIn)
-              ? () => AuthGate.navigateTo(context, initialAuthTab: 1)
-              : (isFoundingBeta || _submitting
-                  ? null
-                  : () => _handleCheckout(tier: 'family_estate', isLifetime: true)),
+          ctaLabel: _paidCtaLabel(
+            isStatusLoading: isStatusLoading,
+            isFoundingBeta: isFoundingBeta,
+            signedOutLabel: 'Sign in to Buy',
+            eligibleLabel: r'Buy Lifetime ($500)',
+          ),
+          onPressed: _paidCtaOnPressed(
+            canCheckout: canCheckout,
+            tier: 'family_estate',
+            isLifetime: true,
+          ),
         ),
 
         const SizedBox(height: 20),
