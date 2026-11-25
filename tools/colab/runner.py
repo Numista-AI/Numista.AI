@@ -6,6 +6,7 @@ import argparse
 import json
 import subprocess
 import sys
+import tarfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -31,6 +32,7 @@ from tools.colab.guards import (
     parse_colab_usage,
     verify_manifest,
 )
+from tools.colab.jobs.m1_framing import evaluate_framing_metrics, pack_m1_pilot_inputs
 
 MILESTONE_SCRIPTS: dict[str, tuple[Path, str]] = {
     "SMOKE": (Path(__file__).resolve().parent / "jobs" / "smoke_gpu.py", "CUDA-Smoke"),
@@ -191,9 +193,78 @@ def upload_staging_bundle(output_dir: Path, job_id: str) -> str:
             continue
         _run_gdrive_with_retry(
             ["mutate", "upload", str(artifact), "--parent", folder_id],
-            timeout_sec=120,
+            timeout_sec=300,
         )
     return folder_id
+
+
+def _run_m1_pilot_live(
+    *,
+    cli_bin: str,
+    job_id: str,
+    gpu: str,
+    effective_timeout: int,
+    input_dir: Path,
+    limit: int,
+    output_dir: Path,
+) -> tuple[bool, list[dict[str, Any]], dict[str, Any]]:
+    """Run live M1 BiRefNet pilot on Colab L4 inside strict try/finally stop+session guards."""
+    inputs_tar = output_dir.parent / f"{job_id}_inputs.tar"
+    outputs_tar_gz = output_dir.parent / f"{job_id}_outputs.tar.gz"
+    provenance = pack_m1_pilot_inputs(input_dir, inputs_tar, limit=limit)
+    remote_script = Path(__file__).resolve().parent / "jobs" / "m1_framing_remote.py"
+
+    new_proc = run_with_timeout([cli_bin, "new", "--gpu", gpu.upper(), "-s", job_id], timeout_sec=300)
+    if new_proc.returncode != 0:
+        raise RuntimeError(f"`colab new` failed ({new_proc.returncode}): {new_proc.stderr}")
+
+    sessions_clean = False
+    try:
+        up_proc = run_with_timeout(
+            [cli_bin, "upload", "-s", job_id, str(inputs_tar), "/content/m1_inputs.tar"],
+            timeout_sec=300,
+        )
+        if up_proc.returncode != 0:
+            raise RuntimeError(f"`colab upload` failed ({up_proc.returncode}): {up_proc.stderr}")
+
+        exec_proc = run_with_timeout(
+            [cli_bin, "exec", "-s", job_id, "--timeout", "0", "-f", str(remote_script)],
+            timeout_sec=effective_timeout,
+        )
+        if exec_proc.returncode != 0:
+            raise RuntimeError(
+                f"`colab exec` failed ({exec_proc.returncode}):\nstdout:\n{exec_proc.stdout}\nstderr:\n{exec_proc.stderr}"
+            )
+
+        dl_proc = run_with_timeout(
+            [cli_bin, "download", "-s", job_id, "/content/m1_outputs.tar.gz", str(outputs_tar_gz)],
+            timeout_sec=300,
+        )
+        if dl_proc.returncode != 0:
+            raise RuntimeError(f"`colab download` failed ({dl_proc.returncode}): {dl_proc.stderr}")
+    finally:
+        try:
+            run_with_timeout([cli_bin, "stop", "-s", job_id], timeout_sec=90)
+        finally:
+            sess_proc = run_with_timeout([cli_bin, "sessions"], timeout_sec=60)
+            sessions_clean = verify_zero_active_sessions(sess_proc.stdout, expected_session=job_id)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(outputs_tar_gz, "r:gz") as tf:
+        tf.extractall(output_dir, filter="data")
+
+    metrics_path = output_dir / "framing_metrics.json"
+    metrics_data = json.loads(metrics_path.read_text(encoding="utf-8"))
+    local_eval = evaluate_framing_metrics(metrics_data["items"])
+    m1_extra = {
+        "framing_total": local_eval["total"],
+        "framing_passed": local_eval["passed"],
+        "framing_pass_rate_pct": local_eval["pass_rate_pct"],
+        "framing_min_measured_pct": metrics_data.get("min_measured_pct"),
+        "framing_max_measured_pct": metrics_data.get("max_measured_pct"),
+        "framing_mean_measured_pct": metrics_data.get("mean_measured_pct"),
+    }
+    return sessions_clean, provenance, m1_extra
 
 
 def run_job(
@@ -207,6 +278,8 @@ def run_job(
     cumulative_cu: float = 0.0,
     dry_run: bool = False,
     full_scale_authorized: bool = False,
+    input_dir: Path | None = None,
+    limit: int = 120,
 ) -> Path:
     """Execute a milestone batch job under all budget, license, timeout, and staging guards."""
     if milestone not in MILESTONE_SCRIPTS:
@@ -222,6 +295,8 @@ def run_job(
         PILOT_TIMEOUT_SEC if mode == "pilot" else FULL_TIMEOUT_SEC
     )
     cli_bin = resolve_colab_cli()
+    input_provenance: list[dict[str, Any]] = [{"milestone": milestone, "mode": mode}]
+    milestone_extra: dict[str, Any] = {}
 
     if dry_run:
         pre_balance = 1531.77
@@ -267,51 +342,64 @@ def run_job(
         )
 
         t0 = time.monotonic()
-        colab_cmd = [
-            cli_bin,
-            "run",
-            "--gpu",
-            gpu.upper(),
-            "--session",
-            job_id,
-            "--timeout",
-            "0",
-            str(script_path),
-            "--output-dir",
-            str(output_dir),
-            "--job-id",
-            job_id,
-        ]
-        run_proc = run_with_timeout(colab_cmd, timeout_sec=effective_timeout)
-        if run_proc.returncode != 0:
-            raise RuntimeError(f"`colab run` failed ({run_proc.returncode}): {run_proc.stderr}")
+        if milestone == "M1":
+            if input_dir is None:
+                raise GuardViolation("Live M1 pilot requires --input-dir pointing to staged candidate images.")
+            sessions_clean, input_provenance, milestone_extra = _run_m1_pilot_live(
+                cli_bin=cli_bin,
+                job_id=job_id,
+                gpu=gpu,
+                effective_timeout=effective_timeout,
+                input_dir=input_dir,
+                limit=limit,
+                output_dir=output_dir,
+            )
+        else:
+            colab_cmd = [
+                cli_bin,
+                "run",
+                "--gpu",
+                gpu.upper(),
+                "--session",
+                job_id,
+                "--timeout",
+                "0",
+                str(script_path),
+                "--output-dir",
+                str(output_dir),
+                "--job-id",
+                job_id,
+            ]
+            run_proc = run_with_timeout(colab_cmd, timeout_sec=effective_timeout)
+            if run_proc.returncode != 0:
+                raise RuntimeError(f"`colab run` failed ({run_proc.returncode}): {run_proc.stderr}")
 
-        sess_proc = run_with_timeout([cli_bin, "sessions"], timeout_sec=60)
-        sessions_clean = verify_zero_active_sessions(sess_proc.stdout, expected_session=job_id)
+            sess_proc = run_with_timeout([cli_bin, "sessions"], timeout_sec=60)
+            sessions_clean = verify_zero_active_sessions(sess_proc.stdout, expected_session=job_id)
+
+            if milestone == "SMOKE":
+                smoke_payload = extract_delimited_json(
+                    run_proc.stdout,
+                    "===COLAB_SMOKE_JSON_BEGIN===",
+                    "===COLAB_SMOKE_JSON_END===",
+                )
+                if (
+                    smoke_payload is None
+                    or not smoke_payload.get("cuda_available")
+                    or not smoke_payload.get("matmul_ok")
+                    or not smoke_payload.get("gcp_adc_env_absent")
+                    or smoke_payload.get("service_key_files_found", 1) != 0
+                ):
+                    raise GuardViolation(
+                        f"Live GPU smoke verification failed checks: {smoke_payload!r}\nstdout:\n{run_proc.stdout}"
+                    )
+                output_dir.mkdir(parents=True, exist_ok=True)
+                (output_dir / "gpu_smoke_proof.json").write_bytes(
+                    (json.dumps(smoke_payload, indent=2) + "\n").encode("utf-8")
+                )
 
         post_usage_proc = run_with_timeout([cli_bin, "usage"], timeout_sec=60)
         post_balance = parse_colab_usage(post_usage_proc.stdout)
-
-        if milestone == "SMOKE":
-            smoke_payload = extract_delimited_json(
-                run_proc.stdout,
-                "===COLAB_SMOKE_JSON_BEGIN===",
-                "===COLAB_SMOKE_JSON_END===",
-            )
-            if (
-                smoke_payload is None
-                or not smoke_payload.get("cuda_available")
-                or not smoke_payload.get("matmul_ok")
-                or not smoke_payload.get("gcp_adc_env_absent")
-                or smoke_payload.get("service_key_files_found", 1) != 0
-            ):
-                raise GuardViolation(
-                    f"Live GPU smoke verification failed checks: {smoke_payload!r}\nstdout:\n{run_proc.stdout}"
-                )
-            output_dir.mkdir(parents=True, exist_ok=True)
-            (output_dir / "gpu_smoke_proof.json").write_bytes(
-                (json.dumps(smoke_payload, indent=2) + "\n").encode("utf-8")
-            )
 
     duration_sec = time.monotonic() - t0
     receipt = build_cu_receipt(
@@ -326,21 +414,28 @@ def run_job(
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "cu_receipt.json").write_bytes((json.dumps(receipt, indent=2) + "\n").encode("utf-8"))
-    summary_text = (
-        f"# Colab Job Summary — {job_id}\n\n"
-        f"- Plan SHA8: `{PLAN_SHA8}`\n"
-        f"- Milestone / Mode: `{milestone}` / `{mode}`\n"
-        f"- GPU: `{gpu.upper()}`\n"
-        f"- CU Balance: `{pre_balance:.2f}` -> `{post_balance:.2f}` (spent `{receipt['cu_spent']:.4f}`)\n"
-        f"- Auto-Shutdown Verified: `{sessions_clean}`\n"
-        f"- Duration: `{duration_sec:.2f}s`\n"
-        f"- Section 17 Terms Check: {GCP_SECTION_17_CONFIRMATION}\n"
-    )
-    (output_dir / "summary.md").write_bytes(summary_text.encode("utf-8"))
+    summary_lines = [
+        f"# Colab Job Summary — {job_id}\n\n",
+        f"- Plan SHA8: `{PLAN_SHA8}`\n",
+        f"- Milestone / Mode: `{milestone}` / `{mode}`\n",
+        f"- GPU: `{gpu.upper()}`\n",
+        f"- CU Balance: `{pre_balance:.2f}` -> `{post_balance:.2f}` (spent `{receipt['cu_spent']:.4f}`)\n",
+        f"- Auto-Shutdown Verified: `{sessions_clean}`\n",
+        f"- Duration: `{duration_sec:.2f}s`\n",
+        f"- Section 17 Terms Check: {GCP_SECTION_17_CONFIRMATION}\n",
+    ]
+    if milestone_extra:
+        summary_lines.append(
+            f"- M1 Framing Pass Rate: `{milestone_extra['framing_passed']}/{milestone_extra['framing_total']}` "
+            f"(`{milestone_extra['framing_pass_rate_pct']}%`, min `{milestone_extra['framing_min_measured_pct']}%`, "
+            f"max `{milestone_extra['framing_max_measured_pct']}%`, mean `{milestone_extra['framing_mean_measured_pct']}%`)\n"
+        )
+    (output_dir / "summary.md").write_bytes("".join(summary_lines).encode("utf-8"))
 
     extra_meta: dict[str, Any] = {
         "cu_spent": receipt["cu_spent"],
         "auto_shutdown_verified": sessions_clean,
+        **milestone_extra,
     }
     if milestone == "M2":
         extra_meta["m2_review_owner"] = M2_REVIEW_OWNER
@@ -351,7 +446,7 @@ def run_job(
         mode=mode,
         output_dir=output_dir,
         model_name=default_model,
-        input_provenance=[{"milestone": milestone, "mode": mode}],
+        input_provenance=input_provenance,
         extra_meta=extra_meta,
     )
     if not verify_manifest(manifest_path):
@@ -372,6 +467,8 @@ def main() -> int:
     parser.add_argument("--gpu", default=DEFAULT_GPU)
     parser.add_argument("--timeout-sec", type=int, default=None)
     parser.add_argument("--cumulative-cu", type=float, default=0.0)
+    parser.add_argument("--input-dir", type=Path, default=None)
+    parser.add_argument("--limit", type=int, default=120)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -384,6 +481,8 @@ def main() -> int:
         timeout_sec=args.timeout_sec,
         cumulative_cu=args.cumulative_cu,
         dry_run=args.dry_run,
+        input_dir=args.input_dir,
+        limit=args.limit,
     )
     print(f"Completed {args.job_id}: {manifest}")
     return 0

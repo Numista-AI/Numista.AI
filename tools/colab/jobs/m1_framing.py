@@ -8,13 +8,100 @@ pass/fail metrics in framing_metrics.json and contact_sheet.html.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
+import io
 import json
+import re
+import tarfile
 from pathlib import Path
 from typing import Any
 
 from tools.colab.config import M1_FRAMING_MAX_PCT, M1_FRAMING_MIN_PCT, M1_FRAMING_TARGET_PCT
 from tools.colab.guards import build_manifest
+
+
+_IMAGE_EXTS: tuple[str, ...] = (".jpg", ".jpeg", ".png", ".webp")
+
+
+def pack_m1_pilot_inputs(
+    source_dir: Path,
+    out_tar: Path,
+    *,
+    limit: int = 120,
+    min_bytes: int = 20_000,
+    max_side_px: int = 1280,
+    min_count: int = 100,
+) -> list[dict[str, Any]]:
+    """Deterministically pack up to `limit` coin images into a tar bundle for Colab M1."""
+    from PIL import Image
+
+    if not source_dir.is_dir():
+        raise FileNotFoundError(f"M1 input directory does not exist: {source_dir}")
+
+    candidates = [
+        p
+        for p in sorted(source_dir.rglob("*"))
+        if p.is_file() and p.suffix.lower() in _IMAGE_EXTS and p.stat().st_size >= min_bytes
+    ]
+    selected = candidates[:limit]
+    if len(selected) < min_count:
+        raise ValueError(
+            f"M1 pilot requires at least {min_count} valid images (>= {min_bytes} B); found {len(selected)} in {source_dir}."
+        )
+
+    out_tar.parent.mkdir(parents=True, exist_ok=True)
+    manifest_entries: list[dict[str, Any]] = []
+    provenance: list[dict[str, Any]] = []
+    seen_stems: dict[str, int] = {}
+
+    with tarfile.open(out_tar, "w") as tf:
+        for src in selected:
+            raw_bytes = src.read_bytes()
+            orig_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+            relpath = src.relative_to(source_dir).as_posix()
+
+            safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", src.stem).strip("._") or "coin"
+            idx_num = seen_stems.get(safe_stem.lower(), 0)
+            seen_stems[safe_stem.lower()] = idx_num + 1
+            if idx_num > 0:
+                safe_stem = f"{safe_stem}_{idx_num}"
+
+            buf = io.BytesIO()
+            with Image.open(io.BytesIO(raw_bytes)) as img:
+                rgb_or_rgba = img.convert("RGBA" if "A" in img.getbands() else "RGB")
+                if max(rgb_or_rgba.size) > max_side_px:
+                    rgb_or_rgba.thumbnail((max_side_px, max_side_px), Image.Resampling.LANCZOS)
+                ext = ".png" if rgb_or_rgba.mode == "RGBA" else ".jpg"
+                if ext == ".png":
+                    rgb_or_rgba.save(buf, format="PNG")
+                else:
+                    rgb_or_rgba.save(buf, format="JPEG", quality=95)
+
+            staged_rel = f"images/{safe_stem}{ext}"
+            staged_bytes = buf.getvalue()
+            info = tarfile.TarInfo(name=staged_rel)
+            info.size = len(staged_bytes)
+            tf.addfile(info, io.BytesIO(staged_bytes))
+
+            manifest_entries.append({
+                "staged_path": staged_rel,
+                "source_relpath": relpath,
+                "original_sha256": orig_sha256,
+                "source": source_dir.name,
+                "license": "US Mint / Eric local archive",
+            })
+            provenance.append({
+                "source_relpath": relpath,
+                "original_sha256": orig_sha256,
+            })
+
+        manifest_bytes = (json.dumps(manifest_entries, indent=2) + "\n").encode("utf-8")
+        minfo = tarfile.TarInfo(name="input_manifest.json")
+        minfo.size = len(manifest_bytes)
+        tf.addfile(minfo, io.BytesIO(manifest_bytes))
+
+    return provenance
 
 
 def compute_framing_ratio_pct(coin_diameter_px: float, canvas_size_px: float) -> float:

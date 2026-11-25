@@ -294,3 +294,27 @@ def test_runner_dry_run_all_milestones(tmp_path: Path, milestone: str) -> None:
 
     receipt = json.loads((out_dir / "cu_receipt.json").read_text(encoding="utf-8"))
     assert receipt["auto_shutdown_verified"] is True
+
+
+def test_pack_m1_pilot_inputs_bundle(tmp_path: Path) -> None:
+    """Verify M1 input packer enforces minimum image count and builds valid tar + manifest."""
+    import tarfile
+    from PIL import Image
+    from tools.colab.jobs.m1_framing import pack_m1_pilot_inputs
+
+    src_dir = tmp_path / "coins"
+    src_dir.mkdir()
+    for i in range(3):
+        img = Image.new("RGB", (64, 64), (200, 200, 200))
+        img.save(src_dir / f"coin_{i}.jpg", format="JPEG")
+
+    out_tar = tmp_path / "m1.tar"
+    with pytest.raises(ValueError, match="at least 100 valid images"):
+        pack_m1_pilot_inputs(src_dir, out_tar, min_bytes=100, min_count=100)
+
+    provenance = pack_m1_pilot_inputs(src_dir, out_tar, limit=3, min_bytes=100, min_count=3)
+    assert len(provenance) == 3
+    with tarfile.open(out_tar, "r") as tf:
+        names = tf.getnames()
+        assert "input_manifest.json" in names
+        assert any(n.startswith("images/") for n in names)
