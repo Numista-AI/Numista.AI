@@ -318,3 +318,86 @@ def test_pack_m1_pilot_inputs_bundle(tmp_path: Path) -> None:
         names = tf.getnames()
         assert "input_manifest.json" in names
         assert any(n.startswith("images/") for n in names)
+
+
+def test_pack_m2_pilot_inputs_and_recall(tmp_path: Path) -> None:
+    """Verify M2 packer builds valid tar + manifest and evaluates >=90% known-bad recall."""
+    import tarfile
+    from PIL import Image
+    from tools.colab.jobs.m2_embeddings import (
+        build_advisory_flags_payload,
+        evaluate_known_bad_recall,
+        pack_m2_pilot_inputs,
+    )
+
+    img_dir = tmp_path / "m2_imgs"
+    img_dir.mkdir()
+    records = []
+    for i in range(4):
+        p = img_dir / f"c_{i}.jpg"
+        Image.new("RGB", (64, 64), (180, 180, 180)).save(p, format="JPEG")
+        records.append({
+            "path": f"m2_imgs/c_{i}.jpg",
+            "catalog_id": f"CAT-{i}",
+            "series_group": "morgan",
+            "is_known_bad": i == 3,
+            "known_bad_reason": "slabbed" if i == 3 else "",
+        })
+
+    manifest_json = tmp_path / "m2_manifest.json"
+    manifest_json.write_text(json.dumps(records), encoding="utf-8")
+    out_tar = tmp_path / "m2.tar"
+    provenance = pack_m2_pilot_inputs(manifest_json, out_tar)
+    assert len(provenance) == 4
+    with tarfile.open(out_tar, "r") as tf:
+        assert "input_manifest.json" in tf.getnames()
+
+    flags = build_advisory_flags_payload([{
+        "catalog_id": "CAT-3",
+        "candidate_image": "m2_imgs/c_3.jpg",
+        "reason": "below_threshold",
+        "similarity_score": 0.42,
+    }])
+    passed = evaluate_known_bad_recall(flags, {"CAT-3"})
+    assert passed["recall_pct"] == 100.0
+    assert passed["at07_passed"] is True
+
+    failed = evaluate_known_bad_recall(flags, {"CAT-3", "CAT-9"})
+    assert failed["recall_pct"] == 50.0
+    assert failed["at07_passed"] is False
+
+
+def test_pack_m4_pilot_inputs_and_handcheck_scoring(tmp_path: Path) -> None:
+    """Verify M4 packer builds valid tar and handcheck scorer enforces >=10 filled pages."""
+    import tarfile
+    from PIL import Image
+    from tools.colab.jobs.m4_ocr import pack_m4_pilot_inputs, score_handcheck_file
+
+    docs_dir = tmp_path / "mint_docs"
+    docs_dir.mkdir()
+    for i in range(2):
+        Image.new("RGB", (64, 64), (255, 255, 255)).save(docs_dir / f"page_{i}.png", format="PNG")
+
+    out_tar = tmp_path / "m4.tar"
+    provenance = pack_m4_pilot_inputs(docs_dir, out_tar, max_pages=10)
+    assert len(provenance) == 2
+    with tarfile.open(out_tar, "r") as tf:
+        names = tf.getnames()
+        assert "input_manifest.json" in names
+        assert any(n.startswith("docs/") for n in names)
+
+    hc_path = tmp_path / "handcheck_sample_10pages.json"
+    report_path = tmp_path / "ocr_error_report.json"
+
+    rows_9 = [{"page_number": i + 1, "ocr_text": f"Mint {i}", "reference_text": f"Mint {i}"} for i in range(9)]
+    hc_path.write_text(json.dumps(rows_9), encoding="utf-8")
+    with pytest.raises(GuardViolation, match="hand-checked pages"):
+        score_handcheck_file(hc_path, report_path)
+
+    rows_10 = [{"page_number": i + 1, "ocr_text": f"Mint {i}", "reference_text": f"Mint {i}"} for i in range(10)]
+    hc_path.write_text(json.dumps(rows_10), encoding="utf-8")
+    scored = score_handcheck_file(hc_path, report_path)
+    assert scored["status"] == "scored"
+    assert scored["sample_pages_checked"] == 10
+    assert scored["cer"] == 0.0
+    assert report_path.is_file()

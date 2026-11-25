@@ -33,6 +33,8 @@ from tools.colab.guards import (
     verify_manifest,
 )
 from tools.colab.jobs.m1_framing import evaluate_framing_metrics, pack_m1_pilot_inputs
+from tools.colab.jobs.m2_embeddings import pack_m2_pilot_inputs
+from tools.colab.jobs.m4_ocr import pack_m4_pilot_inputs
 
 MILESTONE_SCRIPTS: dict[str, tuple[Path, str]] = {
     "SMOKE": (Path(__file__).resolve().parent / "jobs" / "smoke_gpu.py", "CUDA-Smoke"),
@@ -163,7 +165,10 @@ def _parse_drive_folder_id(stdout: str, job_id: str) -> str:
                 if token.endswith(")"):
                     return token.rstrip(")")
 
-    ls_proc = _run_gdrive_with_retry(["readonly", "ls", DRIVE_STAGING_FOLDER_ID, "--json"], timeout_sec=60)
+    ls_proc = _run_gdrive_with_retry(
+        ["readonly", "ls", DRIVE_STAGING_FOLDER_ID, "--max", "0", "--json"],
+        timeout_sec=60,
+    )
     try:
         items = json.loads(ls_proc.stdout)
         if isinstance(items, list):
@@ -198,22 +203,20 @@ def upload_staging_bundle(output_dir: Path, job_id: str) -> str:
     return folder_id
 
 
-def _run_m1_pilot_live(
+def _execute_colab_session(
     *,
     cli_bin: str,
     job_id: str,
     gpu: str,
     effective_timeout: int,
-    input_dir: Path,
-    limit: int,
+    inputs_tar: Path,
+    remote_input_path: str,
+    remote_script: Path,
+    remote_output_path: str,
+    local_outputs_tar_gz: Path,
     output_dir: Path,
-) -> tuple[bool, list[dict[str, Any]], dict[str, Any]]:
-    """Run live M1 BiRefNet pilot on Colab L4 inside strict try/finally stop+session guards."""
-    inputs_tar = output_dir.parent / f"{job_id}_inputs.tar"
-    outputs_tar_gz = output_dir.parent / f"{job_id}_outputs.tar.gz"
-    provenance = pack_m1_pilot_inputs(input_dir, inputs_tar, limit=limit)
-    remote_script = Path(__file__).resolve().parent / "jobs" / "m1_framing_remote.py"
-
+) -> bool:
+    """Provision a Colab GPU VM, upload inputs, exec script, download outputs, and always stop."""
     new_proc = run_with_timeout([cli_bin, "new", "--gpu", gpu.upper(), "-s", job_id], timeout_sec=300)
     if new_proc.returncode != 0:
         raise RuntimeError(f"`colab new` failed ({new_proc.returncode}): {new_proc.stderr}")
@@ -221,7 +224,7 @@ def _run_m1_pilot_live(
     sessions_clean = False
     try:
         up_proc = run_with_timeout(
-            [cli_bin, "upload", "-s", job_id, str(inputs_tar), "/content/m1_inputs.tar"],
+            [cli_bin, "upload", "-s", job_id, str(inputs_tar), remote_input_path],
             timeout_sec=300,
         )
         if up_proc.returncode != 0:
@@ -237,7 +240,7 @@ def _run_m1_pilot_live(
             )
 
         dl_proc = run_with_timeout(
-            [cli_bin, "download", "-s", job_id, "/content/m1_outputs.tar.gz", str(outputs_tar_gz)],
+            [cli_bin, "download", "-s", job_id, remote_output_path, str(local_outputs_tar_gz)],
             timeout_sec=300,
         )
         if dl_proc.returncode != 0:
@@ -250,21 +253,86 @@ def _run_m1_pilot_live(
             sessions_clean = verify_zero_active_sessions(sess_proc.stdout, expected_session=job_id)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(outputs_tar_gz, "r:gz") as tf:
+    with tarfile.open(local_outputs_tar_gz, "r:gz") as tf:
         tf.extractall(output_dir, filter="data")
+    return sessions_clean
 
-    metrics_path = output_dir / "framing_metrics.json"
-    metrics_data = json.loads(metrics_path.read_text(encoding="utf-8"))
-    local_eval = evaluate_framing_metrics(metrics_data["items"])
-    m1_extra = {
-        "framing_total": local_eval["total"],
-        "framing_passed": local_eval["passed"],
-        "framing_pass_rate_pct": local_eval["pass_rate_pct"],
-        "framing_min_measured_pct": metrics_data.get("min_measured_pct"),
-        "framing_max_measured_pct": metrics_data.get("max_measured_pct"),
-        "framing_mean_measured_pct": metrics_data.get("mean_measured_pct"),
-    }
-    return sessions_clean, provenance, m1_extra
+
+def _run_staged_milestone_live(
+    *,
+    milestone: str,
+    cli_bin: str,
+    job_id: str,
+    gpu: str,
+    effective_timeout: int,
+    input_dir: Path,
+    limit: int,
+    output_dir: Path,
+) -> tuple[bool, list[dict[str, Any]], dict[str, Any]]:
+    """Pack inputs, run remote M1/M2/M4 GPU worker in Colab, and validate staged outputs."""
+    jobs_dir = Path(__file__).resolve().parent / "jobs"
+    inputs_tar = output_dir.parent / f"{job_id}_inputs.tar"
+    outputs_tar_gz = output_dir.parent / f"{job_id}_outputs.tar.gz"
+
+    if milestone == "M1":
+        provenance = pack_m1_pilot_inputs(input_dir, inputs_tar, limit=limit)
+        remote_script = jobs_dir / "m1_framing_remote.py"
+        remote_in, remote_out = "/content/m1_inputs.tar", "/content/m1_outputs.tar.gz"
+    elif milestone == "M2":
+        provenance = pack_m2_pilot_inputs(input_dir, inputs_tar, limit=limit)
+        remote_script = jobs_dir / "m2_embeddings_remote.py"
+        remote_in, remote_out = "/content/m2_inputs.tar", "/content/m2_outputs.tar.gz"
+    elif milestone == "M4":
+        provenance = pack_m4_pilot_inputs(input_dir, inputs_tar, max_pages=limit)
+        remote_script = jobs_dir / "m4_ocr_remote.py"
+        remote_in, remote_out = "/content/m4_inputs.tar", "/content/m4_outputs.tar.gz"
+    else:
+        raise GuardViolation(f"Milestone {milestone!r} does not use staged archive live execution.")
+
+    sessions_clean = _execute_colab_session(
+        cli_bin=cli_bin,
+        job_id=job_id,
+        gpu=gpu,
+        effective_timeout=effective_timeout,
+        inputs_tar=inputs_tar,
+        remote_input_path=remote_in,
+        remote_script=remote_script,
+        remote_output_path=remote_out,
+        local_outputs_tar_gz=outputs_tar_gz,
+        output_dir=output_dir,
+    )
+
+    if milestone == "M1":
+        metrics_data = json.loads((output_dir / "framing_metrics.json").read_text(encoding="utf-8"))
+        local_eval = evaluate_framing_metrics(metrics_data["items"])
+        extra: dict[str, Any] = {
+            "framing_total": local_eval["total"],
+            "framing_passed": local_eval["passed"],
+            "framing_pass_rate_pct": local_eval["pass_rate_pct"],
+            "framing_min_measured_pct": metrics_data.get("min_measured_pct"),
+            "framing_max_measured_pct": metrics_data.get("max_measured_pct"),
+            "framing_mean_measured_pct": metrics_data.get("mean_measured_pct"),
+        }
+    elif milestone == "M2":
+        flags_data = json.loads((output_dir / "advisory_flags.json").read_text(encoding="utf-8"))
+        if flags_data.get("advisory_only") is not True or flags_data.get("mutated_catalog") is not False:
+            raise GuardViolation("M2 advisory_flags.json violated zero-mutation governance fields.")
+        eval_data = json.loads((output_dir / "m2_eval_report.json").read_text(encoding="utf-8"))
+        extra = {
+            "m2_total_images": eval_data["total_images"],
+            "m2_flagged_count": eval_data["flagged_count"],
+            "m2_known_bad_recall_pct": eval_data["known_bad_recall_pct"],
+            "m2_at07_passed": eval_data["at07_passed"],
+        }
+    else:
+        ocr_report = json.loads((output_dir / "ocr_error_report.json").read_text(encoding="utf-8"))
+        extra = {
+            "m4_handcheck_status": ocr_report.get("status"),
+            "m4_sample_pages_checked": ocr_report.get("sample_pages_checked"),
+            "m4_cer": ocr_report.get("cer"),
+            "m4_wer": ocr_report.get("wer"),
+        }
+    return sessions_clean, provenance, extra
 
 
 def run_job(
@@ -342,10 +410,11 @@ def run_job(
         )
 
         t0 = time.monotonic()
-        if milestone == "M1":
+        if milestone in ("M1", "M2", "M4"):
             if input_dir is None:
-                raise GuardViolation("Live M1 pilot requires --input-dir pointing to staged candidate images.")
-            sessions_clean, input_provenance, milestone_extra = _run_m1_pilot_live(
+                raise GuardViolation(f"Live {milestone} pilot requires --input-dir pointing to staged inputs.")
+            sessions_clean, input_provenance, milestone_extra = _run_staged_milestone_live(
+                milestone=milestone,
                 cli_bin=cli_bin,
                 job_id=job_id,
                 gpu=gpu,
@@ -424,11 +493,21 @@ def run_job(
         f"- Duration: `{duration_sec:.2f}s`\n",
         f"- Section 17 Terms Check: {GCP_SECTION_17_CONFIRMATION}\n",
     ]
-    if milestone_extra:
+    if milestone == "M1" and milestone_extra:
         summary_lines.append(
             f"- M1 Framing Pass Rate: `{milestone_extra['framing_passed']}/{milestone_extra['framing_total']}` "
             f"(`{milestone_extra['framing_pass_rate_pct']}%`, min `{milestone_extra['framing_min_measured_pct']}%`, "
             f"max `{milestone_extra['framing_max_measured_pct']}%`, mean `{milestone_extra['framing_mean_measured_pct']}%`)\n"
+        )
+    elif milestone == "M2" and milestone_extra:
+        summary_lines.append(
+            f"- M2 Advisory Audit: `{milestone_extra['m2_flagged_count']}/{milestone_extra['m2_total_images']}` flagged "
+            f"(known-bad recall `{milestone_extra['m2_known_bad_recall_pct']}%`, AT-07 passed `{milestone_extra['m2_at07_passed']}`)\n"
+        )
+    elif milestone == "M4" and milestone_extra:
+        summary_lines.append(
+            f"- M4 OCR Hand-Check: status `{milestone_extra['m4_handcheck_status']}`, "
+            f"pages `{milestone_extra['m4_sample_pages_checked']}`, CER `{milestone_extra['m4_cer']}`, WER `{milestone_extra['m4_wer']}`\n"
         )
     (output_dir / "summary.md").write_bytes("".join(summary_lines).encode("utf-8"))
 

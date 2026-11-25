@@ -7,12 +7,117 @@ OCR pages (>= 10) and reports numeric Character Error Rate (CER) and Word Error 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import io
 import json
+import re
+import tarfile
 from pathlib import Path
 from typing import Any
 
 from tools.colab.config import M4_DEFAULT_MODEL, M4_OCR_HANDCHECK_MIN_SAMPLE
 from tools.colab.guards import GuardViolation, build_manifest
+
+
+_DOC_EXTS: tuple[str, ...] = (".pdf", ".png", ".jpg", ".jpeg", ".webp")
+
+
+def pack_m4_pilot_inputs(
+    source_path: Path,
+    out_tar: Path,
+    *,
+    max_pages: int = 25,
+) -> list[dict[str, Any]]:
+    """Pack PDFs/images from a directory or JSON manifest into a tar bundle for Colab M4 OCR."""
+    entries: list[dict[str, Any]] = []
+    if source_path.is_dir():
+        files = [
+            p for p in sorted(source_path.rglob("*"))
+            if p.is_file() and p.suffix.lower() in _DOC_EXTS
+        ]
+        if not files:
+            raise ValueError(f"No PDF or image files found in M4 directory: {source_path}")
+        for fpath in files[:max_pages]:
+            entries.append({"path": fpath, "source_doc": fpath.relative_to(source_path).as_posix()})
+    elif source_path.is_file() and source_path.suffix.lower() == ".json":
+        loaded = json.loads(source_path.read_text(encoding="utf-8"))
+        if not isinstance(loaded, list) or not loaded:
+            raise ValueError(f"M4 JSON manifest must be a non-empty list: {source_path}")
+        for item in loaded[:max_pages]:
+            raw_p = Path(str(item["path"]))
+            fpath = raw_p if raw_p.is_absolute() else (source_path.parent / raw_p)
+            entries.append({
+                "path": fpath,
+                "source_doc": str(item.get("source_doc") or fpath.name),
+                "page_numbers": item.get("page_numbers"),
+                "reference_texts": item.get("reference_texts") or {},
+            })
+    elif source_path.is_file() and source_path.suffix.lower() in _DOC_EXTS:
+        entries.append({"path": source_path, "source_doc": source_path.name})
+    else:
+        raise FileNotFoundError(f"Invalid M4 input source path: {source_path}")
+
+    out_tar.parent.mkdir(parents=True, exist_ok=True)
+    staged_entries: list[dict[str, Any]] = []
+    provenance: list[dict[str, Any]] = []
+    seen_names: dict[str, int] = {}
+
+    with tarfile.open(out_tar, "w") as tf:
+        for item in entries:
+            src: Path = item["path"]
+            if not src.is_file():
+                raise FileNotFoundError(f"Missing M4 source file: {src}")
+            raw_bytes = src.read_bytes()
+            orig_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+
+            safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", src.stem).strip("._") or "doc"
+            cnt = seen_names.get(safe_stem.lower(), 0)
+            seen_names[safe_stem.lower()] = cnt + 1
+            if cnt > 0:
+                safe_stem = f"{safe_stem}_{cnt}"
+
+            staged_rel = f"docs/{safe_stem}{src.suffix.lower()}"
+            tinfo = tarfile.TarInfo(name=staged_rel)
+            tinfo.size = len(raw_bytes)
+            tf.addfile(tinfo, io.BytesIO(raw_bytes))
+
+            staged_entries.append({
+                "staged_path": staged_rel,
+                "source_doc": item["source_doc"],
+                "original_sha256": orig_sha256,
+                "page_numbers": item.get("page_numbers"),
+                "reference_texts": item.get("reference_texts") or {},
+            })
+            provenance.append({
+                "source_doc": item["source_doc"],
+                "original_sha256": orig_sha256,
+            })
+
+        mbytes = (json.dumps(staged_entries, indent=2) + "\n").encode("utf-8")
+        minfo = tarfile.TarInfo(name="input_manifest.json")
+        minfo.size = len(mbytes)
+        tf.addfile(minfo, io.BytesIO(mbytes))
+
+    return provenance
+
+
+def score_handcheck_file(handcheck_json: Path, out_report_json: Path) -> dict[str, Any]:
+    """Compute numeric CER/WER from a >=10-page hand-checked JSON sample and write report."""
+    records = json.loads(handcheck_json.read_text(encoding="utf-8"))
+    if not isinstance(records, list):
+        raise ValueError("Hand-check file must contain a JSON list of page records.")
+
+    filled = [
+        r for r in records
+        if str(r.get("reference_text", "")).strip() and str(r.get("ocr_text", "")).strip()
+    ]
+    refs = [str(r["reference_text"]) for r in filled]
+    hyps = [str(r["ocr_text"]) for r in filled]
+    metrics = compute_ocr_error_rate(refs, hyps, min_sample=M4_OCR_HANDCHECK_MIN_SAMPLE)
+    metrics["status"] = "scored"
+    out_report_json.parent.mkdir(parents=True, exist_ok=True)
+    out_report_json.write_bytes((json.dumps(metrics, indent=2) + "\n").encode("utf-8"))
+    return metrics
 
 
 def _levenshtein(seq_a: list[str] | str, seq_b: list[str] | str) -> int:
@@ -123,15 +228,20 @@ def run_pilot_dry_run(output_dir: Path, job_id: str) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description="M4 Bulk Historical Mint OCR")
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--job-id", required=True)
+    parser.add_argument("--job-id", default="m4-handcheck")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--score-handcheck", type=Path, default=None)
     args = parser.parse_args()
 
+    if args.score_handcheck is not None:
+        report = score_handcheck_file(args.score_handcheck, args.output_dir / "ocr_error_report.json")
+        print(f"M4 handcheck scored: CER={report['cer']} WER={report['wer']} pages={report['sample_pages_checked']}")
+        return 0
     if args.dry_run:
         manifest = run_pilot_dry_run(args.output_dir, args.job_id)
         print(f"M4 dry-run manifest written: {manifest}")
         return 0
-    raise NotImplementedError("Live GPU execution runs inside Colab via `colab run`.")
+    raise NotImplementedError("Live GPU execution runs via `python -m tools.colab.runner --milestone M4`.")
 
 
 if __name__ == "__main__":
