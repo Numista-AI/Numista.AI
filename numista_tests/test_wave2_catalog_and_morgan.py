@@ -408,6 +408,64 @@ class TestWave2MorganCatalogFirstAndNoScraper(unittest.TestCase):
         self.assertNotIn("threading.Thread(target=scrape_url", main_src)
         self.assertIn("Un-gated Background Auto-Scraper RETIRED", main_src)
 
+    def test_catalog_card_emits_both_canonical_and_alias_keys(self):
+        item = dict(self.sample_catalog[0])
+        item["primary_image"] = {
+            "url": "https://storage.googleapis.com/us_mint_coin_images/catalog/test.jpg",
+            "credit": "Public domain (US government work)",
+        }
+        card = mk._build_catalog_card(item)
+        self.assertEqual(card["mintage_display"], "1,155,000 (calendar year 1875)")
+        self.assertEqual(card["mintage_label"], card["mintage_display"])
+        self.assertEqual(card["image_url"], "https://storage.googleapis.com/us_mint_coin_images/catalog/test.jpg")
+        self.assertEqual(card["thumb_url"], card["image_url"])
+
+    def test_catalog_missing_request_endpoint_auth_and_persistence(self):
+        from fastapi.testclient import TestClient
+        from unittest.mock import MagicMock, patch
+        import main as app_main
+
+        client = TestClient(app_main.app)
+
+        # 1. Unauthenticated -> 401
+        r_unauth = client.post("/api/v1/collection/catalog-missing-request", json={"query": "1999 Atlantis Coin"})
+        self.assertEqual(r_unauth.status_code, 401)
+
+        # Authenticated override
+        app_main.app.dependency_overrides[app_main.get_current_user] = lambda: {"uid": "uid_w2_test"}
+        try:
+            # 2. Blank query -> 422
+            r_blank = client.post("/api/v1/collection/catalog-missing-request", json={"query": "   "})
+            self.assertIn(r_blank.status_code, (400, 422))
+
+            # 3. Valid query -> 201 and auto_published: False written to missing_catalog_requests
+            mock_doc = MagicMock()
+            mock_doc.id = "req_test_123"
+            mock_coll = MagicMock()
+            mock_coll.document.return_value = mock_doc
+            mock_db = MagicMock()
+            mock_db.collection.return_value = mock_coll
+
+            import routes.catalog_routes as cat_routes
+            with patch.object(cat_routes, "db", mock_db):
+                r_ok = client.post(
+                    "/api/v1/collection/catalog-missing-request",
+                    json={"query": "1999 Atlantis Coin", "note": "Asked in Morgan chat"},
+                )
+            self.assertEqual(r_ok.status_code, 201)
+            body = r_ok.json()
+            self.assertEqual(body["status"], "logged")
+            self.assertEqual(body["request_id"], "req_test_123")
+            self.assertFalse(body["auto_published"])
+            mock_db.collection.assert_called_with("missing_catalog_requests")
+            saved_payload = mock_doc.set.call_args[0][0]
+            self.assertEqual(saved_payload["query"], "1999 Atlantis Coin")
+            self.assertEqual(saved_payload["requested_by_uid"], "uid_w2_test")
+            self.assertFalse(saved_payload["auto_published"])
+            self.assertEqual(saved_payload["status"], "pending_review")
+        finally:
+            app_main.app.dependency_overrides.clear()
+
 
 if __name__ == "__main__":
     unittest.main()

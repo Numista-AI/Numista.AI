@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -293,6 +294,25 @@ void main() {
       await tester.pump();
       expect(find.text('ROUTE:Catalog of American Numismatics'), findsOneWidget);
       MorganProactiveRescueObserver.instance.resetForTesting();
+    });
+
+    test('Gemini W2-1 & Muse Merge-Order Fixes: ai_chat_screen handles mintage_display/image_url, Map missing_item_report_prompt, missing-request endpoint, and zero new isGuest refs', () {
+      final src = File('lib/screens/ai_chat_screen.dart').readAsStringSync();
+      // Fix 1: reads canonical mintage_display & image_url with legacy fallback
+      expect(src.contains("card['mintage_display'] ?? card['mintage_label']"), isTrue);
+      expect(src.contains("card['image_url'] ?? card['thumb_url']"), isTrue);
+      // Fix 2: handles Map payload for missing_item_report_prompt (not == true)
+      expect(src.contains("data['missing_item_report_prompt'] == true"), isFalse);
+      expect(src.contains("msg['missing_item_report_prompt'] == true"), isFalse);
+      expect(src.contains("rawPrompt['query']"), isTrue);
+      // Fix 3: posts to authenticated catalog-missing-request endpoint
+      expect(src.contains('/api/v1/collection/catalog-missing-request'), isTrue);
+      // Fix 4: Wave 2 handlers use user.isAnonymous (not AuthService.isGuest)
+      final addIdx = src.indexOf('_addCatalogCardToCollection(');
+      expect(addIdx, greaterThan(-1));
+      final addSlice = src.substring(addIdx, addIdx + 400);
+      expect(addSlice.contains('AuthService.isGuest'), isFalse);
+      expect(addSlice.contains('user.isAnonymous'), isTrue);
     });
   });
 }

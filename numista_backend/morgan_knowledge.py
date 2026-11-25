@@ -148,6 +148,7 @@ def _build_catalog_card(item: Dict[str, Any]) -> Dict[str, Any]:
     prim = item.get("primary_image") if isinstance(item.get("primary_image"), dict) else None
     timg = item.get("type_image") if isinstance(item.get("type_image"), dict) else None
     img = prim or timg or {}
+    resolved_image_url = img.get("thumb_url") or img.get("url")
     return {
         "nac_code": item.get("nac_code"),
         "name": item.get("name"),
@@ -157,9 +158,11 @@ def _build_catalog_card(item: Dict[str, Any]) -> Dict[str, Any]:
         "series": item.get("series"),
         "mint_facility": item.get("mint_facility"),
         "mintage_display": mintage_display,
+        "mintage_label": mintage_display,
         "mintage_source_url": mintage_src,
         "status_badge": item.get("status_badge"),
-        "image_url": img.get("thumb_url") or img.get("url"),
+        "image_url": resolved_image_url,
+        "thumb_url": resolved_image_url,
         "image_credit": img.get("credit") or img.get("source"),
         "ai_generated": bool(img.get("ai_generated") is True),
         "actions": ["view_in_catalog", "add_to_collection", "add_to_wishlist"],

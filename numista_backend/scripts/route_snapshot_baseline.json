@@ -1792,6 +1792,19 @@
     ]
   },
   {
+    "path": "/api/v1/collection/catalog-missing-request",
+    "methods": [
+      "POST"
+    ],
+    "name": "catalog_missing_request",
+    "tags": [
+      "US Numismatics Catalog (collection add)"
+    ],
+    "dependencies": [
+      "get_current_user"
+    ]
+  },
+  {
     "path": "/api/v1/collection/catalog-photo-toggle",
     "methods": [
       "PATCH"

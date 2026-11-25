@@ -539,7 +539,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       String replyText;
       String? actionPayloadJson;
       List<Map<String, dynamic>>? catalogCards;
-      bool missingItemReportPrompt = false;
+      dynamic missingItemReportPrompt;
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         replyText = data['response'] ?? 'No response.';
@@ -552,8 +552,15 @@ class _AiChatScreenState extends State<AiChatScreen> {
             catalogCards = parsed;
           }
         }
-        if (data is Map && data['missing_item_report_prompt'] == true) {
-          missingItemReportPrompt = true;
+        if (data is Map &&
+            data['missing_item_report_prompt'] != null &&
+            data['missing_item_report_prompt'] != false) {
+          final rawPrompt = data['missing_item_report_prompt'];
+          if (rawPrompt is Map) {
+            missingItemReportPrompt = Map<String, dynamic>.from(rawPrompt);
+          } else if (rawPrompt == true) {
+            missingItemReportPrompt = true;
+          }
         }
         if (data['action_payload'] != null &&
             !(data['action_payload'] is Map &&
@@ -592,7 +599,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         // ignore: use_null_aware_elements
         if (actionPayloadJson != null) 'action_payload': actionPayloadJson,
         'catalog_cards': ?catalogCards,
-        if (missingItemReportPrompt) 'missing_item_report_prompt': true,
+        'missing_item_report_prompt': ?missingItemReportPrompt,
       };
       setState(() {
         _messages.add(aiMsg);
@@ -956,7 +963,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final nacCode = card['nac_code']?.toString() ?? '';
     if (nacCode.isEmpty) return;
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null || AuthService.isGuest) {
+    if (user == null || user.isAnonymous) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please sign in to add items to your collection (Free tier includes up to 10 items).'),
@@ -996,14 +1003,55 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
   }
 
+  Future<void> _submitMissingCatalogRequest(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.isAnonymous) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to report a missing catalog item.'),
+        ),
+      );
+      return;
+    }
+    try {
+      final resp = await HttpAuthClient.post(
+        Uri.parse('$kApiBaseUrl/api/v1/collection/catalog-missing-request'),
+        body: jsonEncode({'query': trimmed}),
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Logged for Catalog review — never auto-published until verified.'),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(formatChatErrorResponse(resp.statusCode, resp.body))),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not submit missing-item report. Please try again.'),
+        ),
+      );
+    }
+  }
+
   Widget _buildCatalogCitationCard(Map<String, dynamic> card) {
     final nacCode = card['nac_code']?.toString() ?? '';
     final name = card['name']?.toString() ?? nacCode;
     final year = card['year']?.toString() ?? '';
     final denom = card['denomination']?.toString() ?? '';
     final series = card['series']?.toString() ?? '';
-    final mintage = card['mintage_label']?.toString() ?? '';
-    final thumbUrl = card['thumb_url']?.toString() ?? '';
+    final mintage =
+        (card['mintage_display'] ?? card['mintage_label'])?.toString() ?? '';
+    final thumbUrl =
+        (card['image_url'] ?? card['thumb_url'])?.toString() ?? '';
 
     return Container(
       margin: const EdgeInsets.only(top: 10, bottom: 4),
@@ -1356,17 +1404,28 @@ class _AiChatScreenState extends State<AiChatScreen> {
               ...((msg['catalog_cards'] as List)
                   .whereType<Map>()
                   .map((c) => _buildCatalogCitationCard(Map<String, dynamic>.from(c)))),
-            if (!isUser && msg['missing_item_report_prompt'] == true)
+            if (!isUser &&
+                msg['missing_item_report_prompt'] != null &&
+                msg['missing_item_report_prompt'] != false)
               Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: ActionChip(
                   avatar: Icon(Icons.flag_outlined, size: 16, color: _gold),
                   label: const Text('Report Missing Item'),
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Logged for Catalog review — never auto-published until verified.'),
-                      ),
+                    final rawPrompt = msg['missing_item_report_prompt'];
+                    final q = rawPrompt is Map
+                        ? (rawPrompt['query']?.toString().trim() ?? '')
+                        : '';
+                    final fallback = content.trim();
+                    _submitMissingCatalogRequest(
+                      q.isNotEmpty
+                          ? q
+                          : (fallback.length > 200
+                              ? fallback.substring(0, 200)
+                              : (fallback.isNotEmpty
+                                  ? fallback
+                                  : 'Missing catalog item')),
                     );
                   },
                 ),
