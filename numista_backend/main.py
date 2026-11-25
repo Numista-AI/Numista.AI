@@ -12536,12 +12536,40 @@ class InitiateTransferRequest(BaseModel):
     recipient_email: Optional[str] = None
     privacy_toggles: Optional[Dict[str, bool]] = None
     item_quantities: Optional[Dict[str, int]] = None
+    # v2 (PLAN v1.2): transfer type, expiry, sold-item source, optional typed sender details
+    transfer_type: str = "lateral"
+    expires_days: Optional[int] = None
+    source: str = "active"
+    sender_display: Optional[str] = None
+    sender_address: Optional[str] = None
+    show_price: bool = False
+    sale_price_usd: Optional[float] = None
 
 class ClaimTransferRequest(BaseModel):
     user_id: str
-    transfer_id: str
-    claim_pin: str
+    # One claim endpoint (R1): a v2 token (QR), a v2 code (typed), or the legacy Transfer ID + PIN.
+    transfer_id: Optional[str] = None
+    claim_pin: Optional[str] = None
+    claim_token: Optional[str] = None
+    claim_code: Optional[str] = None
     selected_item_ids: Optional[List[str]] = None
+
+class RotateCodeRequest(BaseModel):
+    transfer_id: str
+
+
+def _transfer_client_ip(request: Request) -> Optional[str]:
+    """Client IP for the claim limiter. On Cloud Run the front end appends the real client IP as the
+    LAST X-Forwarded-For entry, so the first entry (client-controlled) is not trusted."""
+    xff = request.headers.get("x-forwarded-for") or ""
+    parts = [p.strip() for p in xff.split(",") if p.strip()]
+    if parts:
+        return parts[-1]
+    return request.client.host if request.client else None
+
+
+def _token_sign_in_provider(current_user: Dict[str, Any]) -> Optional[str]:
+    return ((current_user.get("firebase") or {}).get("sign_in_provider"))
 
 class RecallTransferRequest(BaseModel):
     user_id: str
@@ -12610,16 +12638,25 @@ async def api_initiate_transfer(
     if not token_uid:
         raise HTTPException(status_code=401, detail="Unable to identify user from token")
     try:
-        from services.transfer_service import initiate_transfer
+        from services.transfer_service import initiate_transfer, public_transfer_view
         result = initiate_transfer(
             db=db,
             user_a_id=token_uid,
             item_ids=req.item_ids,
             recipient_email=req.recipient_email,
             privacy_toggles=req.privacy_toggles,
-            item_quantities=req.item_quantities
+            item_quantities=req.item_quantities,
+            version=2,
+            transfer_type=req.transfer_type,
+            expires_days=req.expires_days,
+            source=req.source,
+            sender_display=req.sender_display,
+            sender_address=req.sender_address,
+            show_price=req.show_price,
+            sale_price_usd=req.sale_price_usd,
         )
-        return {"status": "success", "transfer": result}
+        # claim_token / claim_code / document_pdf_b64 are returned ONCE here and never stored.
+        return {"status": "success", "transfer": public_transfer_view(result)}
     except Exception as e:
         logger.exception("Initiate transfer failed")
         raise HTTPException(status_code=400, detail=str(e))
@@ -12627,6 +12664,7 @@ async def api_initiate_transfer(
 @app.post("/api/transfer/claim")
 async def api_claim_transfer(
     req: ClaimTransferRequest,
+    request: Request,
     current_user: Dict[str, Any] = Depends(require_registered_user),
 ):
     """
@@ -12637,15 +12675,22 @@ async def api_claim_transfer(
     if not token_uid:
         raise HTTPException(status_code=401, detail="Unable to identify user from token")
     try:
-        from services.transfer_service import claim_transfer
+        from services.transfer_service import claim_transfer, ClaimRateLimited
         result = claim_transfer(
             db=db,
             user_b_id=token_uid,
             transfer_id=req.transfer_id,
             claim_pin=req.claim_pin,
-            selected_item_ids=req.selected_item_ids
+            selected_item_ids=req.selected_item_ids,
+            claim_token=req.claim_token,
+            claim_code=req.claim_code,
+            client_ip=_transfer_client_ip(request),
+            uid=(current_user.get("uid") or current_user.get("user_id") or None),
+            sign_in_provider=_token_sign_in_provider(current_user),
         )
         return {"status": "success", "result": result}
+    except ClaimRateLimited as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         logger.exception("Claim transfer failed")
         raise HTTPException(status_code=400, detail=str(e))
@@ -12672,6 +12717,50 @@ async def api_recall_transfer(
         return {"status": "success", "result": result}
     except Exception as e:
         logger.exception("Recall transfer failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/transfer/preview")
+async def api_preview_transfer(
+    request: Request,
+    claim_token: Optional[str] = None,
+    claim_code: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(require_registered_user),
+):
+    """Authenticated preview of a claim link: item TITLES only (no sender, address, cost, notes, photos)."""
+    token_uid = current_user.get("email") or current_user.get("uid") or ""
+    if not token_uid:
+        raise HTTPException(status_code=401, detail="Unable to identify user from token")
+    if not (claim_token or claim_code):
+        raise HTTPException(status_code=400, detail="claim_token or claim_code is required")
+    try:
+        from services.transfer_service import preview_transfer, ClaimRateLimited
+        preview = preview_transfer(
+            db=db,
+            user_id=token_uid,
+            claim_token=claim_token,
+            claim_code=claim_code,
+            client_ip=_transfer_client_ip(request),
+            uid=(current_user.get("uid") or current_user.get("user_id") or None),
+        )
+        return {"status": "success", "preview": preview}
+    except ClaimRateLimited as e:
+        raise HTTPException(status_code=429, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/transfer/rotate-code")
+async def api_rotate_transfer_code(
+    req: RotateCodeRequest,
+    current_user: Dict[str, Any] = Depends(require_registered_user),
+):
+    """Sender reissues a pending transfer's claim token and code (also upgrades a legacy PIN transfer)."""
+    token_uid = current_user.get("email") or current_user.get("uid") or ""
+    if not token_uid:
+        raise HTTPException(status_code=401, detail="Unable to identify user from token")
+    try:
+        from services.transfer_service import rotate_claim_code
+        return {"status": "success", "result": rotate_claim_code(db=db, user_a_id=token_uid, transfer_id=req.transfer_id)}
+    except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/transfer/sell-direct")
@@ -12760,9 +12849,9 @@ async def api_get_passport_pdf(
         # Authorization: only sender or locked recipient may access the PDF
         caller_uid   = (current_user.get('uid') or current_user.get('user_id') or '').strip()
         caller_email = (current_user.get('email') or '').strip().lower()
-        sender_uid   = str(transfer_data.get('user_a_id') or '').strip()
+        sender_uid   = str(transfer_data.get('sender_id') or transfer_data.get('user_a_id') or '').strip().lower()
         recipient_email = str(transfer_data.get('recipient_email') or '').strip().lower()
-        claimer_uid  = str(transfer_data.get('user_b_id') or '').strip()
+        claimer_uid  = str(transfer_data.get('claimed_by') or transfer_data.get('user_b_id') or '').strip().lower()
         is_sender    = bool(sender_uid) and (caller_email == sender_uid or caller_uid == sender_uid)
         is_claimer   = bool(claimer_uid) and (caller_email == claimer_uid or caller_uid == claimer_uid)
         is_recipient = recipient_email and caller_email == recipient_email
@@ -12775,6 +12864,17 @@ async def api_get_passport_pdf(
         items = transfer_data.get("items", [])
         if not items:
             raise HTTPException(status_code=400, detail="Cannot generate PDF for a transfer with 0 items.")
+
+        if int(transfer_data.get("version") or 1) >= 2:
+            # v2: the new large-print Transfer Document, sender only (the typed sender address stays private).
+            if not is_sender:
+                raise HTTPException(status_code=403, detail="Only the sender may download this document.")
+            from services.transfer_document_pdf import generate_transfer_document_pdf
+            return Response(
+                content=generate_transfer_document_pdf(transfer_data),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename=transfer_document_{transfer_id}.pdf"}
+            )
 
         pdf_bytes = generate_passport_pdf(transfer_data)
         return Response(
@@ -12840,26 +12940,32 @@ async def api_export_appraisal_pdf(
 
 
 @app.get("/api/provenance/verify/{passport_id}")
-async def api_verify_provenance(passport_id: str):
+async def api_verify_provenance(passport_id: str, request: Request):
     """
-    Public verification endpoint for coin provenance and passport transfer integrity.
+    Public verification endpoint for passport transfer integrity.
+    Rate-limited per client IP (fails closed). Returns only `verified` and `status`: no item count,
+    no timestamps, no sender data (PLAN v1.2 section 6.2).
     """
     try:
+        from services.transfer_service import check_claim_attempts, record_claim_failure, ClaimRateLimited
+        ip = _transfer_client_ip(request)
+        try:
+            check_claim_attempts(db, uid=None, client_ip=ip)
+        except ClaimRateLimited as rl:
+            return JSONResponse(status_code=429, content={"verified": False, "message": str(rl)})
         doc = db.collection("transfers").document(passport_id).get()
         if not doc.exists:
+            try:
+                record_claim_failure(db, uid=None, client_ip=ip)
+            except ClaimRateLimited as rl:
+                return JSONResponse(status_code=429, content={"verified": False, "message": str(rl)})
             return JSONResponse(status_code=404, content={"verified": False, "message": "Passport ID not found."})
-        
+
         data = doc.to_dict()
         return {
             "verified": True,
             "passport_id": passport_id,
             "status": data.get("status", "active"),
-            "created_at": data.get("created_at"),
-            "item_count": len(data.get("item_ids", [])),
-            "provenance_chain": [
-                {"event": "Transfer Initiated", "timestamp": data.get("created_at"), "by": "Sanitized Owner"},
-                {"event": "Passport Minted", "timestamp": data.get("created_at"), "verified_by": "Numista.AI Security Engine"}
-            ]
         }
     except Exception as e:
         logger.exception("Provenance verification failed")

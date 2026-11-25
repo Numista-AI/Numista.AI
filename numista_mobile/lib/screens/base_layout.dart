@@ -30,6 +30,7 @@ import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
 import 'add_world_item_screen.dart';
 import 'attorney_portal_screen.dart';
 import 'lateral_transfer_screen.dart';
+import '../services/claim_link_service.dart';
 import 'admin_feedback_screen.dart';
 import 'my_tickets_screen.dart';
 import 'support_portal_screen.dart';
@@ -262,6 +263,12 @@ class _BaseLayoutState extends State<BaseLayout> {
       _activeRoute = morganRoute;
       _addCoinsInitialTabName = WelcomeScreen.pendingTabName;
       WelcomeScreen.pendingTabName = null;
+    }
+
+    // Claim link (#/claim?t=TOKEN): after sign-in, open the Claim tab. The token stays in memory only.
+    if (ClaimLinkService.hasPendingToken && !widget.testSkipFirebase && !widget.isDemoMode &&
+        !GuestSeedService.isBrowseDemoMode) {
+      _activeRoute = 'Claim Transfer';
     }
 
     // Load eBay credentials from Firestore into SharedPreferences.

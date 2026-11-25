@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../models/coin_model.dart';
 import '../services/analytics_calculator.dart';
 import '../services/auth_service.dart';
+import '../utils/sold_item.dart';
 import '../services/guest_seed_service.dart';
 import '../services/morgan_action_bus.dart';
 import '../services/morgan_screen_state_registry.dart';
@@ -75,7 +76,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 final data = d.data();
                 final itemType =
                     (data['item_type'] ?? '').toString().toLowerCase().trim();
-                return data['is_supply'] != true && itemType != 'supply';
+                return data['is_supply'] != true && itemType != 'supply' && !isSoldItem(data);
               })
               .map((d) => CoinModel.fromMap(d.data(), d.id))
               .toList();

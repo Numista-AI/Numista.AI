@@ -8,13 +8,21 @@ class LateralTransferService {
 
   LateralTransferService({this.baseUrl = kApiBaseUrl});
 
-  /// Initiates a lateral transfer with privacy options
+  /// Initiates a transfer (v2). The server returns the claim token, code and the Transfer Document
+  /// (base64 PDF) ONCE; only hashes are stored.
   Future<TransferModel> initiateTransfer({
     required String userId,
     required List<String> itemIds,
     String? recipientEmail,
     Map<String, bool>? privacyToggles,
     Map<String, int>? itemQuantities,
+    String transferType = 'lateral',
+    int? expiresDays,
+    String source = 'active',
+    String? senderDisplay,
+    String? senderAddress,
+    bool showPrice = false,
+    double? salePriceUsd,
   }) async {
     final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/initiate'),
@@ -23,6 +31,13 @@ class LateralTransferService {
         'item_ids': itemIds,
         'recipient_email': recipientEmail,
         'item_quantities': itemQuantities,
+        'transfer_type': transferType,
+        'expires_days': expiresDays,
+        'source': source,
+        'sender_display': senderDisplay,
+        'sender_address': senderAddress,
+        'show_price': showPrice,
+        'sale_price_usd': salePriceUsd,
         'privacy_toggles': privacyToggles ?? {
           'hide_cost_basis': true,
           'hide_private_notes': true,
@@ -40,28 +55,62 @@ class LateralTransferService {
     }
   }
 
-  /// Claims a pending transfer using PIN/token
+  /// Claims a pending transfer. One endpoint: pass a [claimToken] (QR), a [claimCode] (typed),
+  /// or the legacy [transferId] + [claimPin].
   Future<Map<String, dynamic>> claimTransfer({
     required String userId,
-    required String transferId,
-    required String claimPin,
+    String? transferId,
+    String? claimPin,
+    String? claimToken,
+    String? claimCode,
     List<String>? selectedItemIds,
   }) async {
     final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/claim'),
       body: jsonEncode({
         'user_id': userId,
-        'transfer_id': transferId,
-        'claim_pin': claimPin,
+        'transfer_id': ?transferId,
+        'claim_pin': ?claimPin,
+        'claim_token': ?claimToken,
+        'claim_code': ?claimCode,
         'selected_item_ids': selectedItemIds,
       }),
     );
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
+    } else if (response.statusCode == 429) {
+      throw Exception('Too many attempts. Please try again later.');
     } else {
       throw Exception('Failed to claim transfer: ${response.body}');
     }
+  }
+
+  /// Authenticated preview of a claim link: item titles only.
+  Future<Map<String, dynamic>> previewTransfer({String? claimToken, String? claimCode}) async {
+    final params = <String, String>{
+      'claim_token': ?claimToken,
+      'claim_code': ?claimCode,
+    };
+    final response = await HttpAuthClient.get(
+      Uri.parse('$baseUrl/api/transfer/preview').replace(queryParameters: params),
+    );
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(jsonDecode(response.body)['preview'] as Map);
+    }
+    throw Exception('Failed to preview transfer: ${response.body}');
+  }
+
+  /// Sender reissues a pending transfer's token and code (also upgrades a legacy PIN transfer).
+  Future<Map<String, dynamic>> rotateClaimCode(String transferId) async {
+    final response = await HttpAuthClient.post(
+      Uri.parse('$baseUrl/api/transfer/rotate-code'),
+      body: jsonEncode({'transfer_id': transferId}),
+    );
+    if (response.statusCode == 200) {
+      return Map<String, dynamic>.from(jsonDecode(response.body)['result'] as Map);
+    }
+    throw Exception('Failed to reissue code: ${response.body}');
   }
 
   /// Recalls an unclaimed pending transfer

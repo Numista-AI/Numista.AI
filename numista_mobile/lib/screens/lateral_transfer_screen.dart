@@ -13,6 +13,9 @@ import '../models/transfer_model.dart';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
 import '../services/lateral_transfer_service.dart';
+import '../services/claim_link_service.dart';
+import '../utils/sell_transfer_access.dart';
+import 'dart:convert' show base64Decode;
 
 class LateralTransferScreen extends StatefulWidget {
   final String userId;
@@ -36,6 +39,12 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _claimTransferIdController = TextEditingController();
   final TextEditingController _claimPinController = TextEditingController();
+  final TextEditingController _claimCodeController = TextEditingController();
+  final TextEditingController _senderNameController = TextEditingController();
+  final TextEditingController _senderAddressController = TextEditingController();
+  String? _pendingClaimToken; // from a #/claim?t= link, held in memory only
+  String _transferType = 'lateral'; // sale_ebay | sale_private | gift | lateral
+  int _expiresDays = 60; // 7 | 30 | 60
 
   String _activeTab = 'send'; // 'send', 'sell_outside', 'sold_history', 'claim'
 
@@ -67,11 +76,11 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   Color get _textSecondary => _isDark ? const Color(0xFFCBD5E1) : const Color(0xFF5A5C69);
   Color get _inputFill => _isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
 
-  // Default to FALSE so nothing is scrubbed unless sender explicitly checks the toggle
-  bool _hideCostBasis = false;
-  bool _hidePrivateNotes = false;
-  bool _hideStorageLocation = false;
-  bool _hideInvoices = false;
+  // PLAN v1.2: privacy by default. Everything private is hidden unless the seller opts in per field.
+  bool _hideCostBasis = true;
+  bool _hidePrivateNotes = true;
+  bool _hideStorageLocation = true;
+  bool _hideInvoices = true;
 
   bool _isLoading = false;
   bool _isClaiming = false;
@@ -89,6 +98,13 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     super.initState();
     _activeTab = widget.initialTab;
     _saleDateController.text = DateTime.now().toIso8601String().substring(0, 10);
+    // Browse Demo / anonymous: show the sign-up message and make NO Firestore or HTTP call from here.
+    if (!canSellOrTransfer()) return;
+    final pendingToken = ClaimLinkService.takePendingToken();
+    if (pendingToken != null) {
+      _pendingClaimToken = pendingToken;
+      _activeTab = 'claim';
+    }
     if (widget.itemsToTransfer.isNotEmpty) {
       _allCoins = List.from(widget.itemsToTransfer);
       _selectedCoinIds = _allCoins.map((c) => c.id).toSet();
@@ -107,6 +123,9 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     _searchController.dispose();
     _claimTransferIdController.dispose();
     _claimPinController.dispose();
+    _claimCodeController.dispose();
+    _senderNameController.dispose();
+    _senderAddressController.dispose();
     _salePriceController.dispose();
     _saleFeesController.dispose();
     _saleDateController.dispose();
@@ -147,7 +166,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
         coins = snap.docs
             .map((doc) => CoinModel.fromFirestore(doc))
-            .where((c) => c.transferStatus != 'pending' && c.transferStatus != 'transferred' && c.transferStatus != 'claimed')
+            .where((c) => c.transferStatus != 'pending' && c.transferStatus != 'transferred' && c.transferStatus != 'claimed' && c.transferStatus != 'sold' && !c.isLocked)
             .toList();
       }
 
@@ -235,6 +254,10 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
             ? _recipientEmailController.text.trim()
             : null,
         itemQuantities: _itemTransferQuantities.isNotEmpty ? _itemTransferQuantities : null,
+        transferType: _transferType,
+        expiresDays: _expiresDays,
+        senderDisplay: _senderNameController.text.trim().isNotEmpty ? _senderNameController.text.trim() : null,
+        senderAddress: _senderAddressController.text.trim().isNotEmpty ? _senderAddressController.text.trim() : null,
         privacyToggles: {
           'hide_cost_basis': _hideCostBasis,
           'hide_private_notes': _hidePrivateNotes,
@@ -260,12 +283,14 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   }
 
   Future<void> _claimTransfer() async {
+    final code = _claimCodeController.text.trim();
     final transferId = _claimTransferIdController.text.trim();
     final pin = _claimPinController.text.trim();
+    final token = _pendingClaimToken;
 
-    if (transferId.isEmpty || pin.isEmpty) {
+    if (token == null && code.isEmpty && (transferId.isEmpty || pin.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter both Transfer ID and 6-Digit Claim PIN.')),
+        const SnackBar(content: Text('Please enter the claim code from your Transfer Document.')),
       );
       return;
     }
@@ -276,20 +301,31 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     try {
       final res = await _transferService.claimTransfer(
         userId: userIdToUse,
-        transferId: transferId,
-        claimPin: pin,
+        claimToken: token,
+        claimCode: token == null && code.isNotEmpty ? code : null,
+        transferId: token == null && code.isEmpty ? transferId : null,
+        claimPin: token == null && code.isEmpty ? pin : null,
       );
-      setState(() => _isClaiming = false);
+      setState(() {
+        _isClaiming = false;
+        _pendingClaimToken = null;
+      });
       if (!mounted) return;
 
-      final count = res['result']?['items_claimed_count'] ?? 0;
+      final result = (res['result'] as Map?) ?? const {};
+      final count = result['items_claimed_count'] ?? 0;
+      final locked = result['locked'] == true;
+      final lockedMessage = result['message']?.toString();
 
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: _cardBg,
           title: Text('Transfer Adopted Successfully!', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
-          content: Text('$count item(s) were added to your collection vault with full provenance records.',
+          content: Text(
+              locked && lockedMessage != null
+                  ? lockedMessage
+                  : '$count item(s) were added to your collection with full provenance records.',
               style: TextStyle(color: _textSecondary)),
           actions: [
             ElevatedButton(
@@ -297,6 +333,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                 Navigator.pop(ctx);
                 _claimTransferIdController.clear();
                 _claimPinController.clear();
+                _claimCodeController.clear();
               },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),
               child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -313,8 +350,31 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     }
   }
 
+  Widget _buildSignInRequired() {
+    return Scaffold(
+      backgroundColor: _scaffoldBg,
+      appBar: AppBar(
+        title: Text('Transfer & Sell', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
+        backgroundColor: _cardBg,
+        iconTheme: IconThemeData(color: _textPrimary),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            kSellTransferDemoCta,
+            key: const Key('sell_transfer_demo_cta'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!canSellOrTransfer()) return _buildSignInRequired();
     return Scaffold(
       backgroundColor: _scaffoldBg,
       appBar: AppBar(
@@ -401,7 +461,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'All invoice and financial details are included by default. Toggle switches on below if you wish to scrub specific data.',
+                  'Everything private is hidden by default. Switch a setting off only if you want the recipient to see it.',
                   style: TextStyle(color: _textSecondary, fontSize: 13),
                 ),
                 Divider(height: 24, color: _borderCol),
@@ -436,6 +496,75 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         ),
         const SizedBox(height: 20),
 
+        // Transfer type, expiry and the optional sender details printed on the Transfer Document
+        Text('Type of transfer', style: TextStyle(fontWeight: FontWeight.bold, color: _textPrimary)),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          key: const Key('transfer_type_dropdown'),
+          initialValue: _transferType,
+          dropdownColor: _cardBg,
+          style: TextStyle(color: _textPrimary),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: _inputFill,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'sale_ebay', child: Text('Sale (eBay)')),
+            DropdownMenuItem(value: 'sale_private', child: Text('Sale (private)')),
+            DropdownMenuItem(value: 'gift', child: Text('Gift')),
+            DropdownMenuItem(value: 'lateral', child: Text('Lateral Transfer')),
+          ],
+          onChanged: (v) => setState(() => _transferType = v ?? 'lateral'),
+        ),
+        const SizedBox(height: 14),
+        Text('Claim code valid for', style: TextStyle(fontWeight: FontWeight.bold, color: _textPrimary)),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<int>(
+          key: const Key('transfer_expiry_dropdown'),
+          initialValue: _expiresDays,
+          dropdownColor: _cardBg,
+          style: TextStyle(color: _textPrimary),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: _inputFill,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+          ),
+          items: const [
+            DropdownMenuItem(value: 7, child: Text('7 days')),
+            DropdownMenuItem(value: 30, child: Text('30 days')),
+            DropdownMenuItem(value: 60, child: Text('60 days')),
+          ],
+          onChanged: (v) => setState(() => _expiresDays = v ?? 60),
+        ),
+        const SizedBox(height: 14),
+        Text('Name to print on the document (optional)', style: TextStyle(fontWeight: FontWeight.bold, color: _textPrimary)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _senderNameController,
+          style: TextStyle(color: _textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Leave blank to stay anonymous',
+            filled: true,
+            fillColor: _inputFill,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text('Address to print (optional, used for this document only)', style: TextStyle(fontWeight: FontWeight.bold, color: _textPrimary)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _senderAddressController,
+          style: TextStyle(color: _textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Never read from your profile. Leave blank to hide it.',
+            filled: true,
+            fillColor: _inputFill,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+          ),
+        ),
+        const SizedBox(height: 20),
+
         // Recipient Email
         Text(
           'Recipient Email (Optional)',
@@ -446,7 +575,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           controller: _recipientEmailController,
           style: TextStyle(color: _textPrimary),
           decoration: InputDecoration(
-            hintText: 'user@example.com (or leave blank for face-to-face PIN claim)',
+            hintText: 'user@example.com (or leave blank and share the claim code or QR)',
             hintStyle: const TextStyle(color: Color(0xFF64748B)),
             filled: true,
             fillColor: _inputFill,
@@ -820,6 +949,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   }
 
   Widget _buildClaimView() {
+    final hasLink = _pendingClaimToken != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -838,57 +968,67 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                   children: [
                     const Icon(Icons.move_to_inbox_outlined, color: Color(0xFF0284C7), size: 28),
                     const SizedBox(width: 10),
-                    Text(
-                      'Adopt Transferred Items into Your Vault',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _textPrimary),
+                    Expanded(
+                      child: Text(
+                        'Claim an item (free)',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _textPrimary),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Enter the Transfer ID and 6-digit Claim PIN code from the Passport Certificate to adopt the items directly into your personal collection vault.',
+                  hasLink
+                      ? 'Your claim link is ready. Press the button to add the item to your collection.'
+                      : 'Type the claim code from your Transfer Document, or scan its QR code. The item and its history move to your collection.',
                   style: TextStyle(color: _textSecondary, fontSize: 14, height: 1.4),
                 ),
                 Divider(height: 28, color: _borderCol),
 
-                Text('Transfer ID', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _claimTransferIdController,
-                  style: TextStyle(color: _textPrimary),
-                  decoration: InputDecoration(
-                    hintText: 'e.g. 10cb9dbd7a1d45069329a7e3f4db5443',
-                    hintStyle: const TextStyle(color: Color(0xFF64748B)),
-                    filled: true,
-                    fillColor: _scaffoldBg,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0284C7))),
-                    prefixIcon: const Icon(Icons.key, color: Color(0xFF0284C7)),
+                if (!hasLink) ...[
+                  Text('Claim code', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    key: const Key('claim_code_field'),
+                    controller: _claimCodeController,
+                    textCapitalization: TextCapitalization.characters,
+                    maxLength: 11,
+                    style: TextStyle(color: _textPrimary, fontSize: 20, letterSpacing: 3, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: 'XXXXX-XXXXX',
+                      hintStyle: const TextStyle(color: Color(0xFF64748B), letterSpacing: 0, fontSize: 14),
+                      filled: true,
+                      fillColor: _scaffoldBg,
+                      counterStyle: const TextStyle(color: Color(0xFF64748B)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0284C7))),
+                      prefixIcon: const Icon(Icons.key, color: Color(0xFF0284C7)),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                Text('6-Digit Claim PIN', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _claimPinController,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  style: TextStyle(color: _textPrimary, fontSize: 18, letterSpacing: 3, fontWeight: FontWeight.bold),
-                  decoration: InputDecoration(
-                    hintText: '704167',
-                    hintStyle: const TextStyle(color: Color(0xFF64748B), letterSpacing: 0, fontSize: 14),
-                    filled: true,
-                    fillColor: _scaffoldBg,
-                    counterStyle: const TextStyle(color: Color(0xFF64748B)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0284C7))),
-                    prefixIcon: const Icon(Icons.pin, color: Color(0xFF0284C7)),
+                  const SizedBox(height: 8),
+                  ExpansionTile(
+                    key: const Key('legacy_claim_expander'),
+                    tilePadding: EdgeInsets.zero,
+                    title: Text('Have an old Transfer ID and 6-digit PIN?', style: TextStyle(color: _textSecondary, fontSize: 13)),
+                    children: [
+                      TextField(
+                        controller: _claimTransferIdController,
+                        style: TextStyle(color: _textPrimary),
+                        decoration: const InputDecoration(labelText: 'Transfer ID'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _claimPinController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        style: TextStyle(color: _textPrimary, letterSpacing: 3),
+                        decoration: const InputDecoration(labelText: '6-digit PIN'),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 20),
+                ],
+                const SizedBox(height: 12),
 
                 SizedBox(
                   width: double.infinity,
@@ -899,7 +1039,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                     label: _isClaiming
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text(
-                            'Verify & Adopt Transferred Items',
+                            'Claim this item',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                           ),
                     style: ElevatedButton.styleFrom(
@@ -969,43 +1109,30 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
   Widget _buildSuccessView() {
     final transfer = _createdTransfer!;
+    final hasV2Secrets = transfer.claimCode.isNotEmpty;
 
     return Column(
       children: [
         const Icon(Icons.check_circle_outline, color: Colors.green, size: 72),
         const SizedBox(height: 12),
         Text(
-          'Transfer Initiated Successfully!',
+          'Transfer ready!',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: _textPrimary),
         ),
         const SizedBox(height: 8),
         Text(
-          'Share the 6-digit Claim PIN below with the recipient or download the Certificate of Transfer.',
+          hasV2Secrets
+              ? 'Print the Transfer Document and give it to the recipient. They scan its QR code or type the claim code. This code is shown only now.'
+              : 'Share the Claim PIN below with the recipient or download the Certificate of Transfer.',
           textAlign: TextAlign.center,
           style: TextStyle(color: _textSecondary),
         ),
         if (transfer.recipientEmail != null && transfer.recipientEmail!.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.mark_email_read_outlined, color: Colors.greenAccent, size: 18),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    'Certificate of Transfer & PIN emailed to ${transfer.recipientEmail} (Locked to recipient account)',
-                    style: const TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
+          Text(
+            'Also emailed to ${transfer.recipientEmail} (locked to that account).',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ],
         const SizedBox(height: 24),
@@ -1018,13 +1145,14 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           ),
           child: Column(
             children: [
-              const Text(
-                'CLAIM PIN CODE',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8)),
+              Text(
+                hasV2Secrets ? 'CLAIM CODE' : 'CLAIM PIN CODE',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8)),
               ),
               const SizedBox(height: 4),
-              Text(
-                transfer.claimPin,
+              SelectableText(
+                hasV2Secrets ? transfer.claimCode : transfer.claimPin,
+                key: const Key('created_claim_code'),
                 style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -1033,7 +1161,8 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                 ),
               ),
               const SizedBox(height: 4),
-              const Text('Valid for 60 days', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+              Text('Valid until ${transfer.expiresAt.toIso8601String().substring(0, 10)}',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
             ],
           ),
         ),
@@ -1043,19 +1172,18 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
           height: 48,
           child: ElevatedButton.icon(
             icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
-            label: const Text(
-              'Download Certificate of Transfer',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            label: Text(
+              hasV2Secrets ? 'Download Transfer Document (with QR)' : 'Download Certificate of Transfer',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),
             onPressed: () async {
               try {
-                final bytes = await _transferService.fetchCertificatePdfBytes(transfer.transferId);
-                // Open the PDF bytes using the universal_io / printing package or web download
-                // On web: trigger a Blob download; on mobile: save to temp and open with PDF viewer
-                // For now, use the printing package's sharePdf to open the system share sheet
-                // ignore: depend_on_referenced_packages
-                await _openPdfBytes(Uint8List.fromList(bytes), 'certificate_${transfer.transferId}.pdf');
+                // v2: the document with the QR and code came back with the creation response (never stored).
+                final bytes = transfer.documentPdfB64.isNotEmpty
+                    ? base64Decode(transfer.documentPdfB64)
+                    : await _transferService.fetchCertificatePdfBytes(transfer.transferId);
+                await _openPdfBytes(Uint8List.fromList(bytes), 'transfer_document_${transfer.transferId}.pdf');
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(

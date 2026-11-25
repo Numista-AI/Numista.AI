@@ -654,7 +654,7 @@ def test_tc13_undo_mode3_full_sale_resurrection_sf1_sf7():
     """
     TC-13: Full Sale Undo (Resurrection), SF1 (unit cost basis restoration) & SF7 (Quantity in archive).
     - Checks archive doc sets Quantity == sold_qty (SF7).
-    - Checks full sale removes active coin.
+    - R3 (PLAN v1.2): a full sale KEEPS the item doc, marked Sold (never deleted).
     - Checks undo resurrects coin with original unit cost_basis (not total allocated) and original created_at (SF1).
     """
     db = FakeFirestore()
@@ -683,8 +683,14 @@ def test_tc13_undo_mode3_full_sale_resurrection_sf1_sf7():
     )
     sale_archive_id = sale_res["sale_archive_id"]
 
-    # Active coin should be deleted
-    assert db.collection("users").document(user_id).collection("coins").document(coin_id).get().exists is False
+    # R3: Mark Sold, never delete. The doc stays, read-only, with status "sold".
+    kept = db.collection("users").document(user_id).collection("coins").document(coin_id).get()
+    assert kept.exists is True
+    kept_data = kept.to_dict()
+    assert kept_data["status"] == "sold"
+    assert kept_data["transferStatus"] == "sold"
+    assert kept_data["sale_archive_id"] == sale_res["sale_archive_id"]
+    assert sale_res["item_kept_as_sold"] is True
 
     # Archive document inspection (SF7 & SF1)
     arch_doc = db.collection("users").document(user_id).collection("transferred_coins").document(sale_archive_id).get().to_dict()

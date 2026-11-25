@@ -43,7 +43,9 @@ service cloud.firestore {
 
       // Owner deletes their own coins (soft-archive is done server-side;
       // hard delete is not used in this sprint, but not blocked at rules level)
-      allow delete: if isOwner(email);
+      // PLAN v1.2 (F14): a Sold or pending item is read-only for clients.
+      allow delete: if isOwner(email)
+                    && resource.data.get('status', 'active') != 'sold' && resource.data.get('transferStatus', 'none') != 'pending';
 
       // Owner creates a new coin:
       //   - is_demo MUST be present in the document AND explicitly false.
@@ -63,7 +65,28 @@ service cloud.firestore {
       allow update: if isOwner(email)
                     && !request.resource.data.diff(resource.data)
                           .affectedKeys()
-                          .hasAny(['is_demo', 'is_demo_cleared']);
+                          .hasAny(['is_demo', 'is_demo_cleared'])
+                    && resource.data.get('status', 'active') != 'sold' && resource.data.get('transferStatus', 'none') != 'pending';
+    }
+
+    // PLAN v1.2 (G1, F14): paper money and legacy currency get explicit blocks so Sold and pending items
+    // are read-only for clients. They are ALSO in the wildcard exclusion lists above, because overlapping
+    // match rules are OR-ed: without the exclusion the wildcard would still grant them full write access.
+    match /users/{email}/banknotes/{docId} {
+      allow read, create: if isOwner(email);
+      allow update, delete: if isOwner(email)
+                            && resource.data.get('status', 'active') != 'sold' && resource.data.get('transferStatus', 'none') != 'pending';
+    }
+    match /users/{email}/banknotes/{docId}/{rest=**} {
+      allow read, write: if isOwner(email);
+    }
+    match /users/{email}/currency/{docId} {
+      allow read, create: if isOwner(email);
+      allow update, delete: if isOwner(email)
+                            && resource.data.get('status', 'active') != 'sold' && resource.data.get('transferStatus', 'none') != 'pending';
+    }
+    match /users/{email}/currency/{docId}/{rest=**} {
+      allow read, write: if isOwner(email);
     }
 
     // NOTE: match /users/{email}/profile was removed (13 Oct 2026).
@@ -115,12 +138,12 @@ service cloud.firestore {
     // server-only subcollections are excluded so writes are blocked.
     match /users/{email}/{sub}/{docId} {
       allow read, write: if isOwner(email)
-        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency', 'wishlist_email_logs']);
+        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency', 'wishlist_email_logs', 'banknotes', 'currency']);
     }
     // Nested docs within writable subcollections
     match /users/{email}/{sub}/{docId}/{rest=**} {
       allow read, write: if isOwner(email)
-        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency', 'wishlist_email_logs']);
+        && !(sub in ['settings', 'estate_reports', 'morgan_action_log', 'trash', 'audit_log', 'coins', 'profile', 'morgan_proposals', 'subaccounts', 'subscription', 'transferred_coins', 'transferred_currency', 'wishlist_email_logs', 'banknotes', 'currency']);
     }
     // Server-only subcollections — owner may read but NOT write (server SA only)
     match /users/{email}/settings/{docId} {

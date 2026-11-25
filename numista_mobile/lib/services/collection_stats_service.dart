@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
 import 'guest_seed_service.dart';
 import 'set_expansion_helper.dart';
+import '../utils/sold_item.dart';
 
 class CollectionStatsService {
   static double _parseNumber(dynamic val) {
@@ -40,11 +41,13 @@ class CollectionStatsService {
     }
 
     final db = FirebaseFirestore.instance;
-    final snap = await db.collection(AuthService.coinsPath).get();  // no .limit(500)
+    final allSnap = await db.collection(AuthService.coinsPath).get();  // no .limit(500)
+    // R3: Sold items keep their doc but are not part of the owned collection.
+    final liveDocs = allSnap.docs.where((d) => !isSoldItem(d.data())).toList();
 
     // Build expansion-aware counts
-    final docs = snap.docs.map((d) => d.data()).toList();
-    final docIds = snap.docs.map((d) => d.id).toList();
+    final docs = liveDocs.map((d) => d.data()).toList();
+    final docIds = liveDocs.map((d) => d.id).toList();
     final expansion = expandCollection(docs, docIds);
 
     int coinCount = 0;
@@ -68,7 +71,7 @@ class CollectionStatsService {
     }
 
     // Value aggregation: iterate original docs for lot_value
-    for (final doc in snap.docs) {
+    for (final doc in liveDocs) {
       final d = doc.data();
       final itemType = (d['item_type'] ?? '').toString().toLowerCase().trim();
       final isSupply = d['is_supply'] == true || itemType == 'supply';

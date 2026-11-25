@@ -18,6 +18,7 @@ import 'currency_collection_screen.dart';
 import 'unified_coin_detail_screen.dart';
 import '../services/world_item_service.dart';
 import '../services/auth_service.dart';
+import '../utils/sold_item.dart';
 import '../models/coin_model.dart';
 import '../services/guest_seed_service.dart';
 import '../services/coin_image_service.dart';
@@ -117,6 +118,8 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
   // --- UI / filter state ---------------------------------------------------
   String _currentTab = 'All';
+  /// R3: Sold items keep their doc but stay out of My Collection unless the user asks to see them.
+  bool _showSold = false;
   String? _selectedCoinId;
   CollectionLimitMode _limitMode = CollectionLimitMode.all;
   String  _searchQuery      = '';
@@ -873,6 +876,9 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
       // Transferred items
       final tStatus = m['transferStatus']?.toString() ?? '';
       if (tStatus == 'transferred') return false;
+
+      // Sold items (status == 'sold') are hidden unless "Show sold" is on
+      if (isSoldItem(m) && !_showSold) return false;
 
       // Supplies
       final itemType = _rowField(m, 'item_type', 'Item Type').toLowerCase();
@@ -2478,14 +2484,28 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                 hintStyle: TextStyle(color: _subtext, fontSize: 14),
                 contentPadding: EdgeInsets.symmetric(horizontal: 12),
                 prefixIcon: Icon(Icons.search, size: 18, color: _subtext),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear, size: 16, color: _subtext),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() => _searchQuery = '');
-                        })
-                    : null,
+                // The "Show sold" toggle lives inside the (flexible) search field so the filters Row
+                // never gains a fixed-width child: a FilterChip here overflowed a 390px phone by 47px.
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_searchQuery.isNotEmpty)
+                      IconButton(
+                          icon: Icon(Icons.clear, size: 16, color: _subtext),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() => _searchQuery = '');
+                          }),
+                    Tooltip(
+                      message: _showSold ? 'Hide sold items' : 'Show sold items',
+                      child: IconButton(
+                        key: const Key('show_sold_chip'),
+                        icon: Icon(Icons.sell_outlined, size: 18, color: _showSold ? _accent : _subtext),
+                        onPressed: () => setState(() => _showSold = !_showSold),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -5459,7 +5479,31 @@ class _CollectionCardImage extends StatelessWidget {
   final Map<String, dynamic> data;
   const _CollectionCardImage({required this.data});
   @override
-  Widget build(BuildContext context) => CollectionCardImage(data: data);
+  Widget build(BuildContext context) {
+    final image = CollectionCardImage(data: data);
+    final sold = isSoldItem(data);
+    final locked = isLockedItem(data);
+    if (!sold && !locked) return image;
+    return Stack(children: [
+      image,
+      Positioned(
+        left: 4,
+        top: 4,
+        child: Container(
+          key: Key(sold ? 'sold_badge' : 'locked_badge'),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: sold ? Colors.green.shade700 : Colors.amber.shade800,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            sold ? 'SOLD' : 'LOCKED until you upgrade',
+            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    ]);
+  }
 }
 
 

@@ -1,3 +1,4 @@
+import 'services/claim_link_service.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, kReleaseMode, debugPrint;
@@ -79,6 +80,9 @@ Future<void> main() async {
   };
 
   final uri = Uri.base;
+
+  // Claim link (#/claim?t=TOKEN): remember the token in memory until the user is signed in.
+  ClaimLinkService.captureFromUri(uri);
 
   // ── Public Wishlist deep-link detection ──────────────────────────────────
   final isPublicWishlist = uri.path.contains('/wishlist/') ||

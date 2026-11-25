@@ -1660,11 +1660,33 @@
     ]
   },
   {
+    "path": "/api/transfer/preview",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_preview_transfer",
+    "tags": [],
+    "dependencies": [
+      "require_registered_user"
+    ]
+  },
+  {
     "path": "/api/transfer/recall",
     "methods": [
       "POST"
     ],
     "name": "api_recall_transfer",
+    "tags": [],
+    "dependencies": [
+      "require_registered_user"
+    ]
+  },
+  {
+    "path": "/api/transfer/rotate-code",
+    "methods": [
+      "POST"
+    ],
+    "name": "api_rotate_transfer_code",
     "tags": [],
     "dependencies": [
       "require_registered_user"

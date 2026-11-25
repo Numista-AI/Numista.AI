@@ -529,3 +529,570 @@ test("DENY: authenticated getDocs (list) on .../skus and setDoc both fail", asyn
     setDoc(doc(db, "global_metadata/usmint_sku_dictionary/skus/26SQRP"), { name: "test" })
   );
 });
+/**
+ * firestore.rules.test.js
+ * =======================
+ * ADDENDUM B — Firestore field-level rules unit tests
+ * Tests the affectedKeys() guards on is_demo, is_demo_cleared, sandbox_cleared.
+ *
+ * Run: npx @firebase/rules-unit-testing  (from numista_mobile/)
+ * Or:  firebase emulators:exec --only firestore "npx jest firestore.rules.test.js"
+ *
+ * Acceptance criteria from ITEM 6 + v4.1 Addendum B:
+ *   [ ] Client SDK attempt to set is_demo: true on own coin returns PERMISSION_DENIED
+ *   [ ] Client SDK attempt to change is_demo_cleared on own coin returns PERMISSION_DENIED
+ *   [ ] Client SDK attempt to change sandbox_cleared on own profile returns PERMISSION_DENIED
+ *   [ ] Client SDK can create a coin with is_demo: false (allowed)
+ *   [ ] Client SDK can create a coin without is_demo field (allowed; backfill covers it)
+ *   [ ] Client SDK can update other coin fields without touching is_demo (allowed)
+ */
+
+const { initializeTestEnvironment, assertFails, assertSucceeds } =
+  require("@firebase/rules-unit-testing");
+const { doc, setDoc, updateDoc, deleteDoc, getDoc, collection, getDocs } = require("firebase/firestore");
+const fs = require("fs");
+const path = require("path");
+
+const PROJECT_ID = "studio-9101802118-8c9a8";
+const RULES_PATH = path.join(__dirname, "firestore.rules");
+
+let testEnv;
+let ownerCtx;
+let otherCtx;
+
+beforeAll(async () => {
+  testEnv = await initializeTestEnvironment({
+    projectId: PROJECT_ID,
+    firestore: {
+      rules: fs.readFileSync(RULES_PATH, "utf8"),
+      host: "127.0.0.1",
+      port: 8080,
+    },
+  });
+
+  // Owner: authenticated user whose email matches the path
+  ownerCtx = testEnv.authenticatedContext("owner_uid", { email: "testowner@numista.ai" });
+
+  // Other user: different uid and email
+  otherCtx = testEnv.authenticatedContext("other_uid", { email: "other@numista.ai" });
+});
+
+afterAll(async () => {
+  await testEnv.cleanup();
+});
+
+beforeEach(async () => {
+  await testEnv.clearFirestore();
+});
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const ownerEmail = "testowner@numista.ai";
+const coinPath = (id) => `users/${ownerEmail}/coins/${id}`;
+const profilePath = `users/${ownerEmail}/profile/main`; // 4-segment doc path (collection/doc/collection/doc)
+
+// ─── CREATE rules ──────────────────────────────────────────────────────────────
+
+// Rule change (v2 plan): is_demo and is_demo_cleared must BOTH be present and
+// explicitly false on create. get('is_demo', false) != true allowed omitting the
+// field — then WHERE is_demo == false hides the coin (empty-vault bug).
+
+test("DENY: owner_create_omitting_is_demo — field absent triggers PERMISSION_DENIED", async () => {
+  // This is the critical empty-vault regression test.
+  // A coin created without is_demo would survive the old get() rule but be
+  // hidden by the WHERE is_demo == false display filter.
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, coinPath("c1")), {
+      Year: "1921",
+      Denomination: "Dollar",
+      source: "manual",
+      // is_demo intentionally omitted — MUST be DENIED by new rule
+    })
+  );
+});
+
+test("ALLOW: owner creates coin with is_demo: false and is_demo_cleared: false", async () => {
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    setDoc(doc(db, coinPath("c2")), {
+      Year: "1941",
+      Denomination: "Half Dollar",
+      is_demo: false,
+      is_demo_cleared: false,
+    })
+  );
+});
+
+test("DENY: owner creates coin with is_demo: true", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, coinPath("c3")), {
+      Year: "1944",
+      Denomination: "Cent",
+      is_demo: true,         // BLOCKED — client may never create a demo coin
+      is_demo_cleared: false,
+    })
+  );
+});
+
+test("DENY: owner creates coin with is_demo_cleared: true", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, coinPath("c4")), {
+      Year: "1921",
+      is_demo: false,
+      is_demo_cleared: true,  // BLOCKED — client may never set this on create
+    })
+  );
+});
+
+// ─── UPDATE rules ──────────────────────────────────────────────────────────────
+
+// Seed a coin doc first, then try to update protected fields
+async function seedCoin(id, data = {}) {
+  await testEnv.withSecurityRulesDisabled(async (adminCtx) => {
+    await setDoc(doc(adminCtx.firestore(), coinPath(id)), {
+      Year: "1921",
+      Denomination: "Dollar",
+      is_demo: false,
+      is_demo_cleared: false,
+      ...data,
+    });
+  });
+}
+
+test("ALLOW: owner updates non-protected coin field (Condition)", async () => {
+  await seedCoin("c5");
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    updateDoc(doc(db, coinPath("c5")), { Condition: "MS63" })
+  );
+});
+
+test("DENY: owner attempts to set is_demo: true on own coin", async () => {
+  await seedCoin("c6");
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, coinPath("c6")), { is_demo: true })
+  );
+});
+
+test("DENY: owner attempts to change is_demo from true to false (any value change blocked)", async () => {
+  // Seed via admin with is_demo: true so the update is a real value change (true -> false)
+  // affectedKeys() only fires when a value actually changes — false->false has no diff.
+  await testEnv.withSecurityRulesDisabled(async (adminCtx) => {
+    await setDoc(doc(adminCtx.firestore(), coinPath("c7")), {
+      Year: "2021", is_demo: true, is_demo_cleared: false,
+    });
+  });
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, coinPath("c7")), { is_demo: false, Condition: "AU55" })
+  );
+});
+
+test("DENY: owner attempts to change is_demo_cleared on own coin", async () => {
+  await seedCoin("c8");
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, coinPath("c8")), { is_demo_cleared: true })
+  );
+});
+
+// ─── Entitlement field rules on users/{email} user doc ────────────────────────
+// NOTE: The old profile subcollection tests (users/{email}/profile) were removed
+// because the app never writes to that subcollection directly. sandbox_cleared,
+// is_lifetime_family_estate, is_ai_qc_account, and beta_tester all live on the
+// users/{email} top-level doc, guarded by _noEntitlementChange() below.
+// The dead match /users/{email}/profile rule was removed from firestore.rules.
+
+async function seedUserDoc(data = {}) {
+  await testEnv.withSecurityRulesDisabled(async (adminCtx) => {
+    await setDoc(doc(adminCtx.firestore(), `users/${ownerEmail}`), {
+      display_name: "Test Owner",
+      sandbox_cleared: false,
+      ...data,
+    });
+  });
+}
+
+test("ALLOW: owner updates display_name on user doc (non-protected field)", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    updateDoc(doc(db, `users/${ownerEmail}`), { display_name: "Eric D." })
+  );
+});
+
+test("DENY: owner attempts to change sandbox_cleared on own user doc", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, `users/${ownerEmail}`), { sandbox_cleared: true })
+  );
+});
+
+test("DENY: owner cannot update 'power_user' on own user doc (AMEND-A C-3)", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, `users/${ownerEmail}`), { power_user: true })
+  );
+});
+
+test("DENY: owner cannot update 'family_group_id' on own user doc (AMEND-A C-3)", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, `users/${ownerEmail}`), { family_group_id: "fg_other" })
+  );
+});
+
+test("ALLOW: owner set({default_sort_field:'year', default_sort_asc:true}, merge) on doc holding power_user & deepdive_count", async () => {
+  await seedUserDoc({ power_user: true, deepdive_count: 5 });
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    setDoc(
+      doc(db, `users/${ownerEmail}`),
+      { default_sort_field: "year", default_sort_asc: true },
+      { merge: true }
+    )
+  );
+});
+
+test("DENY: owner_cannot_self_grant_estate — is_lifetime_family_estate blocked on user doc", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, `users/${ownerEmail}`), { is_lifetime_family_estate: true })
+  );
+});
+
+test("DENY: owner_cannot_self_grant_estate — is_ai_qc_account blocked on user doc", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, `users/${ownerEmail}`), { is_ai_qc_account: true })
+  );
+});
+
+test("DENY: owner_cannot_self_grant_estate — beta_tester blocked on user doc", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, `users/${ownerEmail}`), { beta_tester: true })
+  );
+});
+
+// ─── Cross-user reads ─────────────────────────────────────────────────────────
+
+test("DENY: other user reads owner coins", async () => {
+  await seedCoin("c9");
+  const db = otherCtx.firestore();
+  await assertFails(
+    getDoc(doc(db, coinPath("c9")))
+  );
+});
+
+// ─── T3b Fix 3: Server-only subcollection write protection ──────────────────
+// These tests verify that the narrowed wildcard rule does NOT allow the
+// client (even the owner) to write to server-only subcollections.
+
+const settingsPath = `users/${ownerEmail}/settings/ui_variant`;
+const estateReportsPath = `users/${ownerEmail}/estate_reports/report_001`;
+const morganLogPath = `users/${ownerEmail}/morgan_action_log/log_001`;
+const trashPath = `users/${ownerEmail}/trash/coin_001`;
+const auditLogPath = `users/${ownerEmail}/audit_log/audit_001`;
+const morganProposalsPath = `users/${ownerEmail}/morgan_proposals/prop_001`;
+const subaccountsPath = `users/${ownerEmail}/subaccounts/sub_001`;
+const subscriptionPath = `users/${ownerEmail}/subscription/sub_001`;
+const transferredCoinsPath = `users/${ownerEmail}/transferred_coins/tc_001`;
+const transferredCurrencyPath = `users/${ownerEmail}/transferred_currency/tcurr_001`;
+
+test("DENY: owner cannot write to settings/ui_variant (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, settingsPath), { variant: "alt" })
+  );
+});
+
+test("DENY: owner cannot write to estate_reports (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, estateReportsPath), { report: "data" })
+  );
+});
+
+test("DENY: owner cannot write to morgan_action_log (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, morganLogPath), { action: "add", coin_id: "c1" })
+  );
+});
+
+test("DENY: owner cannot write to trash (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, trashPath), { Year: "2026", deleted_by: "client" })
+  );
+});
+
+test("DENY: owner cannot write to audit_log (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, auditLogPath), { event: "login" })
+  );
+});
+
+test("DENY: owner cannot write to morgan_proposals (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, morganProposalsPath), { proposal: "test" })
+  );
+});
+
+test("DENY: owner cannot write to subaccounts (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, subaccountsPath), { role: "sub" })
+  );
+});
+
+test("DENY: owner cannot write to subscription (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, subscriptionPath), { status: "active" })
+  );
+});
+
+test("DENY: owner cannot write to transferred_coins (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, transferredCoinsPath), { coinId: "c1" })
+  );
+});
+
+test("DENY: owner cannot write to transferred_currency (server-only)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, transferredCurrencyPath), { currencyId: "cur1" })
+  );
+});
+
+test("ALLOW: owner can read settings/ui_variant (read-only for owner)", async () => {
+  // Note: this may return permission denied if doc doesn't exist; use assertSucceeds only if emulator allows read on non-existent
+  // This test documents the READ is allowed even though write is denied
+  const db = ownerCtx.firestore();
+  // getDoc on a non-existent document returns empty (not denied) if read is allowed
+  const snap = await getDoc(doc(db, settingsPath));
+  // No exception = read allowed (snap.exists() will be false)
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can read morgan_proposals (read-only for owner)", async () => {
+  const db = ownerCtx.firestore();
+  const snap = await getDoc(doc(db, morganProposalsPath));
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can read subaccounts (read-only for owner)", async () => {
+  const db = ownerCtx.firestore();
+  const snap = await getDoc(doc(db, subaccountsPath));
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can read subscription (read-only for owner)", async () => {
+  const db = ownerCtx.firestore();
+  const snap = await getDoc(doc(db, subscriptionPath));
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can read transferred_coins (read-only for owner)", async () => {
+  const db = ownerCtx.firestore();
+  const snap = await getDoc(doc(db, transferredCoinsPath));
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can read transferred_currency (read-only for owner)", async () => {
+  const db = ownerCtx.firestore();
+  const snap = await getDoc(doc(db, transferredCurrencyPath));
+  expect(snap).toBeDefined();
+});
+
+test("ALLOW: owner can still write to coins (writable subcollection)", async () => {
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    setDoc(doc(db, coinPath("allowed_coin")), {
+      Year: "2026",
+      Denomination: "Dime",
+      is_demo: false,
+      is_demo_cleared: false,
+    })
+  );
+});
+
+
+// =============================================================================
+// ADDENDUM C — Entitlement field protection on users/{email} (T1B + T3b V3)
+// Tests that owner cannot set tier/stripe_tier/beta_tester on their own user doc.
+// ownerEmail is already declared above (line 58): "testowner@numista.ai"
+// =============================================================================
+
+const userDocPath = `users/${ownerEmail}`;
+
+test("DENY: owner cannot set 'tier' on own user doc (P0 entitlement field)", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, userDocPath), { display_name: "Alice", tier: "family_estate" })
+  );
+});
+
+test("DENY: owner cannot set 'stripe_tier' on own user doc", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, userDocPath), { display_name: "Alice", stripe_tier: "enterprise" })
+  );
+});
+
+test("DENY: owner cannot set 'beta_tester' on own user doc", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, userDocPath), { display_name: "Alice", beta_tester: true })
+  );
+});
+
+test("DENY: owner cannot set 'is_lifetime_family_estate' on own user doc", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, userDocPath), { display_name: "Alice", is_lifetime_family_estate: true })
+  );
+});
+
+test("DENY: owner cannot set 'admin' on own user doc", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, userDocPath), { display_name: "Alice", admin: true })
+  );
+});
+
+// ── AMEND-A C-3: DENY setDoc-create for every additional server-only key ─────
+for (const [key, val] of [
+  ["power_user", true],
+  ["family_group_id", "fg_123"],
+  ["deepdive_count", 0],
+  ["invoice_scan_count", 0],
+  ["last_usage_date", "2026-11-16"],
+  ["creation_timestamp", 0],
+  ["_auth_created_ms", 1],
+  ["_auth_is_anonymous", false],
+  ["stripe_customer_id", "cus_fake"],
+  ["stripe_subscription_id", "sub_fake"],
+  ["subscription_status", "active"],
+  ["grace_period_until", 9999999999],
+  ["locked_pending_upgrade", false],
+]) {
+  test(`DENY: owner cannot set '${key}' on own user doc create (AMEND-A C-3)`, async () => {
+    const db = ownerCtx.firestore();
+    await assertFails(
+      setDoc(doc(db, userDocPath), { display_name: "Alice", [key]: val })
+    );
+  });
+}
+
+test("ALLOW: owner can create own user doc without entitlement fields", async () => {
+  // Clear any existing doc first via admin context
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const adminDb = context.firestore();
+    const ref = doc(adminDb, userDocPath);
+    try { await ref.delete(); } catch (_) {}
+  });
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    setDoc(doc(db, userDocPath), {
+      display_name: "Alice",
+      created_at: new Date().toISOString(),
+    })
+  );
+});
+
+test("DENY: coin create with is_demo: true still blocked by coin-level rule", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    setDoc(doc(db, coinPath("demo_test")), {
+      Year: "2025",
+      is_demo: true,
+    })
+  );
+});
+
+
+// ── NET-748: read-only SKU dictionary lookups ─────────────────────────────────
+test("ALLOW: authenticated getDoc of global_metadata/usmint_sku_dictionary/skus/26SQRP succeeds", async () => {
+  const db = ownerCtx.firestore();
+  await assertSucceeds(
+    getDoc(doc(db, "global_metadata/usmint_sku_dictionary/skus/26SQRP"))
+  );
+});
+
+test("DENY: unauthenticated getDoc of global_metadata/usmint_sku_dictionary/skus/26SQRP fails", async () => {
+  const unauthDb = testEnv.unauthenticatedContext().firestore();
+  await assertFails(
+    getDoc(doc(unauthDb, "global_metadata/usmint_sku_dictionary/skus/26SQRP"))
+  );
+});
+
+test("DENY: authenticated getDocs (list) on .../skus and setDoc both fail", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(
+    getDocs(collection(db, "global_metadata/usmint_sku_dictionary/skus"))
+  );
+  await assertFails(
+    setDoc(doc(db, "global_metadata/usmint_sku_dictionary/skus/26SQRP"), { name: "test" })
+  );
+});
+
+
+// ── PLAN v1.2 (G1, F14): Sold and pending items are read-only for clients ──────────────────────────
+// NOTE: written but NOT RUN in the Phase 1 local build (no node / java / firebase-tools in that environment).
+// Run from numista_mobile/:  firebase emulators:exec --only firestore "npx jest firestore.rules.test.js"
+const OWNER_EMAIL = "testowner@numista.ai";
+const seedItem = async (subcol, id, data) => {
+  await testEnv.withSecurityRulesDisabled(async (adminCtx) => {
+    await setDoc(doc(adminCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/${id}`), data);
+  });
+};
+
+for (const subcol of ["coins", "banknotes", "currency"]) {
+  test(`DENY: owner cannot update a Sold item in ${subcol}`, async () => {
+    await seedItem(subcol, "sold1", { is_demo: false, is_demo_cleared: false, status: "sold", transferStatus: "sold" });
+    await assertFails(updateDoc(doc(ownerCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/sold1`), { Condition: "MS-70" }));
+  });
+
+  test(`DENY: owner cannot delete a Sold item in ${subcol}`, async () => {
+    await seedItem(subcol, "sold2", { is_demo: false, is_demo_cleared: false, status: "sold", transferStatus: "sold" });
+    await assertFails(deleteDoc(doc(ownerCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/sold2`)));
+  });
+
+  test(`DENY: owner cannot update a pending-transfer item in ${subcol}`, async () => {
+    await seedItem(subcol, "pend1", { is_demo: false, is_demo_cleared: false, transferStatus: "pending" });
+    await assertFails(updateDoc(doc(ownerCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/pend1`), { Condition: "MS-70" }));
+  });
+
+  test(`ALLOW: owner can still update a normal item in ${subcol}`, async () => {
+    await seedItem(subcol, "ok1", { is_demo: false, is_demo_cleared: false, transferStatus: "none" });
+    await assertSucceeds(updateDoc(doc(ownerCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/ok1`), { Condition: "MS-65" }));
+  });
+
+  test(`ALLOW: owner can read a Sold item in ${subcol}`, async () => {
+    await seedItem(subcol, "sold3", { is_demo: false, is_demo_cleared: false, status: "sold", transferStatus: "sold" });
+    await assertSucceeds(getDoc(doc(ownerCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/sold3`)));
+  });
+}
+
+test("DENY: owner cannot read or write server-only transfers or transfer_claims", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(getDoc(doc(db, "transfers/abc")));
+  await assertFails(setDoc(doc(db, "transfers/abc"), { status: "claimed" }));
+  await assertFails(getDoc(doc(db, "transfer_claims/abc")));
+  await assertFails(setDoc(doc(db, "transfer_claims/abc"), { transfer_id: "abc" }));
+});
