@@ -14,14 +14,31 @@ from typing import Dict
 
 CROCKFORD_32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
-# Plan.v2.2: CC = US|CO|PF|CS|FS; FAC includes MO (Mexico City) distinct from M (Manila);
+# Plan.v2.2 + Wave 2 D.6 (Muse 97 / Gemini 99 ruling):
+# CC = US|CO|PF|CS|FS; FAC includes MO (Mexico City) distinct from M (Manila);
+# NY (New York Federal Reserve District note sheets, e.g. B7800/B7801) is permitted
+# ONLY when kind == "BN" (strictly rejected for CN/MD/TK/ST).
 # CHK regex strictly excludes Crockford-ambiguous I, L, O, U ([0-9A-HJ-KM-NP-TV-Z]).
 NAC1_REGEX = re.compile(
     r"^(?P<payload>NAC1\.(?P<kind>CN|BN|MD|TK|ST)\.(?P<cc>US|CO|PF|CS|FS)\."
     r"(?P<denom>[A-Z0-9]{2,8})\.(?P<series>[A-Z0-9_]{2,12})\."
-    r"(?P<year>[0-9]{4}[A-Z]?|ND|XXXX)\.(?P<fac>P|D|S|W|CC|O|C|DD|M|MO|L|PTS|PH|BEP|NARA|XX)\."
+    r"(?P<year>[0-9]{4}[A-Z]?|ND|XXXX)\.(?P<fac>P|D|S|W|CC|O|C|DD|M|MO|L|PTS|PH|BEP|NARA|NY|XX)\."
     r"(?P<var>[A-Z0-9_]{2,12}))\.(?P<chk>[0-9A-HJ-KM-NP-TV-Z])$"
 )
+
+BN_ONLY_FACILITIES = frozenset({"NY"})
+
+
+def _match_nac1(nac_code):
+    """Regex match enforcing kind-scoped facility constraints (NY allowed for BN only)."""
+    if not isinstance(nac_code, str):
+        return None
+    match = NAC1_REGEX.match(nac_code)
+    if not match:
+        return None
+    if match.group("fac") in BN_ONLY_FACILITIES and match.group("kind") != "BN":
+        return None
+    return match
 
 # Catalog `kind` -> user sub-collection (Plan section 3.1). BN/MD/TK/ST must NEVER land in "coins".
 KIND_TO_COLLECTION = {
@@ -43,9 +60,7 @@ def compute_nac1_chk(payload: str) -> str:
 
 def validate_nac1(nac_code) -> bool:
     """True only for a well-formed NAC1 string whose check character is correct."""
-    if not isinstance(nac_code, str):
-        return False
-    match = NAC1_REGEX.match(nac_code)
+    match = _match_nac1(nac_code)
     if not match:
         return False
     payload, chk = match.group("payload"), match.group("chk")
@@ -59,7 +74,7 @@ def build_nac1(payload: str) -> str:
 
 def nac1_kind(nac_code: str) -> str:
     """Return the KIND segment (CN/BN/MD/TK/ST) of a syntactically valid NAC1 code."""
-    m = NAC1_REGEX.match(nac_code or "")
+    m = _match_nac1(nac_code or "")
     if not m:
         raise ValueError("INVALID_NAC1_FORMAT")
     return m.group("kind")
@@ -67,7 +82,7 @@ def nac1_kind(nac_code: str) -> str:
 
 def nac1_cc(nac_code: str) -> str:
     """Return the CC segment (US/CO/PF/CS/FS) of a syntactically valid NAC1 code."""
-    m = NAC1_REGEX.match(nac_code or "")
+    m = _match_nac1(nac_code or "")
     if not m:
         raise ValueError("INVALID_NAC1_FORMAT")
     return m.group("cc")
@@ -77,7 +92,7 @@ def parse_nac1(nac_code: str) -> Dict[str, str]:
     """Parse a validated NAC1 code into its constituent segments."""
     if not validate_nac1(nac_code):
         raise ValueError("INVALID_NAC1_CHECKSUM")
-    m = NAC1_REGEX.match(nac_code)
+    m = _match_nac1(nac_code)
     assert m is not None
     return {
         "payload": m.group("payload"),

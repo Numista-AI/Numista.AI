@@ -13,14 +13,358 @@ Usage (from main.py):
     # inject context_block into the deep_dive prompt
 """
 
+import json
+import os
 import re
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
 from google.cloud import firestore
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 COLLECTION       = "coins_reference"
 MAX_RESULTS      = 5     # max coin entries to inject per query
 MIN_SCORE        = 2     # minimum keyword match score to include
+
+# ─── WAVE 2 COMPONENT C: CATALOG-FIRST IN-MEMORY INDEX ────────────────────────
+# Canonical sanitized public catalog loaded in Cloud Run memory first (zero user Firestore reads).
+_CATALOG_DEFAULT_PATHS = (
+    os.environ.get("CATALOG_PUBLIC_JSON_PATH", ""),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "catalog_public_v1.json"),
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "numista_mobile",
+        "assets",
+        "catalog",
+        "catalog_public_v1.json",
+    ),
+)
+
+_CATALOG_INDEX_CACHE: Dict[str, Any] = {
+    "loaded": False,
+    "path": None,
+    "entries": [],
+    "by_nac": {},
+    "by_alias": {},
+}
+
+# Ambiguous colloquial nicknames that span multiple U.S. series/denominations.
+AMBIGUOUS_NICKNAMES: Dict[str, List[str]] = {
+    "turban head": ["Capped Bust Right $5 Half Eagle (1795-1807)", "Capped Bust Right $10 Eagle (1795-1804)", "Classic / Turban Head $2.50 Quarter Eagle"],
+    "draped bust": ["Draped Bust Half Cent & Large Cent", "Draped Bust Half Dime, Dime, Quarter & Half Dollar", "Draped Bust Silver Dollar (1795-1804)", "Capped Bust Right Gold $5 & $10 (colloquially called Draped Bust)"],
+    "capped bust": ["Capped Bust Half Dime, Dime, Quarter & Half Dollar", "Capped Bust Right $5 & $10 Gold (1795-1807)", "Capped Bust Left $5 Gold (1807-1834)"],
+    "liberty head": ["Liberty Head 'V' Nickel (1883-1913)", "Liberty Head / Barber Dime, Quarter & Half", "Liberty Head Coronet Gold ($2.50, $5, $10, $20)"],
+    "indian head": ["Indian Head Cent (1859-1909)", "Indian Head / Buffalo Nickel (1913-1938)", "Indian Head Gold ($2.50, $5, $10)"],
+    "mercury": ["Winged Liberty Head 'Mercury' Dime (1916-1945)", "2016 Centennial Gold Mercury Dime"],
+    "buffalo": ["Buffalo / Indian Head Nickel (1913-1938)", "American Buffalo $50 Gold Bullion Coin (2006-present)"],
+    "standing liberty": ["Standing Liberty Quarter (1916-1930)", "2016 Centennial Gold Standing Liberty Quarter"],
+    "morgan": ["Morgan Silver Dollar (1878-1921)", "Modern Morgan Silver Dollar (2021-present)"],
+    "peace": ["Peace Silver Dollar (1921-1935)", "Modern Peace Silver Dollar (2021-present)"],
+    "stella": ["1879-1880 $4 Flowing Hair Stella Pattern", "1879-1880 $4 Coiled Hair Stella Pattern", "1879 $20 Quintuple Stella Pattern"],
+}
+
+_NAC1_INLINE_RE = re.compile(r"\bNAC1\.[A-Z0-9_]+(?:\.[A-Z0-9_]+){7}\b")
+
+
+def reset_public_catalog_cache() -> None:
+    """Reset in-memory public catalog index (used by unit tests)."""
+    _CATALOG_INDEX_CACHE.update(loaded=False, path=None, entries=[], by_nac={}, by_alias={})
+
+
+def load_public_catalog_index(
+    catalog_path: Optional[str] = None,
+    entries_override: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """Loads sanitized `catalog_public_v1.json` once into Cloud Run memory (strictly public data)."""
+    if entries_override is not None:
+        entries = list(entries_override)
+        by_nac: Dict[str, Dict[str, Any]] = {}
+        by_alias: Dict[str, Dict[str, Any]] = {}
+        for item in entries:
+            nac = str(item.get("nac_code") or "").strip().upper()
+            if nac:
+                by_nac[nac] = item
+            for alias in (item.get("nac_aliases") or []):
+                if isinstance(alias, str) and alias.strip():
+                    by_alias[alias.strip().upper()] = item
+        _CATALOG_INDEX_CACHE.update(
+            loaded=True, path="<override>", entries=entries, by_nac=by_nac, by_alias=by_alias
+        )
+        return _CATALOG_INDEX_CACHE
+
+    if _CATALOG_INDEX_CACHE["loaded"] and (catalog_path is None or _CATALOG_INDEX_CACHE["path"] == catalog_path):
+        return _CATALOG_INDEX_CACHE
+
+    candidates = [catalog_path] if catalog_path else list(_CATALOG_DEFAULT_PATHS)
+    chosen = next((p for p in candidates if p and os.path.exists(p)), None)
+    if not chosen:
+        _CATALOG_INDEX_CACHE.update(loaded=True, path=None, entries=[], by_nac={}, by_alias={})
+        return _CATALOG_INDEX_CACHE
+
+    with open(chosen, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+    entries = raw if isinstance(raw, list) else []
+    by_nac = {}
+    by_alias = {}
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        nac = str(item.get("nac_code") or "").strip().upper()
+        if nac:
+            by_nac[nac] = item
+        for alias in (item.get("nac_aliases") or []):
+            if isinstance(alias, str) and alias.strip():
+                by_alias[alias.strip().upper()] = item
+    _CATALOG_INDEX_CACHE.update(
+        loaded=True, path=chosen, entries=entries, by_nac=by_nac, by_alias=by_alias
+    )
+    return _CATALOG_INDEX_CACHE
+
+
+def resolve_catalog_by_nac(nac_code: str, index: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    """Tier-0 deterministic lookup by canonical `nac_code` or retired `nac_aliases`."""
+    if not nac_code or not isinstance(nac_code, str):
+        return None
+    idx = index or load_public_catalog_index()
+    key = nac_code.strip().upper()
+    return idx["by_nac"].get(key) or idx["by_alias"].get(key)
+
+
+def _format_mintage_summary(item: Dict[str, Any]) -> Tuple[str, Optional[str]]:
+    m = item.get("mintage")
+    if isinstance(m, dict):
+        val = m.get("value")
+        lbl = (m.get("label") or "").strip()
+        src_url = m.get("source_url")
+        if isinstance(val, (int, float)) and not isinstance(val, bool):
+            val_str = f"{int(val):,}" if float(val).is_integer() else str(val)
+            return (f"{val_str} ({lbl})" if lbl else val_str), src_url
+        return (lbl if lbl else "Needs source (not yet sourced — do NOT invent a figure)"), src_url
+    return "Needs source (not yet sourced — do NOT invent a figure)", None
+
+
+def _build_catalog_card(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Builds a safe public inline Catalog Card payload for Morgan chat UI."""
+    mintage_display, mintage_src = _format_mintage_summary(item)
+    prim = item.get("primary_image") if isinstance(item.get("primary_image"), dict) else None
+    timg = item.get("type_image") if isinstance(item.get("type_image"), dict) else None
+    img = prim or timg or {}
+    resolved_image_url = img.get("thumb_url") or img.get("url")
+    return {
+        "nac_code": item.get("nac_code"),
+        "name": item.get("name"),
+        "type": item.get("type"),
+        "year": item.get("year"),
+        "denomination": item.get("denomination"),
+        "series": item.get("series"),
+        "mint_facility": item.get("mint_facility"),
+        "mintage_display": mintage_display,
+        "mintage_label": mintage_display,
+        "mintage_source_url": mintage_src,
+        "status_badge": item.get("status_badge"),
+        "image_url": resolved_image_url,
+        "thumb_url": resolved_image_url,
+        "image_credit": img.get("credit") or img.get("source"),
+        "ai_generated": bool(img.get("ai_generated") is True),
+        "actions": ["view_in_catalog", "add_to_collection", "add_to_wishlist"],
+    }
+
+
+def _format_catalog_entry_for_morgan(item: Dict[str, Any]) -> str:
+    mintage_display, mintage_src = _format_mintage_summary(item)
+    lines = [
+        f"CATALOG ENTRY [{item.get('nac_code')}]: {item.get('name', 'Unknown')}",
+        f"  Type/Series:   {item.get('type', '')} | {item.get('series', '')}",
+        f"  Year/Denom:    {item.get('year', 'Undated')} | {item.get('denomination', '')}",
+        f"  Mint Facility: {item.get('mint_facility', 'Unspecified')}",
+        f"  Composition:   {item.get('composition', 'Not yet sourced')}",
+        f"  Mintage:       {mintage_display}",
+    ]
+    if mintage_src:
+        lines.append(f"  Mintage Source: {mintage_src}")
+    if item.get("search_aliases"):
+        lines.append(f"  Also Known As: {', '.join(item['search_aliases'])}")
+    if item.get("history"):
+        lines.append(f"  History:       {str(item['history'])[:320]}")
+    sources = item.get("sources") or []
+    if sources:
+        src_labels = [str(s.get("label") or s.get("url") or "") for s in sources[:3] if isinstance(s, dict)]
+        lines.append(f"  Sources:       {'; '.join(x for x in src_labels if x)}")
+    return "\n".join(lines)
+
+
+def _detect_ambiguous_nickname(query: str) -> Optional[Tuple[str, List[str]]]:
+    ql = query.lower().strip()
+    has_year = bool(re.search(r"\b(1[789]\d{2}|20[0-2]\d)\b", ql))
+    has_denom = bool(
+        re.search(r"\b(cent|penny|nickel|dime|quarter|half dollar|dollar|\$1|\$2\.50|\$4|\$5|\$10|\$20|50c|25c|10c|5c|1c)\b", ql)
+    )
+    if has_year or has_denom:
+        return None
+    for nick, options in AMBIGUOUS_NICKNAMES.items():
+        if nick in ql:
+            return nick, options
+    return None
+
+
+def get_catalog_context(
+    query: str,
+    *,
+    nac_code: Optional[str] = None,
+    max_results: int = MAX_RESULTS,
+    catalog_index: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Wave 2 Component C: Catalog-First Morgan AI lookup (strictly public JSON, zero user Firestore reads).
+    Returns:
+      {
+        "context_block": Optional[str],
+        "catalog_cards": List[dict],
+        "needs_disambiguation": bool,
+        "disambiguation_options": List[str],
+        "missing_item_report_prompt": Optional[dict],
+        "matched_tier": "tier0_nac" | "tier1_catalog" | "none",
+      }
+    """
+    idx = catalog_index or load_public_catalog_index()
+    entries = idx.get("entries") or []
+
+    # Tier 0: Explicit nac_code argument or inline NAC1.* code in query
+    explicit_nac = (nac_code or "").strip()
+    if not explicit_nac and query:
+        m = _NAC1_INLINE_RE.search(query.upper())
+        if m:
+            explicit_nac = m.group(0)
+    if explicit_nac:
+        hit = resolve_catalog_by_nac(explicit_nac, index=idx)
+        if hit:
+            header = (
+                "CATALOG OF AMERICAN NUMISMATICS — VERIFIED PRIMARY RECORD (Tier 0 Exact Match):\n"
+                "Treat the facts below as authoritative. Never override a verified mintage and NEVER invent a mintage when marked 'Needs source' or 'not yet sourced'.\n"
+            )
+            return {
+                "context_block": f"{header}\n{_format_catalog_entry_for_morgan(hit)}\n",
+                "catalog_cards": [_build_catalog_card(hit)],
+                "needs_disambiguation": False,
+                "disambiguation_options": [],
+                "missing_item_report_prompt": None,
+                "matched_tier": "tier0_nac",
+            }
+
+    q = (query or "").strip()
+    if not q or not entries:
+        return {
+            "context_block": None,
+            "catalog_cards": [],
+            "needs_disambiguation": False,
+            "disambiguation_options": [],
+            "missing_item_report_prompt": {"query": q} if q else None,
+            "matched_tier": "none",
+        }
+
+    ql = q.lower()
+    years = re.findall(r"\b(1[789]\d{2}|20[0-2]\d)\b", ql)
+    tokens = [t for t in re.findall(r"[a-z0-9\$]+", ql) if t not in STOP_WORDS and len(t) > 1]
+
+    scored: List[Tuple[int, Dict[str, Any]]] = []
+    for item in entries:
+        name = str(item.get("name") or "").lower()
+        series = str(item.get("series") or "").lower()
+        denom = str(item.get("denomination") or "").lower()
+        year_str = str(item.get("year") or "").lower()
+        aliases = " ".join(str(a).lower() for a in (item.get("search_aliases") or []) if isinstance(a, str))
+        nac = str(item.get("nac_code") or "").lower()
+        hay = f"{name} {series} {denom} {year_str} {aliases} {nac}"
+
+        score = 0
+        if ql in name or ql in aliases:
+            score += 12
+        for y in years:
+            if y == year_str:
+                score += 8
+        matched_tokens = 0
+        for tok in tokens:
+            if tok in aliases:
+                score += 5
+                matched_tokens += 1
+            elif tok in name or tok in series:
+                score += 4
+                matched_tokens += 1
+            elif tok in hay:
+                score += 2
+                matched_tokens += 1
+        if tokens and matched_tokens == len(tokens):
+            score += 6
+        if score >= 5:
+            scored.append((score, item))
+
+    scored.sort(key=lambda pair: (pair[0], 1 if pair[1].get("primary_image") else 0), reverse=True)
+    top = [it for _, it in scored[:max_results]]
+
+    disamb = _detect_ambiguous_nickname(q)
+    needs_disamb = disamb is not None and len({str(it.get("series") or "") for it in top}) != 1
+
+    if not top:
+        honest_block = (
+            "CATALOG OF AMERICAN NUMISMATICS — NO VERIFIED MATCH FOUND:\n"
+            f"The user asked about '{q}', which is not currently in our verified Catalog of American Numismatics.\n"
+            "MORGAN §1 HONESTY RULE: State plainly that this item is not yet in our verified catalog. "
+            "NEVER invent mintage numbers or specifications. Invite the user to tap 'Report Missing Item' so our catalog team can research and verify it from official sources.\n"
+        )
+        return {
+            "context_block": honest_block,
+            "catalog_cards": [],
+            "needs_disambiguation": bool(disamb),
+            "disambiguation_options": disamb[1] if disamb else [],
+            "missing_item_report_prompt": {"query": q},
+            "matched_tier": "none",
+        }
+
+    header = (
+        "CATALOG OF AMERICAN NUMISMATICS — VERIFIED PUBLIC RECORDS (Tier 1 Catalog-First):\n"
+        "Use ONLY these verified catalog facts for mintages, specifications, and sources. "
+        "If a field says 'Needs source' or 'not yet sourced', state honestly that it is not yet sourced — NEVER invent or guess numbers. "
+        "Never cite Greysheet wholesale prices or GSIDs.\n"
+    )
+    if needs_disamb and disamb is not None:
+        header += (
+            f"DISAMBIGUATION REQUIRED: '{disamb[0]}' refers to multiple U.S. series "
+            f"({'; '.join(disamb[1])}). Ask a brief clarifying question naming these options instead of guessing one coin.\n"
+        )
+
+    body = "\n\n".join(_format_catalog_entry_for_morgan(it) for it in top)
+    return {
+        "context_block": f"{header}\n{body}\n",
+        "catalog_cards": [_build_catalog_card(it) for it in top],
+        "needs_disambiguation": needs_disamb,
+        "disambiguation_options": disamb[1] if (needs_disamb and disamb is not None) else [],
+        "missing_item_report_prompt": None,
+        "matched_tier": "tier1_catalog",
+    }
+
+
+def record_missing_catalog_request(
+    db: Any,
+    query: str,
+    *,
+    requester_uid: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Safely queues a missing-item report into internal Firestore `catalog_missing_requests`
+    for Morgan review. NEVER auto-scrapes Wikipedia and NEVER auto-publishes to live catalog.
+    """
+    cleaned = re.sub(r"\s+", " ", (query or "").strip())[:240]
+    if not cleaned:
+        raise ValueError("Missing-item query must not be empty")
+    payload = {
+        "query": cleaned,
+        "requester_uid": requester_uid,
+        "status": "pending_morgan_review",
+        "auto_published": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if db is not None:
+        db.collection("catalog_missing_requests").document().set(payload)
+    return payload
 
 # ─── KEYWORD EXTRACTION ───────────────────────────────────────────────────────
 
@@ -317,25 +661,35 @@ def get_coin_context_vertex(query: str, max_results: int = MAX_RESULTS) -> Optio
 
 
 def get_coin_context(
-    db: firestore.Client,
+    db: Optional[firestore.Client],
     query: str,
     max_results: int = MAX_RESULTS,
+    nac_code: Optional[str] = None,
 ) -> Optional[str]:
     """
-    Given a user query, search coins_reference for relevant entries.
-    Attempts to use Vertex AI Search (Discovery Engine) first to leverage
-    semantic capabilities and utilize GenAI App Builder credits.
-    Falls back to Firestore keyword matching if Vertex Search is not configured,
-    returns no results, or fails.
+    Catalog-First Morgan RAG lookup (Wave 2 Component C):
+      1. Tier 0 / Tier 1: Authoritative in-memory `catalog_public_v1.json` (zero user Firestore reads).
+      2. Tier 2: Vertex AI Search (general encyclopedia augmentation) if catalog has no match.
+      3. Tier 3: Legacy Firestore `coins_reference` fallback (only when `db` is provided).
     """
-    if not query or not query.strip():
+    if (not query or not query.strip()) and not nac_code:
         return None
 
-    # 1. Try Vertex AI Search first
+    # 0. Catalog-First lookup (Tier 0 exact nac_code/alias + Tier 1 public catalog search)
+    cat_res = get_catalog_context(query, nac_code=nac_code, max_results=max_results)
+    if cat_res["matched_tier"] in ("tier0_nac", "tier1_catalog") and cat_res["context_block"]:
+        return cat_res["context_block"]
+
+    # 1. Try Vertex AI Search next for general numismatic background
     vertex_context = get_coin_context_vertex(query, max_results)
     if vertex_context:
         print(f"[morgan_knowledge] Successfully retrieved RAG context from Vertex AI Search for: {query!r}")
+        if cat_res["context_block"]:
+            return f"{cat_res['context_block']}\n{vertex_context}"
         return vertex_context
+
+    if db is None:
+        return cat_res["context_block"]
 
     print(f"[morgan_knowledge] Vertex AI Search unavailable or empty for {query!r}; falling back to Firestore keyword match.")
 

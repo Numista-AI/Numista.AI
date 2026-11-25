@@ -25,10 +25,7 @@ import 'customer_service_screen.dart';
 import 'ai_chat_screen.dart';
 import 'admin_grade_flags_screen.dart';
 import 'supplies_screen.dart';
-import 'coin_search_screen.dart';
 import 'currency_collection_screen.dart';
-import 'mint_error_library_screen.dart';
-import 'glossary_academy_screen.dart';
 import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
 import 'add_world_item_screen.dart';
 import 'attorney_portal_screen.dart';
@@ -51,7 +48,7 @@ import '../widgets/morgan_privacy_mask.dart';
 import '../widgets/morgan_settings_panel.dart'
     show MorganSettingsService, showMorganConsentModalIfNeeded;
 import 'coin_detail_screen.dart';
-import 'upcoming_releases_screen.dart';
+import 'catalog/catalog_browse_screen.dart';
 import '../theme/numista_theme.dart';
 import '../services/ui_variant_service.dart';
 import '../utils/numista_error_helper.dart';
@@ -88,6 +85,9 @@ class _BaseLayoutState extends State<BaseLayout> {
   // Optional pre-populated AI query — set when the user taps AI Deep Dive
   // on a specific coin. Consumed once and then cleared.
   String? _aiInitialQuery;
+  String? _aiInitialNacCode;
+  String? _catalogInitialTab;
+  String? _catalogInitialNacCode;
   String? _addCoinsInitialTabName;
   String? _programManagerInitialId;
   bool _isMorganPopoutOpen = false;
@@ -351,17 +351,24 @@ class _BaseLayoutState extends State<BaseLayout> {
   String _resolveRouteAlias(String rawRoute) {
     if (rawRoute == 'Add new coins/notes/etc.') return 'Add New Coins';
     if (rawRoute == 'Admin Grade Flags') return 'Admin: Grade Flags';
-    if (rawRoute == '🔍 Numista Lookup' || rawRoute == 'Numista Lookup') {
-      return 'Coin Search';
+    if (rawRoute == '🔍 Numista Lookup' ||
+        rawRoute == 'Numista Lookup' ||
+        rawRoute == 'Coin Search' ||
+        rawRoute == 'U.S. Numismatics Catalog') {
+      return 'Catalog of American Numismatics';
+    }
+    if (rawRoute == 'Ask Morgan') {
+      return 'AI Deepdive';
     }
     return rawRoute;
   }
 
-  /// All prior desktop width >= 800 intercepts for the 'AI Deepdive' route have been removed; DeepDive always lands in the main pane.
+  /// All prior desktop width >= 800 intercepts for the 'AI Deepdive' / 'Ask Morgan' route have been removed; Ask Morgan always lands in the main pane.
   void _navigateTo(
     String route, {
     String? subTab,
     String? aiInitialQuery,
+    String? aiInitialNacCode,
     bool pushHistory = true,
   }) {
     MorganProactiveRescueObserver.instance.recordUserActivity();
@@ -375,6 +382,21 @@ class _BaseLayoutState extends State<BaseLayout> {
       }
       if (aiInitialQuery != null) {
         _aiInitialQuery = aiInitialQuery;
+      }
+      if (aiInitialNacCode != null) {
+        _aiInitialNacCode = aiInitialNacCode;
+      }
+      if (resolvedRoute == 'Error Library') {
+        _catalogInitialTab = 'errors';
+        resolvedRoute = 'Catalog of American Numismatics';
+      } else if (resolvedRoute == 'Upcoming Releases') {
+        _catalogInitialTab = 'upcoming';
+        resolvedRoute = 'Catalog of American Numismatics';
+      } else if (resolvedRoute == 'Glossary Academy') {
+        _catalogInitialTab = 'glossary';
+        resolvedRoute = 'Catalog of American Numismatics';
+      } else if (resolvedRoute == 'Catalog of American Numismatics' && subTab != null) {
+        _catalogInitialTab = subTab;
       }
       if (aliased.startsWith('Coin Programs:')) {
         final parts = aliased.split(':');
@@ -510,13 +532,22 @@ class _BaseLayoutState extends State<BaseLayout> {
           onNavigate: _navigateTo,
         );
       case 'AI Deepdive':
-        // Consume the initial query once, then clear it so subsequent opens
-        // of AI Deepdive (from sidebar) start with an empty chat.
+      case 'Ask Morgan':
+        // Consume the initial query/nacCode once, then clear so subsequent opens start clean.
         final q = _aiInitialQuery;
+        final nac = _aiInitialNacCode;
         _aiInitialQuery = null;
+        _aiInitialNacCode = null;
         return AiChatScreen(
           initialQuery: q,
+          initialNacCode: nac,
           onNavigateToCollection: () => _navigateTo('My Collection'),
+          onOpenCatalogNac: (nacCode) {
+            setState(() {
+              _catalogInitialNacCode = nacCode;
+            });
+            _navigateTo('Catalog of American Numismatics');
+          },
         );
       case 'Review Hub':
         return const ReviewHubScreen();
@@ -557,16 +588,21 @@ class _BaseLayoutState extends State<BaseLayout> {
 
       case 'Inventory':
         return const SuppliesScreen();
+      case 'Catalog of American Numismatics':
       case 'Coin Search':
-        return const CoinSearchScreen();
+        final catTab = _catalogInitialTab;
+        final catNac = _catalogInitialNacCode;
+        _catalogInitialTab = null;
+        _catalogInitialNacCode = null;
+        return CatalogBrowseScreen(initialTab: catTab, initialNacCode: catNac);
       case 'Currency Collection':
         return const CurrencyCollectionScreen();
       case 'Error Library':
-        return const MintErrorLibraryScreen();
+        return const CatalogBrowseScreen(initialTab: 'errors');
       case 'Glossary Academy':
-        return const GlossaryAcademyScreen();
+        return const CatalogBrowseScreen(initialTab: 'glossary');
       case 'Upcoming Releases':
-        return const UpcomingReleasesScreen();
+        return const CatalogBrowseScreen(initialTab: 'upcoming');
       default:
         return const _UnderConstruction();
     }
@@ -686,9 +722,9 @@ class _BaseLayoutState extends State<BaseLayout> {
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
         SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
-            _navigateTo('Coin Search'),
+            _navigateTo('Catalog of American Numismatics'),
         SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
-            _navigateTo('Coin Search'),
+            _navigateTo('Catalog of American Numismatics'),
         SingleActivator(LogicalKeyboardKey.keyM, control: true): _showMorganDialog,
         SingleActivator(LogicalKeyboardKey.keyM, meta: true): _showMorganDialog,
         SingleActivator(LogicalKeyboardKey.escape): () {
@@ -959,6 +995,9 @@ class _BaseLayoutState extends State<BaseLayout> {
                             child: _buildNavItem('My Collection',
                                 icon: Icons.layers_outlined),
                           ),
+                          _buildNavItem('Catalog of American Numismatics',
+                              displayLabel: 'Catalog',
+                              icon: Icons.auto_stories_outlined),
                           _buildNavItem('Analytics',
                               icon: Icons.insights_rounded),
                           WizardNavPulse(
@@ -1294,6 +1333,8 @@ class _BaseLayoutState extends State<BaseLayout> {
             'AI Photo Identification',
             'Microscope Scanner',
             'Coin Programs',
+            'Catalog of American Numismatics',
+            'Ask Morgan',
             'Coin Search',
             '🔍 Numista Lookup',
             'Add New Coins',
@@ -1544,19 +1585,19 @@ class _NavEntry {
 const List<_NavEntry> _kTopLevelNavItems = [
   _NavEntry(route: 'Home Dashboard', label: 'Home', icon: Icons.home_outlined),
   _NavEntry(route: 'My Collection', label: 'My Collection', icon: Icons.layers_outlined),
+  _NavEntry(route: 'Catalog of American Numismatics', label: 'Catalog', icon: Icons.auto_stories_outlined),
   _NavEntry(route: 'Coin Programs', label: 'Coin Programs', icon: Icons.article_outlined),
   _NavEntry(route: 'My Wishlist', label: 'Wishlist', icon: Icons.favorite_border),
   _NavEntry(route: 'Review Hub', label: 'Review', icon: Icons.fact_check_outlined),
 ];
 
+// Wave 2 Component B: Consolidated Research navigation (duplicate Numista Lookup deleted;
+// Error Library, Upcoming Releases, and Glossary Academy folded into Catalog tabs;
+// AI Deepdive renamed to Ask Morgan). Legacy route strings remain supported via aliases.
 const Map<String, List<_NavEntry>> _kNavGroups = {
   'Research': [
-    _NavEntry(route: 'Coin Search', label: 'Coin Search', icon: Icons.manage_search_outlined),
-    _NavEntry(route: '🔍 Numista Lookup', label: 'Numista Lookup', icon: Icons.search_outlined),
-    _NavEntry(route: 'AI Deepdive', label: 'AI Deepdive', icon: Icons.auto_awesome_outlined),
-    _NavEntry(route: 'Glossary Academy', label: 'Glossary Academy', icon: Icons.menu_book_outlined),
-    _NavEntry(route: 'Error Library', label: 'Error Library', icon: Icons.error_outline),
-    _NavEntry(route: 'Upcoming Releases', label: 'Upcoming Releases', icon: Icons.calendar_today_outlined),
+    _NavEntry(route: 'Catalog of American Numismatics', label: 'Catalog of American Numismatics', icon: Icons.manage_search_outlined),
+    _NavEntry(route: 'AI Deepdive', label: 'Ask Morgan', icon: Icons.auto_awesome_outlined),
   ],
   'Estate & Transfers': [
     _NavEntry(route: 'Estate Planning', label: 'Estate Planning', icon: Icons.description_outlined),

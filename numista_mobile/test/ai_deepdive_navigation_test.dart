@@ -94,15 +94,16 @@ void main() {
     await tester.tap(find.text('Research'));
     await _settle(tester);
 
-    await tester.tap(find.text('Coin Search'));
+    await tester.tap(find.text('Catalog of American Numismatics'));
     await _settle(tester);
-    expect(find.text('ROUTE:Coin Search'), findsOneWidget);
+    expect(find.text('ROUTE:Catalog of American Numismatics'), findsOneWidget);
 
-    await tester.tap(find.text('AI Deepdive'));
+    // Research accordion 'Ask Morgan' is above the bottom _MorganSidebarButton ('Ask Morgan')
+    await tester.tap(find.text('Ask Morgan').first);
     await _settle(tester);
 
     expect(find.text('ROUTE:AI Deepdive'), findsOneWidget);
-    expect(find.text('ROUTE:Coin Search'), findsNothing);
+    expect(find.text('ROUTE:Catalog of American Numismatics'), findsNothing);
     expect(find.text('MORGAN_POPOUT'), findsNothing);
     expect(MorganScreenStateRegistry.instance.currentRoute, 'AI Deepdive');
     expect(MorganScreenStateRegistry.instance.isScreenHydrated, isTrue);
@@ -122,31 +123,31 @@ void main() {
 
     await tester.tap(find.text('Research'));
     await _settle(tester);
-    await tester.tap(find.text('Coin Search'));
+    await tester.tap(find.text('Catalog of American Numismatics'));
     await _settle(tester);
 
-    // Open dedicated Ask Morgan popout via sidebar Ask Morgan button
-    await tester.tap(find.text('Ask Morgan'));
+    // Open dedicated Ask Morgan popout via bottom sidebar Ask Morgan button (last Ask Morgan widget)
+    await tester.tap(find.text('Ask Morgan').last);
     await _settle(tester);
 
     expect(find.text('MORGAN_POPOUT'), findsOneWidget);
-    expect(find.text('ROUTE:Coin Search'), findsOneWidget);
-    expect(MorganScreenStateRegistry.instance.currentRoute, 'Coin Search');
+    expect(find.text('ROUTE:Catalog of American Numismatics'), findsOneWidget);
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Catalog of American Numismatics');
 
-    // Navigating to AI Deepdive closes the popout and mounts main-pane DeepDive
-    await tester.tap(find.text('AI Deepdive'));
+    // Navigating to Ask Morgan (AI Deepdive) inside Research closes the popout and mounts main-pane DeepDive
+    await tester.tap(find.text('Ask Morgan').first);
     await _settle(tester);
 
     expect(find.text('ROUTE:AI Deepdive'), findsOneWidget);
     expect(find.text('MORGAN_POPOUT'), findsNothing);
     expect(MorganScreenStateRegistry.instance.currentRoute, 'AI Deepdive');
 
-    // Collapsed-rail + Ctrl+M sub-step: switch back to Coin Search, collapse sidebar,
+    // Collapsed-rail + Ctrl+M sub-step: switch back to Catalog, collapse sidebar,
     // trigger Ctrl+M to open Ask Morgan popout without changing currentRoute, then expand
-    // and navigate to AI Deepdive to close popout and land in main pane.
-    await tester.tap(find.text('Coin Search'));
+    // and navigate to Ask Morgan (AI Deepdive) to close popout and land in main pane.
+    await tester.tap(find.text('Catalog of American Numismatics'));
     await _settle(tester);
-    expect(MorganScreenStateRegistry.instance.currentRoute, 'Coin Search');
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Catalog of American Numismatics');
 
     // Invoke Collapse Sidebar button (Ahem test font can overflow the header Row horizontally).
     final collapseBtn = tester
@@ -165,13 +166,13 @@ void main() {
     await _settle(tester);
 
     expect(find.text('MORGAN_POPOUT'), findsOneWidget);
-    expect(MorganScreenStateRegistry.instance.currentRoute, 'Coin Search');
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Catalog of American Numismatics');
 
     await tester.tap(find.byTooltip('Expand Sidebar'));
     await _settle(tester);
-    await tester.ensureVisible(find.text('AI Deepdive'));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -180));
     await _settle(tester);
-    await tester.tap(find.text('AI Deepdive'));
+    await tester.tap(find.text('Ask Morgan').first);
     await _settle(tester);
 
     expect(find.text('ROUTE:AI Deepdive'), findsOneWidget);
@@ -181,7 +182,7 @@ void main() {
   });
 
   testWidgets(
-      'Fixture 3: Review Hub -> sidebar Coin Search updates currentRoute and 25s stall nudge names Coin Search, never Review Hub',
+      'Fixture 3: Review Hub -> sidebar Catalog updates currentRoute and 25s stall nudge names Catalog, never Review Hub',
       (tester) async {
     _setupHarnessCleanup();
 
@@ -204,13 +205,13 @@ void main() {
     );
     expect(MorganScreenStateRegistry.instance.currentRoute, 'Review Hub');
 
-    // Switch to Coin Search via Research accordion in sidebar
+    // Switch to Catalog via Research accordion in sidebar
     await tester.tap(find.text('Research'));
     await _settle(tester);
-    await tester.tap(find.text('Coin Search'));
+    await tester.tap(find.text('Catalog of American Numismatics'));
     await tester.pump();
 
-    expect(MorganScreenStateRegistry.instance.currentRoute, 'Coin Search');
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Catalog of American Numismatics');
     expect(MorganScreenStateRegistry.instance.isScreenHydrated, isTrue);
     expect(MorganScreenStateRegistry.instance.screenContextData, isEmpty);
 
@@ -221,9 +222,9 @@ void main() {
     expect(prompt, isNotNull);
     expect(
       prompt!.message,
-      'Looks like you paused on Coin Search. Want me to highlight the next button or do it with you?',
+      'Looks like you paused on Catalog of American Numismatics. Want me to highlight the next button or do it with you?',
     );
-    expect(prompt.message.contains('Coin Search'), isTrue);
+    expect(prompt.message.contains('Catalog of American Numismatics'), isTrue);
     expect(prompt.message.contains('Review Hub'), isFalse);
   });
 
@@ -249,7 +250,7 @@ void main() {
     expect(MorganScreenStateRegistry.instance.currentRoute, 'My Wishlist');
     expect(MorganScreenStateRegistry.instance.isScreenHydrated, isTrue);
 
-    // Move focus inside CallbackShortcuts subtree via Tab, then dispatch Ctrl+K -> Coin Search
+    // Move focus inside CallbackShortcuts subtree via Tab, then dispatch Ctrl+K -> Catalog of American Numismatics
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await _settle(tester);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
@@ -257,18 +258,18 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.keyK);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await _settle(tester);
-    expect(MorganScreenStateRegistry.instance.currentRoute, 'Coin Search');
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Catalog of American Numismatics');
     expect(MorganScreenStateRegistry.instance.isScreenHydrated, isTrue);
 
     // Open Ask Morgan popout via sidebar button, then Back should close popout first
-    await tester.tap(find.text('Ask Morgan'));
+    await tester.tap(find.text('Ask Morgan').first);
     await _settle(tester);
     expect(find.text('MORGAN_POPOUT'), findsOneWidget);
 
     await tester.binding.handlePopRoute();
     await _settle(tester);
     expect(find.text('MORGAN_POPOUT'), findsNothing);
-    expect(MorganScreenStateRegistry.instance.currentRoute, 'Coin Search');
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Catalog of American Numismatics');
 
     // Second Back pops _routeHistory to My Wishlist
     await tester.binding.handlePopRoute();
@@ -279,7 +280,7 @@ void main() {
   });
 
   testWidgets(
-      'Fixture 5: Phone (390x844) Menu drill-in to AI Deepdive navigates main pane and hydrates registry',
+      'Fixture 5: Phone (390x844) Menu drill-in to Ask Morgan (AI Deepdive) navigates main pane and hydrates registry',
       (tester) async {
     _setupHarnessCleanup();
 
@@ -295,7 +296,7 @@ void main() {
     await tester.tap(find.text('Research'));
     await _settle(tester);
 
-    await tester.tap(find.text('AI Deepdive'));
+    await tester.tap(find.text('Ask Morgan').last);
     await _settle(tester);
 
     expect(find.text('ROUTE:AI Deepdive'), findsOneWidget);
@@ -343,7 +344,7 @@ void main() {
   });
 
   testWidgets(
-      'Fixture 7: Aliased route navigation resolves to canonical route and hydrates registry',
+      'Fixture 7: Top-level Catalog nav resolves to canonical Catalog of American Numismatics and hides duplicate Numista Lookup',
       (tester) async {
     _setupHarnessCleanup();
 
@@ -355,13 +356,13 @@ void main() {
 
     await tester.tap(find.text('Research'));
     await _settle(tester);
+    expect(find.text('Numista Lookup'), findsNothing);
 
-    // Tapping 'Numista Lookup' dispatches the aliased route '🔍 Numista Lookup'
-    await tester.tap(find.text('Numista Lookup'));
+    await tester.tap(find.text('Catalog'));
     await _settle(tester);
 
-    expect(find.text('ROUTE:Coin Search'), findsOneWidget);
-    expect(MorganScreenStateRegistry.instance.currentRoute, 'Coin Search');
+    expect(find.text('ROUTE:Catalog of American Numismatics'), findsOneWidget);
+    expect(MorganScreenStateRegistry.instance.currentRoute, 'Catalog of American Numismatics');
     expect(MorganScreenStateRegistry.instance.isScreenHydrated, isTrue);
     MorganProactiveRescueObserver.instance.resetForTesting();
   });

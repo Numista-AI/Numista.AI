@@ -315,7 +315,7 @@ class _UsNumismaticsCatalogScreenState
             ),
             const SizedBox(width: 8),
             const Text(
-              'U.S. NUMISMATICS MASTER CATALOG (1776 – 2026)',
+              'CATALOG OF AMERICAN NUMISMATICS (1787 – 2026)',
               style: TextStyle(
                 color: CatalogVaultPalette.textPrimary,
                 fontSize: 16,

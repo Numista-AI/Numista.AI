@@ -19,6 +19,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from google.cloud import firestore
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from catalog_models import CollectionAddRequest, PhotoToggleRequest
 from catalog_nac1 import validate_nac1
@@ -30,6 +31,7 @@ from catalog_service import (
     find_by_slug,
     load_catalog,
     toggle_personal_photo_in_txn,
+    verify_banknote_ai_download_allowed,
     verify_image_download_allowed,
 )
 from routes.deps import db, get_current_user, verify_firebase_bearer_token
@@ -89,6 +91,10 @@ def download_catalog_image(nac_code: str, request: Request):
         raise HTTPException(status_code=e.status_code, detail={"error": e.code, **e.extra})
     for it in _items():
         if it.get("nac_code") == nac_code or nac_code in (it.get("nac_aliases") or []):
+            try:
+                verify_banknote_ai_download_allowed(it)
+            except CatalogError as e:
+                raise HTTPException(status_code=e.status_code, detail={"error": e.code, **e.extra})
             return {
                 "nac_code": it["nac_code"],
                 "obverse_image_url": it.get("obverse_image_url"),
@@ -177,3 +183,46 @@ def catalog_photo_toggle(body: PhotoToggleRequest, user: dict = Depends(get_curr
     except CatalogError as e:
         raise HTTPException(status_code=e.status_code, detail={"error": e.code, **e.extra})
     return result
+
+
+class MissingCatalogRequestBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    query: str
+    note: Optional[str] = None
+
+    @field_validator("query")
+    @classmethod
+    def _validate_query(cls, v: str) -> str:
+        cleaned = " ".join((v or "").strip().split())
+        if not (1 <= len(cleaned) <= 300):
+            raise ValueError("query must be between 1 and 300 characters")
+        return cleaned
+
+
+@write_router.post("/catalog-missing-request")
+def catalog_missing_request(
+    body: MissingCatalogRequestBody,
+    user: dict = Depends(get_current_user),
+):
+    uid = user.get("uid")
+    if not uid:
+        raise HTTPException(status_code=401, detail="Authentication token missing or invalid")
+    payload = {
+        "query": body.query,
+        "note": (body.note or "").strip()[:500] or None,
+        "requested_by_uid": uid,
+        "requested_at": firestore.SERVER_TIMESTAMP,
+        "auto_published": False,
+        "status": "pending_review",
+    }
+    doc_ref = db.collection("missing_catalog_requests").document()
+    doc_ref.set(payload)
+    return JSONResponse(
+        status_code=201,
+        content={
+            "status": "logged",
+            "request_id": doc_ref.id,
+            "auto_published": False,
+        },
+    )

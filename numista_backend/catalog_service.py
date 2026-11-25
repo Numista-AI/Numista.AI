@@ -21,10 +21,11 @@ from catalog_nac1 import KIND_TO_COLLECTION, validate_nac1
 
 CATALOG_COLLECTION = "us_numismatics_catalog"
 USER_COLLECTIONS = ("coins", "currency", "world_items")
-FREE_TRIAL_ITEM_LIMIT = 10  # = TIER_COIN_LIMITS["free"]; CoS 16 Nov (Free 10 everywhere)
+# Free-tier item limit (Guest tier retired 25 Nov 2026; Free tier cap = 10 items).
+FREE_TRIAL_ITEM_LIMIT = 10  # = TIER_COIN_LIMITS["free"]
 _FIXTURE_PATH = os.path.join(os.path.dirname(__file__), "data", "catalog_dev_fixture.json")
 
-# In-memory guest search sliding-window rate limiter (Founder Q4: rate-limited guest search)
+# In-memory unauthenticated public-browse search sliding-window rate limiter
 _guest_search_buckets: Dict[str, List[float]] = {}
 GUEST_SEARCH_LIMIT_PER_MIN = 30
 
@@ -63,14 +64,37 @@ def check_guest_search_rate_limit(
 
 def verify_image_download_allowed(user: Optional[dict], nac_code: str) -> Dict[str, Any]:
     """
-    Founder Q4 policy: Unauthenticated guests can browse and view the catalog,
-    but NO image download is permitted without a registered account.
+    Public catalog browse policy: Unauthenticated visitors can browse and view the catalog,
+    but NO raw image download is permitted without a registered account.
     """
     if not validate_nac1(nac_code):
         raise CatalogError(400, "INVALID_NAC1_CHECKSUM")
     if not user or not user.get("uid"):
         raise CatalogError(403, "IMAGE_DOWNLOAD_REQUIRES_ACCOUNT")
     return {"allowed": True, "nac_code": nac_code, "uid": user["uid"]}
+
+
+def verify_banknote_ai_download_allowed(item: Dict[str, Any]) -> None:
+    """
+    31 CFR § 411.1 / 18 U.S.C. § 504 statutory compliance guard (Wave 2 Component F):
+    Raw image download is strictly disabled (HTTP 403) for any AI-generated banknote
+    illustration, even for authenticated accounts.
+    """
+    is_note = (
+        str(item.get("type") or "").lower() == "note"
+        or str(item.get("kind") or "").upper() == "BN"
+        or str(item.get("nac_code") or "").startswith("NAC1.BN.")
+    )
+    if not is_note:
+        return
+    primary = item.get("primary_image") if isinstance(item.get("primary_image"), dict) else {}
+    type_img = item.get("type_image") if isinstance(item.get("type_image"), dict) else {}
+    if (
+        item.get("ai_generated") is True
+        or primary.get("ai_generated") is True
+        or type_img.get("ai_generated") is True
+    ):
+        raise CatalogError(403, "AI_BANKNOTE_DOWNLOAD_DISABLED")
 
 
 # ── Reads ─────────────────────────────────────────────────────────────────────
@@ -123,12 +147,34 @@ def filter_catalog(
         if max_year and it.get("year", 0) > max_year:
             continue
         if ql:
+            search_aliases = it.get("search_aliases") or []
+            alias_text = " ".join(str(a) for a in search_aliases if isinstance(a, str))
+            nac_aliases = it.get("nac_aliases") or []
+            nac_alias_text = " ".join(str(a) for a in nac_aliases if isinstance(a, str))
             hay = " ".join(
-                str(it.get(k, ""))
-                for k in ("title", "subtitle", "nac_code", "year_display", "series", "denomination_class")
-            )
-            if ql not in hay.lower():
-                continue
+                [
+                    *(
+                        str(it.get(k, ""))
+                        for k in (
+                            "name",
+                            "title",
+                            "subtitle",
+                            "nac_code",
+                            "year_display",
+                            "year",
+                            "series",
+                            "denomination",
+                            "denomination_class",
+                        )
+                    ),
+                    alias_text,
+                    nac_alias_text,
+                ]
+            ).lower()
+            if ql not in hay:
+                tokens = [t for t in ql.split() if t]
+                if not tokens or not all(t in hay for t in tokens):
+                    continue
         out.append(it)
     return out
 
