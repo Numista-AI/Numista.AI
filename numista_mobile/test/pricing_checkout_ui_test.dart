@@ -372,5 +372,243 @@ void main() {
       expect(find.textContaining('coming soon'), findsNothing);
       expect(find.text(r'$9.99'), findsNothing);
     });
+
+    testWidgets('T-UI-11 (Subscribe-gap 4a): Signed-in pending status shows loading state and disables all paid/lifetime CTAs', (tester) async {
+      tester.view.physicalSize = const Size(1280, 2200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final completer = Completer<SubscriptionStatusSnapshot?>();
+      var checkoutCalls = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicInfoShell(
+            targetRoute: '/pricing',
+            isSignedInOverride: true,
+            uidOverride: 'uid_pending',
+            statusFetcherOverride: (_) => completer.future,
+            checkoutStarterOverride: ({required String tier, String interval = 'month', String? promoCode}) async {
+              checkoutCalls++;
+              return const CheckoutLaunchResult(ok: true, statusCode: 200);
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('pricing_status_loading_banner')), findsOneWidget);
+      expect(find.text('Checking your account...'), findsOneWidget);
+      expect(find.text('Subscribe'), findsNothing);
+      expect(find.text(r'Buy Lifetime ($500)'), findsNothing);
+
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        final btn = tester.widget<ElevatedButton>(find.byKey(Key(keyName)));
+        expect(btn.onPressed, isNull, reason: '$keyName must be disabled while status is pending');
+      }
+
+      await tester.tap(find.byKey(const Key('plan_cta_pro')));
+      await tester.pump();
+      expect(checkoutCalls, 0);
+
+      // Unmount widget cleanly so dispose cancels the 15s timeout timer.
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('T-UI-12 (Subscribe-gap 4b): Founding Beta transitions from disabled loading state to disabled Included with Founding Beta after 200', (tester) async {
+      tester.view.physicalSize = const Size(1280, 2200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final completer = Completer<SubscriptionStatusSnapshot?>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicInfoShell(
+            targetRoute: '/pricing',
+            isSignedInOverride: true,
+            uidOverride: 'uid_beta_delayed',
+            statusFetcherOverride: (_) => completer.future,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('pricing_status_loading_banner')), findsOneWidget);
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNull);
+      }
+
+      completer.complete(const SubscriptionStatusSnapshot(
+        stripeTier: 'founding_beta',
+        unlimited: true,
+        estateAccess: true,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('pricing_status_loading_banner')), findsNothing);
+      expect(
+        find.text('Founding Beta Member — Lifetime Access (including Estate) Included'),
+        findsOneWidget,
+      );
+      expect(find.text('Included with Founding Beta'), findsNWidgets(5));
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNull);
+      }
+    });
+
+    testWidgets('T-UI-13 (Subscribe-gap 4c): Paid-eligible non-beta account gets enabled Subscribe/Buy buttons only after 200', (tester) async {
+      tester.view.physicalSize = const Size(1280, 2200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final completer = Completer<SubscriptionStatusSnapshot?>();
+      final launchedTiers = <String>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicInfoShell(
+            targetRoute: '/pricing',
+            isSignedInOverride: true,
+            uidOverride: 'uid_paid_eligible',
+            nowUtcOverride: DateTime.utc(2026, 12, 1, 12),
+            statusFetcherOverride: (_) => completer.future,
+            checkoutStarterOverride: ({required String tier, String interval = 'month', String? promoCode}) async {
+              launchedTiers.add(tier);
+              return const CheckoutLaunchResult(ok: true, statusCode: 200);
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNull);
+      }
+
+      completer.complete(const SubscriptionStatusSnapshot(
+        stripeTier: 'free',
+        unlimited: false,
+        estateAccess: false,
+        coinLimit: 10,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('pricing_status_loading_banner')), findsNothing);
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNotNull);
+      }
+
+      await tester.ensureVisible(find.byKey(const Key('plan_cta_pro')));
+      await tester.tap(find.byKey(const Key('plan_cta_pro')));
+      await tester.pumpAndSettle();
+      expect(launchedTiers, ['pro']);
+    });
+
+    testWidgets('T-UI-14 (Subscribe-gap 4d): Error and timeout keep all buttons disabled with Retry until status succeeds', (tester) async {
+      tester.view.physicalSize = const Size(1280, 2200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      var attempt = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicInfoShell(
+            targetRoute: '/pricing',
+            isSignedInOverride: true,
+            uidOverride: 'uid_error_retry',
+            statusFetcherOverride: (_) {
+              attempt++;
+              if (attempt == 1) {
+                return Future<SubscriptionStatusSnapshot?>.value(null);
+              }
+              if (attempt == 2) {
+                return Completer<SubscriptionStatusSnapshot?>().future;
+              }
+              return Future<SubscriptionStatusSnapshot?>.value(
+                const SubscriptionStatusSnapshot(stripeTier: 'free', coinLimit: 10),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1st attempt returned null -> error banner + Retry shown, all CTAs disabled
+      expect(find.byKey(const Key('pricing_status_error_banner')), findsOneWidget);
+      expect(find.byKey(const Key('pricing_status_retry_btn')), findsOneWidget);
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNull);
+      }
+
+      // Tap Retry -> 2nd attempt hangs -> advance past 15s timeout -> still error + disabled
+      await tester.tap(find.byKey(const Key('pricing_status_retry_btn')));
+      await tester.pump();
+      expect(find.byKey(const Key('pricing_status_loading_banner')), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 15));
+      await tester.pump();
+      expect(find.byKey(const Key('pricing_status_error_banner')), findsOneWidget);
+      expect(find.byKey(const Key('pricing_status_retry_btn')), findsOneWidget);
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNull);
+      }
+
+      // Tap Retry -> 3rd attempt resolves free -> buttons enable cleanly
+      await tester.tap(find.byKey(const Key('pricing_status_retry_btn')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('pricing_status_error_banner')), findsNothing);
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNotNull);
+      }
+    });
   });
 }
