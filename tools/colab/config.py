@@ -77,6 +77,7 @@ MODEL_LICENSES: dict[str, ModelLicenseInfo] = {
     "Marker": ModelLicenseInfo(spdx="GPL-3.0", commercial_ok=False, notes="Blocked without offline-only waiver"),
     "Surya": ModelLicenseInfo(spdx="GPL-3.0-Modified", commercial_ok=False, notes="Blocked without offline-only waiver"),
     "YOLOv11": ModelLicenseInfo(spdx="AGPL-3.0", commercial_ok=False, notes="Explicitly blocked per Gemini/Muse gate"),
+    "CUDA-Smoke": ModelLicenseInfo(spdx="Apache-2.0", commercial_ok=True, notes="AT-01/AT-02 live GPU smoke verification"),
 }
 
 
@@ -91,3 +92,14 @@ def resolve_colab_cli() -> str:
     if found:
         return found
     return str(DEFAULT_COLAB_CLI_PATH)
+
+
+def resolve_gdrive_cli() -> str:
+    """Return the path to the gdrive CLI executable (resolving .cmd on Windows)."""
+    env_bin = os.environ.get("GDRIVE_CLI_BIN")
+    if env_bin:
+        return env_bin
+    found = shutil.which("gdrive")
+    if found:
+        return found
+    return "gdrive"

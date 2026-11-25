@@ -22,6 +22,7 @@ from tools.colab.config import (
     PILOT_TIMEOUT_SEC,
     PLAN_SHA8,
     resolve_colab_cli,
+    resolve_gdrive_cli,
 )
 from tools.colab.guards import (
     GuardViolation,
@@ -32,6 +33,7 @@ from tools.colab.guards import (
 )
 
 MILESTONE_SCRIPTS: dict[str, tuple[Path, str]] = {
+    "SMOKE": (Path(__file__).resolve().parent / "jobs" / "smoke_gpu.py", "CUDA-Smoke"),
     "M1": (Path(__file__).resolve().parent / "jobs" / "m1_framing.py", "BiRefNet"),
     "M2": (Path(__file__).resolve().parent / "jobs" / "m2_embeddings.py", "DINOv2"),
     "M3": (Path(__file__).resolve().parent / "jobs" / "m3_cropper.py", M3_DEFAULT_MODEL),
@@ -113,42 +115,84 @@ def build_cu_receipt(
     }
 
 
+def extract_delimited_json(stdout: str, begin_marker: str, end_marker: str) -> dict[str, Any] | None:
+    """Extract a JSON object emitted between markers in subprocess stdout."""
+    start_idx = stdout.find(begin_marker)
+    if start_idx == -1:
+        return None
+    end_idx = stdout.find(end_marker, start_idx + len(begin_marker))
+    if end_idx == -1:
+        return None
+    raw = stdout[start_idx + len(begin_marker) : end_idx].strip()
+    if not raw:
+        return None
+    data = json.loads(raw)
+    return data if isinstance(data, dict) else None
+
+
+def _run_gdrive_with_retry(args: list[str], *, timeout_sec: int = 90) -> subprocess.CompletedProcess[str]:
+    """Run gdrive CLI resolving .cmd on Windows, retrying transient 403/rate-limit errors."""
+    gdrive_bin = resolve_gdrive_cli()
+    last_proc: subprocess.CompletedProcess[str] | None = None
+    for attempt in range(4):
+        proc = run_with_timeout([gdrive_bin, *args], timeout_sec=timeout_sec)
+        last_proc = proc
+        if proc.returncode == 0:
+            return proc
+        err_text = (proc.stderr or "") + (proc.stdout or "")
+        if "rateLimitExceeded" in err_text or "403" in err_text:
+            time.sleep(3 * (attempt + 1))
+            continue
+        break
+    assert last_proc is not None
+    raise RuntimeError(f"gdrive {args} failed ({last_proc.returncode}): {last_proc.stderr}")
+
+
+def _parse_drive_folder_id(stdout: str, job_id: str) -> str:
+    """Extract Drive folder ID from gdrive mkdir JSON/text output, or fall back to folder ls."""
+    text = (stdout or "").strip()
+    if text:
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict) and parsed.get("id"):
+                return str(parsed["id"])
+        except json.JSONDecodeError:
+            for token in text.split():
+                if token.endswith(")"):
+                    return token.rstrip(")")
+
+    ls_proc = _run_gdrive_with_retry(["readonly", "ls", DRIVE_STAGING_FOLDER_ID, "--json"], timeout_sec=60)
+    try:
+        items = json.loads(ls_proc.stdout)
+        if isinstance(items, list):
+            for entry in reversed(items):
+                if isinstance(entry, dict) and entry.get("name") == job_id and entry.get("id"):
+                    return str(entry["id"])
+    except json.JSONDecodeError:
+        for line in reversed(ls_proc.stdout.splitlines()):
+            parts = line.split()
+            if len(parts) >= 2 and parts[1] == job_id:
+                return parts[0]
+    return ""
+
+
 def upload_staging_bundle(output_dir: Path, job_id: str) -> str:
     """Upload staged job artifacts to Google Drive -> Numista.Ai -> Colab_Staging/<job_id>/."""
-    mkdir_proc = run_with_timeout(
-        [
-            "gdrive",
-            "mutate",
-            "mkdir",
-            job_id,
-            "--parent",
-            DRIVE_STAGING_FOLDER_ID,
-            "--json",
-        ],
+    mkdir_proc = _run_gdrive_with_retry(
+        ["mutate", "mkdir", job_id, "--parent", DRIVE_STAGING_FOLDER_ID, "--json"],
         timeout_sec=60,
     )
-    if mkdir_proc.returncode != 0:
-        raise RuntimeError(f"gdrive mkdir failed: {mkdir_proc.stderr}")
-
-    folder_id = ""
-    try:
-        folder_id = json.loads(mkdir_proc.stdout).get("id", "")
-    except json.JSONDecodeError:
-        for token in mkdir_proc.stdout.split():
-            if token.endswith(")"):
-                folder_id = token.rstrip(")")
+    folder_id = _parse_drive_folder_id(mkdir_proc.stdout, job_id)
     if not folder_id:
-        raise RuntimeError(f"Could not parse Drive staging job folder ID from: {mkdir_proc.stdout}")
+        raise RuntimeError(f"Could not resolve Drive staging folder ID for {job_id!r}.")
 
     for artifact in sorted(output_dir.rglob("*")):
         if not artifact.is_file():
             continue
-        up_proc = run_with_timeout(
-            ["gdrive", "mutate", "upload", str(artifact), "--parent", folder_id, "--json"],
+        _run_gdrive_with_retry(
+            ["mutate", "upload", str(artifact), "--parent", folder_id],
             timeout_sec=120,
         )
-        if up_proc.returncode != 0:
-            raise RuntimeError(f"gdrive upload failed for {artifact}: {up_proc.stderr}")
     return folder_id
 
 
@@ -248,6 +292,27 @@ def run_job(
         post_usage_proc = run_with_timeout([cli_bin, "usage"], timeout_sec=60)
         post_balance = parse_colab_usage(post_usage_proc.stdout)
 
+        if milestone == "SMOKE":
+            smoke_payload = extract_delimited_json(
+                run_proc.stdout,
+                "===COLAB_SMOKE_JSON_BEGIN===",
+                "===COLAB_SMOKE_JSON_END===",
+            )
+            if (
+                smoke_payload is None
+                or not smoke_payload.get("cuda_available")
+                or not smoke_payload.get("matmul_ok")
+                or not smoke_payload.get("gcp_adc_env_absent")
+                or smoke_payload.get("service_key_files_found", 1) != 0
+            ):
+                raise GuardViolation(
+                    f"Live GPU smoke verification failed checks: {smoke_payload!r}\nstdout:\n{run_proc.stdout}"
+                )
+            output_dir.mkdir(parents=True, exist_ok=True)
+            (output_dir / "gpu_smoke_proof.json").write_bytes(
+                (json.dumps(smoke_payload, indent=2) + "\n").encode("utf-8")
+            )
+
     duration_sec = time.monotonic() - t0
     receipt = build_cu_receipt(
         job_id=job_id,
@@ -293,7 +358,8 @@ def run_job(
         raise GuardViolation(f"Manifest verification failed for {manifest_path}")
 
     if not dry_run:
-        upload_staging_bundle(output_dir, job_id)
+        folder_id = upload_staging_bundle(output_dir, job_id)
+        print(f"Uploaded Drive staging folder ID: {folder_id}")
     return manifest_path
 
 

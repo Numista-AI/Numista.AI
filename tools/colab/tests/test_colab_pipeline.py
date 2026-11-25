@@ -39,6 +39,8 @@ def test_at01_parse_usage_and_balance_floor() -> None:
     """AT-01: Parse `colab usage` output and enforce the 500 CU hard stop floor."""
     assert parse_colab_usage("Available: 1531.77 compute units") == pytest.approx(1531.77)
     assert parse_colab_usage("Remaining balance: 499.99 CUs") == pytest.approx(499.99)
+    real_usage = "Current balance: 1531.77 compute units\nUsage rate: 0.00/hr\nActive assignments: 0\n"
+    assert parse_colab_usage(real_usage) == pytest.approx(1531.77)
 
     ok = enforce_pre_run_guards(
         balance_cu=1531.77,
@@ -64,6 +66,7 @@ def test_at01_parse_usage_and_balance_floor() -> None:
 def test_at02_auto_shutdown_verification() -> None:
     """AT-02: Confirm 0 active sessions passes and lingering session fails."""
     assert verify_zero_active_sessions("No active sessions.", expected_session="job-m1-01") is True
+    assert verify_zero_active_sessions("[colab] No active sessions found on server.", expected_session="smoke-l4") is True
     assert verify_zero_active_sessions("other-session running", expected_session="job-m1-01") is True
 
     with pytest.raises(GuardViolation, match="Auto-shutdown"):
@@ -255,7 +258,7 @@ def test_pilots_only_runtime_guard_and_section17_confirmation(tmp_path: Path) ->
         )
 
 
-@pytest.mark.parametrize("milestone", ["M1", "M2", "M3", "M4"])
+@pytest.mark.parametrize("milestone", ["SMOKE", "M1", "M2", "M3", "M4"])
 def test_runner_dry_run_all_milestones(tmp_path: Path, milestone: str) -> None:
     """Verify end-to-end dry-run wrapper emits verified manifest, summary.md, and cu_receipt.json."""
     out_dir = tmp_path / milestone
@@ -276,6 +279,11 @@ def test_runner_dry_run_all_milestones(tmp_path: Path, milestone: str) -> None:
     assert manifest_data["gcp_section_17_confirmation"] == GCP_SECTION_17_CONFIRMATION
     assert manifest_data["model"]["promotion_allowed"] is True
 
+    if milestone == "SMOKE":
+        smoke_proof = json.loads((out_dir / "gpu_smoke_proof.json").read_text(encoding="utf-8"))
+        assert smoke_proof["mode"] == "dry_run"
+        assert smoke_proof["gcp_adc_env_absent"] is True
+        assert smoke_proof["service_key_files_found"] == 0
     if milestone == "M2":
         assert manifest_data["extra"]["m2_review_owner"] == M2_REVIEW_OWNER
     if milestone == "M4":
