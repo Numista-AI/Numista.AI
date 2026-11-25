@@ -30,6 +30,7 @@ from catalog_service import (
     find_by_slug,
     load_catalog,
     toggle_personal_photo_in_txn,
+    verify_banknote_ai_download_allowed,
     verify_image_download_allowed,
 )
 from routes.deps import db, get_current_user, verify_firebase_bearer_token
@@ -89,6 +90,10 @@ def download_catalog_image(nac_code: str, request: Request):
         raise HTTPException(status_code=e.status_code, detail={"error": e.code, **e.extra})
     for it in _items():
         if it.get("nac_code") == nac_code or nac_code in (it.get("nac_aliases") or []):
+            try:
+                verify_banknote_ai_download_allowed(it)
+            except CatalogError as e:
+                raise HTTPException(status_code=e.status_code, detail={"error": e.code, **e.extra})
             return {
                 "nac_code": it["nac_code"],
                 "obverse_image_url": it.get("obverse_image_url"),

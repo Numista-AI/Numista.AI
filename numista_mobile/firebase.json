@@ -43,6 +43,56 @@
         "source": "/reset",
         "destination": "/reset-password",
         "type": 301
+      },
+      {
+        "source": "/catalog/NAC1.CN.US.1C.20CENTPIEC.1875.XX.BASE.J",
+        "destination": "/catalog/NAC1.CN.US.20C.TWENTYCENT.1875.P.BASE.1",
+        "type": 301
+      },
+      {
+        "source": "/catalog/NAC1.CN.US.1C.20CENTPIEC.1875.XX.BASE.J/",
+        "destination": "/catalog/NAC1.CN.US.20C.TWENTYCENT.1875.P.BASE.1",
+        "type": 301
+      },
+      {
+        "source": "/catalog/NAC1.CN.US.1C.20CENTPIEC.1875.CC.BASE.2",
+        "destination": "/catalog/NAC1.CN.US.20C.TWENTYCENT.1875.CC.BASE.N",
+        "type": 301
+      },
+      {
+        "source": "/catalog/NAC1.CN.US.1C.20CENTPIEC.1875.CC.BASE.2/",
+        "destination": "/catalog/NAC1.CN.US.20C.TWENTYCENT.1875.CC.BASE.N",
+        "type": 301
+      },
+      {
+        "source": "/catalog/NAC1.CN.US.1C.20CENTPIEC.1875.S.BASE.1",
+        "destination": "/catalog/NAC1.CN.US.20C.TWENTYCENT.1875.S.BASE.0",
+        "type": 301
+      },
+      {
+        "source": "/catalog/NAC1.CN.US.1C.20CENTPIEC.1875.S.BASE.1/",
+        "destination": "/catalog/NAC1.CN.US.20C.TWENTYCENT.1875.S.BASE.0",
+        "type": 301
+      },
+      {
+        "source": "/catalog/NAC1.CN.US.D1.FLOWINGHAI.1795.P.BASE.S",
+        "destination": "/catalog/NAC1.CN.US.1D.FLOWINGHAI.1795.P.BASE.J",
+        "type": 301
+      },
+      {
+        "source": "/catalog/NAC1.CN.US.D1.FLOWINGHAI.1795.P.BASE.S/",
+        "destination": "/catalog/NAC1.CN.US.1D.FLOWINGHAI.1795.P.BASE.J",
+        "type": 301
+      },
+      {
+        "source": "/catalog/NAC1.CN.US.D1.DRAPEDBUST.1798.P.HERALDICEA.N",
+        "destination": "/catalog/NAC1.CN.US.1D.DRAPEDBUST.1798.P.HERALDICEA.R",
+        "type": 301
+      },
+      {
+        "source": "/catalog/NAC1.CN.US.D1.DRAPEDBUST.1798.P.HERALDICEA.N/",
+        "destination": "/catalog/NAC1.CN.US.1D.DRAPEDBUST.1798.P.HERALDICEA.R",
+        "type": 301
       }
     ],
 

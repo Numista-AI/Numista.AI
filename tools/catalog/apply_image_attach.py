@@ -41,7 +41,8 @@ except ImportError:
         from pii_gate_validator import scan_document_for_leaks
 
 
-# Explicit 7-key allow-list (Part 4, m1). Zero internal columns or *_file_page_url.
+# Explicit 7-key allow-list (Part 4, m1) + optional Wave 2 Component E `role` key
+# (packaging, packaging_alt, set_contents, privy_detail, set_member, primary, extra).
 ALLOWED_IMAGE_KEYS = (
     "url",
     "side",
@@ -51,6 +52,15 @@ ALLOWED_IMAGE_KEYS = (
     "source",
     "source_url",
 )
+ALLOWED_ROLE_VALUES = frozenset({
+    "packaging",
+    "packaging_alt",
+    "set_contents",
+    "privy_detail",
+    "set_member",
+    "primary",
+    "extra",
+})
 
 REPRESENTATIVE_PHOTO_LABEL = "Representative photo \u2014 date or mint may differ"
 DEFAULT_CAPTION = "Numista.Ai reference photo"
@@ -171,12 +181,12 @@ def _check_image_captions_p10(
 
 def build_side_image_object(row: Dict[str, Any], side: str) -> Dict[str, Any]:
     """
-    Maps a single side ('obverse' or 'reverse') from attach_manifest_v4 into a
-    strict 7-key catalog image object. Fails closed on unapproved URL, uncertified
-    license, missing credit/source_url, non-Y/N unique_side, or P10 caption leak.
+    Maps a single side ('obverse', 'reverse', 'packaging', or 'privy_detail') into a
+    strict allow-listed catalog image object. Fails closed on unapproved URL, uncertified
+    license, missing credit/source_url, non-Y/N unique_side, invalid role, or P10 caption leak.
     """
-    if side not in ("obverse", "reverse"):
-        raise ValueError(f"Unsupported side {side!r}; expected 'obverse' or 'reverse'")
+    if side not in ("obverse", "reverse", "packaging", "privy_detail"):
+        raise ValueError(f"Unsupported side {side!r}; expected 'obverse', 'reverse', 'packaging', or 'privy_detail'")
 
     url = (row.get(f"{side}_public_url") or "").strip()
     if not is_approved_image_url(url):
@@ -198,6 +208,8 @@ def build_side_image_object(row: Dict[str, Any], side: str) -> Dict[str, Any]:
     credit = (row.get(f"{side}_credit") or "").strip()
     if not credit:
         raise ValueError(f"{side}_credit is missing or empty")
+    if "used with permission" in credit.lower() or "courtesy" in credit.lower():
+        raise ValueError(f"{side}_credit uses forbidden wording (use 'Image: United States Mint'): {credit!r}")
 
     source_url = (row.get(f"{side}_source_url") or "").strip()
     if not source_url:
@@ -218,8 +230,42 @@ def build_side_image_object(row: Dict[str, Any], side: str) -> Dict[str, Any]:
         "source": credit,  # Spec: source always equals credit
         "source_url": source_url,
     }
-    assert tuple(obj.keys()) == ALLOWED_IMAGE_KEYS
+    raw_role = (row.get(f"{side}_role") or "").strip()
+    if raw_role:
+        if raw_role not in ALLOWED_ROLE_VALUES:
+            raise ValueError(f"{side}_role not in ALLOWED_ROLE_VALUES: {raw_role!r}")
+        obj["role"] = raw_role
+    else:
+        assert tuple(obj.keys()) == ALLOWED_IMAGE_KEYS
     return obj
+
+
+def attach_packaging_or_privy_image(
+    target_entry: Dict[str, Any],
+    img_obj: Dict[str, Any],
+) -> None:
+    """
+    Wave 2 Component E helper: attaches packaging/packaging_alt/set_contents images into
+    `packaging_images[]` and `privy_detail` close-ups as an additional `extra_images[]` item
+    (preserving full obverse & full reverse as separate entries; never overwrites primary).
+    """
+    role = (img_obj.get("role") or "").strip()
+    if role in ("packaging", "packaging_alt", "set_contents"):
+        pkg_list = list(target_entry.get("packaging_images") or [])
+        if role == "packaging":
+            # Eric Vision Rule 2a: OGP packaging is [0] / default image for set rows
+            pkg_list = [img_obj] + [p for p in pkg_list if p.get("url") != img_obj.get("url")]
+        else:
+            if not any(p.get("url") == img_obj.get("url") for p in pkg_list):
+                pkg_list.append(img_obj)
+        target_entry["packaging_images"] = pkg_list
+    elif role == "privy_detail":
+        extras = list(target_entry.get("extra_images") or [])
+        if not any(e.get("url") == img_obj.get("url") for e in extras):
+            extras.append(img_obj)
+        target_entry["extra_images"] = extras
+    else:
+        raise ValueError(f"Unsupported packaging/privy role: {role!r}")
 
 
 def _load_target_records(target_path: str) -> Tuple[List[Dict[str, Any]], bool]:

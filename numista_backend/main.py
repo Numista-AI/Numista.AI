@@ -2423,6 +2423,7 @@ class DeepDiveRequest(BaseModel):
     chat_history: list = []
     collection_context: str = ""
     user_name: str = ""
+    nac_code: Optional[str] = None
 
 # -- Morgan Conversational Coin Addition Tools ----------------------------------
 
@@ -3261,58 +3262,30 @@ COUNTING RULES (follow these exactly for any counting or inventory question):
                 turns.append(f"{role}: {msg.get('content', '')}")
             history_block = "\n\nRecent Conversation History:\n" + "\n".join(turns) + "\n"
 
-        # -- 3. RAG: look up coin knowledge base --------------------------------
+        # -- 3. Catalog-First RAG: Catalog of American Numismatics + Morgan §1 Honesty --
         knowledge_block = ""
+        catalog_cards = []
+        missing_item_report_prompt = None
         if MORGAN_KNOWLEDGE_AVAILABLE:
             try:
-                kb_context = get_coin_context(db, request.query)
+                from morgan_knowledge import get_catalog_context
+                cat_result = get_catalog_context(
+                    request.query,
+                    nac_code=request.nac_code,
+                )
+                catalog_cards = cat_result.get("catalog_cards") or []
+                missing_item_report_prompt = cat_result.get("missing_item_report_prompt")
+                kb_context = get_coin_context(db, request.query, nac_code=request.nac_code)
                 if kb_context:
                     knowledge_block = f"\n\n{kb_context}"
             except Exception as kb_err:
                 logger.warning(f"Deep dive: knowledge base lookup warning: {kb_err}")
 
-        # -- 3b. Auto-Scraper Trigger for Missing Coins -------------------------
-        lower_query = request.query.lower()
-        if any(x in lower_query for x in ["do we have", "is there", "add info for", "find images for", "scrape", "ordered", "released", "buy"]):
-            import re
-            import threading
-            import sqlite3
-            from numista_scraper.config import DB_PATH
-            from numista_scraper.url_scraper import scrape_url
-
-            search_term = request.query
-            for prefix in ["do we have the", "do we have", "is there a", "is there", "find images for the", "find images for", "add info for the", "add info for", "scrape the", "scrape", "ordered the", "ordered"]:
-                if lower_query.startswith(prefix):
-                    search_term = request.query[len(prefix):].strip()
-                    break
-
-            search_term = search_term.rstrip("?").strip()
-
-            has_coin = False
-            try:
-                conn = sqlite3.connect(str(DB_PATH))
-                conn.row_factory = sqlite3.Row
-                cur = conn.cursor()
-                cleaned_term = re.sub(r'[^a-zA-Z0-9\s]', '', search_term)
-                keywords = cleaned_term.split()
-                if keywords:
-                    sql = "SELECT doc_id FROM definitive_reference WHERE "
-                    sql += " AND ".join(["(variety LIKE ? OR design_obverse LIKE ?)" for _ in keywords])
-                    params = []
-                    for kw in keywords:
-                        params.extend([f"%{kw}%", f"%{kw}%"])
-                    cur.execute(sql, params)
-                    matches = cur.fetchall()
-                    if matches:
-                        has_coin = True
-                conn.close()
-            except Exception as e:
-                logger.error(f"Catalog pre-check error: {e}")
-
-            if not has_coin and len(search_term) > 5:
-                print(f"🚀 [Morgan Chat] Triggering background scrape for query: '{search_term}'")
-                threading.Thread(target=scrape_url, args=(search_term, False), daemon=True).start()
-                knowledge_block += f"\n\n[SYSTEM NOTIFICATION] The user asked about a coin currently missing from the database: '{search_term}'. The system has automatically launched a background scraping task to find, scrape, and ingest this coin from the US Mint or Wikipedia. Acknowledge this action warmly and reassure the user that it will be ingested momentarily."
+        # -- 3b. Un-gated Background Auto-Scraper RETIRED (Wave 2 Component C) --
+        # Per Morgan §1 verified-sources policy (Plan cc9d2916), Morgan NEVER launches
+        # unreviewed Wikipedia/web scraping threads into live databases. When an item is
+        # absent from the verified catalog, `missing_item_report_prompt` surfaces a
+        # "Report Missing Item" button routed to internal `catalog_missing_requests`.
 
         # -- 3c. Vector RAG: semantic numismatic reference chunks ------------------
         rag_block = ""
@@ -3544,9 +3517,20 @@ CRITICAL INSTRUCTIONS FOR ADDING & MANAGING COINS:
                     thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
                 ),
             )
-            return {"status": "success", "response": response2.text, "action_payload": action_payload}
+            return {
+                "status": "success",
+                "response": response2.text,
+                "action_payload": action_payload,
+                "catalog_cards": catalog_cards,
+                "missing_item_report_prompt": missing_item_report_prompt,
+            }
 
-        return {"status": "success", "response": response.text}
+        return {
+            "status": "success",
+            "response": response.text,
+            "catalog_cards": catalog_cards,
+            "missing_item_report_prompt": missing_item_report_prompt,
+        }
 
     except HTTPException:
         raise

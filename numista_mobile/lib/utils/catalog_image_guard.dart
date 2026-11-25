@@ -52,6 +52,10 @@ bool isApprovedCatalogImageUrl(String rawUrl) {
     return false;
   }
 
+  // Approved public GCS buckets (SAG residual self-containment note, Wave 2 F):
+  //   1. us_mint_coin_images
+  //   2. numista-reference-library
+  //   3. numista-uploads-studio-9101802118-8c9a8/reference/...
   switch (seg.first) {
     case 'us_mint_coin_images':
     case 'numista-reference-library':
@@ -64,7 +68,10 @@ bool isApprovedCatalogImageUrl(String rawUrl) {
   }
 }
 
-/// Allow-listed HTTPS provenance source hosts for clickable source_url links (CR3 P5).
+/// Allow-listed HTTPS provenance source hosts for clickable source_url links
+/// (CR3 P5 + Wave 2 Component F Smithsonian NNC hosts).
+// Exact CR3 P5 allowlist for image source_url links (3 hosts only; Smithsonian
+// object URLs belong in entry sources[], not image.source_url).
 const Set<String> _approvedSourceHosts = <String>{
   'usmint.gov',
   'www.usmint.gov',

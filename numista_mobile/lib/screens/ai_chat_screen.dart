@@ -55,8 +55,10 @@ String formatChatErrorResponse(int statusCode, String body) {
 }
 
 class AiChatScreen extends StatefulWidget {
-  /// Optional pre-populated query (from "AI Deep Dive" button on a coin).
+  /// Optional pre-populated query (from "Ask Morgan" button on a catalog item or coin).
   final String? initialQuery;
+  /// Optional canonical NAC1 catalog code for Tier-0 Catalog-First Morgan lookup (Wave 2 Component C).
+  final String? initialNacCode;
   final bool isPopout;
   final bool isMinimized;
   final bool isDocked;
@@ -66,10 +68,13 @@ class AiChatScreen extends StatefulWidget {
   final ValueChanged<DragUpdateDetails>? onDragUpdate;
   final VoidCallback? onDragEnd;
   final VoidCallback? onNavigateToCollection;
+  /// Optional callback to open a catalog entry by NAC1 code (Wave 2 Component C).
+  final ValueChanged<String>? onOpenCatalogNac;
 
   const AiChatScreen({
     super.key,
     this.initialQuery,
+    this.initialNacCode,
     this.isPopout = false,
     this.isMinimized = false,
     this.isDocked = false,
@@ -79,6 +84,7 @@ class AiChatScreen extends StatefulWidget {
     this.onDragUpdate,
     this.onDragEnd,
     this.onNavigateToCollection,
+    this.onOpenCatalogNac,
   });
 
   @override
@@ -509,6 +515,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
           'collection_context':  _ctx?.systemPrompt ?? '',
           'user_name':           _displayName,
           'screen_state':        MorganScreenStateRegistry.instance.toCompactJson(),
+          if (widget.initialNacCode != null && widget.initialNacCode!.isNotEmpty)
+            'nac_code':          widget.initialNacCode,
         }),
       );
 
@@ -521,6 +529,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
             'chat_history':        recentHistory,
             'collection_context':  _ctx?.systemPrompt ?? '',
             'user_name':           _displayName,
+            if (widget.initialNacCode != null && widget.initialNacCode!.isNotEmpty)
+              'nac_code':          widget.initialNacCode,
           }),
         );
       }
@@ -528,9 +538,23 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
       String replyText;
       String? actionPayloadJson;
+      List<Map<String, dynamic>>? catalogCards;
+      bool missingItemReportPrompt = false;
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         replyText = data['response'] ?? 'No response.';
+        if (data is Map && data['catalog_cards'] is List) {
+          final parsed = (data['catalog_cards'] as List)
+              .whereType<Map>()
+              .map((m) => Map<String, dynamic>.from(m))
+              .toList(growable: false);
+          if (parsed.isNotEmpty) {
+            catalogCards = parsed;
+          }
+        }
+        if (data is Map && data['missing_item_report_prompt'] == true) {
+          missingItemReportPrompt = true;
+        }
         if (data['action_payload'] != null &&
             !(data['action_payload'] is Map &&
                 data['action_payload']['status'] == 'rate_limited')) {
@@ -567,6 +591,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
         'content': replyText,
         // ignore: use_null_aware_elements
         if (actionPayloadJson != null) 'action_payload': actionPayloadJson,
+        'catalog_cards': ?catalogCards,
+        if (missingItemReportPrompt) 'missing_item_report_prompt': true,
       };
       setState(() {
         _messages.add(aiMsg);
@@ -926,6 +952,171 @@ class _AiChatScreenState extends State<AiChatScreen> {
     );
   }
 
+  Future<void> _addCatalogCardToCollection(Map<String, dynamic> card) async {
+    final nacCode = card['nac_code']?.toString() ?? '';
+    if (nacCode.isEmpty) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || AuthService.isGuest) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to add items to your collection (Free tier includes up to 10 items).'),
+        ),
+      );
+      return;
+    }
+    try {
+      final resp = await HttpAuthClient.post(
+        Uri.parse('$kApiBaseUrl/api/v1/collection/catalog-add'),
+        body: jsonEncode({
+          'nac_code': nacCode,
+          'idempotency_key': 'morgan_${nacCode}_${DateTime.now().millisecondsSinceEpoch}',
+        }),
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Added "${card['name'] ?? nacCode}" to your collection!')),
+        );
+      } else if (resp.statusCode == 403) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Free-tier 10-item collection limit reached. Upgrade to add unlimited items.'),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(formatChatErrorResponse(resp.statusCode, resp.body))),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not reach server to add item. Please try again.')),
+      );
+    }
+  }
+
+  Widget _buildCatalogCitationCard(Map<String, dynamic> card) {
+    final nacCode = card['nac_code']?.toString() ?? '';
+    final name = card['name']?.toString() ?? nacCode;
+    final year = card['year']?.toString() ?? '';
+    final denom = card['denomination']?.toString() ?? '';
+    final series = card['series']?.toString() ?? '';
+    final mintage = card['mintage_label']?.toString() ?? '';
+    final thumbUrl = card['thumb_url']?.toString() ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10, bottom: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF0F172A)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _gold.withAlpha(140), width: 1.25),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (thumbUrl.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    thumbUrl,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Icon(Icons.auto_stories_outlined, size: 22),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: TextStyle(
+                        color: _textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (year.isNotEmpty || denom.isNotEmpty || series.isNotEmpty)
+                      Text(
+                        [if (year.isNotEmpty) year, if (denom.isNotEmpty) denom, if (series.isNotEmpty) series].join(' • '),
+                        style: TextStyle(color: _sub, fontSize: 12),
+                      ),
+                    if (mintage.isNotEmpty)
+                      Text(
+                        'Mintage: $mintage',
+                        style: TextStyle(color: _sub, fontSize: 11),
+                      ),
+                    if (nacCode.isNotEmpty)
+                      Text(
+                        nacCode,
+                        style: TextStyle(color: _sub.withAlpha(180), fontSize: 10, fontFamily: 'monospace'),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              if (widget.onOpenCatalogNac != null && nacCode.isNotEmpty)
+                OutlinedButton.icon(
+                  onPressed: () => widget.onOpenCatalogNac!(nacCode),
+                  icon: const Icon(Icons.open_in_new, size: 14),
+                  label: const Text('View in Catalog', style: TextStyle(fontSize: 12)),
+                ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _teal,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                ),
+                onPressed: () => _addCatalogCardToCollection(card),
+                icon: const Icon(Icons.add_circle_outline, size: 14),
+                label: const Text('Add to Collection', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final coin = CoinModel(
+                    id: 'morgan_cat_${DateTime.now().millisecondsSinceEpoch}',
+                    year: year,
+                    denomination: denom,
+                    themeSubject: name,
+                    programSeries: series.isNotEmpty ? series : name,
+                    personalNotes: nacCode.isNotEmpty ? 'Catalog NAC1: $nacCode' : '',
+                  );
+                  await WishlistService.addToWishlist(coin);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Added "$name" to your Wishlist!')),
+                  );
+                },
+                icon: const Icon(Icons.favorite_border, size: 14),
+                label: const Text('Add to Wishlist', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildConfirmationCard(Map<String, dynamic> payload) {
     final year = payload['year'] ?? '';
     final denom = payload['denomination'] ?? '';
@@ -1161,6 +1352,25 @@ class _AiChatScreenState extends State<AiChatScreen> {
               _buildGroupProposalCard(payload),
             if (payload != null && payload['action'] == 'group_photo_success')
               _buildGroupSuccessCard(payload),
+            if (!isUser && msg['catalog_cards'] is List && (msg['catalog_cards'] as List).isNotEmpty)
+              ...((msg['catalog_cards'] as List)
+                  .whereType<Map>()
+                  .map((c) => _buildCatalogCitationCard(Map<String, dynamic>.from(c)))),
+            if (!isUser && msg['missing_item_report_prompt'] == true)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: ActionChip(
+                  avatar: Icon(Icons.flag_outlined, size: 16, color: _gold),
+                  label: const Text('Report Missing Item'),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Logged for Catalog review — never auto-published until verified.'),
+                      ),
+                    );
+                  },
+                ),
+              ),
             if (!isUser) ...[
               const SizedBox(height: 12),
               ConstrainedBox(

@@ -1,10 +1,10 @@
 # SOP: Banknote Reference Image System & Taxonomy
 
 **Standard Operating Procedure**  
-**Document Version:** 1.0.0  
-**Effective Date:** August 10, 2026  
+**Document Version:** 2.0.0  
+**Effective Date:** November 25, 2026 (Supersedes v1.0.0 August 10, 2026 AI render ban for catalog gap-fills only)  
 **Target Repository:** `Numista.AI`  
-**Status:** Approved Standard  
+**Status:** Approved Standard (Wave 2 `cc9d2916` / Eric 25 Nov 2026 ruling)  
 
 ---
 
@@ -128,9 +128,16 @@ To guarantee **$O(1)$ point-read performance** in client applications (`Currency
 2. **Official Government Archives**: U.S. Bureau of Engraving and Printing (BEP), U.S. Treasury, or Library of Congress public domain archives.
 3. **Attributed User Contributions**: Direct user submissions where explicit copyright waiver / Creative Commons license is granted.
 
-### B. Prohibited Sources & Scraper Quarantine
+### B. Prohibited Sources, Scraper Quarantine & 31 CFR § 411.1 AI Gap-Fill Rules
 - **Auction Scrapers**: Heritage Auctions, Stack's Bowers, or PCGS/PMG scrapers are strictly prohibited for reference library building due to Terms of Service and copyright risks.
-- **AI Renders**: AI-generated banknote renders are strictly forbidden from entering `gs://numista-reference-library`. Intake manifests require attestation that assets are authentic photographs.
+- **Public-Domain Scans First**: Authentic Smithsonian NNC, Bureau of Engraving and Printing (BEP), U.S. Treasury, or Wikimedia Commons public-domain scans ALWAYS take precedence over AI illustrations.
+- **AI Banknote Gap-Fills (v2.0.0 — Strictly Bounded by 31 CFR § 411.1 & 18 U.S.C. §§ 475, 504)**:
+  When no authentic public-domain scan is available for a catalog banknote row, an AI-generated illustration MAY enter `gs://numista-reference-library` ONLY after passing **SAG 95+ AND Gemini 95+ AND Muse 95+** and satisfying all five mandatory controls:
+  1. **One-Sided Color Obverse Only**: `side == "obverse"` ONLY (`build_public_catalog.py` fails closed and drops any AI banknote reverse).
+  2. **Strictly `< 75%` Linear Print Size + Raw Download Disabled**: UI caps rendered dimensions strictly below 75% of real U.S. currency linear dimensions (`< 4.60" × 1.95"` for small-size notes; `< 5.56" × 2.34"` for large-size notes), disables zoom past cap, and `GET /api/v1/catalog/{nac_code}/image-download` returns HTTP `403 AI_BANKNOTE_DOWNLOAD_DISABLED` even for signed-in users.
+  3. **Immediate Destruction of Working Intermediates**: All temporary/working AI banknote generation files MUST be deleted immediately after placing the final approved asset.
+  4. **Zero Marketing / Ad Usage (`18 U.S.C. § 475`)**: Every AI banknote record carries `"allow_marketing_use": false` and is excluded from all ads, landing-page heroes, and promotional graphics.
+  5. **Mandatory Burned-In Watermark & UI Caption**: Every AI banknote image MUST carry a small legible **`"AI Generated"`** watermark in the **lower-right corner** AND render the fixed UI disclosure **`"AI-generated illustration of the note — not a genuine specimen"`**.
 
 ### C. Mandatory `MANIFEST.json` Schema
 Every intake batch directory submitted to `_scripts/intake_banknote_images.py` must include a valid `MANIFEST.json`:
