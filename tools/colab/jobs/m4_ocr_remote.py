@@ -228,10 +228,10 @@ def main() -> int:
 
     gpu_name = torch.cuda.get_device_name(0)
     vram_mib = round(torch.cuda.get_device_properties(0).total_memory / (1024 * 1024), 1)
-    use_4bit = vram_mib < 18000.0
+    use_4bit = True
     print(f"[m4_remote] GPU: {gpu_name} ({vram_mib} MiB, 4bit={use_4bit})", flush=True)
 
-    _ensure_dependencies(need_bnb=use_4bit)
+    _ensure_dependencies(need_bnb=True)
 
     from PIL import Image
     from transformers import AutoProcessor, BitsAndBytesConfig
@@ -256,15 +256,28 @@ def main() -> int:
     t0 = time.monotonic()
     print(f"[m4_remote] Loading {MODEL_ID} (Apache-2.0)...", flush=True)
     processor = AutoProcessor.from_pretrained(MODEL_ID)
-    if use_4bit:
-        bnb_cfg = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,
-        )
-        model = VLMClass.from_pretrained(MODEL_ID, quantization_config=bnb_cfg, device_map="auto").eval()
-    else:
-        model = VLMClass.from_pretrained(MODEL_ID, torch_dtype=torch.float16, device_map="auto").eval()
+    compute_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    bnb_cfg = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=compute_dtype,
+    )
+    try:
+        model = VLMClass.from_pretrained(
+            MODEL_ID,
+            quantization_config=bnb_cfg,
+            device_map={"": 0},
+            attn_implementation="sdpa",
+        ).eval()
+    except (TypeError, ValueError):
+        model = VLMClass.from_pretrained(
+            MODEL_ID,
+            quantization_config=bnb_cfg,
+            device_map={"": 0},
+        ).eval()
+    if any(p.device.type != "cuda" for p in model.parameters()):
+        raise RuntimeError("Model offloaded to CPU")
 
     prompt_text = (
         "Transcribe this historical US Mint document page verbatim into clean Markdown. "
@@ -276,10 +289,11 @@ def main() -> int:
     anchor_checks: list[dict[str, Any]] = []
 
     for idx, task in enumerate(page_tasks, start=1):
+        page_t0 = time.monotonic()
         with Image.open(task["page_image"]) as pil_img:
             img_rgb = pil_img.convert("RGB")
-            if max(img_rgb.size) > 1288:
-                img_rgb.thumbnail((1288, 1288), Image.Resampling.LANCZOS)
+            if max(img_rgb.size) > 1024:
+                img_rgb.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
 
         messages = [
             {
@@ -294,7 +308,13 @@ def main() -> int:
         inputs = processor(text=[text_prompt], images=[img_rgb], padding=True, return_tensors="pt").to("cuda")
 
         with torch.no_grad():
-            output_ids = model.generate(**inputs, max_new_tokens=2048, do_sample=False)
+            output_ids = model.generate(
+                **inputs,
+                max_new_tokens=1024,
+                max_time=90.0,
+                repetition_penalty=1.08,
+                do_sample=False,
+            )
 
         prompt_len = inputs["input_ids"].shape[1]
         generated_ids = output_ids[:, prompt_len:]
@@ -329,7 +349,10 @@ def main() -> int:
             f"<!-- page: {task['pdf_page']} | printed: {task['printed_page']} -->\n"
             f"{ocr_text}\n\n"
         )
-        print(f"[m4_remote] OCR complete page {idx}/{len(page_tasks)} ({task['source_doc']} p.{task['pdf_page']})", flush=True)
+        print(
+            f"[m4_remote] OCR complete page {idx}/{len(page_tasks)} ({task['source_doc']} p.{task['pdf_page']}) in {round(time.monotonic() - page_t0, 1)}s",
+            flush=True,
+        )
 
     elapsed_sec = round(time.monotonic() - t0, 2)
 
