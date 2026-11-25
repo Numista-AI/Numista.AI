@@ -31,7 +31,6 @@ import time
 import re
 import argparse
 import datetime
-import urllib3
 from pathlib import Path
 
 try:
@@ -40,17 +39,17 @@ except ImportError:
     print("ERROR: 'requests' not installed. Run: pip install requests")
     sys.exit(1)
 
-urllib3.disable_warnings()
 sys.stdout.reconfigure(encoding='utf-8')
 
 # ── Config ────────────────────────────────────────────────────────────────────
-API_KEY   = os.environ.get('GREYSHEET_API_KEY',   '1FCAE3B4-966A-4F25-AFA1-BE242C26856B')
-API_TOKEN = os.environ.get('GREYSHEET_API_TOKEN', 'D876F1BA-DDC4-4F80-B155-509AB3B6B970')
+API_KEY   = os.environ.get('GREYSHEET_API_KEY', '').strip()
+API_TOKEN = os.environ.get('GREYSHEET_API_TOKEN', '').strip()
 
-if 'GREYSHEET_API_KEY' not in os.environ:
-    print("WARNING: GREYSHEET_API_KEY not in environment. Using fallback key.")
+if not API_KEY or not API_TOKEN:
+    print("ERROR: GREYSHEET_API_KEY and GREYSHEET_API_TOKEN must be set in environment.")
+    sys.exit(1)
 
-BASE_URL = 'https://cpgpublicapiv2.greysheet.com/api'
+BASE_URL = (os.environ.get('GREYSHEET_BASE_URL') or 'https://cpgpublicapiv2.greysheet.com/api').rstrip('/')
 HEADERS  = {'x-api-key': API_KEY, 'x-api-token': API_TOKEN, 'Content-Type': 'application/json'}
 
 REPO_ROOT    = Path(__file__).resolve().parents[2]  # numista_backend/../..
@@ -70,7 +69,7 @@ def api_get(endpoint, params=None):
     p.setdefault('apiLevel', 'advanced')
     try:
         r = requests.get(f'{BASE_URL}/{endpoint}', headers=HEADERS, params=p,
-                         verify=False, timeout=20)
+                         verify=True, timeout=20)
         if r.status_code == 200:
             return r.json().get('Data', [])
         print(f"  [API {r.status_code}] {endpoint} params={params}", file=sys.stderr)

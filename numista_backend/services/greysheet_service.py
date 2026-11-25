@@ -20,16 +20,14 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("greysheet_service")
 
-# Production API Endpoint
-BASE_URL = "https://cpgpublicapiv2.greysheet.com/api"
-
-# Default fallback credentials for development/testing
-DEFAULT_API_KEY = "1FCAE3B4-966A-4F25-AFA1-BE242C26856B"
-DEFAULT_API_TOKEN = "D876F1BA-DDC4-4F80-B155-509AB3B6B970"
+# Production API Endpoint (overridable via GREYSHEET_BASE_URL for sandbox testing)
+DEFAULT_BASE_URL = "https://cpgpublicapiv2.greysheet.com/api"
+BASE_URL = os.environ.get("GREYSHEET_BASE_URL") or DEFAULT_BASE_URL
 
 class GreysheetService:
     def __init__(self, db: Optional[firestore.Client] = None):
         self._db = db
+        self._base_url = None
         self._api_key = None
         self._api_token = None
         self._headers = None
@@ -38,57 +36,53 @@ class GreysheetService:
         self._pricing_cache = {}       # Cache of gsid -> pricing data list
         self._quota_service = GreysheetQuotaService(db=db)
         
-    def _lazy_init(self):
-        """Lazy load credentials and setup headers."""
+    def _lazy_init(self) -> bool:
+        """Lazy load credentials strictly from environment variables (fail closed)."""
+        self._base_url = (os.environ.get("GREYSHEET_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
         if self._headers:
-            return
-            
-        # 1. Try to read from environment variables
-        self._api_key = os.environ.get("GREYSHEET_API_KEY")
-        self._api_token = os.environ.get("GREYSHEET_API_TOKEN")
-        
-        # 2. Try Firestore config if DB is available and env vars are missing
-        if (not self._api_key or not self._api_token) and self._db:
-            try:
-                doc = self._db.collection("config").document("greysheet").get()
-                if doc.exists:
-                    data = doc.to_dict()
-                    self._api_key = self._api_key or data.get("apiKey")
-                    self._api_token = self._api_token or data.get("apiToken")
-                    logger.info("[Greysheet] Loaded credentials from Firestore config/greysheet")
-            except Exception as e:
-                logger.warning(f"[Greysheet] Failed to load credentials from Firestore: {e}")
-                
-        # 3. Fallback to user-provided dev credentials
-        self._api_key = self._api_key or DEFAULT_API_KEY
-        self._api_token = self._api_token or DEFAULT_API_TOKEN
-        
+            return True
+
+        self._api_key = (os.environ.get("GREYSHEET_API_KEY") or "").strip() or None
+        self._api_token = (os.environ.get("GREYSHEET_API_TOKEN") or "").strip() or None
+
+        if not self._api_key or not self._api_token:
+            self._headers = None
+            logger.error("[Greysheet] Missing GREYSHEET_API_KEY or GREYSHEET_API_TOKEN environment variables; failing closed.")
+            return False
+
         self._headers = {
             "x-api-key": self._api_key,
             "x-api-token": self._api_token,
             "Content-Type": "application/json"
         }
         logger.info("[Greysheet] GreysheetService initialized.")
+        return True
 
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
-        self._lazy_init()
+        if not self._lazy_init() or not self._headers:
+            return None
         
         # Hard cap check before making external call
         if self._quota_service.is_hard_cap_engaged():
             logger.warning(f"[Greysheet] Hard cap (50,000 calls) engaged. Skipping external call to {endpoint}.")
             return None
 
-        url = f"{BASE_URL}/{endpoint}"
+        url = f"{self._base_url}/{endpoint}"
         query_params = dict(params) if params else {}
         if "apiLevel" not in query_params:
             query_params["apiLevel"] = "advanced"
         try:
-            # Bypass SSL certificate verification for expired host certs
-            response = requests.get(url, headers=self._headers, params=query_params, verify=False, timeout=15)
+            response = requests.get(url, headers=self._headers, params=query_params, verify=True, timeout=15)
             if response.status_code == 200:
+                payload = response.json()
+                if isinstance(payload, dict) and payload.get("PermitAccess") is False:
+                    logger.warning(
+                        f"[Greysheet] API access denied for {endpoint}: {payload.get('AccessDeniedMessage', '')}"
+                    )
+                    return None
                 # Increment atomic call count on successful response
                 self._quota_service.increment_call_count()
-                return response.json()
+                return payload
             else:
                 logger.error(f"[Greysheet] API Error: {url} returned status {response.status_code}: {response.text[:200]}")
                 return None
@@ -749,7 +743,7 @@ Set gsid to null if no candidate is a good match. Do not output markdown."""
             "Mint Mark": mint
         }
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(self.resolve_coin, coin_data)
+            future = executor.submit(self.resolve_gsid_hybrid, coin_data)
             try:
                 result = future.result(timeout=timeout_ms / 1000.0)
                 if result:
@@ -757,16 +751,24 @@ Set gsid to null if no candidate is a good match. Do not output markdown."""
                     pricing = self.get_pricing(gsid)
                     bid = 0.0
                     ask = 0.0
+                    cpg_retail = 0.0
                     if pricing:
                         first_p = pricing[0]
-                        bid = float(first_p.get("bid", 0.0) or 0.0)
-                        ask = float(first_p.get("ask", 0.0) or 0.0)
+                        if isinstance(first_p, dict) and isinstance(first_p.get("PricingData"), list) and first_p["PricingData"]:
+                            row = first_p["PricingData"][0]
+                            cpg_retail = float(str(row.get("CpgVal") or 0.0).replace(",", "") or 0.0)
+                            bid = float(str(row.get("GreyVal") or 0.0).replace(",", "") or 0.0)
+                            ask = float(str(row.get("GreyAskVal") or 0.0).replace(",", "") or 0.0)
+                        elif isinstance(first_p, dict):
+                            bid = float(first_p.get("bid", 0.0) or 0.0)
+                            ask = float(first_p.get("ask", 0.0) or 0.0)
+                            cpg_retail = float(first_p.get("CpgVal", 0.0) or 0.0)
                     return {
                         "gsid": gsid,
                         "name": g_name,
                         "bid": bid,
                         "ask": ask,
-                        "cpg_retail": ask or (bid * 1.25 if bid > 0 else 0.0)
+                        "cpg_retail": cpg_retail or ask or (bid * 1.25 if bid > 0 else 0.0)
                     }
             except concurrent.futures.TimeoutError:
                 logger.warning(f"[Greysheet] Resolution timed out after {timeout_ms}ms for {year} {denom} {subject}")
