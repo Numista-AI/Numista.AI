@@ -30,10 +30,10 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SA_KEY_PATH = os.path.join(SCRIPT_DIR, "..", "serviceAccountKey.json")
 PROJECT_ID = "studio-9101802118-8c9a8"
 
-# CPG/Greysheet API
-CPG_BASE = "https://cpgpublicapiv2.greysheet.com/api"
-CPG_API_KEY = "1FCAE3B4-966A-4F25-AFA1-BE242C26856B"
-CPG_API_TOKEN = "D876F1BA-DDC4-4F80-B155-509AB3B6B970"
+# CPG/Greysheet API (env-only; fail closed in main if absent)
+CPG_BASE = (os.environ.get("GREYSHEET_BASE_URL") or "https://cpgpublicapiv2.greysheet.com/api").rstrip("/")
+CPG_API_KEY = os.environ.get("GREYSHEET_API_KEY", "").strip()
+CPG_API_TOKEN = os.environ.get("GREYSHEET_API_TOKEN", "").strip()
 
 DELAY_S = 0.5
 
@@ -187,6 +187,10 @@ def extract_price(price_data, condition=""):
 
 
 def main():
+    if not CPG_API_KEY or not CPG_API_TOKEN:
+        print("ERROR: GREYSHEET_API_KEY and GREYSHEET_API_TOKEN must be set in environment.")
+        sys.exit(1)
+
     parser = argparse.ArgumentParser(description="Batch Greysheet v2 for grokbot")
     parser.add_argument("--write", action="store_true", help="Actually resolve + write pricing")
     parser.add_argument("--stats", action="store_true", help="Rebuild collection_stats after")

@@ -11648,16 +11648,47 @@ async def refresh_greysheet_coin_price(
         logger.exception("Greysheet: error refreshing coin price")
         raise HTTPException(status_code=500, detail=str(e))
 
+_FORBIDDEN_GREYSHEET_WHOLESALE_KEYS = {
+    "greyval",
+    "greyaskval",
+    "greyval1",
+    "greyaskval1",
+    "greyask",
+    "greysheet_bid",
+    "greysheetbid",
+    "greysheet_ask",
+    "greysheetask",
+    "bid",
+    "ask",
+    "wholesale",
+    "net_margin",
+    "gs_ask",
+}
+
+
+def _strip_greysheet_wholesale(payload: Any) -> Any:
+    """Recursively strip all Greysheet wholesale fields so only retail/guide data leaves the server."""
+    if isinstance(payload, list):
+        return [_strip_greysheet_wholesale(item) for item in payload]
+    if isinstance(payload, dict):
+        return {
+            k: _strip_greysheet_wholesale(v)
+            for k, v in payload.items()
+            if str(k).lower() not in _FORBIDDEN_GREYSHEET_WHOLESALE_KEYS
+        }
+    return payload
+
+
 @app.get("/api/greysheet/pricing/{gsid}")
 async def get_greysheet_pricing_table(gsid: int):
     """
-    Returns the grade-by-grade pricing list for a specific GSID.
+    Returns the retail grade-by-grade pricing list for a specific GSID (wholesale stripped).
     """
     try:
         from services.greysheet_service import GreysheetService
         service = GreysheetService(db=db)
         prices = service.get_pricing(gsid)
-        return {"gsid": gsid, "pricing": prices}
+        return {"gsid": gsid, "pricing": _strip_greysheet_wholesale(prices)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -12116,14 +12147,11 @@ async def get_greysheet_config(_admin: dict = Depends(require_admin_user)):
         from services.greysheet_service import GreysheetService
         service = GreysheetService(db=db)
         service._lazy_init()
-        has_prod = (
-            service._api_key is not None and 
-            service._api_key != "1FCAE3B4-966A-4F25-AFA1-BE242C26856B"
-        )
+        has_prod = bool(service._api_key and service._api_token)
         return {
-            "status": "active",
-            "mode": "production" if has_prod else "fallback",
-            "tier": "Advanced" if has_prod else "Basic",
+            "status": "active" if has_prod else "unconfigured",
+            "mode": "production" if has_prod else "unconfigured",
+            "tier": "Advanced" if has_prod else "None",
             "endpoints": {
                 "pricing": "/api/greysheet/pricing/{gsid}",
                 "resolve": "/api/greysheet/resolve",

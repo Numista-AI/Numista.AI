@@ -192,3 +192,89 @@ def test_deal_spotter_real_cpg_item_yields_deal():
     assert deals[0]["cpg_retail"] == 150.0
     assert "greysheet_bid" not in deals[0]
     assert "net_margin" not in deals[0]
+
+
+_FORBIDDEN_WHOLESALE_KEYS_LOWER = {
+    "greyval",
+    "greyaskval",
+    "greyval1",
+    "greyaskval1",
+    "greyask",
+    "greysheet_bid",
+    "greysheetbid",
+    "greysheet_ask",
+    "greysheetask",
+    "bid",
+    "ask",
+    "wholesale",
+    "net_margin",
+    "gs_ask",
+}
+
+
+def _assert_no_wholesale_recursive(obj, forbidden_values=()):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            assert str(k).lower() not in _FORBIDDEN_WHOLESALE_KEYS_LOWER, f"Wholesale key leaked: {k!r}"
+            _assert_no_wholesale_recursive(v, forbidden_values)
+    elif isinstance(obj, list):
+        for item in obj:
+            _assert_no_wholesale_recursive(item, forbidden_values)
+    elif forbidden_values and obj is not None:
+        assert str(obj) not in forbidden_values, f"Wholesale value leaked: {obj!r}"
+
+
+def test_pricing_endpoint_strips_greyval_and_all_wholesale():
+    """P5: GET /api/greysheet/pricing/{gsid} returns retail-only fields and strips GreyVal/GreyAskVal."""
+    resp = client.get("/api/greysheet/pricing/429")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["gsid"] == 429
+    assert len(data["pricing"]) == 1
+    row = data["pricing"][0]["PricingData"][0]
+    assert row["CpgVal"] == "120.00"
+    assert row["PcgsVal"] == "125.00"
+    assert row["NgcVal"] == "120.00"
+    assert row["BlueBookVal"] == "80.00"
+    _assert_no_wholesale_recursive(data, forbidden_values=("95.00", "110.00"))
+
+
+def test_sibling_greysheet_endpoints_never_leak_greyval(monkeypatch):
+    """P5: Verify sibling Greysheet endpoints never return GreyVal/GreyAskVal or wholesale bid/ask."""
+    monkeypatch.setattr(
+        gs_module.GreysheetService,
+        "resolve_gsid_hybrid",
+        lambda self, coin_data, genai_client=None, primary_model="gemini-4-hydrogen": (429, "1881-S Morgan Dollar"),
+    )
+    prev_override = main.app.dependency_overrides.get(get_current_user)
+    main.app.dependency_overrides[get_current_user] = lambda: {
+        "email": "test_user@numista.ai",
+        "uid": "test-uid",
+    }
+    try:
+        r_resolve = client.post(
+            "/api/greysheet/resolve",
+            json={"year": "1881", "mint_mark": "S", "denomination": "Morgan Dollar", "program_series": "Morgan Dollars"},
+        )
+        assert r_resolve.status_code == 200
+        _assert_no_wholesale_recursive(r_resolve.json())
+
+        r_refresh = client.post(
+            "/api/greysheet/refresh",
+            json={"user_id": "test_user@numista.ai", "coin_id": "test-coin-123"},
+        )
+        assert r_refresh.status_code == 200
+        _assert_no_wholesale_recursive(r_refresh.json(), forbidden_values=("95.00", "110.00"))
+
+        r_deals = client.get("/api/greysheet/deals")
+        assert r_deals.status_code == 200
+        _assert_no_wholesale_recursive(r_deals.json())
+
+        r_cac = client.get("/api/greysheet/cac")
+        assert r_cac.status_code == 200
+        _assert_no_wholesale_recursive(r_cac.json())
+    finally:
+        if prev_override is None:
+            main.app.dependency_overrides.pop(get_current_user, None)
+        else:
+            main.app.dependency_overrides[get_current_user] = prev_override

@@ -137,13 +137,18 @@ def test_daily_snapshot_endpoint():
         app.dependency_overrides.pop(require_admin_user, None)
 
 def test_advanced_api_level_default(monkeypatch):
-    """Verify that GreysheetService requests include apiLevel=advanced."""
+    """Verify that GreysheetService requests include apiLevel=advanced and verify=True."""
+    monkeypatch.setenv("GREYSHEET_API_KEY", "test-api-key-only")
+    monkeypatch.setenv("GREYSHEET_API_TOKEN", "test-api-token-only")
+    monkeypatch.delenv("GREYSHEET_BASE_URL", raising=False)
     service = gs_module.GreysheetService()
     captured_params = {}
+    captured_verify = None
     
     def fake_requests_get(url, headers=None, params=None, verify=False, timeout=15):
-        nonlocal captured_params
+        nonlocal captured_params, captured_verify
         captured_params = params
+        captured_verify = verify
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = {"Data": []}
@@ -153,6 +158,123 @@ def test_advanced_api_level_default(monkeypatch):
     service._get("GetPricingRequest", {"Gsid": 429})
     assert captured_params.get("apiLevel") == "advanced"
     assert captured_params.get("Gsid") == 429
+    assert captured_verify is True
+
+
+def test_greysheet_fail_closed_without_env_vars(monkeypatch):
+    """Verify GreysheetService fails closed without env vars (0 HTTP calls, 0 Firestore config/greysheet reads)."""
+    monkeypatch.delenv("GREYSHEET_API_KEY", raising=False)
+    monkeypatch.delenv("GREYSHEET_API_TOKEN", raising=False)
+
+    mock_db = MagicMock()
+    http_called = False
+
+    def fail_if_called(*args, **kwargs):
+        nonlocal http_called
+        http_called = True
+        raise AssertionError("requests.get must NOT be called when Greysheet env vars are missing")
+
+    monkeypatch.setattr("requests.get", fail_if_called)
+
+    service = gs_module.GreysheetService(db=mock_db)
+    res = service._get("GetPricingRequest", {"Gsid": 7084})
+
+    assert res is None
+    assert http_called is False
+    assert service._headers is None
+    mock_db.collection.assert_not_called()
+
+
+def test_greysheet_outgoing_request_capture_and_sandbox_override(monkeypatch):
+    """P5: Capture exact outgoing URL, method, auth headers, params, and verify=True with GREYSHEET_BASE_URL override."""
+    monkeypatch.setenv("GREYSHEET_API_KEY", "p5-test-key")
+    monkeypatch.setenv("GREYSHEET_API_TOKEN", "p5-test-token")
+    monkeypatch.setenv("GREYSHEET_BASE_URL", "https://cpgpublicapiv2dev.greysheet.com/api/")
+
+    captured = {}
+
+    def capture_get(url, headers=None, params=None, verify=None, timeout=None):
+        captured["method"] = "GET"
+        captured["url"] = url
+        captured["headers"] = dict(headers or {})
+        captured["params"] = dict(params or {})
+        captured["verify"] = verify
+        captured["timeout"] = timeout
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"Data": [{"GsId": 7084}], "PermitAccess": True}
+        return mock_resp
+
+    monkeypatch.setattr("requests.get", capture_get)
+
+    service = gs_module.GreysheetService()
+    res = service._get("GetPricingRequest", {"Gsid": 7084})
+
+    assert res == {"Data": [{"GsId": 7084}], "PermitAccess": True}
+    assert captured["method"] == "GET"
+    assert captured["url"] == "https://cpgpublicapiv2dev.greysheet.com/api/GetPricingRequest"
+    assert captured["headers"] == {
+        "x-api-key": "p5-test-key",
+        "x-api-token": "p5-test-token",
+        "Content-Type": "application/json",
+    }
+    assert captured["params"] == {"Gsid": 7084, "apiLevel": "advanced"}
+    assert captured["verify"] is True
+
+
+def test_greysheet_config_endpoint_env_only(monkeypatch):
+    """Verify GET /api/greysheet/config reports active/production with env vars and unconfigured without them."""
+    from routes.deps import require_admin_user
+    prev_override = app.dependency_overrides.get(require_admin_user)
+    app.dependency_overrides[require_admin_user] = lambda: {"uid": "admin", "email": "admin@numista.ai", "admin": True}
+    try:
+        monkeypatch.setenv("GREYSHEET_API_KEY", "p5-test-key")
+        monkeypatch.setenv("GREYSHEET_API_TOKEN", "p5-test-token")
+        resp_active = client.get("/api/greysheet/config")
+        assert resp_active.status_code == 200
+        body_active = resp_active.json()
+        assert body_active["status"] == "active"
+        assert body_active["mode"] == "production"
+        assert body_active["tier"] == "Advanced"
+
+        monkeypatch.delenv("GREYSHEET_API_KEY", raising=False)
+        monkeypatch.delenv("GREYSHEET_API_TOKEN", raising=False)
+        resp_unconf = client.get("/api/greysheet/config")
+        assert resp_unconf.status_code == 200
+        body_unconf = resp_unconf.json()
+        assert body_unconf["status"] == "unconfigured"
+        assert body_unconf["mode"] == "unconfigured"
+        assert body_unconf["tier"] == "None"
+    finally:
+        if prev_override is None:
+            app.dependency_overrides.pop(require_admin_user, None)
+        else:
+            app.dependency_overrides[require_admin_user] = prev_override
+
+
+def test_resolve_coin_with_timeout_calls_resolve_gsid_hybrid(monkeypatch):
+    """Verify resolve_coin_with_timeout delegates to resolve_gsid_hybrid instead of nonexistent resolve_coin."""
+    service = gs_module.GreysheetService()
+    called_with = {}
+
+    def fake_hybrid(coin_data):
+        called_with["coin_data"] = coin_data
+        return (7084, "1909-S Lincoln Cent")
+
+    def fake_pricing(gsid):
+        return [{
+            "GsId": gsid,
+            "PricingData": [{"Grade": 60, "GradeLabel": "PR60", "CpgVal": "2.90", "GreyVal": "2.15"}],
+        }]
+
+    monkeypatch.setattr(service, "resolve_gsid_hybrid", fake_hybrid)
+    monkeypatch.setattr(service, "get_pricing", fake_pricing)
+
+    out = service.resolve_coin_with_timeout("1909", "One Cent", series="Lincoln Cents", mint="S", timeout_ms=2000)
+    assert called_with["coin_data"]["Year"] == "1909"
+    assert out is not None
+    assert out["gsid"] == 7084
+    assert out["cpg_retail"] == 2.90
 
 def test_quota_endpoint():
     """Verify GET /api/greysheet/quota returns usage & threshold metrics."""
