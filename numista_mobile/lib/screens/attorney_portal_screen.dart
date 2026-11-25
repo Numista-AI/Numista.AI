@@ -17,6 +17,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../utils/mint_helpers.dart';
 import '../utils/numista_error_helper.dart';
+import '../utils/sold_item.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme-aware color tokens (matches estate_planning_screen.dart pattern)
@@ -149,6 +150,7 @@ class _AttorneyPortalScreenState extends State<AttorneyPortalScreen> {
             .get();
 
         coins = coinsSnap.docs
+            .where((d) => !isSoldItem(d.data()))
             .map((d) => {'id': d.id, ...d.data()})
             .toList();
       }

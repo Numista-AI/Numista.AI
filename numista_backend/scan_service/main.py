@@ -670,7 +670,7 @@ def initialize_estate_upgrade():
 
     try:
         coins_ref = db.collection('users').document(uid).collection('coins').stream()
-        coin_docs = list(coins_ref)
+        coin_docs = [cd for cd in coins_ref if (cd.to_dict() or {}).get('status') != 'sold']  # R3
         total_coins = len(coin_docs)
         total_fmv = 0.0
 

@@ -363,6 +363,77 @@ def resolve_item_collections(item_data: dict, uid: str, db: firestore.Client):
     return ref
 
 
+def _extract_seller_photo_urls(item_data: Dict[str, Any]) -> List[str]:
+    """Collect candidate seller-uploaded storage URLs from an item doc (owner_photos first)."""
+    urls: List[str] = []
+    seen = set()
+
+    def _add(u: Any) -> None:
+        if isinstance(u, str):
+            s = u.strip()
+            if s and s not in seen:
+                seen.add(s)
+                urls.append(s)
+
+    owner_photos = item_data.get("owner_photos")
+    if isinstance(owner_photos, list):
+        for entry in owner_photos:
+            if isinstance(entry, dict):
+                _add(entry.get("compressed_url") or entry.get("url") or entry.get("original_url"))
+            elif isinstance(entry, str):
+                _add(entry)
+    _add(item_data.get("image_url_obverse"))
+    _add(item_data.get("image_url_reverse"))
+    return urls
+
+
+def _load_seller_photo_bytes_for_pdf(
+    raw_items_by_id: Dict[str, Dict[str, Any]],
+    allowed_owners: set,
+    *,
+    storage_client: Any = None,
+    max_per_item: int = 2,
+    max_total: int = 8,
+) -> Dict[str, List[bytes]]:
+    """Fetch EXIF-stripped JPEG bytes for seller's own photos only (validated via coin_image_service).
+
+    Never fetches external/unvalidated URLs or another seller's photos. Fails soft per photo.
+    """
+    from services.coin_image_service import load_sanitized_coin_image, parse_and_validate_storage_url
+
+    client = storage_client
+    if client is None:
+        try:
+            from google.cloud import storage as gcs_storage
+            client = gcs_storage.Client()
+        except Exception as e:
+            logger.warning(f"Storage client unavailable for transfer PDF photos: {type(e).__name__}")
+            return {}
+
+    out: Dict[str, List[bytes]] = {}
+    total = 0
+    for item_id, item_data in raw_items_by_id.items():
+        if total >= max_total:
+            break
+        imgs: List[bytes] = []
+        for url in _extract_seller_photo_urls(item_data):
+            if len(imgs) >= max_per_item or total >= max_total:
+                break
+            try:
+                bucket_name, blob_name = parse_and_validate_storage_url(url, allowed_owners)
+                img_bytes, _ = load_sanitized_coin_image(
+                    client, bucket_name, blob_name, max_edge=600, quality=80
+                )
+                imgs.append(img_bytes)
+                total += 1
+            except Exception as pe:
+                logger.info(f"Skipping transfer PDF photo for item {item_id}: {type(pe).__name__}")
+                continue
+        if imgs:
+            out[item_id] = imgs
+    return out
+
+
 def initiate_transfer(
     db: firestore.Client,
     user_a_id: str,
@@ -379,6 +450,8 @@ def initiate_transfer(
     sender_address: Optional[str] = None,
     show_price: bool = False,
     sale_price_usd: Optional[float] = None,
+    include_photos: bool = False,
+    storage_client: Any = None,
 ) -> Dict[str, Any]:
     """
     Initiates a lateral transfer for one or more items.
@@ -427,6 +500,7 @@ def initiate_transfer(
     claim_pin = f"{secrets.randbelow(900000) + 100000}"
 
     sanitized_items = []
+    raw_items_by_id: Dict[str, Dict[str, Any]] = {}
     pending_locks = []  # (coin_ref, update_payload) applied only after every item passed the guards
     pending_archives = []
 
@@ -450,6 +524,8 @@ def initiate_transfer(
 
         item_data = coin_snap.to_dict()
         item_data["id"] = item_id
+        if include_photos:
+            raw_items_by_id[item_id] = dict(item_data)
 
         # Guards (F9): demo, Sold, locked and listed items cannot start a transfer.
         if item_data.get("is_demo") is True or item_data.get("is_demo_cleared") is True:
@@ -543,6 +619,7 @@ def initiate_transfer(
             "sender_display": (sender_display or "").strip() or None,
             "sender_address": (sender_address or "").strip() or None,
             "show_price": bool(show_price),
+            "include_photos": bool(include_photos),
             "sale_price_usd": float(sale_price_usd) if (show_price and sale_price_usd is not None) else None,
             "claim_token_hash": token_hash,
             "claim_code_hash": code_hash,
@@ -564,8 +641,21 @@ def initiate_transfer(
         try:
             from services.transfer_document_pdf import generate_transfer_document_pdf
             import base64
+            pdf_photos = None
+            if include_photos and raw_items_by_id:
+                allowed_owners = {clean_user_a_id, user_a_id.strip()}
+                pdf_photos = _load_seller_photo_bytes_for_pdf(
+                    raw_items_by_id,
+                    allowed_owners,
+                    storage_client=storage_client,
+                )
             result["document_pdf_b64"] = base64.b64encode(
-                generate_transfer_document_pdf(transfer_doc, claim_token=raw_token, claim_code=raw_code)
+                generate_transfer_document_pdf(
+                    transfer_doc,
+                    claim_token=raw_token,
+                    claim_code=raw_code,
+                    item_photos=pdf_photos,
+                )
             ).decode("ascii")
         except Exception as pe:
             logger.warning(f"Transfer Document generation failed: {type(pe).__name__}")
@@ -1453,6 +1543,44 @@ def undo_sale(
         "coin_id": orig_coin_id,
         "restored_qty": sold_qty
     }
+
+
+def list_pending_transfers(db: firestore.Client, user_a_id: str) -> List[Dict[str, Any]]:
+    """Returns the sender's pending transfers with safe summary fields only (no hashes, PINs or address)."""
+    clean_user_a_id = user_a_id.strip().lower() if "@" in user_a_id else user_a_id.strip()
+    now = _get_utc_now()
+    docs = db.collection(COLLECTION_TRANSFERS).where("sender_id", "==", clean_user_a_id).stream()
+    rows: List[Dict[str, Any]] = []
+    for snap in docs:
+        data = snap.to_dict() or {}
+        if data.get("status") != "pending":
+            continue
+        expires_str = str(data.get("expires_at") or "")
+        is_expired = False
+        if expires_str:
+            try:
+                exp = datetime.fromisoformat(expires_str)
+                if exp.tzinfo is None:
+                    exp = exp.replace(tzinfo=timezone.utc)
+                is_expired = now > exp
+            except ValueError:
+                pass
+        items = data.get("items") or []
+        rows.append({
+            "transfer_id": data.get("transfer_id") or snap.id,
+            "status": "pending",
+            "version": int(data.get("version") or 1),
+            "transfer_type": data.get("transfer_type") or "lateral",
+            "source": data.get("source") or "active",
+            "created_at": data.get("created_at"),
+            "expires_at": expires_str or None,
+            "is_expired": is_expired,
+            "item_count": len(items),
+            "item_titles": [_item_title(i) for i in items],
+            "recipient_email": data.get("recipient_email"),
+        })
+    rows.sort(key=lambda r: str(r.get("created_at") or ""), reverse=True)
+    return rows
 
 
 def get_sold_inventory(db: firestore.Client, user_id: str) -> List[Dict[str, Any]]:

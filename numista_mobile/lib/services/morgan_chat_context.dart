@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../services/auth_service.dart';
 import '../services/guest_seed_service.dart';
 import '../services/set_expansion_helper.dart';
+import '../utils/sold_item.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  MorganChatContext
@@ -194,12 +195,13 @@ class MorganChatContextService {
             .collection(AuthService.coinsPath)
             .get();
 
-        if (snap.docs.isEmpty) {
+        final liveDocs = snap.docs.where((d) => !isSoldItem(d.data())).toList();
+        if (liveDocs.isEmpty) {
           _cache = _empty(userName);
           return _cache!;
         }
-        docDataList = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
-        docIdList = snap.docs.map((d) => d.id).toList();
+        docDataList = liveDocs.map((d) => {'id': d.id, ...d.data()}).toList();
+        docIdList = liveDocs.map((d) => d.id).toList();
       } catch (e) {
         debugPrint('[MorganChatContext] Error loading coins: $e');
         _cache = _empty(userName);

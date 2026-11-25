@@ -989,6 +989,7 @@ class _CollectionTabState extends State<_CollectionTab> {
           .get();
       final coins = snap.docs
           .map((d) => CoinModel.fromFirestore(d))
+          .where((c) => !c.isSold)
           .toList();
       if (mounted) setState(() { _coins = coins; _loading = false; });
     } catch (_) {
@@ -1216,6 +1217,7 @@ class _DivisionTabState extends State<_DivisionTab> {
           .get();
       final coins = snap.docs
           .map((d) => CoinModel.fromFirestore(d))
+          .where((c) => !c.isSold)
           .toList();
       if (mounted) {
         setState(() {
@@ -1776,13 +1778,14 @@ class _GenerateTabState extends State<_GenerateTab> {
     if (widget.uid.isEmpty) return;
     if (FirebaseAuth.instance.currentUser == null) return; // demo/signed-out guard — prevents Firestore 403
     try {
-      final snap = await FirebaseFirestore.instance
+      final coinsCol = FirebaseFirestore.instance
           .collection('users')
           .doc(widget.uid)
-          .collection('coins')
-          .count()
-          .get();
-      if (mounted) setState(() => _coinCount = snap.count ?? 0);
+          .collection('coins');
+      final totalSnap = await coinsCol.count().get();
+      final soldSnap = await coinsCol.where('status', isEqualTo: 'sold').count().get();
+      final activeCount = (totalSnap.count ?? 0) - (soldSnap.count ?? 0);
+      if (mounted) setState(() => _coinCount = activeCount < 0 ? 0 : activeCount);
     } catch (_) {}
   }
 

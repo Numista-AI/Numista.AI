@@ -23,6 +23,7 @@ class LateralTransferService {
     String? senderAddress,
     bool showPrice = false,
     double? salePriceUsd,
+    bool includePhotos = false,
   }) async {
     final response = await HttpAuthClient.post(
       Uri.parse('$baseUrl/api/transfer/initiate'),
@@ -38,6 +39,7 @@ class LateralTransferService {
         'sender_address': senderAddress,
         'show_price': showPrice,
         'sale_price_usd': salePriceUsd,
+        'include_photos': includePhotos,
         'privacy_toggles': privacyToggles ?? {
           'hide_cost_basis': true,
           'hide_private_notes': true,
@@ -99,6 +101,19 @@ class LateralTransferService {
       return Map<String, dynamic>.from(jsonDecode(response.body)['preview'] as Map);
     }
     throw Exception('Failed to preview transfer: ${response.body}');
+  }
+
+  /// Lists the authenticated sender's pending transfers (summary only; no hashes or secrets).
+  Future<List<Map<String, dynamic>>> listPendingTransfers() async {
+    final response = await HttpAuthClient.get(
+      Uri.parse('$baseUrl/api/transfer/pending'),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final list = (data['transfers'] as List<dynamic>?) ?? const [];
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    throw Exception('Failed to load pending transfers: ${response.body}');
   }
 
   /// Sender reissues a pending transfer's token and code (also upgrades a legacy PIN transfer).

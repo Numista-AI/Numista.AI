@@ -1660,6 +1660,17 @@
     ]
   },
   {
+    "path": "/api/transfer/pending",
+    "methods": [
+      "GET"
+    ],
+    "name": "api_list_pending_transfers",
+    "tags": [],
+    "dependencies": [
+      "require_registered_user"
+    ]
+  },
+  {
     "path": "/api/transfer/preview",
     "methods": [
       "GET"

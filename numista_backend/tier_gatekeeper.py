@@ -329,8 +329,10 @@ def get_coin_count(user_identifier: str) -> int:
     """Calculates total coins in users/{user_identifier}/coins via count()."""
     try:
         coins_ref = db.collection("users").document(user_identifier).collection("coins")
-        results = coins_ref.count().get()
-        return results[0][0].value
+        total = coins_ref.count().get()[0][0].value
+        # R3 (Mark Sold, never delete): Sold items keep their doc but are not part of the owned count.
+        sold = coins_ref.where("status", "==", "sold").count().get()[0][0].value
+        return max(0, total - sold)
     except Exception as e:
         print(f"[Tier Gatekeeper] Error counting coins for {user_identifier}: {e}")
         return 0

@@ -139,6 +139,7 @@ from routes.morgan_routes import (
     execute_morgan_web_lookup,
 )
 from routes.analytics_routes import analytics_router
+from services.item_state import is_sold_item, unsold_docs
 from routes.catalog_routes import public_router as catalog_public_router, write_router as catalog_write_router
 from routes.deps import (
     get_current_user,
@@ -4182,7 +4183,7 @@ async def dedup_sweep(user_email: str = Form(...), _admin: dict = Depends(requir
     """
     try:
         coins_ref = db.collection('users').document(user_email).collection('coins')
-        docs = coins_ref.stream()
+        docs = unsold_docs(coins_ref.stream())   # Sold items are records, never dedup candidates
 
         invoice_groups: dict  = {}   # invoice+item -> list
         attr_groups: dict     = {}   # attribute key WITH date -> list
@@ -4299,7 +4300,7 @@ async def dedup_auto_clean(user_email: str = Form(...), _admin: dict = Depends(r
     """
     try:
         coins_ref = db.collection('users').document(user_email).collection('coins')
-        docs = list(coins_ref.stream())   # load all into memory
+        docs = list(unsold_docs(coins_ref.stream()))   # load all into memory (Sold items are never dedup candidates)
 
         invoice_groups: dict = {}
         attr_groups: dict    = {}
@@ -9155,7 +9156,7 @@ def collection_count(
 
         # --- Expand and count ---
         coins_ref = db.collection('users').document(target_owner).collection('coins')
-        docs = coins_ref.stream()
+        docs = unsold_docs(coins_ref.stream())   # R3: Sold items are not part of the owned count
         inventory, stats = expand_collection_inventory(docs)
         counts = count_coins_and_lots(inventory)
 
@@ -9313,7 +9314,9 @@ def checklist_add_coins(req: ChecklistAddRequest, _user: dict = Depends(get_curr
                 .where('program_id', '==', req.program_id)
                 .where('Year', '==', slot.year)
             )
-            existing = query_docs_by_mint_mark(base_q, slot.mint_mark, limit=1)
+            # A Sold item does not make a new copy a duplicate: over-fetch, then ignore Sold docs.
+            existing = [e for e in query_docs_by_mint_mark(base_q, slot.mint_mark, limit=5)
+                        if not is_sold_item(e.to_dict() or {})]
             if existing:
                 duplicate_warning = True
                 break
@@ -9451,15 +9454,13 @@ def collection_clear(
         coins_deleted = 0
         BATCH_LIMIT   = 490  # Firestore max is 500 writes per batch
 
-        while True:
-            # Stream up to BATCH_LIMIT doc refs at a time (select() fetches only IDs)
-            docs = list(coins_ref.limit(BATCH_LIMIT).stream())
-            if not docs:
-                break   # nothing left
-
+        # R3 (Mark Sold, never delete): Sold items are kept. Collect the ids to delete first, then delete in
+        # batches (the old "re-read the first 490 until empty" loop would never finish with Sold docs left over).
+        doomed = [d.id for d in unsold_docs(coins_ref.stream())]
+        for start in range(0, len(doomed), BATCH_LIMIT):
             batch = db.batch()
-            for doc in docs:
-                batch.delete(coins_ref.document(doc.id))
+            for doc_id in doomed[start:start + BATCH_LIMIT]:
+                batch.delete(coins_ref.document(doc_id))
                 coins_deleted += 1
             batch.commit()
 
@@ -9634,7 +9635,7 @@ def _get_user_owned_doc_ids(user_email: str, return_raw_counts: bool = False):
     # 1. Fetch user coins from Firestore
     try:
         coins_ref = db.collection("users").document(user_email).collection("coins")
-        user_coins = [doc.to_dict() for doc in coins_ref.stream()]
+        user_coins = [doc.to_dict() for doc in unsold_docs(coins_ref.stream())]   # a Sold item is not owned
     except Exception as e:
         logger.error(f"get_user_owned_doc_ids: error fetching coins: {e}")
         user_coins = []
@@ -11804,7 +11805,7 @@ async def create_daily_portfolio_snapshot(req: DailySnapshotRequest, _admin: dic
         today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         
         # 1. Fetch all coins for the user
-        coins_docs = list(db.collection("users").document(req.user_id).collection("coins").get())
+        coins_docs = list(unsold_docs(db.collection("users").document(req.user_id).collection("coins").get()))   # R3
         
         # Authoritative single source of truth for coin/lot counts
         inventory, _ = expand_collection_inventory(coins_docs)
@@ -11932,7 +11933,7 @@ async def batch_resolve_greysheet_coins(req: BatchActionRequest, _admin: dict = 
         
         service = GreysheetService(db=db)
         
-        coins_ref = db.collection("users").document(req.user_id).collection("coins").get()
+        coins_ref = list(unsold_docs(db.collection("users").document(req.user_id).collection("coins").get()))   # R3: no Greysheet quota for Sold items
         resolved_count = 0
         total_count = 0
         
@@ -11994,7 +11995,7 @@ async def batch_refresh_greysheet_prices(req: BatchActionRequest, _admin: dict =
         service = GreysheetService(db=db)
         
         # 1. Fetch all coins and group by unique GSID
-        coins_ref = db.collection("users").document(req.user_id).collection("coins").get()
+        coins_ref = list(unsold_docs(db.collection("users").document(req.user_id).collection("coins").get()))   # R3: no Greysheet quota for Sold items
         gsid_to_coins = defaultdict(list)
         total_mapped = 0
         
@@ -12544,6 +12545,7 @@ class InitiateTransferRequest(BaseModel):
     sender_address: Optional[str] = None
     show_price: bool = False
     sale_price_usd: Optional[float] = None
+    include_photos: bool = False
 
 class ClaimTransferRequest(BaseModel):
     user_id: str
@@ -12654,6 +12656,7 @@ async def api_initiate_transfer(
             sender_address=req.sender_address,
             show_price=req.show_price,
             sale_price_usd=req.sale_price_usd,
+            include_photos=req.include_photos,
         )
         # claim_token / claim_code / document_pdf_b64 are returned ONCE here and never stored.
         return {"status": "success", "transfer": public_transfer_view(result)}
@@ -12717,6 +12720,21 @@ async def api_recall_transfer(
         return {"status": "success", "result": result}
     except Exception as e:
         logger.exception("Recall transfer failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/transfer/pending")
+async def api_list_pending_transfers(
+    current_user: Dict[str, Any] = Depends(require_registered_user),
+):
+    """Returns the authenticated sender's pending transfers (summary only; no hashes or secrets)."""
+    token_uid = current_user.get("email") or current_user.get("uid") or ""
+    if not token_uid:
+        raise HTTPException(status_code=401, detail="Unable to identify user from token")
+    try:
+        from services.transfer_service import list_pending_transfers
+        return {"status": "success", "transfers": list_pending_transfers(db=db, user_a_id=token_uid)}
+    except Exception as e:
+        logger.exception("List pending transfers failed")
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/transfer/preview")
@@ -12905,10 +12923,10 @@ async def api_export_appraisal_pdf(
     req.user_email = owner_key
     try:
         coins_ref = db.collection('users').document(req.user_email).collection('portfolio').stream()
-        items = [c.to_dict() for c in coins_ref]
+        items = [c.to_dict() for c in unsold_docs(coins_ref)]
         if not items:
             coins_ref = db.collection('users').document(req.user_email).collection('coins').stream()
-            items = [c.to_dict() for c in coins_ref]
+            items = [c.to_dict() for c in unsold_docs(coins_ref)]
 
         from services.passport_pdf_generator import generate_passport_pdf
         pdf_bytes = generate_passport_pdf({

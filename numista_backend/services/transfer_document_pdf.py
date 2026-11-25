@@ -9,7 +9,7 @@ printed only when the raw token/code are supplied; they are never stored.
 
 import io
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -63,6 +63,7 @@ def generate_transfer_document_pdf(
     transfer_data: Dict[str, Any],
     claim_token: Optional[str] = None,
     claim_code: Optional[str] = None,
+    item_photos: Optional[Dict[str, List[bytes]]] = None,
 ) -> bytes:
     s = _styles()
     buf = io.BytesIO()
@@ -90,6 +91,23 @@ def generate_transfer_document_pdf(
             n = len(set_contents) if isinstance(set_contents, list) else 0
             story.append(Paragraph(f"Set type: set{f' ({n} pieces)' if n else ''}", s["body"]))
         story.append(Paragraph(f"Quantity: {qty}", s["body"]))
+        if transfer_data.get("include_photos") and item_photos:
+            raw_list = item_photos.get(str(itm.get("id") or "")) or []
+            thumbs = []
+            for img_bytes in raw_list[:2]:
+                if not img_bytes:
+                    continue
+                try:
+                    thumbs.append(
+                        Image(io.BytesIO(img_bytes), width=1.6 * inch, height=1.6 * inch, kind="proportional")
+                    )
+                except Exception:
+                    continue
+            if thumbs:
+                photo_tbl = Table([thumbs], colWidths=[1.8 * inch] * len(thumbs))
+                photo_tbl.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+                story.append(Spacer(1, 4))
+                story.append(photo_tbl)
         story.append(Spacer(1, 6))
 
     # ---- From / To ----

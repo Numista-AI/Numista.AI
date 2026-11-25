@@ -23,6 +23,7 @@ import 'estate_planning_screen.dart';
 import 'human_ai_trainer_screen.dart';
 import 'customer_service_screen.dart';
 import 'ai_chat_screen.dart';
+import '../utils/sold_item.dart';
 import 'admin_grade_flags_screen.dart';
 import 'supplies_screen.dart';
 import 'currency_collection_screen.dart';
@@ -149,6 +150,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       return snap.docs
           .where((d) {
             final data = d.data();
+            if (isSoldItem(data)) return false; // R3: Sold items excluded from active search
             final denom   = (data['Denomination']   ?? '').toString().toLowerCase();
             final year    = (data['Year']            ?? '').toString().toLowerCase();
             final series  = (data['Program/Series']  ?? '').toString().toLowerCase();

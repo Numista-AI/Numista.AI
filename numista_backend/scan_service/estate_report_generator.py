@@ -123,7 +123,8 @@ def fetch_coins(db: firestore.Client, uid: str) -> tuple[list[dict], list[dict]]
     Each row carries '_doc_id' = row['coin_id'] for estate override matching.
     """
     try:
-        docs = db.collection('users').document(uid).collection('coins').stream()
+        docs = (d for d in db.collection('users').document(uid).collection('coins').stream()
+                if (d.to_dict() or {}).get('status') != 'sold')  # R3: Sold items are listed from the sold archive
         inventory, stats = expand_collection_inventory(docs, include_financial=True)
 
         # Stamp _doc_id on every row (gate 2: grouping keys on _doc_id)

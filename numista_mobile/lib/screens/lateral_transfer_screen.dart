@@ -20,13 +20,15 @@ import 'dart:convert' show base64Decode;
 class LateralTransferScreen extends StatefulWidget {
   final String userId;
   final List<CoinModel> itemsToTransfer;
-  final String initialTab; // 'send' or 'claim'
+  final String initialTab; // 'send', 'pending', 'sell_outside', 'sold_history', 'claim'
+  final LateralTransferService? transferService;
 
   const LateralTransferScreen({
     super.key,
     required this.userId,
     required this.itemsToTransfer,
     this.initialTab = 'send',
+    this.transferService,
   });
 
   @override
@@ -34,7 +36,7 @@ class LateralTransferScreen extends StatefulWidget {
 }
 
 class _LateralTransferScreenState extends State<LateralTransferScreen> {
-  final LateralTransferService _transferService = LateralTransferService();
+  late final LateralTransferService _transferService;
   final TextEditingController _recipientEmailController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _claimTransferIdController = TextEditingController();
@@ -42,11 +44,25 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   final TextEditingController _claimCodeController = TextEditingController();
   final TextEditingController _senderNameController = TextEditingController();
   final TextEditingController _senderAddressController = TextEditingController();
+  final TextEditingController _transferPriceController = TextEditingController();
   String? _pendingClaimToken; // from a #/claim?t= link, held in memory only
   String _transferType = 'lateral'; // sale_ebay | sale_private | gift | lateral
   int _expiresDays = 60; // 7 | 30 | 60
+  bool _showPriceOnDocument = false;
+  bool _includePhotosOnDocument = false;
 
-  String _activeTab = 'send'; // 'send', 'sell_outside', 'sold_history', 'claim'
+  // Claim preview state (titles only before committing)
+  Map<String, dynamic>? _claimPreview;
+  bool _isPreviewingClaim = false;
+  String? _claimPreviewError;
+
+  // Pending transfers state (Cancel + Reissue code)
+  List<Map<String, dynamic>> _pendingTransfers = [];
+  bool _isLoadingPending = false;
+  String? _pendingError;
+  String? _busyPendingTransferId;
+
+  String _activeTab = 'send'; // 'send', 'pending', 'sell_outside', 'sold_history', 'claim'
 
   // Mode 3 Direct Sale Fields
   final TextEditingController _salePriceController = TextEditingController();
@@ -96,6 +112,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
   @override
   void initState() {
     super.initState();
+    _transferService = widget.transferService ?? LateralTransferService();
     _activeTab = widget.initialTab;
     _saleDateController.text = DateTime.now().toIso8601String().substring(0, 10);
     // Browse Demo / anonymous: show the sign-up message and make NO Firestore or HTTP call from here.
@@ -109,11 +126,15 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       _allCoins = List.from(widget.itemsToTransfer);
       _selectedCoinIds = _allCoins.map((c) => c.id).toSet();
       _selectedCoinToSell = _allCoins.first;
-    } else {
+    } else if (_activeTab == 'send' || _activeTab == 'sell_outside') {
       _loadInventoryFromFirestore();
     }
     if (_activeTab == 'sold_history') {
       _loadSoldItems();
+    } else if (_activeTab == 'pending') {
+      _loadPendingTransfers();
+    } else if (_activeTab == 'claim' && _pendingClaimToken != null) {
+      _previewClaim();
     }
   }
 
@@ -126,6 +147,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     _claimCodeController.dispose();
     _senderNameController.dispose();
     _senderAddressController.dispose();
+    _transferPriceController.dispose();
     _salePriceController.dispose();
     _saleFeesController.dispose();
     _saleDateController.dispose();
@@ -166,7 +188,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
         coins = snap.docs
             .map((doc) => CoinModel.fromFirestore(doc))
-            .where((c) => c.transferStatus != 'pending' && c.transferStatus != 'transferred' && c.transferStatus != 'claimed' && c.transferStatus != 'sold' && !c.isLocked)
+            .where((c) => !c.isSold && c.transferStatus != 'pending' && c.transferStatus != 'transferred' && c.transferStatus != 'claimed' && c.transferStatus != 'sold' && !c.isLocked)
             .toList();
       }
 
@@ -245,6 +267,10 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         ? widget.userId.trim()
         : AuthService.userEmail;
 
+    final parsedPrice = _showPriceOnDocument
+        ? double.tryParse(_transferPriceController.text.replaceAll(',', '').replaceAll(r'$', '').trim())
+        : null;
+
     setState(() => _isLoading = true);
     try {
       final transfer = await _transferService.initiateTransfer(
@@ -258,6 +284,9 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         expiresDays: _expiresDays,
         senderDisplay: _senderNameController.text.trim().isNotEmpty ? _senderNameController.text.trim() : null,
         senderAddress: _senderAddressController.text.trim().isNotEmpty ? _senderAddressController.text.trim() : null,
+        showPrice: _showPriceOnDocument,
+        salePriceUsd: parsedPrice,
+        includePhotos: _includePhotosOnDocument,
         privacyToggles: {
           'hide_cost_basis': _hideCostBasis,
           'hide_private_notes': _hidePrivateNotes,
@@ -276,6 +305,287 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not initiate transfer. Please try again.')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _previewClaim() async {
+    final code = _claimCodeController.text.trim();
+    final token = _pendingClaimToken;
+    if (token == null && code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter the claim code to preview the item(s).')),
+      );
+      return;
+    }
+    setState(() {
+      _isPreviewingClaim = true;
+      _claimPreviewError = null;
+    });
+    try {
+      final preview = await _transferService.previewTransfer(
+        claimToken: token,
+        claimCode: token == null ? code : null,
+      );
+      if (!mounted) return;
+      setState(() {
+        _claimPreview = preview;
+        _isPreviewingClaim = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _claimPreview = null;
+        _isPreviewingClaim = false;
+        _claimPreviewError = NumistaErrorHelper.toUserFriendly(
+          e,
+          fallback: 'Could not preview this claim code. Please check it and try again.',
+        );
+      });
+    }
+  }
+
+  Future<void> _loadPendingTransfers() async {
+    setState(() {
+      _isLoadingPending = true;
+      _pendingError = null;
+    });
+    try {
+      final list = await _transferService.listPendingTransfers();
+      if (!mounted) return;
+      setState(() {
+        _pendingTransfers = list;
+        _isLoadingPending = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingPending = false;
+        _pendingError = NumistaErrorHelper.toUserFriendly(
+          e,
+          fallback: 'Could not load pending transfers. Please try again.',
+        );
+      });
+    }
+  }
+
+  Future<void> _cancelPendingTransfer(String transferId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _cardBg,
+        title: Text('Cancel Pending Transfer?', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
+        content: Text(
+          'This immediately invalidates the QR code and claim code so nobody can claim it. '
+          'The item returns to its previous status in your vault.',
+          style: TextStyle(color: _textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Keep Pending', style: TextStyle(color: _textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text('Cancel Transfer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    final userIdToUse = widget.userId.trim().isNotEmpty ? widget.userId.trim() : AuthService.userEmail;
+    setState(() => _busyPendingTransferId = transferId);
+    try {
+      await _transferService.recallTransfer(userId: userIdToUse, transferId: transferId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transfer canceled. Claim code and QR are now invalid.'), backgroundColor: Colors.green),
+      );
+      await _loadPendingTransfers();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not cancel transfer.')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busyPendingTransferId = null);
+    }
+  }
+
+  Future<void> _reissuePendingCode(String transferId) async {
+    setState(() => _busyPendingTransferId = transferId);
+    try {
+      final res = await _transferService.rotateClaimCode(transferId);
+      if (!mounted) return;
+      final newCode = res['claim_code']?.toString() ?? '';
+      final pdfB64 = res['document_pdf_b64']?.toString() ?? '';
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: _cardBg,
+          title: Text('New Claim Code Ready', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'The old QR code and claim code are now invalid. Share or print this new code (shown once):',
+                style: TextStyle(color: _textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: SelectableText(
+                  newCode,
+                  key: const Key('reissued_claim_code'),
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 3,
+                    color: Color(0xFF38BDF8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            if (pdfB64.isNotEmpty)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.picture_as_pdf, size: 16),
+                label: const Text('Download PDF'),
+                onPressed: () async {
+                  final bytes = base64Decode(pdfB64);
+                  await _openPdfBytes(Uint8List.fromList(bytes), 'transfer_document_$transferId.pdf');
+                },
+              ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),
+              child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      await _loadPendingTransfers();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not reissue claim code.')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busyPendingTransferId = null);
+    }
+  }
+
+  Future<void> _createTransferForSoldItem(Map<String, dynamic> soldItem) async {
+    final coinId = (soldItem['original_coin_id'] ?? soldItem['coin_id'] ?? '').toString().trim();
+    if (coinId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This sold record does not have a linked item ID.'), backgroundColor: Colors.amber),
+      );
+      return;
+    }
+    final venue = (soldItem['sales_venue'] ?? soldItem['venue'] ?? '').toString().toLowerCase();
+    String docType = venue.contains('ebay') ? 'sale_ebay' : 'sale_private';
+    bool showPrice = false;
+    bool includePhotos = false;
+    final salePrice = (soldItem['sale_price_usd'] as num?)?.toDouble() ??
+        (soldItem['sale_price'] as num?)?.toDouble();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: _cardBg,
+          title: Text('Create Transfer Document for Buyer', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Generate a one-time QR + claim code so the buyer can add this item to a free Numista.AI account. Your sale record stays unchanged.',
+                style: TextStyle(color: _textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: docType,
+                dropdownColor: _cardBg,
+                style: TextStyle(color: _textPrimary),
+                decoration: const InputDecoration(labelText: 'Transfer Type'),
+                items: const [
+                  DropdownMenuItem(value: 'sale_ebay', child: Text('Sale (eBay)')),
+                  DropdownMenuItem(value: 'sale_private', child: Text('Sale (private)')),
+                  DropdownMenuItem(value: 'gift', child: Text('Gift')),
+                ],
+                onChanged: (v) => setDialogState(() => docType = v ?? docType),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Show sale price on document', style: TextStyle(color: _textPrimary, fontSize: 13)),
+                subtitle: salePrice != null
+                    ? Text('\$${salePrice.toStringAsFixed(2)}', style: TextStyle(color: _textSecondary, fontSize: 12))
+                    : null,
+                value: showPrice,
+                onChanged: (v) => setDialogState(() => showPrice = v),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Include my photos', style: TextStyle(color: _textPrimary, fontSize: 13)),
+                value: includePhotos,
+                onChanged: (v) => setDialogState(() => includePhotos = v),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel', style: TextStyle(color: _textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7)),
+              child: const Text('Create Document', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final userIdToUse = widget.userId.trim().isNotEmpty ? widget.userId.trim() : AuthService.userEmail;
+    setState(() => _isLoading = true);
+    try {
+      final transfer = await _transferService.initiateTransfer(
+        userId: userIdToUse,
+        itemIds: [coinId],
+        transferType: docType,
+        expiresDays: _expiresDays,
+        source: 'sold_item',
+        showPrice: showPrice,
+        salePriceUsd: showPrice ? salePrice : null,
+        includePhotos: includePhotos,
+      );
+      if (!mounted) return;
+      setState(() {
+        _createdTransfer = transfer;
+        _activeTab = 'send';
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(NumistaErrorHelper.toUserFriendly(e, fallback: 'Could not create transfer document.')),
           backgroundColor: Colors.red,
         ),
       );
@@ -403,6 +713,7 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildTabButton('send', Icons.send_outlined, 'Transfer (Mode 1)'),
+                    _buildTabButton('pending', Icons.pending_actions_outlined, 'Pending Transfers'),
                     _buildTabButton('sell_outside', Icons.point_of_sale_outlined, 'Sold Outside (Mode 3)'),
                     _buildTabButton('sold_history', Icons.history_outlined, 'Sold Inventory & Undo'),
                     _buildTabButton('claim', Icons.download_for_offline_outlined, 'Claim Transfer'),
@@ -413,6 +724,8 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
             if (_activeTab == 'claim')
               _buildClaimView()
+            else if (_activeTab == 'pending')
+              _buildPendingTransfersView()
             else if (_activeTab == 'sell_outside')
               _buildSoldOutsideView()
             else if (_activeTab == 'sold_history')
@@ -561,6 +874,56 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
             filled: true,
             fillColor: _inputFill,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          color: _cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: _borderCol),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  key: const Key('transfer_show_price_switch'),
+                  value: _showPriceOnDocument,
+                  onChanged: (v) => setState(() => _showPriceOnDocument = v),
+                  activeThumbColor: const Color(0xFF38BDF8),
+                  title: Text('Show price on Transfer Document', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text('Off by default. Turn on to print the sale price on the PDF.', style: TextStyle(color: _textSecondary, fontSize: 12)),
+                ),
+                if (_showPriceOnDocument)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: TextField(
+                      key: const Key('transfer_price_field'),
+                      controller: _transferPriceController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: TextStyle(color: _textPrimary),
+                      decoration: InputDecoration(
+                        labelText: 'Price to print (\$ USD)',
+                        hintText: 'e.g. 125.00',
+                        prefixText: '\$ ',
+                        filled: true,
+                        fillColor: _inputFill,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: _borderCol)),
+                      ),
+                    ),
+                  ),
+                Divider(height: 1, color: _borderCol),
+                SwitchListTile(
+                  key: const Key('transfer_include_photos_switch'),
+                  value: _includePhotosOnDocument,
+                  onChanged: (v) => setState(() => _includePhotosOnDocument = v),
+                  activeThumbColor: const Color(0xFF38BDF8),
+                  title: Text('Include my photos on Transfer Document', style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text('Off by default. Uses only your own uploaded photos.', style: TextStyle(color: _textSecondary, fontSize: 12)),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 20),
@@ -1030,6 +1393,78 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
                 ],
                 const SizedBox(height: 12),
 
+                if (_claimPreviewError != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
+                    ),
+                    child: Text(_claimPreviewError!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                  ),
+                ],
+
+                if (_claimPreview != null) ...[
+                  Container(
+                    key: const Key('claim_preview_card'),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.4)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Items ready to claim',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _textPrimary),
+                        ),
+                        const SizedBox(height: 6),
+                        for (final entry in ((_claimPreview!['items'] as List?) ?? const []))
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              '• ${(entry as Map)['title'] ?? 'Numismatic Item'} (Qty: ${entry['quantity'] ?? 1})',
+                              style: TextStyle(color: _textPrimary, fontSize: 13),
+                            ),
+                          ),
+                        if ((_claimPreview!['expires_at']?.toString() ?? '').isNotEmpty)
+                          Text(
+                            'Expires: ${_claimPreview!['expires_at'].toString().substring(0, _claimPreview!['expires_at'].toString().length >= 10 ? 10 : _claimPreview!['expires_at'].toString().length)}',
+                            style: TextStyle(color: _textSecondary, fontSize: 12),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    key: const Key('claim_preview_button'),
+                    onPressed: _isPreviewingClaim ? null : _previewClaim,
+                    icon: _isPreviewingClaim
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.visibility_outlined, color: Color(0xFF0284C7)),
+                    label: Text(
+                      _isPreviewingClaim ? 'Checking code...' : 'Preview item(s) before claiming',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF0284C7)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -1225,6 +1660,8 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         setState(() => _activeTab = tabKey);
         if (tabKey == 'sold_history') {
           _loadSoldItems();
+        } else if (tabKey == 'pending') {
+          _loadPendingTransfers();
         }
       },
       child: Container(
@@ -1837,6 +2274,154 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
     );
   }
 
+  Widget _buildPendingTransfersView() {
+    if (_isLoadingPending) {
+      return const Padding(
+        padding: EdgeInsets.all(40.0),
+        child: Center(child: CircularProgressIndicator(color: Color(0xFF0284C7))),
+      );
+    }
+
+    if (_pendingError != null) {
+      return Card(
+        color: _cardBg,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Text(_pendingError!, style: const TextStyle(color: Colors.redAccent)),
+              const SizedBox(height: 10),
+              ElevatedButton(onPressed: _loadPendingTransfers, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Pending Transfers', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textPrimary)),
+                  const SizedBox(height: 4),
+                  Text('Cancel unclaimed transfers or reissue a fresh claim code and QR.', style: TextStyle(color: _textSecondary, fontSize: 12)),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Color(0xFF0284C7)),
+              onPressed: _loadPendingTransfers,
+              tooltip: 'Refresh Pending Transfers',
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_pendingTransfers.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(color: _cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: _borderCol)),
+            child: Column(
+              children: [
+                Icon(Icons.pending_actions_outlined, size: 48, color: _textSecondary),
+                const SizedBox(height: 10),
+                Text('No pending transfers right now.', style: TextStyle(color: _textSecondary, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _pendingTransfers.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (ctx, idx) {
+              final tr = _pendingTransfers[idx];
+              final transferId = (tr['transfer_id'] ?? '').toString();
+              final titles = (tr['item_titles'] as List?)?.map((e) => e.toString()).toList() ?? const [];
+              final titleText = titles.isNotEmpty ? titles.join(', ') : 'Transfer ($transferId)';
+              final itemCount = tr['item_count'] ?? titles.length;
+              final expiresRaw = (tr['expires_at'] ?? '').toString();
+              final expiresStr = expiresRaw.length >= 10 ? expiresRaw.substring(0, 10) : (expiresRaw.isNotEmpty ? expiresRaw : '—');
+              final isExpired = tr['is_expired'] == true;
+              final isBusy = _busyPendingTransferId == transferId;
+              final recipient = (tr['recipient_email'] ?? '').toString();
+
+              return Card(
+                key: Key('pending_transfer_card_$transferId'),
+                color: _cardBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: isExpired ? Colors.amber.withValues(alpha: 0.6) : _borderCol),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(titleText, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: _textPrimary)),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isExpired ? Colors.amber.withValues(alpha: 0.2) : const Color(0xFF0284C7).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              isExpired ? 'EXPIRED' : 'PENDING',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isExpired ? Colors.amber.shade800 : const Color(0xFF0284C7),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Items: $itemCount | Expires: $expiresStr${recipient.isNotEmpty ? ' | Locked to: $recipient' : ''}',
+                        style: TextStyle(fontSize: 12, color: _textSecondary),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            key: Key('pending_reissue_$transferId'),
+                            onPressed: (isBusy || isExpired) ? null : () => _reissuePendingCode(transferId),
+                            icon: const Icon(Icons.refresh, size: 14),
+                            label: const Text('Reissue code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                          OutlinedButton.icon(
+                            key: Key('pending_cancel_$transferId'),
+                            onPressed: isBusy ? null : () => _cancelPendingTransfer(transferId),
+                            icon: const Icon(Icons.cancel_outlined, size: 14, color: Colors.redAccent),
+                            label: const Text('Cancel', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 12)),
+                            style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.redAccent)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
   Widget _buildSoldHistoryView() {
     if (_isLoadingSoldItems) {
       return const Padding(
@@ -1867,13 +2452,15 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Sold & Disposed Inventory', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textPrimary)),
-                const SizedBox(height: 4),
-                Text('Audit ledger of liquidated assets outside active collection.', style: TextStyle(color: _textSecondary, fontSize: 12)),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Sold & Disposed Inventory', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textPrimary)),
+                  const SizedBox(height: 4),
+                  Text('Audit ledger of liquidated assets outside active collection.', style: TextStyle(color: _textSecondary, fontSize: 12)),
+                ],
+              ),
             ),
             IconButton(
               icon: const Icon(Icons.refresh, color: Color(0xFF0284C7)),
@@ -1997,17 +2584,36 @@ class _LateralTransferScreenState extends State<LateralTransferScreen> {
 
                       if (!isVoided && archiveId.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: OutlinedButton.icon(
-                            onPressed: _isUndoing ? null : () => _undoSale(archiveId),
-                            icon: const Icon(Icons.undo, size: 14, color: Colors.amber),
-                            label: Text(_isUndoing ? 'Undoing...' : 'Undo Sale', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.amber),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.end,
+                          children: [
+                            if ((item['original_coin_id'] ?? item['coin_id'] ?? '').toString().isNotEmpty &&
+                                ((item['remaining_qty'] as num?)?.toInt() ?? 0) == 0)
+                              ElevatedButton.icon(
+                                key: Key('sold_create_transfer_${item['original_coin_id'] ?? item['coin_id']}'),
+                                onPressed: _isLoading ? null : () => _createTransferForSoldItem(item),
+                                icon: const Icon(Icons.description_outlined, size: 14, color: Colors.white),
+                                label: const Text(
+                                  'Create Transfer Document for the buyer',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0284C7),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                ),
+                              ),
+                            OutlinedButton.icon(
+                              onPressed: _isUndoing ? null : () => _undoSale(archiveId),
+                              icon: const Icon(Icons.undo, size: 14, color: Colors.amber),
+                              label: Text(_isUndoing ? 'Undoing...' : 'Undo Sale', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.amber),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ],

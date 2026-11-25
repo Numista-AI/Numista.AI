@@ -1,6 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../services/guest_seed_service.dart';
+
+/// Optional test hook so widget tests can exercise registered-user flows without Firebase init.
+@visibleForTesting
+bool Function()? canSellOrTransferOverride;
 
 /// The exact message shown in place of Sell on eBay / Transfer for Browse Demo (PLAN v1.2 section 4.6).
 const String kSellTransferDemoCta = 'Create a free account to sell or transfer items.';
@@ -23,6 +28,7 @@ bool canSellOrTransferFor({
 
 /// Live check. Browse Demo is evaluated FIRST and short-circuits, so Firebase is not touched at all.
 bool canSellOrTransfer() {
+  if (canSellOrTransferOverride != null) return canSellOrTransferOverride!();
   if (GuestSeedService.isBrowseDemoMode) return false;
   final user = FirebaseAuth.instance.currentUser;
   return canSellOrTransferFor(
