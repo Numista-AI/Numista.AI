@@ -94,11 +94,76 @@ class ReviewHubScreen extends StatefulWidget {
     return isNeg ? '-$formatted' : formatted;
   }
 
+  static int? _parseIntField(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    if (raw is num) return raw.round();
+    return int.tryParse(raw.toString().trim());
+  }
+
+  static int? _parseCentsField(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is num) return (raw.toDouble() * 100.0).round();
+    final cleaned = raw.toString().replaceAll(RegExp(r'[^\d.-]'), '').trim();
+    if (cleaned.isEmpty) return null;
+    final parsed = double.tryParse(cleaned);
+    return parsed != null ? (parsed * 100.0).round() : null;
+  }
+
+  /// Arithmetic sanity check: fails closed if backend flagged math_check_passed==false
+  /// or if unit_cost * qty disagrees with line_total by more than 1 cent.
+  static bool passesMathSanityCheck(Map<String, dynamic> data) {
+    if (data['math_check_passed'] == false) return false;
+    final unitCents = _parseIntField(data['unit_cost_cents'] ?? data['unit_price_cents']);
+    final lineTotalCents = _parseIntField(data['line_total_cents']) ?? _parseCentsField(data['line_total']);
+    if (unitCents != null && unitCents > 0 && lineTotalCents != null && lineTotalCents > 0) {
+      final qtyRaw = _parseIntField(data['Quantity'] ?? data['quantity'] ?? data['qty']) ?? 1;
+      final cleanQty = qtyRaw > 0 ? qtyRaw : 1;
+      if ((unitCents * cleanQty - lineTotalCents).abs() > 1) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @visibleForTesting
+  static Widget buildConfidenceOrNeedsReviewBadge(
+    Map<String, dynamic> data, {
+    double confidence = 1.0,
+  }) {
+    final needsReview = !passesMathSanityCheck(data) ||
+        data['review_needed'] == true ||
+        data['status'] == 'quarantined';
+    final Color color = needsReview
+        ? Colors.amber.shade800
+        : (confidence < 0.85 ? Colors.orange : Colors.green);
+    final String label = needsReview
+        ? 'Needs review'
+        : 'Conf: ${(confidence * 100).toInt()}%';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(120)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
   /// Predicate for 100% AI Confidence items eligible for auto-commit.
   static bool isHighConfidenceItem(Map<String, dynamic> data) {
     final status = (data['status'] ?? 'staged').toString().toLowerCase();
     final reviewNeeded = data['review_needed'] == true;
-    if (status == 'quarantined' || status == 'aborted' || status == 'superseded' || status == 'committed' || reviewNeeded) {
+    if (status == 'quarantined' ||
+        status == 'aborted' ||
+        status == 'superseded' ||
+        status == 'committed' ||
+        reviewNeeded ||
+        !passesMathSanityCheck(data)) {
       return false;
     }
     double conf = 1.0;
@@ -2203,9 +2268,10 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                         _buildBadge(typeMeta.label, typeMeta.color),
                         const SizedBox(width: 6),
                       ],
-                      _buildBadge(
-                        'Conf: ${(confidence * 100).toInt()}%',
-                        confidence < 0.85 ? Colors.orange : Colors.green),
+                      ReviewHubScreen.buildConfidenceOrNeedsReviewBadge(
+                        data,
+                        confidence: confidence,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -2231,26 +2297,36 @@ class _ReviewHubScreenState extends State<ReviewHubScreen> {
                     } else {
                       displayTitle = 'Numismatic Item';
                     }
-                    final isQuarantined = data['status'] == 'quarantined' || data['review_needed'] == true;
+                    final needsReview = !ReviewHubScreen.passesMathSanityCheck(data) ||
+                        data['status'] == 'quarantined' ||
+                        data['review_needed'] == true;
+                    final reasonText = (data['needs_review_reason'] ?? '').toString().trim();
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           displayTitle,
                           style: TextStyle(
-                            color: isQuarantined ? Colors.amber[800] : const Color(0xFF475569),
+                            color: needsReview ? Colors.amber[800] : const Color(0xFF475569),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        if (isQuarantined)
+                        if (needsReview)
                           Padding(
                             padding: const EdgeInsets.only(top: 3),
                             child: Row(
-                              children: const [
-                                Icon(Icons.warning_amber_rounded, size: 13, color: Colors.amber),
-                                SizedBox(width: 4),
-                                Text('Quarantined: Subject Verification Needed', style: TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold)),
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, size: 13, color: Colors.amber),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    reasonText.isNotEmpty
+                                        ? reasonText
+                                        : 'Quarantined: Subject Verification Needed',
+                                    style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
