@@ -7,20 +7,27 @@ import '../widgets/morgan_settings_panel.dart';
 
 class MorganChatPopout extends StatefulWidget {
   final String? initialQuery;
+  final int initialQueryNonce;
+  final ValueChanged<int>? onInitialQueryConsumed;
   final bool isDocked;
   final VoidCallback onClose;
   final VoidCallback? onToggleDock;
   final VoidCallback? onNavigateToCollection;
   final Widget? childOverride;
+  @visibleForTesting
+  final bool testSkipFirebase;
 
   const MorganChatPopout({
     super.key,
     this.initialQuery,
+    this.initialQueryNonce = 0,
+    this.onInitialQueryConsumed,
     this.isDocked = false,
     required this.onClose,
     this.onToggleDock,
     this.onNavigateToCollection,
     this.childOverride,
+    this.testSkipFirebase = false,
   });
 
   @override
@@ -192,16 +199,21 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
                 ),
               ],
             ),
-            child: widget.childOverride ??
-                AiChatScreen(
-                  initialQuery: widget.initialQuery,
-                  isPopout: true,
-                  isMinimized: false,
-                  isDocked: true,
-                  onToggleDock: widget.onToggleDock,
-                  onClose: widget.onClose,
-                  onNavigateToCollection: widget.onNavigateToCollection,
-                ),
+            child: PrimaryScrollController.none(
+              child: widget.childOverride ??
+                  AiChatScreen(
+                    initialQuery: widget.initialQuery,
+                    initialQueryNonce: widget.initialQueryNonce,
+                    onInitialQueryConsumed: widget.onInitialQueryConsumed,
+                    isPopout: true,
+                    isMinimized: false,
+                    isDocked: true,
+                    onToggleDock: widget.onToggleDock,
+                    onClose: widget.onClose,
+                    onNavigateToCollection: widget.onNavigateToCollection,
+                    testSkipFirebase: widget.testSkipFirebase,
+                  ),
+            ),
           ),
         ),
       );
@@ -235,24 +247,29 @@ class _MorganChatPopoutState extends State<MorganChatPopout> {
           children: [
             // Embedded Chat Screen
             Positioned.fill(
-              child: widget.childOverride ??
-                  AiChatScreen(
-                    initialQuery: widget.initialQuery,
-                    isPopout: true,
-                    isMinimized: _isMinimized,
-                    isDocked: false,
-                    onToggleDock: widget.onToggleDock,
-                    onMinimize: _toggleMinimize,
-                    onClose: widget.onClose,
-                    onNavigateToCollection: widget.onNavigateToCollection,
-                    onDragUpdate: (details) {
-                      setState(() {
-                        _top = (_top + details.delta.dy).clamp(0.0, screenSize.height - 100);
-                        _left = (_left + details.delta.dx).clamp(0.0, screenSize.width - 100);
-                      });
-                    },
-                    onDragEnd: _saveState,
-                  ),
+              child: PrimaryScrollController.none(
+                child: widget.childOverride ??
+                    AiChatScreen(
+                      initialQuery: widget.initialQuery,
+                      initialQueryNonce: widget.initialQueryNonce,
+                      onInitialQueryConsumed: widget.onInitialQueryConsumed,
+                      isPopout: true,
+                      isMinimized: _isMinimized,
+                      isDocked: false,
+                      onToggleDock: widget.onToggleDock,
+                      onMinimize: _toggleMinimize,
+                      onClose: widget.onClose,
+                      onNavigateToCollection: widget.onNavigateToCollection,
+                      testSkipFirebase: widget.testSkipFirebase,
+                      onDragUpdate: (details) {
+                        setState(() {
+                          _top = (_top + details.delta.dy).clamp(0.0, screenSize.height - 100);
+                          _left = (_left + details.delta.dx).clamp(0.0, screenSize.width - 100);
+                        });
+                      },
+                      onDragEnd: _saveState,
+                    ),
+              ),
             ),
 
             // Diagonal Resize handle in the bottom-right corner

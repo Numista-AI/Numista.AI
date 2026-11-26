@@ -57,6 +57,10 @@ String formatChatErrorResponse(int statusCode, String body) {
 class AiChatScreen extends StatefulWidget {
   /// Optional pre-populated query (from "Ask Morgan" button on a catalog item or coin).
   final String? initialQuery;
+  /// Monotonic nonce incremented by callers so identical repeat queries still dispatch.
+  final int initialQueryNonce;
+  /// Notified once the initial query has been accepted for dispatch (with its nonce).
+  final ValueChanged<int>? onInitialQueryConsumed;
   /// Optional canonical NAC1 catalog code for Tier-0 Catalog-First Morgan lookup (Wave 2 Component C).
   final String? initialNacCode;
   final bool isPopout;
@@ -70,10 +74,16 @@ class AiChatScreen extends StatefulWidget {
   final VoidCallback? onNavigateToCollection;
   /// Optional callback to open a catalog entry by NAC1 code (Wave 2 Component C).
   final ValueChanged<String>? onOpenCatalogNac;
+  @visibleForTesting
+  final bool testSkipFirebase;
+  @visibleForTesting
+  final Future<void> Function()? testLoadGate;
 
   const AiChatScreen({
     super.key,
     this.initialQuery,
+    this.initialQueryNonce = 0,
+    this.onInitialQueryConsumed,
     this.initialNacCode,
     this.isPopout = false,
     this.isMinimized = false,
@@ -85,6 +95,8 @@ class AiChatScreen extends StatefulWidget {
     this.onDragEnd,
     this.onNavigateToCollection,
     this.onOpenCatalogNac,
+    this.testSkipFirebase = false,
+    this.testLoadGate,
   });
 
   @override
@@ -103,6 +115,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
   String? _sessionId;
   MorganCollectionContext? _ctx;
   String _displayName = 'there';
+  String? _pendingInitialQuery;
+  int _pendingInitialNonce = -1;
+  int _lastAcceptedNonce = -1;
 
   // Group photo & Co-Pilot gate state
   Uint8List? _pendingPhotoBytes;
@@ -139,6 +154,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void initState() {
     super.initState();
     _focusNode = FocusNode();
+    final initQ = widget.initialQuery?.trim();
+    if (initQ != null && initQ.isNotEmpty) {
+      _pendingInitialQuery = initQ;
+      _pendingInitialNonce = widget.initialQueryNonce;
+      _lastAcceptedNonce = widget.initialQueryNonce;
+    }
     SttVoiceService.instance.addListener(_onSttServiceChanged);
     MorganActionBus.instance.onProposeConfirmation =
         (actionType, summaryText, payload) async {
@@ -162,6 +183,24 @@ class _AiChatScreenState extends State<AiChatScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AiChatScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextQ = widget.initialQuery?.trim();
+    final changed = nextQ != null &&
+        nextQ.isNotEmpty &&
+        (widget.initialQueryNonce != oldWidget.initialQueryNonce ||
+            widget.initialQuery != oldWidget.initialQuery);
+    if (changed &&
+        (widget.initialQueryNonce != _lastAcceptedNonce ||
+            nextQ != oldWidget.initialQuery?.trim())) {
+      _pendingInitialQuery = nextQ;
+      _pendingInitialNonce = widget.initialQueryNonce;
+      _lastAcceptedNonce = widget.initialQueryNonce;
+      _dispatchPendingInitialQueryIfReady();
     }
   }
 
@@ -207,6 +246,21 @@ class _AiChatScreenState extends State<AiChatScreen> {
   }
 
   Future<void> _loadEverything() async {
+    if (widget.testLoadGate != null) {
+      await widget.testLoadGate!();
+    }
+    if (widget.testSkipFirebase) {
+      _displayName = 'there';
+      _ctx = null;
+      if (mounted) {
+        setState(() {
+          _isLoadingContext = false;
+          _isLoadingHistory = false;
+        });
+      }
+      _dispatchPendingInitialQueryIfReady();
+      return;
+    }
     // Load user name and collection context in parallel with session history
     final nameF = MorganPrefs.getDisplayName();
     final ctxF  = MorganChatContextService.load(forceRefresh: true);
@@ -222,7 +276,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     if (AuthService.isGuest) {
       if (mounted) setState(() => _isLoadingHistory = false);
       _sendMorganOpener();
-      _maybeSendInitialQuery();
+      _dispatchPendingInitialQueryIfReady();
       return;
     }
 
@@ -230,6 +284,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       final ref = _sessionsRef;
       if (ref == null) {
         if (mounted) setState(() => _isLoadingHistory = false);
+        _dispatchPendingInitialQueryIfReady();
         return;
       }
 
@@ -238,7 +293,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           .limit(1)
           .get();
 
-      if (snap.docs.isNotEmpty && widget.initialQuery == null) {
+      if (snap.docs.isNotEmpty && _pendingInitialQuery == null) {
         final doc = snap.docs.first;
         _sessionId = doc.id;
         final raw = (doc.data() as Map<String, dynamic>)['messages'] as List? ?? [];
@@ -271,7 +326,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       if (mounted) setState(() => _isLoadingHistory = false);
       _sendMorganOpener();
     }
-    _maybeSendInitialQuery();
+    _dispatchPendingInitialQueryIfReady();
   }
 
   Future<void> _startNewSession() async {
@@ -302,12 +357,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
     _scrollToBottom();
   }
 
-  void _maybeSendInitialQuery() {
-    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _send(widget.initialQuery!);
-      });
-    }
+  void _dispatchPendingInitialQueryIfReady() {
+    if (!mounted) return;
+    if (_isLoadingHistory || _isLoadingContext) return;
+    final q = _pendingInitialQuery;
+    if (q == null || q.isEmpty) return;
+    final nonce = _pendingInitialNonce;
+    _pendingInitialQuery = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.onInitialQueryConsumed?.call(nonce);
+      _send(q, restoreInputOnFailure: true);
+    });
   }
 
   @override
@@ -454,11 +515,18 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
   }
 
-  Future<void> _send(String query) async {
+  Future<void> _send(String query, {bool restoreInputOnFailure = false}) async {
     final normalizedInput =
         MorganVoiceConfirmationParser.normalizeNumismaticTranscript(query);
     final rawQuery = normalizedInput.trim();
     if (rawQuery.isEmpty) return;
+
+    void restoreInputIfRequested() {
+      if (restoreInputOnFailure && mounted && _controller.text.trim().isEmpty) {
+        _controller.text = rawQuery;
+        _controller.selection = TextSelection.collapsed(offset: rawQuery.length);
+      }
+    }
 
     MorganProactiveRescueObserver.instance.recordUserActivity();
 
@@ -481,20 +549,29 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
     final recentHistory = _messages.length > 6 ? _messages.sublist(_messages.length - 6) : _messages;
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() {
-        _messages.add({
-          'role': 'assistant',
-          'content': 'You need to sign in again to chat with me. Please sign in and try again.',
+    String? idToken;
+    if (widget.testSkipFirebase) {
+      idToken = await HttpAuthClient.getIdToken();
+    } else {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        restoreInputIfRequested();
+        if (!mounted) return;
+        setState(() {
+          _messages.add({
+            'role': 'assistant',
+            'content': 'You need to sign in again to chat with me. Please sign in and try again.',
+          });
+          _isLoading = false;
         });
-        _isLoading = false;
-      });
-      return;
+        return;
+      }
+      idToken = await user.getIdToken();
     }
 
-    final idToken = await user.getIdToken();
-    if (idToken == null) {
+    if (idToken == null || idToken.isEmpty) {
+      restoreInputIfRequested();
+      if (!mounted) return;
       setState(() {
         _messages.add({
           'role': 'assistant',
@@ -505,11 +582,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
       return;
     }
 
+    final String requestEmail =
+        widget.testSkipFirebase ? 'test@numista.ai' : AuthService.userEmail;
+
     try {
       http.Response response = await HttpAuthClient.post(
         Uri.parse('$kApiBaseUrl/api/morgan/copilot'),
         body: jsonEncode({
-          'user_email':          AuthService.userEmail,
+          'user_email':          requestEmail,
           'query':               effectiveQuery,
           'chat_history':        recentHistory,
           'collection_context':  _ctx?.systemPrompt ?? '',
@@ -524,7 +604,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
         response = await HttpAuthClient.post(
           Uri.parse('$kApiBaseUrl/api/deep_dive'),
           body: jsonEncode({
-            'user_email':          AuthService.userEmail,
+            'user_email':          requestEmail,
             'query':               effectiveQuery,
             'chat_history':        recentHistory,
             'collection_context':  _ctx?.systemPrompt ?? '',
@@ -590,6 +670,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           );
         }
       } else {
+        restoreInputIfRequested();
         replyText = formatChatErrorResponse(response.statusCode, response.body);
       }
 
@@ -608,6 +689,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
       _persistMessages([userMsg, aiMsg]);
     } catch (e) {
       if (!mounted) return;
+      restoreInputIfRequested();
       final errorMsg = {
         'role': 'assistant',
         'content':
@@ -623,7 +705,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   }
 
   void _persistMessages(List<Map<String, dynamic>> newMsgs) {
-    if (AuthService.isGuest || _currentSessionRef == null) return;
+    if (widget.testSkipFirebase || AuthService.isGuest || _currentSessionRef == null) return;
     _currentSessionRef!.update({
       'messages':     FieldValue.arrayUnion(newMsgs),
       'updated_at':   FieldValue.serverTimestamp(),
@@ -2444,7 +2526,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   child: TextField(
                     controller: _controller,
                     focusNode: _focusNode,
-                    spellCheckConfiguration: const SpellCheckConfiguration(),
+                    spellCheckConfiguration: widget.testSkipFirebase
+                        ? const SpellCheckConfiguration.disabled()
+                        : const SpellCheckConfiguration(),
                     autocorrect: true,
                     enableSuggestions: true,
                     style: TextStyle(color: _textPrimary, fontSize: 16),

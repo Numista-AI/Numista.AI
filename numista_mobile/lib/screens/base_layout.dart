@@ -87,6 +87,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   // Optional pre-populated AI query — set when the user taps AI Deep Dive
   // on a specific coin. Consumed once and then cleared.
   String? _aiInitialQuery;
+  int _aiInitialQueryNonce = 0;
   String? _aiInitialNacCode;
   String? _catalogInitialTab;
   String? _catalogInitialNacCode;
@@ -95,6 +96,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   bool _isMorganPopoutOpen = false;
   bool _isMorganDocked = true;
   String? _popoutInitialQuery;
+  int _popoutInitialQueryNonce = 0;
   bool _isSidebarCollapsed = false;
   bool _desktopHotkeysEnabled = true;
   FocusNode? _previousFocusNode;
@@ -390,7 +392,14 @@ class _BaseLayoutState extends State<BaseLayout> {
         _myCollectionTab = subTab;
       }
       if (aiInitialQuery != null) {
-        _aiInitialQuery = aiInitialQuery;
+        final trimmed = aiInitialQuery.trim();
+        if (trimmed.isNotEmpty) {
+          _aiInitialQuery = trimmed;
+          _aiInitialQueryNonce++;
+        }
+      } else if (resolvedRoute != 'AI Deepdive') {
+        _aiInitialQuery = null;
+        _aiInitialNacCode = null;
       }
       if (aiInitialNacCode != null) {
         _aiInitialNacCode = aiInitialNacCode;
@@ -467,38 +476,49 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
     switch (_activeRoute) {
       case 'Home Dashboard':
-        return HomeDashboard(
-          onAskMorgan: () {
-            if (MediaQuery.of(context).size.width >= 800) {
-              setState(() {
-                _isMorganPopoutOpen = true;
-                _popoutInitialQuery = null;
-              });
-              showMorganConsentModalIfNeeded(context);
-            } else {
-              _navigateTo('AI Deepdive');
-            }
-          },
-          onAskMorganWithQuery: (query) {
-            if (MediaQuery.of(context).size.width >= 800) {
-              setState(() {
-                _isMorganPopoutOpen = true;
-                _popoutInitialQuery = query;
-              });
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _popoutInitialQuery = null;
-              });
-            } else {
-              _navigateTo('AI Deepdive', aiInitialQuery: query);
-            }
-          },
-          onNavigateToCollection: () => _navigateTo('My Collection'),
-          onAddCoin: () => _navigateTo('Add New Coins'),
-          onTakePhoto: () => _navigateTo('Take a photo'),
-          onOpenReview: () => _navigateTo('Review Hub'),
-          onOpenPrograms: () => _navigateTo('Coin Programs'),
-          reviewQueueCount: _reviewQueueCount,
-          isReviewCountLoading: _isReviewCountLoading,
+        return PrimaryScrollController.none(
+          child: HomeDashboard(
+            testStream: widget.testSkipFirebase
+                ? Stream<CombinedDashboardData>.value(
+                    CombinedDashboardData(
+                      coins: const [],
+                      currency: const [],
+                      worldItems: const [],
+                    ),
+                  )
+                : null,
+            onAskMorgan: () {
+              if (MediaQuery.of(context).size.width >= 800) {
+                setState(() {
+                  _isMorganPopoutOpen = true;
+                  _popoutInitialQuery = null;
+                });
+                showMorganConsentModalIfNeeded(context);
+              } else {
+                _navigateTo('AI Deepdive');
+              }
+            },
+            onAskMorganWithQuery: (query) {
+              final trimmed = query.trim();
+              if (trimmed.isEmpty) return;
+              if (MediaQuery.of(context).size.width >= 800) {
+                setState(() {
+                  _isMorganPopoutOpen = true;
+                  _popoutInitialQuery = trimmed;
+                  _popoutInitialQueryNonce++;
+                });
+              } else {
+                _navigateTo('AI Deepdive', aiInitialQuery: trimmed);
+              }
+            },
+            onNavigateToCollection: () => _navigateTo('My Collection'),
+            onAddCoin: () => _navigateTo('Add New Coins'),
+            onTakePhoto: () => _navigateTo('Take a photo'),
+            onOpenReview: () => _navigateTo('Review Hub'),
+            onOpenPrograms: () => _navigateTo('Coin Programs'),
+            reviewQueueCount: _reviewQueueCount,
+            isReviewCountLoading: _isReviewCountLoading,
+          ),
         );
       case 'Analytics':
         return AnalyticsScreen(
@@ -542,14 +562,18 @@ class _BaseLayoutState extends State<BaseLayout> {
         );
       case 'AI Deepdive':
       case 'Ask Morgan':
-        // Consume the initial query/nacCode once, then clear so subsequent opens start clean.
-        final q = _aiInitialQuery;
-        final nac = _aiInitialNacCode;
-        _aiInitialQuery = null;
-        _aiInitialNacCode = null;
+        // Passed through with nonce; cleared in onInitialQueryConsumed or on route exit.
         return AiChatScreen(
-          initialQuery: q,
-          initialNacCode: nac,
+          initialQuery: _aiInitialQuery,
+          initialQueryNonce: _aiInitialQueryNonce,
+          onInitialQueryConsumed: (consumedNonce) {
+            if (_aiInitialQueryNonce == consumedNonce && _aiInitialQuery != null) {
+              _aiInitialQuery = null;
+              _aiInitialNacCode = null;
+            }
+          },
+          initialNacCode: _aiInitialNacCode,
+          testSkipFirebase: widget.testSkipFirebase,
           onNavigateToCollection: () => _navigateTo('My Collection'),
           onOpenCatalogNac: (nacCode) {
             setState(() {
@@ -1275,16 +1299,29 @@ class _BaseLayoutState extends State<BaseLayout> {
                       widget.testPopoutBuilder != null
                           ? widget.testPopoutBuilder!(
                               _popoutInitialQuery,
-                              () => setState(() => _isMorganPopoutOpen = false),
+                              () => setState(() {
+                                _isMorganPopoutOpen = false;
+                                _popoutInitialQuery = null;
+                              }),
                             )
                           : MorganChatPopout(
                               initialQuery: _popoutInitialQuery,
+                              initialQueryNonce: _popoutInitialQueryNonce,
+                              onInitialQueryConsumed: (consumedNonce) {
+                                if (_popoutInitialQueryNonce == consumedNonce) {
+                                  _popoutInitialQuery = null;
+                                }
+                              },
                               isDocked: false,
+                              testSkipFirebase: widget.testSkipFirebase,
                               onToggleDock: () {
                                 setState(() => _isMorganDocked = true);
                                 MorganSettingsService.instance.setDockToSide(true);
                               },
-                              onClose: () => setState(() => _isMorganPopoutOpen = false),
+                              onClose: () => setState(() {
+                                _isMorganPopoutOpen = false;
+                                _popoutInitialQuery = null;
+                              }),
                               onNavigateToCollection: () => _navigateTo('My Collection'),
                             ),
                   ],
@@ -1298,16 +1335,29 @@ class _BaseLayoutState extends State<BaseLayout> {
             widget.testPopoutBuilder != null
                 ? widget.testPopoutBuilder!(
                     _popoutInitialQuery,
-                    () => setState(() => _isMorganPopoutOpen = false),
+                    () => setState(() {
+                      _isMorganPopoutOpen = false;
+                      _popoutInitialQuery = null;
+                    }),
                   )
                 : MorganChatPopout(
                     initialQuery: _popoutInitialQuery,
+                    initialQueryNonce: _popoutInitialQueryNonce,
+                    onInitialQueryConsumed: (consumedNonce) {
+                      if (_popoutInitialQueryNonce == consumedNonce) {
+                        _popoutInitialQuery = null;
+                      }
+                    },
                     isDocked: true,
+                    testSkipFirebase: widget.testSkipFirebase,
                     onToggleDock: () {
                       setState(() => _isMorganDocked = false);
                       MorganSettingsService.instance.setDockToSide(false);
                     },
-                    onClose: () => setState(() => _isMorganPopoutOpen = false),
+                    onClose: () => setState(() {
+                      _isMorganPopoutOpen = false;
+                      _popoutInitialQuery = null;
+                    }),
                     onNavigateToCollection: () => _navigateTo('My Collection'),
                   ),
         ],

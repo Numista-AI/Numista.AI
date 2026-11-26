@@ -19,6 +19,8 @@ import '../services/coin_programs_data.dart';
 import '../models/program_model.dart';
 import '../utils/slot_resolver.dart';
 import '../services/display_preferences_service.dart';
+import '../services/morgan_test_harness.dart';
+import '../services/stt_voice_service.dart';
 import '../widgets/morgan_owl_avatar.dart';
 
 class HomeDashboard extends StatefulWidget {
@@ -142,11 +144,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
   final TextEditingController _morganQueryCtrl = TextEditingController();
   final FocusNode _morganFocusNode = FocusNode();
   int _streamNonce = 0;
+  bool _submitting = false;
+  bool _listeningFromHomeCard = false;
+  void Function(SttUtteranceEvent)? _previousSttOnUtterance;
 
   @override
   void initState() {
     super.initState();
     DisplayPreferencesService.instance.ensureLoaded();
+    SttVoiceService.instance.addListener(_onHomeSttChanged);
     if (widget.testStream != null) {
       return;
     }
@@ -155,8 +161,43 @@ class _HomeDashboardState extends State<HomeDashboard> {
     BatchValuationService.instance.restoreFromFirestore();
   }
 
+  void _onHomeSttChanged() {
+    final stt = SttVoiceService.instance;
+    if (!stt.isListening &&
+        _listeningFromHomeCard &&
+        !(stt.lastError == 'speech_recognition_unavailable' &&
+            MorganTestHarness.isEnabled)) {
+      stt.onUtterance = _previousSttOnUtterance;
+      _previousSttOnUtterance = null;
+      if (mounted) {
+        setState(() => _listeningFromHomeCard = false);
+      } else {
+        _listeningFromHomeCard = false;
+      }
+    } else if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _stopHomeSttIfActive({bool updateState = true}) {
+    final stt = SttVoiceService.instance;
+    if (_listeningFromHomeCard || stt.isListening) {
+      if (_listeningFromHomeCard) {
+        stt.onUtterance = _previousSttOnUtterance;
+        _previousSttOnUtterance = null;
+        _listeningFromHomeCard = false;
+      }
+      stt.stopListening();
+      if (updateState && mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   @override
   void dispose() {
+    SttVoiceService.instance.removeListener(_onHomeSttChanged);
+    _stopHomeSttIfActive(updateState: false);
     _morganQueryCtrl.dispose();
     _morganFocusNode.dispose();
     super.dispose();
@@ -558,46 +599,111 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 
   Widget _buildAskMorganCard(bool isPhone) {
+    final stt = SttVoiceService.instance;
+    final bool isSttListening = _listeningFromHomeCard || stt.isListening;
+    final bool canSend = !_submitting && !isSttListening;
+
     void submitQuery() {
+      _stopHomeSttIfActive();
+      if (_submitting) return;
       final q = _morganQueryCtrl.text.trim();
       if (q.isEmpty) {
-        widget.onAskMorgan?.call();
-      } else {
-        widget.onAskMorganWithQuery?.call(q);
+        _morganFocusNode.requestFocus();
+        return;
+      }
+      setState(() => _submitting = true);
+      _morganQueryCtrl.clear();
+      widget.onAskMorganWithQuery?.call(q);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) setState(() => _submitting = false);
+      });
+    }
+
+    void toggleSpeak() {
+      if (!stt.isSupported) {
+        _morganFocusNode.requestFocus();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Voice input isn\'t supported in this browser — type your question above.',
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      if (isSttListening) {
+        _stopHomeSttIfActive();
+        return;
+      }
+      _previousSttOnUtterance = stt.onUtterance;
+      setState(() => _listeningFromHomeCard = true);
+      stt.onUtterance = (event) {
+        final text = event.normalizedTranscript.trim();
+        _stopHomeSttIfActive();
+        if (text.isEmpty || !mounted) return;
+        _morganQueryCtrl.text = text;
+        _morganQueryCtrl.selection = TextSelection.collapsed(offset: text.length);
+        submitQuery();
+      };
+      stt.startListening();
+      if (stt.lastError == 'microphone_disabled_in_settings') {
+        _stopHomeSttIfActive();
+        _morganFocusNode.requestFocus();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Microphone is turned off in Settings — type your question above.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     }
 
     final micBtn = OutlinedButton.icon(
-      onPressed: () {
-        _morganFocusNode.requestFocus();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Voice input coming soon — type your question above.'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      },
-      icon: const Icon(Icons.mic_none, color: Color(0xFF0B1A2E), size: 22),
-      label: const Text(
-        'Microphone',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0B1A2E)),
+      onPressed: toggleSpeak,
+      icon: Icon(
+        isSttListening ? Icons.mic : Icons.mic_none,
+        color: isSttListening ? const Color(0xFFDC2626) : const Color(0xFF0B1A2E),
+        size: 22,
+      ),
+      label: Text(
+        isSttListening ? 'Stop' : 'Speak',
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.fade,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: isSttListening ? const Color(0xFFDC2626) : const Color(0xFF0B1A2E),
+        ),
       ),
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(140, 56),
-        side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
+        minimumSize: const Size(0, 56),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        side: BorderSide(
+          color: isSttListening ? const Color(0xFFDC2626) : const Color(0xFF1D4F91),
+          width: 1.5,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
 
     final photoBtn = OutlinedButton.icon(
-      onPressed: widget.onTakePhoto,
+      onPressed: () {
+        _stopHomeSttIfActive();
+        widget.onTakePhoto?.call();
+      },
       icon: const Icon(Icons.photo_camera_outlined, color: Color(0xFF0B1A2E), size: 22),
       label: const Text(
         'Photo',
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.fade,
         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0B1A2E)),
       ),
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(120, 56),
+        minimumSize: const Size(0, 56),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         side: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -606,12 +712,29 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final queryField = TextField(
       controller: _morganQueryCtrl,
       focusNode: _morganFocusNode,
+      textInputAction: TextInputAction.send,
       onSubmitted: (_) => submitQuery(),
       style: const TextStyle(fontSize: 18, color: Color(0xFF0B1A2E)),
       decoration: InputDecoration(
         hintText: 'Type or say your question...',
         hintStyle: const TextStyle(fontSize: 18, color: Color(0xFF0B1A2E)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        suffixIcon: Tooltip(
+          message: 'Send question to Morgan',
+          child: Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: IconButton(
+              key: const Key('home_ask_morgan_send_btn'),
+              onPressed: canSend ? submitQuery : null,
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              icon: Icon(
+                Icons.send_rounded,
+                color: canSend ? const Color(0xFF1D4F91) : const Color(0xFF94A3B8),
+                size: 22,
+              ),
+            ),
+          ),
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFF1D4F91), width: 1.5),
