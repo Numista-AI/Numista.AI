@@ -68,14 +68,24 @@ def test_auth_facts_unavailable_never_locks(monkeypatch):
 
 def test_unlock_on_upgrade_uses_the_existing_helper(monkeypatch):
     import tier_gatekeeper as tg
+    from tests.fakes_firestore import Col
     d = FakeDB()
     for i in range(12):
         seed_item(d, EMAIL, f"k{i:02d}", created_at=f"2026-03-{i + 1:02d}T00:00:00+00:00")
     allowance_service.apply_free_overflow_lock(d, user_key=EMAIL, uid="U5", limit_resolver=lambda: 10)
     assert sum(1 for v in d.store.values() if v.get("locked_pending_upgrade")) == 2
     # tier_gatekeeper.unlock_user_coins is what payment_routes.py calls on an upgrade payment
-    monkeypatch.setattr(tg, "db", d)
-    tg.unlock_user_coins(EMAIL)
+    _orig_where = Col.where
+    monkeypatch.setattr(
+        Col,
+        "where",
+        lambda self, field=None, op=None, value=None, *, filter=None: (
+            _orig_where(self, filter.field_path, filter.op_string, filter.value)
+            if filter is not None else _orig_where(self, field, op, value)
+        ),
+    )
+    monkeypatch.setattr(tg, "_run_txn", lambda db, fn: fn(db.transaction()))
+    tg.unlock_user_coins(d, "U5", EMAIL, None)
     assert not any(v.get("locked_pending_upgrade") for v in d.store.values())
 
 
