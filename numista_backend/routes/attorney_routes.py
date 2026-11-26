@@ -253,6 +253,8 @@ async def get_attorney_snapshot(
         total_value = 0.0
         for coin_doc in coins_snap:
             coin_data = coin_doc.to_dict() or {}
+            if coin_data.get("status") == "sold":
+                continue  # R3: Sold items are records, not inventory
             filtered = _filter_coin(coin_data)
             filtered["coin_id"] = coin_doc.id   # always include doc ID
             coins.append(filtered)

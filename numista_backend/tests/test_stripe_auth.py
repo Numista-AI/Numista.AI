@@ -86,7 +86,7 @@ def test_stripe_checkout_no_token():
 # ─── MUST 2: Stripe Portal IDOR ───────────────────────────────────────────────
 
 def test_stripe_portal_idor():
-    """Token A + query user_email=B → Customer.list/create called with A's email only."""
+    """Token A + query user_email=B with no entitlements -> 404 no_billing_account, no Stripe calls."""
     app.dependency_overrides[get_current_user] = _make_user('uidA', 'userA@numista.ai')
     try:
         with patch('routes.payment_routes.stripe.api_key', 'sk_test_dummy'), \
@@ -96,17 +96,51 @@ def test_stripe_portal_idor():
              patch('routes.payment_routes.stripe.billing_portal.Session.create') as mock_portal, \
              patch('routes.payment_routes.db') as mock_db:
 
-            # Simulate no existing Firestore stripe_customer_id
             mock_doc = MagicMock()
-            mock_doc.exists = True
+            mock_doc.exists = False
             mock_doc.to_dict.return_value = {}
             mock_db.collection.return_value.document.return_value.get.return_value = mock_doc
 
-            mock_list.return_value = MagicMock(data=[])
+            client = TestClient(app)
+            response = client.post(
+                '/api/stripe/create-customer-portal?user_email=userB@numista.ai'
+            )
+            assert response.status_code == 404, response.text
+            assert response.json()['detail']['error'] == 'no_billing_account'
+            mock_list.assert_not_called()
+            mock_create_cust.assert_not_called()
+            mock_portal.assert_not_called()
+    finally:
+        app.dependency_overrides.clear()
 
-            mock_cust = MagicMock()
-            mock_cust.id = 'cus_mock123'
-            mock_create_cust.return_value = mock_cust
+
+def test_stripe_portal_idor_verified_map_uses_own_cus():
+    """Token A + query user_email=B with A's verified map -> portal called with A's cus_ and return_url."""
+    app.dependency_overrides[get_current_user] = _make_user('uidA', 'userA@numista.ai')
+    try:
+        with patch('routes.payment_routes.stripe.api_key', 'sk_test_dummy'), \
+             patch('routes.payment_routes.load_stripe_keys', return_value={'secret_key': 'sk_test_dummy'}), \
+             patch('routes.payment_routes.stripe.Customer.list') as mock_list, \
+             patch('routes.payment_routes.stripe.Customer.create') as mock_create_cust, \
+             patch('routes.payment_routes.stripe.billing_portal.Session.create') as mock_portal, \
+             patch('routes.payment_routes.db') as mock_db:
+
+            ent_doc = MagicMock()
+            ent_doc.exists = True
+            ent_doc.to_dict.return_value = {'stripe_customer_id': 'cus_A'}
+            cust_doc = MagicMock()
+            cust_doc.exists = True
+            cust_doc.to_dict.return_value = {'uid': 'uidA'}
+
+            def _col(name):
+                c = MagicMock()
+                if name == 'entitlements':
+                    c.document.return_value.get.return_value = ent_doc
+                elif name == 'stripe_customers':
+                    c.document.return_value.get.return_value = cust_doc
+                return c
+
+            mock_db.collection.side_effect = _col
 
             mock_portal_sess = MagicMock()
             mock_portal_sess.url = 'https://billing.stripe.com/mock'
@@ -117,11 +151,13 @@ def test_stripe_portal_idor():
                 '/api/stripe/create-customer-portal?user_email=userB@numista.ai'
             )
             assert response.status_code == 200, response.text
-
-            # Stripe must have been called with A's email, not B's
-            mock_list.assert_called_once_with(email='usera@numista.ai', limit=1)
-            assert mock_create_cust.call_args.kwargs['email'] == 'usera@numista.ai', \
-                f"Portal created customer with wrong email: {mock_create_cust.call_args}"
+            assert response.json()['portal_url'] == 'https://billing.stripe.com/mock'
+            mock_list.assert_not_called()
+            mock_create_cust.assert_not_called()
+            mock_portal.assert_called_once_with(
+                customer='cus_A',
+                return_url='https://numista.ai/#/settings',
+            )
     finally:
         app.dependency_overrides.clear()
 

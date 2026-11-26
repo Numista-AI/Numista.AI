@@ -77,7 +77,7 @@ void main() {
   });
 
   testWidgets(
-    'Pricing: Fail-closed copy renders early-access strings without Beta branding',
+    'Pricing: Renders locked v2.0.7 plans, Free 10 items, and removes TBA copy',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -85,21 +85,24 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: PublicInfoShell(targetRoute: '/pricing'),
+          home: PublicInfoShell(targetRoute: '/pricing', isSignedInOverride: false),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Early Access Included — Plans TBA'), findsOneWidget);
-      expect(find.textContaining(r'$0 / month'), findsOneWidget);
-      expect(find.textContaining('included for registered members.'), findsOneWidget);
-      expect(find.textContaining('Founding Member accounts will be grandfathered'), findsOneWidget);
-      expect(find.textContaining('Beta'), findsNothing);
-      expect(find.textContaining('beta'), findsNothing);
+      expect(find.textContaining('Simple Plans for Every Collection Size'), findsOneWidget);
+      expect(find.textContaining('10 items in your vault'), findsOneWidget);
+      expect(find.textContaining('Copper'), findsWidgets);
+      expect(find.textContaining('Silver'), findsWidgets);
+      expect(find.textContaining('Platinum'), findsWidgets);
+      expect(find.textContaining('Gold'), findsWidgets);
+      expect(find.textContaining('Lifetime Family Estate'), findsWidgets);
+      expect(find.textContaining('Sign in to Subscribe'), findsWidgets);
 
-      // Negative assertions: unapproved paid tier & world-coverage ETA must be absent
+      // Obsolete TBA & unapproved copy must be absent
+      expect(find.textContaining('Early Access Included'), findsNothing);
+      expect(find.textContaining(r'$0 / month'), findsNothing);
       expect(find.textContaining(r'$30 / 6 months'), findsNothing);
-      expect(find.textContaining('2027'), findsNothing);
     },
   );
 

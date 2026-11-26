@@ -292,9 +292,11 @@ def check_cert_exists(
     existing_id = None
     try:
         coins_ref = db.collection("users").document(user_email).collection("coins")
-        matches = list(coins_ref.where("certNo", "==", clean_cert).limit(1).stream())
+        matches = list(coins_ref.where("certNo", "==", clean_cert).limit(5).stream())
         if not matches:
-            matches = list(coins_ref.where("cert_num", "==", clean_cert).limit(1).stream())
+            matches = list(coins_ref.where("cert_num", "==", clean_cert).limit(5).stream())
+        # A Sold item does not block saving the same cert again (e.g. bought back): ignore Sold docs.
+        matches = [m for m in matches if (m.to_dict() or {}).get("status") != "sold"]
         if matches:
             existing_id = matches[0].id
     except Exception as e:
@@ -335,9 +337,11 @@ def cert_save(
     existing_id = None
     try:
         coins_ref = db.collection("users").document(user_email).collection("coins")
-        matches = list(coins_ref.where("certNo", "==", clean_cert).limit(1).stream())
+        matches = list(coins_ref.where("certNo", "==", clean_cert).limit(5).stream())
         if not matches:
-            matches = list(coins_ref.where("cert_num", "==", clean_cert).limit(1).stream())
+            matches = list(coins_ref.where("cert_num", "==", clean_cert).limit(5).stream())
+        # A Sold item does not block saving the same cert again (e.g. bought back): ignore Sold docs.
+        matches = [m for m in matches if (m.to_dict() or {}).get("status") != "sold"]
         if matches:
             existing_id = matches[0].id
     except Exception as e:

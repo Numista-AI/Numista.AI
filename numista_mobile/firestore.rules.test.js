@@ -18,7 +18,7 @@
 
 const { initializeTestEnvironment, assertFails, assertSucceeds } =
   require("@firebase/rules-unit-testing");
-const { doc, setDoc, updateDoc, getDoc, collection, getDocs } = require("firebase/firestore");
+const { doc, setDoc, updateDoc, deleteDoc, getDoc, collection, getDocs } = require("firebase/firestore");
 const fs = require("fs");
 const path = require("path");
 
@@ -253,6 +253,15 @@ test("DENY: owner_cannot_self_grant_estate — beta_tester blocked on user doc",
   );
 });
 
+// Clients cannot WRITE or forge exclude_from_founding_beta (server-only exclusion key)
+test("DENY: owner cannot write or forge exclude_from_founding_beta on user doc update", async () => {
+  await seedUserDoc();
+  const db = ownerCtx.firestore();
+  await assertFails(
+    updateDoc(doc(db, `users/${ownerEmail}`), { exclude_from_founding_beta: true })
+  );
+});
+
 // ─── Cross-user reads ─────────────────────────────────────────────────────────
 
 test("DENY: other user reads owner coins", async () => {
@@ -459,6 +468,7 @@ for (const [key, val] of [
   ["subscription_status", "active"],
   ["grace_period_until", 9999999999],
   ["locked_pending_upgrade", false],
+  ["exclude_from_founding_beta", true],
 ]) {
   test(`DENY: owner cannot set '${key}' on own user doc create (AMEND-A C-3)`, async () => {
     const db = ownerCtx.firestore();
@@ -518,4 +528,48 @@ test("DENY: authenticated getDocs (list) on .../skus and setDoc both fail", asyn
   await assertFails(
     setDoc(doc(db, "global_metadata/usmint_sku_dictionary/skus/26SQRP"), { name: "test" })
   );
+});
+// ── PLAN v1.2 (G1, F14): Sold and pending items are read-only for clients ──────────────────────────
+// NOTE: written but NOT RUN in the Phase 1 local build (no node / java / firebase-tools in that environment).
+// Run from numista_mobile/:  firebase emulators:exec --only firestore "npx jest firestore.rules.test.js"
+const OWNER_EMAIL = "testowner@numista.ai";
+const seedItem = async (subcol, id, data) => {
+  await testEnv.withSecurityRulesDisabled(async (adminCtx) => {
+    await setDoc(doc(adminCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/${id}`), data);
+  });
+};
+
+for (const subcol of ["coins", "banknotes", "currency"]) {
+  test(`DENY: owner cannot update a Sold item in ${subcol}`, async () => {
+    await seedItem(subcol, "sold1", { is_demo: false, is_demo_cleared: false, status: "sold", transferStatus: "sold" });
+    await assertFails(updateDoc(doc(ownerCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/sold1`), { Condition: "MS-70" }));
+  });
+
+  test(`DENY: owner cannot delete a Sold item in ${subcol}`, async () => {
+    await seedItem(subcol, "sold2", { is_demo: false, is_demo_cleared: false, status: "sold", transferStatus: "sold" });
+    await assertFails(deleteDoc(doc(ownerCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/sold2`)));
+  });
+
+  test(`DENY: owner cannot update a pending-transfer item in ${subcol}`, async () => {
+    await seedItem(subcol, "pend1", { is_demo: false, is_demo_cleared: false, transferStatus: "pending" });
+    await assertFails(updateDoc(doc(ownerCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/pend1`), { Condition: "MS-70" }));
+  });
+
+  test(`ALLOW: owner can still update a normal item in ${subcol}`, async () => {
+    await seedItem(subcol, "ok1", { is_demo: false, is_demo_cleared: false, transferStatus: "none" });
+    await assertSucceeds(updateDoc(doc(ownerCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/ok1`), { Condition: "MS-65" }));
+  });
+
+  test(`ALLOW: owner can read a Sold item in ${subcol}`, async () => {
+    await seedItem(subcol, "sold3", { is_demo: false, is_demo_cleared: false, status: "sold", transferStatus: "sold" });
+    await assertSucceeds(getDoc(doc(ownerCtx.firestore(), `users/${OWNER_EMAIL}/${subcol}/sold3`)));
+  });
+}
+
+test("DENY: owner cannot read or write server-only transfers or transfer_claims", async () => {
+  const db = ownerCtx.firestore();
+  await assertFails(getDoc(doc(db, "transfers/abc")));
+  await assertFails(setDoc(doc(db, "transfers/abc"), { status: "claimed" }));
+  await assertFails(getDoc(doc(db, "transfer_claims/abc")));
+  await assertFails(setDoc(doc(db, "transfer_claims/abc"), { transfer_id: "abc" }));
 });

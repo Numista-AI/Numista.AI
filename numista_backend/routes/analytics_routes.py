@@ -59,7 +59,7 @@ class MorganAnalyticsResponse(BaseModel):
 def _load_vault_snapshot(uid: str, advanced_mode: bool) -> List[Dict[str, Any]]:
     """Single-read vault fetch per Morgan Analytics turn."""
     docs_iter = db.collection("users").document(uid).collection("coins").stream()
-    raw_docs = [(doc.id, doc.to_dict() or {}) for doc in docs_iter]
+    raw_docs = [(doc.id, doc.to_dict() or {}) for doc in docs_iter if (doc.to_dict() or {}).get("status") != "sold"]  # R3
     return build_vault_snapshot(raw_docs, advanced_mode=advanced_mode)
 
 

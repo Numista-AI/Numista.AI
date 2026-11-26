@@ -23,6 +23,7 @@ import 'estate_planning_screen.dart';
 import 'human_ai_trainer_screen.dart';
 import 'customer_service_screen.dart';
 import 'ai_chat_screen.dart';
+import '../utils/sold_item.dart';
 import 'admin_grade_flags_screen.dart';
 import 'supplies_screen.dart';
 import 'currency_collection_screen.dart';
@@ -30,6 +31,7 @@ import 'welcome_screen.dart';  // for WelcomeScreen.pendingRoute
 import 'add_world_item_screen.dart';
 import 'attorney_portal_screen.dart';
 import 'lateral_transfer_screen.dart';
+import '../services/claim_link_service.dart';
 import 'admin_feedback_screen.dart';
 import 'my_tickets_screen.dart';
 import 'support_portal_screen.dart';
@@ -148,6 +150,7 @@ class _BaseLayoutState extends State<BaseLayout> {
       return snap.docs
           .where((d) {
             final data = d.data();
+            if (isSoldItem(data)) return false; // R3: Sold items excluded from active search
             final denom   = (data['Denomination']   ?? '').toString().toLowerCase();
             final year    = (data['Year']            ?? '').toString().toLowerCase();
             final series  = (data['Program/Series']  ?? '').toString().toLowerCase();
@@ -262,6 +265,12 @@ class _BaseLayoutState extends State<BaseLayout> {
       _activeRoute = morganRoute;
       _addCoinsInitialTabName = WelcomeScreen.pendingTabName;
       WelcomeScreen.pendingTabName = null;
+    }
+
+    // Claim link (#/claim?t=TOKEN): after sign-in, open the Claim tab. The token stays in memory only.
+    if (ClaimLinkService.hasPendingToken && !widget.testSkipFirebase && !widget.isDemoMode &&
+        !GuestSeedService.isBrowseDemoMode) {
+      _activeRoute = 'Claim Transfer';
     }
 
     // Load eBay credentials from Firestore into SharedPreferences.

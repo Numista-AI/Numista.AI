@@ -77,7 +77,11 @@ class CoinModel {
 
   // Lateral Transfer & Passport Ledger fields
   final List<dynamic> provenanceLedger;
-  final String transferStatus; // 'none', 'pending', 'transferred', 'claimed'
+  final String transferStatus; // 'none', 'pending', 'transferred', 'claimed', 'sold'
+  /// R3: status == 'sold' (the Sold marker; never changes while Sold). Read-only, never written back.
+  final bool isSold;
+  /// Free-tier overflow lock set by the server (locked_pending_upgrade). Read-only, never written back.
+  final bool isLocked;
   final String transferId;
 
   CoinModel({
@@ -138,6 +142,8 @@ class CoinModel {
     this.hasCac = false,
     this.provenanceLedger = const [],
     this.transferStatus = 'none',
+    this.isSold = false,
+    this.isLocked = false,
     this.transferId = '',
   });
 
@@ -255,6 +261,8 @@ class CoinModel {
           .toList() ?? [],
       provenanceLedger: data['provenanceLedger'] as List<dynamic>? ?? [],
       transferStatus: data['transferStatus']?.toString() ?? data['transfer_status']?.toString() ?? 'none',
+      isSold: data['status']?.toString() == 'sold',
+      isLocked: data['locked_pending_upgrade'] == true,
       transferId: data['transferId']?.toString() ?? data['transfer_id']?.toString() ?? '',
     );
   }

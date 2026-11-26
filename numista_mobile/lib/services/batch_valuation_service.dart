@@ -16,6 +16,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'http_auth_client.dart';
 import '../constants.dart';
 import '../utils/mint_helpers.dart';
+import '../utils/sold_item.dart';
 import 'auth_service.dart';
 import 'coin_data_normalizer.dart';
 
@@ -264,6 +265,7 @@ class BatchValuationService {
   /// if the document has already completed valuation (`ai_value_status == 'valued'`).
   @visibleForTesting
   static ValuationTask? buildCoinTask(String docId, Map<String, dynamic> data) {
+    if (isSoldItem(data)) return null; // R3: never re-value Sold items
     final status = data['ai_value_status']?.toString() ?? '';
     final existingEst = data['AI Estimated Value'] ??
         data['ai_estimated_value'] ??
@@ -311,6 +313,7 @@ class BatchValuationService {
   /// if the document has already completed valuation (`ai_value_status == 'valued'`).
   @visibleForTesting
   static ValuationTask? buildCurrencyTask(String docId, Map<String, dynamic> data) {
+    if (isSoldItem(data)) return null; // R3: never re-value Sold items
     final status = data['ai_value_status']?.toString() ?? '';
     if (status == 'valued') return null;
 
@@ -488,18 +491,20 @@ class BatchValuationService {
     final currencyRef = FirebaseFirestore.instance
         .collection(AuthService.currencyPath);
 
-    // 1. Fetch unvalued coins
+    // 1. Fetch unvalued coins (R3: Sold items are records, excluded from batch valuation)
     final coinsSnap = await coinsRef.get();
+    final unsoldCoins = coinsSnap.docs.where((d) => !isSoldItem(d.data())).toList();
     final List<ValuationTask> tasks = [];
 
-    for (final doc in coinsSnap.docs) {
+    for (final doc in unsoldCoins) {
       final task = buildCoinTask(doc.id, doc.data());
       if (task != null) tasks.add(task);
     }
 
     // 2. Fetch unvalued currency/banknotes
     final currencySnap = await currencyRef.get();
-    for (final doc in currencySnap.docs) {
+    final unsoldCurrency = currencySnap.docs.where((d) => !isSoldItem(d.data())).toList();
+    for (final doc in unsoldCurrency) {
       final task = buildCurrencyTask(doc.id, doc.data());
       if (task != null) tasks.add(task);
     }
@@ -507,7 +512,7 @@ class BatchValuationService {
     final initialProgress = computeInitialRunProgress(
       previous: _progress,
       pendingTaskCount: tasks.length,
-      totalCollectionCount: coinsSnap.docs.length + currencySnap.docs.length,
+      totalCollectionCount: unsoldCoins.length + unsoldCurrency.length,
     );
     final total   = initialProgress.total;
     int completed = initialProgress.completed;

@@ -32,6 +32,199 @@ except ImportError:
 COLLECTION_TRANSFERS = "transfers"
 logger = logging.getLogger("numista_backend.transfer_service")
 
+# ── v2 claim scheme helpers (PLAN v1.2 sections 4.2, 7.3, 6.3) ──────────────────
+import hashlib
+import os
+
+COLLECTION_CLAIM_LOOKUPS = "transfer_claims"
+CLAIM_CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"  # Crockford base32: no I, L, O, U
+CLAIM_CODE_LENGTH = 10                                       # 10 x 5 bits = 50 bits
+CLAIM_FAIL_LIMIT_UID = 10                                    # failed lookups per hour per uid
+CLAIM_FAIL_LIMIT_IP = 30                                     # failed lookups per hour per hashed IP
+ALLOWED_TRANSFER_TYPES = ("sale_ebay", "sale_private", "gift", "lateral")
+ALLOWED_EXPIRY_DAYS = (7, 30, 60)
+NOT_FOUND_MESSAGE = "Code not found or expired"
+RATE_LIMITED_MESSAGE = "Too many attempts. Please try again later."
+
+# Licensed pricing data (Greysheet / CPG) must not be copied into archives or transfers (F15, R5).
+_LICENSED_PRICING_EXACT = {"cpgretail", "cpg_retail", "pricelastupdated", "price_last_updated"}
+# Seller-side state that must never travel to a recipient's copy of an item.
+_V2_RECIPIENT_STRIP = (
+    "status", "sold_at", "sold_qty", "sale_archive_id", "locked_pending_upgrade", "ebay_listing",
+    "transferId", "pendingTransferQty", "claimed_by_ref", "claimed_at",
+    "AI Estimated Value", "ai_estimated_value", "estimated_value",
+)
+
+
+class ClaimRateLimited(ValueError):
+    """Too many failed claim lookups, or the limiter itself failed (fail closed)."""
+
+
+def _pepper() -> str:
+    return os.environ.get("TRANSFER_CLAIM_PEPPER", "")
+
+
+def _hash_secret(value: str) -> str:
+    """Hash for a claim token or code. HMAC with a server pepper when configured."""
+    pepper = _pepper()
+    if pepper:
+        return hmac.new(pepper.encode("utf-8"), value.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def hash_legacy_pin(pin: str, salt: str) -> str:
+    """Salted (and peppered when configured) hash used to replace a plaintext legacy PIN."""
+    return hmac.new((_pepper() + salt).encode("utf-8"), pin.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def generate_claim_token() -> str:
+    return secrets.token_urlsafe(16)  # 128 bits
+
+
+def generate_claim_code() -> str:
+    """10 Crockford-base32 characters (50 bits), shown as XXXXX-XXXXX."""
+    raw = "".join(secrets.choice(CLAIM_CODE_ALPHABET) for _ in range(CLAIM_CODE_LENGTH))
+    return f"{raw[:5]}-{raw[5:]}"
+
+
+def normalize_claim_code(code: str) -> str:
+    """Upper-case, drop separators, map look-alikes (O->0, I/L->1). Raises on anything invalid."""
+    cleaned = re.sub(r"[\s\-]", "", str(code or "")).upper().replace("O", "0").replace("I", "1").replace("L", "1")
+    if len(cleaned) != CLAIM_CODE_LENGTH or any(ch not in CLAIM_CODE_ALPHABET for ch in cleaned):
+        raise ValueError(NOT_FOUND_MESSAGE)
+    return cleaned
+
+
+def pseudonym(user_id: str) -> str:
+    """Stable anonymous collector reference. Never reveals the e-mail."""
+    digest = hashlib.sha256((_pepper() + "ref:" + str(user_id or "").strip().lower()).encode("utf-8")).hexdigest()
+    return "NUM-" + digest[:6].upper()
+
+
+def strip_licensed_pricing_fields(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Copy of `item` without CPG / Greysheet fields (archive rows and transfer payloads)."""
+    clean = {}
+    for key, value in item.items():
+        low = str(key).lower()
+        if low.startswith("greysheet") or low in _LICENSED_PRICING_EXACT:
+            continue
+        clean[key] = value
+    return clean
+
+
+def _json_safe_item(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """API-safe copy of a claimed item: Firestore write sentinels (SERVER_TIMESTAMP) and datetimes
+    cannot be JSON-encoded. Without this the claim route returned HTTP 500 after the claim had
+    already committed."""
+    safe: Dict[str, Any] = {}
+    for key, value in doc.items():
+        if type(value).__name__ == "Sentinel":
+            continue
+        if isinstance(value, datetime):
+            safe[key] = value.isoformat()
+        else:
+            safe[key] = value
+    return safe
+
+
+def _item_title(item: Dict[str, Any]) -> str:
+    year = str(item.get("Year") or item.get("year") or "").strip()
+    mint = str(item.get("Mint Mark") or item.get("mint_mark") or "").strip()
+    series = str(item.get("Program/Series") or item.get("series") or "").strip()
+    denom = str(item.get("Denomination") or item.get("denomination") or "").strip()
+    head = f"{year}{('-' + mint) if mint else ''}".strip()
+    parts = [p for p in (head, series or denom) if p]
+    return " ".join(parts) if parts else "Numismatic item"
+
+
+def _limiter_ref(db, scope: str, identifier: str, now: datetime):
+    ident_hash = hashlib.sha256(str(identifier).encode("utf-8")).hexdigest()[:32]
+    return (
+        db.collection("_rate_limits").document(f"{scope}_{ident_hash}")
+        .collection("claim_attempt").document(now.strftime("%Y-%m-%dT%H"))
+    )
+
+
+def _limiter_scopes(uid: Optional[str], client_ip: Optional[str]):
+    return (("uid", uid, CLAIM_FAIL_LIMIT_UID), ("ip", client_ip, CLAIM_FAIL_LIMIT_IP))
+
+
+def check_claim_attempts(db, *, uid: Optional[str], client_ip: Optional[str], now: Optional[datetime] = None) -> None:
+    """Deny when a caller already used its failed-lookup budget. FAILS CLOSED on any limiter error."""
+    now = now or _get_utc_now()
+    for scope, ident, limit in _limiter_scopes(uid, client_ip):
+        if not ident:
+            continue
+        try:
+            snap = _limiter_ref(db, scope, ident, now).get()
+            count = int((snap.to_dict() or {}).get("count", 0)) if snap.exists else 0
+        except Exception as exc:
+            logger.warning("claim limiter read failed (%s): denying", type(exc).__name__)
+            raise ClaimRateLimited(RATE_LIMITED_MESSAGE)
+        if count >= limit:
+            raise ClaimRateLimited(RATE_LIMITED_MESSAGE)
+
+
+def record_claim_failure(db, *, uid: Optional[str], client_ip: Optional[str], now: Optional[datetime] = None) -> None:
+    now = now or _get_utc_now()
+    for scope, ident, _limit in _limiter_scopes(uid, client_ip):
+        if not ident:
+            continue
+        try:
+            _limiter_ref(db, scope, ident, now).set({"count": firestore.Increment(1)}, merge=True)
+        except Exception as exc:
+            logger.warning("claim limiter write failed (%s): denying", type(exc).__name__)
+            raise ClaimRateLimited(RATE_LIMITED_MESSAGE)
+
+
+def _write_claim_lookups(db, transfer_id: str, token_hash: str, code_hash: str, expires_at_iso: str) -> None:
+    for kind, h in (("token", token_hash), ("code", code_hash)):
+        db.collection(COLLECTION_CLAIM_LOOKUPS).document(h).set(
+            {"transfer_id": transfer_id, "kind": kind, "expires_at": expires_at_iso}
+        )
+
+
+def _delete_claim_lookups(db, transfer_data: Dict[str, Any]) -> None:
+    for h in transfer_data.get("claim_lookup_ids") or []:
+        try:
+            db.collection(COLLECTION_CLAIM_LOOKUPS).document(h).delete()
+        except Exception as exc:
+            logger.warning("claim lookup cleanup failed (%s)", type(exc).__name__)
+
+
+def _resolve_claim_lookup(db, *, claim_token: Optional[str] = None, claim_code: Optional[str] = None) -> str:
+    """token/code -> transfer_id. One uniform error for unknown, malformed and expired."""
+    if claim_token:
+        secret = str(claim_token).strip()
+    else:
+        secret = normalize_claim_code(claim_code or "")
+    snap = db.collection(COLLECTION_CLAIM_LOOKUPS).document(_hash_secret(secret)).get()
+    if not snap.exists:
+        raise ValueError(NOT_FOUND_MESSAGE)
+    data = snap.to_dict() or {}
+    exp = data.get("expires_at")
+    if exp:
+        try:
+            when = datetime.fromisoformat(str(exp))
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            if _get_utc_now() > when:
+                raise ValueError(NOT_FOUND_MESSAGE)
+        except ValueError:
+            raise ValueError(NOT_FOUND_MESSAGE)
+    transfer_id = str(data.get("transfer_id") or "")
+    if not transfer_id:
+        raise ValueError(NOT_FOUND_MESSAGE)
+    return transfer_id
+
+
+def public_transfer_view(transfer_doc: Dict[str, Any]) -> Dict[str, Any]:
+    """API-safe copy: no hashes, no lookup ids, no typed sender address."""
+    hidden = {"claim_token_hash", "claim_code_hash", "claim_lookup_ids", "claim_pin_hash",
+              "claim_pin_salt", "sender_address", "sender_id"}
+    return {k: v for k, v in transfer_doc.items() if k not in hidden}
+
+
 
 def _get_utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -170,38 +363,147 @@ def resolve_item_collections(item_data: dict, uid: str, db: firestore.Client):
     return ref
 
 
+def _extract_seller_photo_urls(item_data: Dict[str, Any]) -> List[str]:
+    """Collect candidate seller-uploaded storage URLs from an item doc (owner_photos first)."""
+    urls: List[str] = []
+    seen = set()
+
+    def _add(u: Any) -> None:
+        if isinstance(u, str):
+            s = u.strip()
+            if s and s not in seen:
+                seen.add(s)
+                urls.append(s)
+
+    owner_photos = item_data.get("owner_photos")
+    if isinstance(owner_photos, list):
+        for entry in owner_photos:
+            if isinstance(entry, dict):
+                _add(entry.get("compressed_url") or entry.get("url") or entry.get("original_url"))
+            elif isinstance(entry, str):
+                _add(entry)
+    _add(item_data.get("image_url_obverse"))
+    _add(item_data.get("image_url_reverse"))
+    return urls
+
+
+def _load_seller_photo_bytes_for_pdf(
+    raw_items_by_id: Dict[str, Dict[str, Any]],
+    allowed_owners: set,
+    *,
+    storage_client: Any = None,
+    max_per_item: int = 2,
+    max_total: int = 8,
+) -> Dict[str, List[bytes]]:
+    """Fetch EXIF-stripped JPEG bytes for seller's own photos only (validated via coin_image_service).
+
+    Never fetches external/unvalidated URLs or another seller's photos. Fails soft per photo.
+    """
+    from services.coin_image_service import load_sanitized_coin_image, parse_and_validate_storage_url
+
+    client = storage_client
+    if client is None:
+        try:
+            from google.cloud import storage as gcs_storage
+            client = gcs_storage.Client()
+        except Exception as e:
+            logger.warning(f"Storage client unavailable for transfer PDF photos: {type(e).__name__}")
+            return {}
+
+    out: Dict[str, List[bytes]] = {}
+    total = 0
+    for item_id, item_data in raw_items_by_id.items():
+        if total >= max_total:
+            break
+        imgs: List[bytes] = []
+        for url in _extract_seller_photo_urls(item_data):
+            if len(imgs) >= max_per_item or total >= max_total:
+                break
+            try:
+                bucket_name, blob_name = parse_and_validate_storage_url(url, allowed_owners)
+                img_bytes, _ = load_sanitized_coin_image(
+                    client, bucket_name, blob_name, max_edge=600, quality=80
+                )
+                imgs.append(img_bytes)
+                total += 1
+            except Exception as pe:
+                logger.info(f"Skipping transfer PDF photo for item {item_id}: {type(pe).__name__}")
+                continue
+        if imgs:
+            out[item_id] = imgs
+    return out
+
+
 def initiate_transfer(
     db: firestore.Client,
     user_a_id: str,
     item_ids: List[str],
     recipient_email: Optional[str] = None,
     privacy_toggles: Optional[Dict[str, bool]] = None,
-    item_quantities: Optional[Dict[str, int]] = None
+    item_quantities: Optional[Dict[str, int]] = None,
+    *,
+    version: int = 1,
+    transfer_type: str = "lateral",
+    expires_days: Optional[int] = None,
+    source: str = "active",
+    sender_display: Optional[str] = None,
+    sender_address: Optional[str] = None,
+    show_price: bool = False,
+    sale_price_usd: Optional[float] = None,
+    include_photos: bool = False,
+    storage_client: Any = None,
 ) -> Dict[str, Any]:
     """
     Initiates a lateral transfer for one or more items.
     Immediately locks items to transferStatus = 'pending' on sender's collection.
-    Generates Passport Certificate PDF and dispatches email if recipient_email is provided.
-    Appends audit trail to transfers/{transfer_id}/email_audit in Firestore.
+
+    version=1 (default) keeps the legacy PIN behavior byte-for-byte.
+    version=2 (PLAN v1.2): 128-bit token + 50-bit short code, stored only as hashes, hide-all privacy
+    defaults, pseudonymous sender, no plaintext PIN, optional `source="sold_item"` for the buyer of a
+    sale. The raw token/code are returned ONCE in the result and are never stored.
     """
     clean_user_a_id = user_a_id.strip().lower() if "@" in user_a_id else user_a_id.strip()
+    is_v2 = int(version) >= 2
 
-    if not privacy_toggles:
-        privacy_toggles = {
-            "hide_cost_basis": False,
-            "hide_private_notes": False,
-            "hide_storage_location": False,
-            "hide_invoices": False,
-            "hide_owner_photos": True
+    if is_v2:
+        if transfer_type not in ALLOWED_TRANSFER_TYPES:
+            raise ValueError(f"transfer_type must be one of {ALLOWED_TRANSFER_TYPES}")
+        if source not in ("active", "sold_item"):
+            raise ValueError("source must be 'active' or 'sold_item'")
+        days = 60 if expires_days is None else int(expires_days)
+        if days not in ALLOWED_EXPIRY_DAYS:
+            raise ValueError(f"expires_days must be one of {ALLOWED_EXPIRY_DAYS}")
+        defaults = {
+            "hide_cost_basis": True,
+            "hide_private_notes": True,
+            "hide_storage_location": True,
+            "hide_invoices": True,
+            "hide_owner_photos": True,
         }
+        privacy_toggles = {**defaults, **(privacy_toggles or {})}
+    else:
+        if source != "active":
+            raise ValueError("source 'sold_item' requires a v2 transfer")
+        days = 60
+        if not privacy_toggles:
+            privacy_toggles = {
+                "hide_cost_basis": False,
+                "hide_private_notes": False,
+                "hide_storage_location": False,
+                "hide_invoices": False,
+                "hide_owner_photos": True
+            }
 
     now = _get_utc_now()
-    expires_at = now + timedelta(days=60)
+    expires_at = now + timedelta(days=days)
     transfer_id = uuid.uuid4().hex
     claim_pin = f"{secrets.randbelow(900000) + 100000}"
 
     sanitized_items = []
-    
+    raw_items_by_id: Dict[str, Dict[str, Any]] = {}
+    pending_locks = []  # (coin_ref, update_payload) applied only after every item passed the guards
+    pending_archives = []
+
     for item_id in item_ids:
         # Check coins collection first
         coin_ref = db.collection("users").document(clean_user_a_id).collection("coins").document(item_id)
@@ -222,6 +524,23 @@ def initiate_transfer(
 
         item_data = coin_snap.to_dict()
         item_data["id"] = item_id
+        if include_photos:
+            raw_items_by_id[item_id] = dict(item_data)
+
+        # Guards (F9): demo, Sold, locked and listed items cannot start a transfer.
+        if item_data.get("is_demo") is True or item_data.get("is_demo_cleared") is True:
+            raise ValueError(f"Item {item_id} is a demo item and cannot be transferred.")
+        is_sold = item_data.get("status") == "sold"
+        if source == "sold_item":
+            if not is_sold:
+                raise ValueError(f"Item {item_id} is not marked Sold; use a regular transfer.")
+        elif is_sold:
+            raise ValueError(f"Item {item_id} is marked Sold; create the transfer for the buyer instead.")
+        if item_data.get("locked_pending_upgrade") is True:
+            raise ValueError(f"Item {item_id} is locked until you upgrade and cannot be transferred.")
+        listing_state = (item_data.get("ebay_listing") or {}).get("status")
+        if listing_state in ("approved", "published"):
+            raise ValueError(f"Item {item_id} has an active eBay listing and cannot be transferred.")
 
         # Disallow initiating transfer on items that are already pending or transferred
         curr_status = item_data.get("transferStatus", "")
@@ -230,39 +549,52 @@ def initiate_transfer(
 
         curr_qty = int(item_data.get("Quantity") or item_data.get("qty") or 1)
         transfer_qty = 1
-        if item_quantities and item_id in item_quantities:
+        if source == "sold_item":
+            transfer_qty = max(1, min(curr_qty, int(item_data.get("sold_qty") or curr_qty)))
+        elif item_quantities and item_id in item_quantities:
             transfer_qty = max(1, min(curr_qty, int(item_quantities[item_id])))
 
         # Sanitize item payload
         clean_item = sanitize_item_payload(item_data, privacy_toggles)
+        if is_v2:
+            clean_item = strip_licensed_pricing_fields(clean_item)
+            for k in _V2_RECIPIENT_STRIP:
+                clean_item.pop(k, None)
         clean_item["transfer_qty"] = transfer_qty
         sanitized_items.append(clean_item)
 
-        # Move copy to proper transferred archive subcollection
+        # Move copy to proper transferred archive subcollection (not for sold_item: its sale row already exists)
         item_type = str(item_data.get("item_type") or item_data.get("category") or "").lower()
         is_paper_money = item_type in ["paper_currency", "banknote", "currency", "paper_money", "note"] or "FR-" in str(item_data.get("Variety", ""))
         archive_subcol = "transferred_currency" if is_paper_money else "transferred_coins"
 
-        db.collection("users").document(clean_user_a_id).collection(archive_subcol).document(item_id).set({
-            **item_data,
-            "archived_at": now.isoformat(),
-            "transfer_id": transfer_id,
-            "transfer_status": "pending",
-            "transfer_qty": transfer_qty
-        })
+        if source != "sold_item":
+            archive_payload = strip_licensed_pricing_fields(item_data) if is_v2 else item_data
+            pending_archives.append((archive_subcol, item_id, {
+                **archive_payload,
+                "archived_at": now.isoformat(),
+                "transfer_id": transfer_id,
+                "transfer_status": "pending",
+                "transfer_qty": transfer_qty
+            }))
 
-        # Lock active item status to pending immediately
-        coin_ref.update({
+        # Lock active item status to pending (status stays "sold" for a sold_item transfer)
+        pending_locks.append((coin_ref, {
             "transferStatus": "pending",
             "transferId": transfer_id,
             "pendingTransferQty": transfer_qty
-        })
+        }))
+
+    # Every item passed its guards: now write.
+    for archive_subcol, item_id, payload in pending_archives:
+        db.collection("users").document(clean_user_a_id).collection(archive_subcol).document(item_id).set(payload)
+    for coin_ref, payload in pending_locks:
+        coin_ref.update(payload)
 
     transfer_doc = {
         "transfer_id": transfer_id,
         "sender_id": clean_user_a_id,
         "recipient_email": recipient_email.strip().lower() if recipient_email else None,
-        "claim_pin": claim_pin.strip(),
         "items": sanitized_items,
         "item_ids": item_ids,
         "created_at": now.isoformat(),
@@ -272,8 +604,61 @@ def initiate_transfer(
         "email_sent": False
     }
 
+    raw_token = raw_code = None
+    if is_v2:
+        raw_token = generate_claim_token()
+        raw_code = generate_claim_code()
+        token_hash = _hash_secret(raw_token)
+        code_hash = _hash_secret(normalize_claim_code(raw_code))
+        transfer_doc.update({
+            "version": 2,
+            "transfer_type": transfer_type,
+            "source": source,
+            "expires_days": days,
+            "sender_ref": pseudonym(clean_user_a_id),
+            "sender_display": (sender_display or "").strip() or None,
+            "sender_address": (sender_address or "").strip() or None,
+            "show_price": bool(show_price),
+            "include_photos": bool(include_photos),
+            "sale_price_usd": float(sale_price_usd) if (show_price and sale_price_usd is not None) else None,
+            "claim_token_hash": token_hash,
+            "claim_code_hash": code_hash,
+            "claim_lookup_ids": [token_hash, code_hash],
+        })
+    else:
+        transfer_doc["claim_pin"] = claim_pin.strip()
+
     transfer_ref = db.collection(COLLECTION_TRANSFERS).document(transfer_id)
     transfer_ref.set(transfer_doc)
+    if is_v2:
+        _write_claim_lookups(db, transfer_id, transfer_doc["claim_token_hash"], transfer_doc["claim_code_hash"],
+                             expires_at.isoformat())
+
+    result = dict(transfer_doc)
+    if is_v2:
+        result["claim_token"] = raw_token
+        result["claim_code"] = raw_code
+        try:
+            from services.transfer_document_pdf import generate_transfer_document_pdf
+            import base64
+            pdf_photos = None
+            if include_photos and raw_items_by_id:
+                allowed_owners = {clean_user_a_id, user_a_id.strip()}
+                pdf_photos = _load_seller_photo_bytes_for_pdf(
+                    raw_items_by_id,
+                    allowed_owners,
+                    storage_client=storage_client,
+                )
+            result["document_pdf_b64"] = base64.b64encode(
+                generate_transfer_document_pdf(
+                    transfer_doc,
+                    claim_token=raw_token,
+                    claim_code=raw_code,
+                    item_photos=pdf_photos,
+                )
+            ).decode("ascii")
+        except Exception as pe:
+            logger.warning(f"Transfer Document generation failed: {type(pe).__name__}")
 
     # Automated Email Dispatch & Audit Trail
     if recipient_email and recipient_email.strip():
@@ -282,16 +667,23 @@ def initiate_transfer(
             from services.passport_pdf_generator import generate_passport_pdf
             from services.email_service import send_passport_transfer_email
 
-            pdf_bytes = generate_passport_pdf(transfer_doc)
+            if is_v2:
+                import base64
+                pdf_bytes = base64.b64decode(result.get("document_pdf_b64") or "") or generate_passport_pdf(transfer_doc)
+                email_payload = {**transfer_doc, "claim_pin": raw_code}
+            else:
+                pdf_bytes = generate_passport_pdf(transfer_doc)
+                email_payload = transfer_doc
             email_res = send_passport_transfer_email(
                 recipient_email=clean_recipient,
-                transfer_data=transfer_doc,
+                transfer_data=email_payload,
                 pdf_bytes=pdf_bytes
             )
 
             is_sent = email_res.get("status") == "sent"
             transfer_ref.update({"email_sent": is_sent})
             transfer_doc["email_sent"] = is_sent
+            result["email_sent"] = is_sent
 
             audit_entry = {
                 "timestamp": now.isoformat(),
@@ -303,9 +695,9 @@ def initiate_transfer(
             transfer_ref.collection("email_audit").add(audit_entry)
 
         except Exception as ee:
-            logger.warning(f"Failed to dispatch transfer email / write audit log: {ee}")
+            logger.warning(f"Failed to dispatch transfer email / write audit log: {type(ee).__name__}")
 
-    return transfer_doc
+    return result if is_v2 else transfer_doc
 
 
 @firestore.transactional
@@ -340,6 +732,10 @@ def execute_claim_transaction(
 
     sender_id = (transfer_data.get("sender_id") or "").strip()
     clean_sender_id = sender_id.lower() if "@" in sender_id else sender_id
+    is_v2 = int(transfer_data.get("version") or 1) >= 2
+    is_sold_item = transfer_data.get("source") == "sold_item"
+    from_ref = transfer_data.get("sender_ref") if is_v2 else clean_sender_id
+    to_ref = pseudonym(clean_user_b_id) if is_v2 else clean_user_b_id
 
     items = transfer_data.get("items", [])
     if not items:
@@ -369,7 +765,7 @@ def execute_claim_transaction(
     for item, sender_ref, sender_snap in unselected_item_snaps:
         if sender_snap.exists:
             transaction.update(sender_ref, {
-                "transferStatus": "none",
+                "transferStatus": "sold" if is_sold_item else "none",
                 "transferId": firestore.DELETE_FIELD,
                 "pendingTransferQty": firestore.DELETE_FIELD
             })
@@ -401,8 +797,8 @@ def execute_claim_transaction(
         provenance.append({
             "event": "Lateral Transfer (Passport Protocol)",
             "date": now_iso,
-            "from_user": clean_sender_id,
-            "to_user": clean_user_b_id,
+            "from_user": from_ref,
+            "to_user": to_ref,
             "transfer_id": transfer_ref.id,
             "quantity": transfer_qty
         })
@@ -443,6 +839,11 @@ def execute_claim_transaction(
             "updated_at": firestore.SERVER_TIMESTAMP,
             "timestamp": firestore.SERVER_TIMESTAMP
         }
+        if is_v2:
+            for k in _V2_RECIPIENT_STRIP:
+                new_coin_doc.pop(k, None)
+            new_coin_doc["is_demo"] = False
+            new_coin_doc["is_demo_cleared"] = False
 
         # Write active document to recipient's collection
         recipient_ref = resolve_item_collections(item, clean_user_b_id, db).document(new_item_id)
@@ -453,6 +854,18 @@ def execute_claim_transaction(
         item_type = str(item.get("item_type") or item.get("category") or "").lower()
         is_paper_money = item_type in ["paper_currency", "banknote", "currency", "paper_money", "note"] or "FR-" in str(item.get("Variety", ""))
         archive_subcol = "transferred_currency" if is_paper_money else "transferred_coins"
+
+        if is_sold_item:
+            # Buyer of a Sold item: the sender's doc stays Sold and the sale row (and its gain/loss) is untouched.
+            if sender_snap.exists:
+                transaction.update(sender_ref, {
+                    "transferStatus": "sold",
+                    "transferId": firestore.DELETE_FIELD,
+                    "pendingTransferQty": firestore.DELETE_FIELD,
+                    "claimed_at": now_iso,
+                    "claimed_by_ref": to_ref,
+                })
+            continue
 
         # Archive copy in sender's transferred_coins/transferred_currency subcollection with legal provenance.
         # Merge sender_data after item so privacy-stripped fields (Cost, Personal Notes, paper_trail, etc.)
@@ -506,30 +919,57 @@ def execute_claim_transaction(
     return {
         "transfer_id": transfer_ref.id,
         "status": "claimed",
+        "version": 2 if is_v2 else 1,
         "items_claimed_count": len(claimed_items),
-        "claimed_items": claimed_items
+        "claimed_items": [_json_safe_item(c) for c in claimed_items]
     }
 
 
 def claim_transfer(
     db: firestore.Client,
     user_b_id: str,
-    transfer_id: str,
-    claim_pin: str,
-    selected_item_ids: Optional[List[str]] = None
+    transfer_id: Optional[str] = None,
+    claim_pin: Optional[str] = None,
+    selected_item_ids: Optional[List[str]] = None,
+    *,
+    claim_token: Optional[str] = None,
+    claim_code: Optional[str] = None,
+    client_ip: Optional[str] = None,
+    uid: Optional[str] = None,
+    sign_in_provider: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Claims a pending transfer atomically using execute_claim_transaction.
+
+    Three ways in: v2 `claim_token` (QR), v2 `claim_code` (typed), or legacy `transfer_id` + PIN.
+    Token/code lookups are rate-limited per uid and per hashed IP and FAIL CLOSED. After the claim
+    commits, the FIFO overflow lock runs for Free recipients (the claim itself always succeeds).
     """
-    clean_transfer_id = transfer_id.strip()
-    clean_pin = claim_pin.strip()
     clean_user_b_id = user_b_id.strip().lower() if "@" in user_b_id else user_b_id.strip()
+    limiter_uid = uid or clean_user_b_id
+    uses_secret = bool(claim_token or claim_code)
 
-    transfer_ref = db.collection(COLLECTION_TRANSFERS).document(clean_transfer_id)
-    transfer_snap = transfer_ref.get()
-
-    if not transfer_snap.exists:
-        raise ValueError("Transfer not found")
+    if uses_secret:
+        check_claim_attempts(db, uid=limiter_uid, client_ip=client_ip)
+        try:
+            clean_transfer_id = _resolve_claim_lookup(db, claim_token=claim_token, claim_code=claim_code)
+            transfer_ref = db.collection(COLLECTION_TRANSFERS).document(clean_transfer_id)
+            transfer_snap = transfer_ref.get()
+            if not transfer_snap.exists:
+                raise ValueError(NOT_FOUND_MESSAGE)
+        except ValueError:
+            record_claim_failure(db, uid=limiter_uid, client_ip=client_ip)
+            raise
+        clean_pin = ""
+    else:
+        if not (transfer_id or "").strip() or claim_pin is None:
+            raise ValueError("A claim token, a claim code, or a Transfer ID with PIN is required")
+        clean_transfer_id = transfer_id.strip()
+        clean_pin = claim_pin.strip()
+        transfer_ref = db.collection(COLLECTION_TRANSFERS).document(clean_transfer_id)
+        transfer_snap = transfer_ref.get()
+        if not transfer_snap.exists:
+            raise ValueError("Transfer not found")
 
     transfer_data = transfer_snap.to_dict() or {}
 
@@ -547,63 +987,92 @@ def claim_transfer(
                 "Please sign in with the correct recipient account."
             )
 
-    # ── PIN brute-force lockout ──────────────────────────────────────────────
-    # After 5 wrong attempts the transfer document is soft-locked for 15 minutes.
-    PIN_MAX_ATTEMPTS = 5
-    PIN_LOCKOUT_MINUTES = 15
+    if not uses_secret:
+        # ── Legacy PIN brute-force lockout ───────────────────────────────────
+        # After 5 wrong attempts the transfer document is soft-locked for 15 minutes.
+        PIN_MAX_ATTEMPTS = 5
+        PIN_LOCKOUT_MINUTES = 15
 
-    pin_fail_count = int(transfer_data.get("pin_fail_count", 0))
-    pin_locked_until_str = transfer_data.get("pin_locked_until")
-    now = _get_utc_now()
+        pin_fail_count = int(transfer_data.get("pin_fail_count", 0))
+        pin_locked_until_str = transfer_data.get("pin_locked_until")
+        now = _get_utc_now()
 
-    if pin_locked_until_str:
-        try:
-            locked_until = datetime.fromisoformat(pin_locked_until_str)
-            if locked_until.tzinfo is None:
-                locked_until = locked_until.replace(tzinfo=timezone.utc)
-            if now < locked_until:
+        if pin_locked_until_str:
+            try:
+                locked_until = datetime.fromisoformat(pin_locked_until_str)
+                if locked_until.tzinfo is None:
+                    locked_until = locked_until.replace(tzinfo=timezone.utc)
+                if now < locked_until:
+                    raise ValueError(
+                        "Too many incorrect PIN attempts. Please wait 15 minutes before trying again."
+                    )
+                else:
+                    # Lockout period has expired — reset counters
+                    pin_fail_count = 0
+                    transfer_ref.update({"pin_fail_count": 0, "pin_locked_until": firestore.DELETE_FIELD})
+            except ValueError as ve:
+                if "Too many incorrect" in str(ve):
+                    raise
+                pass  # fromisoformat parse error — ignore and proceed
+
+        stored_pin = str(transfer_data.get("claim_pin") or "").strip()
+        stored_hash = transfer_data.get("claim_pin_hash")
+        if stored_hash:
+            pin_ok = hmac.compare_digest(
+                str(stored_hash), hash_legacy_pin(clean_pin, str(transfer_data.get("claim_pin_salt") or ""))
+            )
+        elif stored_pin:
+            pin_ok = hmac.compare_digest(stored_pin, clean_pin)
+        else:
+            pin_ok = False  # v2 transfers have no PIN: only the token or code can claim them
+        if not pin_ok:
+            # Atomic increment so concurrent wrong guesses can't race past the threshold
+            new_count = pin_fail_count + 1
+            update_data: Dict[str, Any] = {"pin_fail_count": firestore.Increment(1)}
+            if new_count >= PIN_MAX_ATTEMPTS:
+                update_data["pin_locked_until"] = (
+                    now + timedelta(minutes=PIN_LOCKOUT_MINUTES)
+                ).isoformat()
+                transfer_ref.update(update_data)
                 raise ValueError(
                     "Too many incorrect PIN attempts. Please wait 15 minutes before trying again."
                 )
-            else:
-                # Lockout period has expired — reset counters
-                pin_fail_count = 0
-                transfer_ref.update({"pin_fail_count": 0, "pin_locked_until": firestore.DELETE_FIELD})
-        except ValueError as ve:
-            if "Too many incorrect" in str(ve):
-                raise
-            pass  # fromisoformat parse error — ignore and proceed
-
-    stored_pin = str(transfer_data.get("claim_pin") or "").strip()
-    if not hmac.compare_digest(stored_pin, clean_pin):
-        # Atomic increment so concurrent wrong guesses can't race past the threshold
-        new_count = pin_fail_count + 1
-        update_data: Dict[str, Any] = {"pin_fail_count": firestore.Increment(1)}
-        if new_count >= PIN_MAX_ATTEMPTS:
-            update_data["pin_locked_until"] = (
-                now + timedelta(minutes=PIN_LOCKOUT_MINUTES)
-            ).isoformat()
             transfer_ref.update(update_data)
-            raise ValueError(
-                "Too many incorrect PIN attempts. Please wait 15 minutes before trying again."
-            )
-        transfer_ref.update(update_data)
-        raise ValueError("Invalid claim PIN code")
+            raise ValueError("Invalid claim PIN code")
 
-    # Successful auth — clear any accumulated failure count
-    if pin_fail_count > 0:
-        transfer_ref.update({"pin_fail_count": 0})
+        # Successful auth — clear any accumulated failure count
+        if pin_fail_count > 0:
+            transfer_ref.update({"pin_fail_count": 0})
 
     # Execute inside atomic Firestore transaction
     transaction = db.transaction()
     txn_fn = getattr(execute_claim_transaction, 'to_wrap', execute_claim_transaction) if not hasattr(transaction, '_clean_up') else execute_claim_transaction
-    return txn_fn(
+    result = txn_fn(
         transaction=transaction,
         db=db,
         transfer_ref=transfer_ref,
         clean_user_b_id=clean_user_b_id,
         selected_item_ids=selected_item_ids
     )
+
+    # One-time use: the lookup docs die with the claim.
+    _delete_claim_lookups(db, transfer_data)
+
+    # Free recipients: keep the oldest items open, lock the newest. The claim already succeeded.
+    result["locked"] = False
+    if uid:
+        try:
+            from services.allowance_service import apply_free_overflow_lock, LOCKED_CLAIM_MESSAGE
+            lock_res = apply_free_overflow_lock(
+                db, user_key=clean_user_b_id, uid=uid, email=clean_user_b_id, sign_in_provider=sign_in_provider
+            )
+            claimed_ids = {c.get("id") for c in result.get("claimed_items", [])}
+            if claimed_ids & set(lock_res.get("locked_ids", [])):
+                result["locked"] = True
+                result["message"] = LOCKED_CLAIM_MESSAGE
+        except Exception as exc:  # the claim is committed; never fail it because of the lock step
+            logger.warning("post-claim overflow lock failed (%s)", type(exc).__name__)
+    return result
 
 
 def recall_transfer(
@@ -638,12 +1107,13 @@ def recall_transfer(
     now_iso = _get_utc_now().isoformat()
 
     # Restore User A's items across coins, banknotes, and legacy currency subcollections (Bug B1)
+    restore_status = "sold" if transfer_data.get("source") == "sold_item" else "none"
     for item_id in transfer_data.get("item_ids", []):
         for subcol in ["coins", "banknotes", "currency"]:
             item_ref = db.collection("users").document(clean_user_a_id).collection(subcol).document(item_id)
             if item_ref.get().exists:
                 item_ref.update({
-                    "transferStatus": "none",
+                    "transferStatus": restore_status,
                     "transferId": firestore.DELETE_FIELD,
                     "pendingTransferQty": firestore.DELETE_FIELD
                 })
@@ -662,8 +1132,98 @@ def recall_transfer(
         "status": "recalled",
         "recalled_at": now_iso
     })
+    _delete_claim_lookups(db, transfer_data)  # the QR and the code die at once
 
     return {"transfer_id": transfer_id, "status": "recalled"}
+
+
+def preview_transfer(
+    db: firestore.Client,
+    user_id: str,
+    *,
+    claim_token: Optional[str] = None,
+    claim_code: Optional[str] = None,
+    client_ip: Optional[str] = None,
+    uid: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Authenticated preview: item TITLES only. No sender, address, cost, notes, photos or price."""
+    clean_user = user_id.strip().lower() if "@" in user_id else user_id.strip()
+    limiter_uid = uid or clean_user
+    check_claim_attempts(db, uid=limiter_uid, client_ip=client_ip)
+    try:
+        transfer_id = _resolve_claim_lookup(db, claim_token=claim_token, claim_code=claim_code)
+        snap = db.collection(COLLECTION_TRANSFERS).document(transfer_id).get()
+        if not snap.exists:
+            raise ValueError(NOT_FOUND_MESSAGE)
+    except ValueError:
+        record_claim_failure(db, uid=limiter_uid, client_ip=client_ip)
+        raise
+    data = snap.to_dict() or {}
+    if data.get("status") != "pending":
+        raise ValueError(NOT_FOUND_MESSAGE)
+    locked_email = (data.get("recipient_email") or "").strip().lower()
+    if locked_email and locked_email != clean_user:
+        raise ValueError(NOT_FOUND_MESSAGE)
+    return {
+        "items": [{"title": _item_title(i), "quantity": int(i.get("transfer_qty") or 1)} for i in data.get("items", [])],
+        "expires_at": data.get("expires_at"),
+    }
+
+
+def rotate_claim_code(db: firestore.Client, user_a_id: str, transfer_id: str) -> Dict[str, Any]:
+    """Sender reissues a pending transfer's token and code (also upgrades a legacy PIN transfer)."""
+    clean_user_a_id = user_a_id.strip().lower() if "@" in user_a_id else user_a_id.strip()
+    transfer_ref = db.collection(COLLECTION_TRANSFERS).document(transfer_id)
+    snap = transfer_ref.get()
+    if not snap.exists:
+        raise ValueError("Transfer not found")
+    data = snap.to_dict() or {}
+    if (data.get("sender_id") or "").strip().lower() != clean_user_a_id:
+        raise ValueError("Only the transfer sender can reissue this code")
+    if data.get("status") != "pending":
+        raise ValueError(f"Cannot reissue a transfer in status '{data.get('status')}'")
+    expires_str = data.get("expires_at") or ""
+    if expires_str:
+        exp = datetime.fromisoformat(expires_str)
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if _get_utc_now() > exp:
+            raise ValueError("Transfer has expired")
+
+    _delete_claim_lookups(db, data)
+    raw_token = generate_claim_token()
+    raw_code = generate_claim_code()
+    token_hash = _hash_secret(raw_token)
+    code_hash = _hash_secret(normalize_claim_code(raw_code))
+    updates = {
+        "version": 2,
+        "claim_token_hash": token_hash,
+        "claim_code_hash": code_hash,
+        "claim_lookup_ids": [token_hash, code_hash],
+        "claim_pin": firestore.DELETE_FIELD,
+        "claim_pin_hash": firestore.DELETE_FIELD,
+        "claim_pin_salt": firestore.DELETE_FIELD,
+        "pin_fail_count": firestore.DELETE_FIELD,
+        "pin_locked_until": firestore.DELETE_FIELD,
+        "rotated_at": _get_utc_now().isoformat(),
+    }
+    if not data.get("sender_ref"):
+        updates["sender_ref"] = pseudonym(clean_user_a_id)
+    transfer_ref.update(updates)
+    _write_claim_lookups(db, transfer_id, token_hash, code_hash, expires_str)
+
+    merged = {**data, **{k: v for k, v in updates.items() if v is not firestore.DELETE_FIELD}}
+    merged.pop("claim_pin", None)
+    result = {"transfer_id": transfer_id, "claim_token": raw_token, "claim_code": raw_code, "expires_at": expires_str}
+    try:
+        from services.transfer_document_pdf import generate_transfer_document_pdf
+        import base64
+        result["document_pdf_b64"] = base64.b64encode(
+            generate_transfer_document_pdf(merged, claim_token=raw_token, claim_code=raw_code)
+        ).decode("ascii")
+    except Exception as pe:
+        logger.warning(f"Transfer Document generation failed: {type(pe).__name__}")
+    return result
 
 
 # ── MODE 3: DIRECT SALE & DISPOSITION ENGINE (PHASE 1) ────────────────────────
@@ -708,6 +1268,11 @@ def record_direct_sale(
     item_data = coin_ref.get().to_dict() or {}
     item_data["id"] = coin_id
 
+    if item_data.get("status") == "sold":
+        raise ValueError(f"Item {coin_id} is already marked Sold")
+    if item_data.get("transferStatus") == "pending":
+        raise ValueError(f"Item {coin_id} has a pending transfer; cancel it before recording a sale")
+
     current_qty = int(item_data.get("Quantity") or item_data.get("qty") or 1)
     qty_to_sell = int(qty_sold)
     if qty_to_sell < 1:
@@ -747,7 +1312,7 @@ def record_direct_sale(
     archive_subcol = "transferred_currency" if active_subcol in ["banknotes", "currency"] else "transferred_coins"
 
     archive_doc = {
-        **item_data,
+        **strip_licensed_pricing_fields(item_data),  # F15: no CPG / Greysheet data in long-lived archive rows
         "id": sale_archive_id,
         "original_coin_id": coin_id,
         "original_subcollection": active_subcol,
@@ -781,6 +1346,17 @@ def record_direct_sale(
 
     archive_ref = db.collection("users").document(clean_user_id).collection(archive_subcol).document(sale_archive_id)
 
+    # R3: status is the Sold marker (never changes while Sold); transferStatus is the transfer sub-state.
+    sold_marker = {
+        "status": "sold",
+        "transferStatus": "sold",
+        "sold_at": now_iso,
+        "sold_qty": qty_to_sell,
+        "sale_archive_id": sale_archive_id,
+        "provenanceLedger": provenance,
+        "updated_at": firestore.SERVER_TIMESTAMP,
+    }
+
     # MF3: Atomic batch write (write archive + delete/decrement coin in single commit)
     if hasattr(db, "batch"):
         batch = db.batch()
@@ -793,8 +1369,8 @@ def record_direct_sale(
                 "updated_at": firestore.SERVER_TIMESTAMP
             })
         else:
-            # Full sale: remove from active inventory
-            batch.delete(coin_ref)
+            # Full sale: Mark Sold, never delete (R3). The doc stays, read-only, with status "sold".
+            batch.update(coin_ref, sold_marker)
         batch.commit()
     else:
         archive_ref.set(archive_doc)
@@ -806,10 +1382,11 @@ def record_direct_sale(
                 "updated_at": firestore.SERVER_TIMESTAMP
             })
         else:
-            coin_ref.delete()
+            coin_ref.update(sold_marker)
 
     return {
         "status": "success",
+        "item_kept_as_sold": qty_to_sell == current_qty,
         "sale_archive_id": sale_archive_id,
         "coin_id": coin_id,
         "qty_sold": qty_to_sell,
@@ -876,7 +1453,29 @@ def undo_sale(
     # MF3: Atomic batch execution (resurrect/increment coin + void archive in single commit)
     batch = db.batch() if hasattr(db, "batch") else None
 
-    if active_snap.exists:
+    peek = (active_snap.to_dict() or {}) if active_snap.exists else {}
+    if active_snap.exists and peek.get("status") == "sold" and peek.get("sale_archive_id") == sale_archive_id:
+        # R3: the Sold doc was kept. Flip it back to active.
+        if peek.get("transferStatus") == "pending":
+            raise ValueError("Cancel the pending transfer before undoing this sale")
+        if peek.get("claimed_by_ref"):
+            raise ValueError("This item was already transferred to the buyer and cannot be restored")
+        prov = list(peek.get("provenanceLedger", []))
+        prov.append(void_prov_entry)
+        restore_payload = {
+            "status": firestore.DELETE_FIELD,
+            "sold_at": firestore.DELETE_FIELD,
+            "sold_qty": firestore.DELETE_FIELD,
+            "sale_archive_id": firestore.DELETE_FIELD,
+            "transferStatus": "none",
+            "provenanceLedger": prov,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+        }
+        if batch:
+            batch.update(active_ref, restore_payload)
+        else:
+            active_ref.update(restore_payload)
+    elif active_snap.exists:
         active_data = active_snap.to_dict() or {}
         curr_qty = int(active_data.get("Quantity") or active_data.get("qty") or 1)
         restored_qty = curr_qty + sold_qty
@@ -946,6 +1545,44 @@ def undo_sale(
     }
 
 
+def list_pending_transfers(db: firestore.Client, user_a_id: str) -> List[Dict[str, Any]]:
+    """Returns the sender's pending transfers with safe summary fields only (no hashes, PINs or address)."""
+    clean_user_a_id = user_a_id.strip().lower() if "@" in user_a_id else user_a_id.strip()
+    now = _get_utc_now()
+    docs = db.collection(COLLECTION_TRANSFERS).where("sender_id", "==", clean_user_a_id).stream()
+    rows: List[Dict[str, Any]] = []
+    for snap in docs:
+        data = snap.to_dict() or {}
+        if data.get("status") != "pending":
+            continue
+        expires_str = str(data.get("expires_at") or "")
+        is_expired = False
+        if expires_str:
+            try:
+                exp = datetime.fromisoformat(expires_str)
+                if exp.tzinfo is None:
+                    exp = exp.replace(tzinfo=timezone.utc)
+                is_expired = now > exp
+            except ValueError:
+                pass
+        items = data.get("items") or []
+        rows.append({
+            "transfer_id": data.get("transfer_id") or snap.id,
+            "status": "pending",
+            "version": int(data.get("version") or 1),
+            "transfer_type": data.get("transfer_type") or "lateral",
+            "source": data.get("source") or "active",
+            "created_at": data.get("created_at"),
+            "expires_at": expires_str or None,
+            "is_expired": is_expired,
+            "item_count": len(items),
+            "item_titles": [_item_title(i) for i in items],
+            "recipient_email": data.get("recipient_email"),
+        })
+    rows.sort(key=lambda r: str(r.get("created_at") or ""), reverse=True)
+    return rows
+
+
 def get_sold_inventory(db: firestore.Client, user_id: str) -> List[Dict[str, Any]]:
     """
     Returns list of sold/transferred items for user, including active sales and voided sales for audit.
@@ -964,3 +1601,28 @@ def get_sold_inventory(db: firestore.Client, user_id: str) -> List[Dict[str, Any
     # Sort by sale_date or archived_at descending
     records.sort(key=lambda r: str(r.get("sale_date") or r.get("sold_at") or r.get("archived_at") or ""), reverse=True)
     return records
+
+
+def harden_legacy_pins(db: firestore.Client, apply: bool = False) -> Dict[str, Any]:
+    """N4 (PLAN v1.2 section 6.3): replace plaintext PINs on pending legacy transfers with salted hashes.
+
+    DRY RUN by default: with apply=False nothing is written. A live run needs its own DEPLOY card
+    (the CLI wrapper refuses to apply without one). v2 transfers have no PIN and are skipped.
+    """
+    stats = {"scanned": 0, "eligible": 0, "hardened": 0, "applied": bool(apply)}
+    for snap in db.collection(COLLECTION_TRANSFERS).stream():
+        stats["scanned"] += 1
+        data = snap.to_dict() or {}
+        if data.get("status") != "pending" or not data.get("claim_pin") or data.get("claim_pin_hash"):
+            continue
+        stats["eligible"] += 1
+        if not apply:
+            continue
+        salt = secrets.token_hex(8)
+        db.collection(COLLECTION_TRANSFERS).document(snap.id).update({
+            "claim_pin_hash": hash_legacy_pin(str(data["claim_pin"]).strip(), salt),
+            "claim_pin_salt": salt,
+            "claim_pin": firestore.DELETE_FIELD,
+        })
+        stats["hardened"] += 1
+    return stats

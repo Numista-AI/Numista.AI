@@ -19,6 +19,7 @@ import '../services/wishlist_service.dart';
 import '../utils/mint_helpers.dart';
 import '../utils/numista_error_helper.dart';
 import '../utils/program_goal_helper.dart';
+import '../utils/sold_item.dart';
 
 /// Senior-friendly Wish List screen (`SPEC_v2.1` daylight palette, >=18px text, >=56px touch targets).
 class WishlistScreen extends StatefulWidget {
@@ -108,7 +109,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
           await db.collection(AuthService.coinsPath).limit(2000).get();
       final Map<String, Map<String, dynamic>> mergedDocs = {};
       for (final d in primarySnap.docs) {
-        mergedDocs[d.id] = d.data();
+        final data = d.data();
+        if (!isSoldItem(data)) mergedDocs[d.id] = data;
       }
 
       // Cross-path merge if primary email path is empty and user has a UID path.
@@ -122,7 +124,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
             .limit(2000)
             .get();
         for (final d in uidSnap.docs) {
-          mergedDocs[d.id] = d.data();
+          final data = d.data();
+          if (!isSoldItem(data)) mergedDocs[d.id] = data;
         }
       }
 

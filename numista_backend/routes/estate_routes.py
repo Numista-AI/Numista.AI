@@ -76,7 +76,7 @@ async def generate_attorney_link(req: GenerateAttorneyLinkRequest, _user: dict =
 
         # 1. Fetch collector's current coins and currency for frozen snapshot
         user_ref = db.collection("users").document(req.owner_uid)
-        coins_snap = user_ref.collection("coins").get()
+        coins_snap = [d for d in user_ref.collection("coins").get() if (d.to_dict() or {}).get("status") != "sold"]  # R3
         currency_snap = user_ref.collection("currency").get()
 
         total_coins = len(coins_snap)

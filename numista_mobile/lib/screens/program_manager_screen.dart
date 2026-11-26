@@ -22,6 +22,7 @@ import '../utils/mint_helpers.dart';
 import '../services/set_expansion_helper.dart';
 import 'add_coins_hub.dart';
 import '../utils/numista_error_helper.dart';
+import '../utils/sold_item.dart';
 import '../constants.dart';
 
 
@@ -120,10 +121,12 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         .limit(2000)
         .get()
         .then((snap) {
+          // R3: Sold items keep their doc as a record and do not count toward program progress.
+          final liveDocs = snap.docs.where((d) => !isSoldItem(d.data())).toList();
           // Populate the state-local cache on a live fetch.
-          _cachedCoinDocs = snap.docs;
+          _cachedCoinDocs = liveDocs;
           _cacheTimestamp = DateTime.now();
-          return snap.docs;
+          return liveDocs;
         });
   }
 
@@ -140,9 +143,10 @@ class _ProgramManagerScreenState extends State<ProgramManagerScreen> {
         .limit(2000)
         .get(const GetOptions(source: Source.server))
         .then((snap) {
-          _cachedCoinDocs = snap.docs;
+          final liveDocs = snap.docs.where((d) => !isSoldItem(d.data())).toList();
+          _cachedCoinDocs = liveDocs;
           _cacheTimestamp = DateTime.now();
-          return snap.docs;
+          return liveDocs;
         });
     // Assign inside setState so FutureBuilder sees the new future.
     if (mounted) {

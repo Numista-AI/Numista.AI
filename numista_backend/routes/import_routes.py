@@ -129,6 +129,8 @@ async def import_spreadsheet(
         existing_docs = db.collection("users").document(user_id).collection("coins").get()
         for d in existing_docs:
             data = d.to_dict() or {}
+            if data.get("status") == "sold":
+                continue  # R3: a Sold item does not make an imported row a duplicate
             cert = data.get("cert_number") or data.get("Cert Number")
             if cert:
                 existing_certs.add(str(cert).strip().lower())

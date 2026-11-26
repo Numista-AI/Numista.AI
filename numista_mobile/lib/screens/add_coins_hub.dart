@@ -18,6 +18,7 @@ import '../utils/mint_helpers.dart';
 import '../services/pcgs_import_service.dart';
 import '../services/backup_export_service.dart';
 import '../services/batch_valuation_service.dart';
+import '../utils/sold_item.dart';
 import '../services/coin_data_normalizer.dart';
 import '../widgets/roll_entry_dialog.dart';
 import '../widgets/morgan_guide_flow.dart';
@@ -498,21 +499,22 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
           .where('Year', isEqualTo: year)
           .where('Denomination', whereIn: denomVariants);
 
+      // R3: over-fetch and ignore Sold items so a previously sold coin does not flag a new copy as duplicate.
       final canonicalMatches = mint.isEmpty
           ? [
-              await base.where('mint_mark', isEqualTo: '').limit(1).get(),
-              await base.where('mint_mark', isNull: true).limit(1).get(),
+              await base.where('mint_mark', isEqualTo: '').limit(5).get(),
+              await base.where('mint_mark', isNull: true).limit(5).get(),
             ]
-          : [await base.where('mint_mark', isEqualTo: mint).limit(1).get()];
-      if (canonicalMatches.any((s) => s.docs.isNotEmpty)) return true;
+          : [await base.where('mint_mark', isEqualTo: mint).limit(5).get()];
+      if (canonicalMatches.any((s) => s.docs.any((d) => !isSoldItem(d.data())))) return true;
 
       final legacyMatches = mint.isEmpty
           ? [
-              await base.where('Mint Mark', isEqualTo: '').limit(1).get(),
-              await base.where('Mint Mark', isNull: true).limit(1).get(),
+              await base.where('Mint Mark', isEqualTo: '').limit(5).get(),
+              await base.where('Mint Mark', isNull: true).limit(5).get(),
             ]
-          : [await base.where('Mint Mark', isEqualTo: mint).limit(1).get()];
-      return legacyMatches.any((s) => s.docs.isNotEmpty);
+          : [await base.where('Mint Mark', isEqualTo: mint).limit(5).get()];
+      return legacyMatches.any((s) => s.docs.any((d) => !isSoldItem(d.data())));
     } catch (_) {
       return false;
     }

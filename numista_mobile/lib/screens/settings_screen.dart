@@ -13,6 +13,8 @@ import '../constants.dart';
 import '../services/photo_sharing_service.dart';
 import '../services/inspector_service.dart';
 import '../services/valuation_mode_service.dart';
+import '../services/stripe_service.dart';
+import 'public_info_screens.dart';
 
 import '../services/epn_service.dart';
 import '../services/theme_provider.dart';
@@ -58,11 +60,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _desktopHotkeysEnabled = true;
   bool _microscopeEnabled = false;
   String _defaultCollectionView = 'All';
+  String? _stripeReturnStatus;
+
+  static String? _extractStripeStatus(Uri uri) {
+    final direct = uri.queryParameters['stripe'];
+    if (direct != null && direct.isNotEmpty) return direct;
+    if (uri.fragment.contains('stripe=')) {
+      final fragUri = Uri.tryParse(uri.fragment);
+      final fragVal = fragUri?.queryParameters['stripe'];
+      if (fragVal != null && fragVal.isNotEmpty) return fragVal;
+    }
+    return null;
+  }
 
   @override
   void initState() {
     super.initState();
     DisplayPreferencesService.instance.ensureLoaded();
+    _stripeReturnStatus = _extractStripeStatus(Uri.base);
+    if (_stripeReturnStatus == 'success' || _stripeReturnStatus == 'cancel') {
+      final statusVal = _stripeReturnStatus;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              statusVal == 'success'
+                  ? 'Checkout complete! Your plan access is updating.'
+                  : 'Checkout canceled. No charges were made.',
+            ),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      });
+    }
     if (widget.testSkipInitialLoad) {
       _isLoading = false;
       return;
@@ -497,6 +528,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
+          ),
+
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              ElevatedButton.icon(
+                key: const Key('settings_plans_billing_btn'),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PublicInfoShell(targetRoute: '/pricing'),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.workspace_premium_outlined, size: 18),
+                label: const Text('Plans & Billing'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDark ? const Color(0xFF1565C0) : const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              OutlinedButton.icon(
+                key: const Key('settings_manage_billing_btn'),
+                onPressed: () async {
+                  final ok = await StripeService.launchCustomerPortal();
+                  if (!ok && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('No active Stripe billing account found.'),
+                        duration: Duration(seconds: 4),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.credit_card_outlined, size: 18),
+                label: const Text('Manage Billing'),
+              ),
+            ],
           ),
  
           // ── Developer & Auditing Tools ─────────────────────────────────────

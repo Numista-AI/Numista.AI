@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart' as intl;
 import '../constants.dart';
 import '../services/auth_service.dart';
+import '../utils/sold_item.dart';
 import '../services/guest_seed_service.dart';
 import '../services/http_auth_client.dart';
 import 'dart:async';
@@ -103,7 +104,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ? GuestSeedService.getDemoCoinsStream()
             : FirebaseFirestore.instance.collection(AuthService.coinsPath).snapshots();
     subCoins = coinsStream.listen((snap) {
-      coins = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      coins = snap.docs.where((d) => !isSoldItem(d.data())).map((d) => {'id': d.id, ...d.data()}).toList();
       emit();
     }, onError: (e) => controller.addError(e));
 

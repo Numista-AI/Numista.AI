@@ -23,6 +23,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import '../config/ai_config.dart';
 import '../utils/numista_error_helper.dart';
+import '../utils/sell_transfer_access.dart';
+import 'lateral_transfer_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -789,8 +791,33 @@ Write in an engaging, authoritative style like a respected numismatic reference.
     );
   }
 
+  void _openSellOrTransfer(String initialTab) {
+    if (!canSellOrTransfer()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(kSellTransferDemoCta)),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LateralTransferScreen(
+          userId: AuthService.userEmail,
+          itemsToTransfer: [_coin],
+          initialTab: initialTab,
+        ),
+      ),
+    );
+  }
+
   // ── Detail view ────────────────────────────────────────────────────────────
   Widget _buildDetailView() {
+    final bool isTransferLocked = _coin.isSold ||
+        _coin.isLocked ||
+        _coin.transferStatus == 'pending' ||
+        _coin.transferStatus == 'transferred' ||
+        _coin.transferStatus == 'claimed';
+    final bool isReadOnlyRecord = _coin.isSold || _coin.transferStatus == 'pending';
+
     return Column(
       children: [
         _HeroHeader(
@@ -799,7 +826,9 @@ Write in an engaging, authoritative style like a respected numismatic reference.
           wishlistLoading: _wishlistLoading,
           onClose: () => Navigator.of(context).pop(),
           onWishlist: _toggleWishlist,
-          onEdit: _enterEditMode,
+          onEdit: isReadOnlyRecord ? null : _enterEditMode,
+          onTransfer: isTransferLocked ? null : () => _openSellOrTransfer('send'),
+          onSell: isTransferLocked ? null : () => _openSellOrTransfer('sell_outside'),
           onVerifyManually: _verifyManually,
           onAiChat: () {
             Navigator.of(context).pop();
@@ -824,7 +853,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
                     mode: LaunchMode.externalApplication,
                   )
               : null,
-          onDelete: _confirmDelete,
+          onDelete: isReadOnlyRecord ? null : _confirmDelete,
           onRefresh: widget.onEdited,
         ),
         // Tab bar
@@ -944,11 +973,13 @@ class _HeroHeader extends StatelessWidget {
   final bool wishlistLoading;
   final VoidCallback onClose;
   final VoidCallback onWishlist;
-  final VoidCallback onEdit;
+  final VoidCallback? onEdit;
+  final VoidCallback? onTransfer;
+  final VoidCallback? onSell;
   final VoidCallback onAiChat;
   final Future<void> Function()? onVerifyCert;
   final String? verifyServiceLabel;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
   final VoidCallback? onVerifyManually;
   final VoidCallback? onRefresh;
 
@@ -959,6 +990,8 @@ class _HeroHeader extends StatelessWidget {
     required this.onClose,
     required this.onWishlist,
     required this.onEdit,
+    this.onTransfer,
+    this.onSell,
     required this.onAiChat,
     this.onVerifyCert,
     this.verifyServiceLabel,
@@ -1034,10 +1067,27 @@ class _HeroHeader extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               _ActionBtn(
+                key: const Key('coin_detail_edit_btn'),
                 icon: Icons.edit_outlined,
                 label: 'Edit',
                 color: const Color(0xFFC9A227),
                 onTap: onEdit,
+              ),
+              const SizedBox(width: 8),
+              _ActionBtn(
+                key: const Key('coin_detail_transfer_btn'),
+                icon: Icons.send_outlined,
+                label: 'Transfer',
+                color: const Color(0xFF0284C7),
+                onTap: onTransfer,
+              ),
+              const SizedBox(width: 8),
+              _ActionBtn(
+                key: const Key('coin_detail_sell_btn'),
+                icon: Icons.point_of_sale_outlined,
+                label: 'Sell',
+                color: const Color(0xFF059669),
+                onTap: onSell,
               ),
               const SizedBox(width: 8),
               _ActionBtn(
@@ -1066,6 +1116,7 @@ class _HeroHeader extends StatelessWidget {
               ],
               const SizedBox(width: 8),
               _ActionBtn(
+                key: const Key('coin_detail_delete_btn'),
                 icon: Icons.delete_outline,
                 label: 'Delete',
                 color: const Color(0xFFDC3545),
@@ -1577,6 +1628,7 @@ class _ActionBtn extends StatelessWidget {
   final bool loading;
 
   const _ActionBtn({
+    super.key,
     this.icon,
     this.leading,
     required this.label,
@@ -1587,30 +1639,34 @@ class _ActionBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap == null ? null : () {
-        final result = onTap();
-        // Handle both sync and async taps
-        if (result is Future) result.catchError((_) {});
-      },
-      borderRadius: BorderRadius.circular(8),
-      hoverColor: color.withAlpha(25),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: color.withAlpha(15),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withAlpha(60), width: 1.0),
+    final bool isDisabled = onTap == null && !loading;
+    return Opacity(
+      opacity: isDisabled ? 0.4 : 1.0,
+      child: InkWell(
+        onTap: onTap == null ? null : () {
+          final result = onTap();
+          // Handle both sync and async taps
+          if (result is Future) result.catchError((_) {});
+        },
+        borderRadius: BorderRadius.circular(8),
+        hoverColor: color.withAlpha(25),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: color.withAlpha(15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withAlpha(60), width: 1.0),
+          ),
+          child: loading
+              ? SizedBox(width: 14, height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: color))
+              : Row(mainAxisSize: MainAxisSize.min, children: [
+                  leading ?? Icon(icon!, size: 14, color: color),
+                  const SizedBox(width: 5),
+                  Text(label, style: TextStyle(color: color, fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+                ]),
         ),
-        child: loading
-            ? SizedBox(width: 14, height: 14,
-                child: CircularProgressIndicator(strokeWidth: 2, color: color))
-            : Row(mainAxisSize: MainAxisSize.min, children: [
-                leading ?? Icon(icon!, size: 14, color: color),
-                const SizedBox(width: 5),
-                Text(label, style: TextStyle(color: color, fontSize: 12,
-                    fontWeight: FontWeight.w600)),
-              ]),
       ),
     );
   }
