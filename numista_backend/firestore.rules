@@ -89,7 +89,7 @@ service cloud.firestore {
       allow update, delete: if isOwner(email)
                             && resource.data.get('status', 'active') != 'sold' && resource.data.get('transferStatus', 'none') != 'pending';
     }
-    match /users/{email}/banknotes/{docId}/{rest=**} {
+    match /users/{email}/banknotes/{docId}/{sub}/{rest=**} {
       allow read, write: if isOwner(email);
     }
     match /users/{email}/currency/{docId} {
@@ -97,7 +97,7 @@ service cloud.firestore {
       allow update, delete: if isOwner(email)
                             && resource.data.get('status', 'active') != 'sold' && resource.data.get('transferStatus', 'none') != 'pending';
     }
-    match /users/{email}/currency/{docId}/{rest=**} {
+    match /users/{email}/currency/{docId}/{sub}/{rest=**} {
       allow read, write: if isOwner(email);
     }
 
