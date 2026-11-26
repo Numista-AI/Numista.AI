@@ -610,5 +610,190 @@ void main() {
         expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNotNull);
       }
     });
+
+    testWidgets('T-UI-15 (Founding Beta + sovereign): banner shown, Included with Founding Beta, Buy Lifetime disabled, Free card omits sign-in bullet', (tester) async {
+      tester.view.physicalSize = const Size(1280, 2200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      HttpAuthClient.tokenProviderOverride = () async => 'test_jwt';
+      HttpAuthClient.httpClientOverride = MockClient((req) async {
+        if (req.url.path == '/api/stripe/subscription-status') {
+          return http.Response(
+            jsonEncode({
+              'stripe_tier': 'sovereign',
+              'founding_beta': true,
+              'unlimited': true,
+              'lifetime_family_estate': false,
+              'estate_access': true,
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 200);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicInfoShell(
+            targetRoute: '/pricing',
+            isSignedInOverride: true,
+            uidOverride: 'eIGZgYb49eeCR4Bsa5ABtHr94L63',
+            nowUtcOverride: DateTime.utc(2026, 12, 1, 12),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Founding Beta Member — Lifetime Access (including Estate) Included'),
+        findsOneWidget,
+      );
+      expect(find.text('Included with Founding Beta'), findsNWidgets(5));
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNull);
+      }
+      expect(find.textContaining('10 items in your vault'), findsOneWidget);
+      expect(
+        find.textContaining('AI coin identification (3 deep dives / day, 1 invoice scan / day)'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Sign in required to subscribe or buy Lifetime'), findsNothing);
+    });
+
+    testWidgets('T-UI-16 (Non-beta Lifetime): no beta banner, Included with Lifetime, Subscribe & Buy Lifetime disabled, Free card omits sign-in bullet', (tester) async {
+      tester.view.physicalSize = const Size(1280, 2200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      HttpAuthClient.tokenProviderOverride = () async => 'test_jwt';
+      HttpAuthClient.httpClientOverride = MockClient((req) async {
+        if (req.url.path == '/api/stripe/subscription-status') {
+          return http.Response(
+            jsonEncode({
+              'stripe_tier': 'family_estate',
+              'founding_beta': false,
+              'unlimited': true,
+              'lifetime_family_estate': true,
+              'estate_access': true,
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 200);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicInfoShell(
+            targetRoute: '/pricing',
+            isSignedInOverride: true,
+            uidOverride: 'uid_nonbeta_lifetime',
+            nowUtcOverride: DateTime.utc(2026, 12, 1, 12),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Founding Beta Member — Lifetime Access (including Estate) Included'),
+        findsNothing,
+      );
+      expect(find.text('Included with Founding Beta'), findsNothing);
+      expect(find.text('Included with Lifetime'), findsNWidgets(5));
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNull);
+      }
+      expect(find.textContaining('Sign in required to subscribe or buy Lifetime'), findsNothing);
+    });
+
+    testWidgets('T-UI-17 (Negative non-beta sovereign): no beta banner, Buy Lifetime ENABLED, Subscribe enabled, Free card omits sign-in bullet', (tester) async {
+      tester.view.physicalSize = const Size(1280, 2200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      HttpAuthClient.tokenProviderOverride = () async => 'test_jwt';
+      HttpAuthClient.httpClientOverride = MockClient((req) async {
+        if (req.url.path == '/api/stripe/subscription-status') {
+          return http.Response(
+            jsonEncode({
+              'stripe_tier': 'sovereign',
+              'founding_beta': false,
+              'unlimited': true,
+              'lifetime_family_estate': false,
+              'estate_access': true,
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 200);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicInfoShell(
+            targetRoute: '/pricing',
+            isSignedInOverride: true,
+            uidOverride: 'uid_nonbeta_sovereign',
+            nowUtcOverride: DateTime.utc(2026, 12, 1, 12),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Founding Beta Member — Lifetime Access (including Estate) Included'),
+        findsNothing,
+      );
+      expect(find.text('Included with Founding Beta'), findsNothing);
+      expect(find.text('Included with Lifetime'), findsNothing);
+      for (final keyName in <String>[
+        'plan_cta_pro',
+        'plan_cta_numismatist',
+        'plan_cta_dealer',
+        'plan_cta_estate',
+        'plan_cta_family_estate',
+      ]) {
+        expect(tester.widget<ElevatedButton>(find.byKey(Key(keyName))).onPressed, isNotNull);
+      }
+      expect(find.text(r'Buy Lifetime ($500)'), findsOneWidget);
+      expect(find.textContaining('Sign in required to subscribe or buy Lifetime'), findsNothing);
+    });
+
+    testWidgets('T-UI-18 (Signed-out regression): Free card keeps Sign in required bullet', (tester) async {
+      tester.view.physicalSize = const Size(1280, 2200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PublicInfoShell(
+            targetRoute: '/pricing',
+            isSignedInOverride: false,
+            nowUtcOverride: DateTime.utc(2026, 12, 1, 12),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('10 items in your vault'), findsOneWidget);
+      expect(
+        find.textContaining('AI coin identification (3 deep dives / day, 1 invoice scan / day)'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Sign in required to subscribe or buy Lifetime'), findsOneWidget);
+    });
   });
 }

@@ -171,6 +171,26 @@ class CoinDetailScreen extends StatefulWidget {
     }
   }
 
+  /// Applies targeted Personal Notes updates only when the trimmed note changed.
+  @visibleForTesting
+  static void applyTargetedNotesUpdate(
+    Map<String, dynamic> updates, {
+    required String initialNotes,
+    required String editedNotes,
+  }) {
+    updates.remove('Personal Notes I');
+    updates.remove('Personal Notes');
+    updates.remove('personalNotes');
+    updates.remove('Notes');
+    updates.remove('notes');
+    final cleanInitial = initialNotes.trim();
+    final cleanEdited = editedNotes.trim();
+    if (cleanEdited == cleanInitial) return;
+    updates['Personal Notes I'] = cleanEdited;
+    updates['Personal Notes'] = cleanEdited;
+    updates['Notes'] = cleanEdited;
+  }
+
   @override
   State<CoinDetailScreen> createState() => _CoinDetailScreenState();
 }
@@ -191,6 +211,7 @@ class _CoinDetailScreenState extends State<CoinDetailScreen>
 
   // Edit-mode controllers
   final Map<String, TextEditingController> _editCtrl = {};
+  String _initialPersonalNotes = '';
 
   @override
   void initState() {
@@ -445,6 +466,7 @@ Write in an engaging, authoritative style like a respected numismatic reference.
   // ── Edit mode ──────────────────────────────────────────────────────────────
   void _enterEditMode() {
     _editCtrl.clear();
+    _initialPersonalNotes = _coin.personalNotes;
     final fields = {
       'Year': _coin.year,
       'Mint Mark': _coin.mintMark,
@@ -474,9 +496,15 @@ Write in an engaging, authoritative style like a respected numismatic reference.
   Future<void> _saveEdits() async {
     final updates = <String, dynamic>{};
     _editCtrl.forEach((key, ctrl) {
+      if (key == 'Personal Notes') return;
       final fsKey = _fieldToFirestore(key);
       if (fsKey != null) updates[fsKey] = ctrl.text;
     });
+    CoinDetailScreen.applyTargetedNotesUpdate(
+      updates,
+      initialNotes: _initialPersonalNotes,
+      editedNotes: _editCtrl['Personal Notes']?.text ?? _initialPersonalNotes,
+    );
 
     // ── Sanitize Quantity (CoS M2: positive integer, fallback to 1 on blank/invalid) ──
     if (updates.containsKey('Quantity')) {
@@ -575,7 +603,11 @@ Write in an engaging, authoritative style like a respected numismatic reference.
         );
       }
       if (!mounted) return;
-      setState(() { _coin = updated; _inEditMode = false; });
+      setState(() {
+        _coin = updated;
+        _initialPersonalNotes = updated.personalNotes;
+        _inEditMode = false;
+      });
       widget.onEdited?.call();
       if (mounted) {
         final msg = yearMintSplit

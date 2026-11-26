@@ -548,12 +548,14 @@ class _PricingViewState extends State<_PricingView> {
   String _paidCtaLabel({
     required bool isStatusLoading,
     required bool isFoundingBeta,
+    required bool isLifetime,
     required String signedOutLabel,
     required String eligibleLabel,
   }) {
     if (!_isSignedIn) return signedOutLabel;
     if (isStatusLoading) return 'Checking account...';
     if (isFoundingBeta) return 'Included with Founding Beta';
+    if (isLifetime) return 'Included with Lifetime';
     return eligibleLabel;
   }
 
@@ -576,7 +578,8 @@ class _PricingViewState extends State<_PricingView> {
     }
     if (_statusState != _PricingStatusState.loaded ||
         _status == null ||
-        _status!.stripeTier == 'founding_beta') {
+        _status!.isFoundingBeta ||
+        _status!.lifetimeFamilyEstate) {
       return;
     }
     setState(() {
@@ -634,10 +637,12 @@ class _PricingViewState extends State<_PricingView> {
     final bool isStatusError = _isSignedIn && _statusState == _PricingStatusState.error;
     final bool isStatusLoaded =
         _isSignedIn && _statusState == _PricingStatusState.loaded && _status != null;
-    final isFoundingBeta = isStatusLoaded && _status!.stripeTier == 'founding_beta';
+    final isFoundingBeta = isStatusLoaded && _status!.isFoundingBeta;
+    final isLifetime = isStatusLoaded && _status!.lifetimeFamilyEstate;
+    final isIncludedForever = isFoundingBeta || isLifetime;
     final hasPaidOrLifetime =
-        isStatusLoaded && (_status!.hasPaidSubscription || _status!.lifetimeFamilyEstate);
-    final bool canCheckout = isStatusLoaded && !isFoundingBeta && !_submitting;
+        isStatusLoaded && (_status!.hasPaidSubscription || isLifetime);
+    final bool canCheckout = isStatusLoaded && !isIncludedForever && !_submitting;
     final intervalLabel = _isYearly ? 'Yearly' : 'Monthly';
 
     return Column(
@@ -901,10 +906,10 @@ class _PricingViewState extends State<_PricingView> {
           badge: 'FREE STARTER',
           priceText: r'$0',
           promoNote: null,
-          features: const [
+          features: [
             '10 items in your vault',
             'AI coin identification (3 deep dives / day, 1 invoice scan / day)',
-            'Sign in required to subscribe or buy Lifetime',
+            if (!_isSignedIn) 'Sign in required to subscribe or buy Lifetime',
           ],
           ctaKey: const Key('plan_cta_free'),
           ctaLabel: _isSignedIn ? 'Included' : 'Sign in to Subscribe',
@@ -930,6 +935,7 @@ class _PricingViewState extends State<_PricingView> {
           ctaLabel: _paidCtaLabel(
             isStatusLoading: isStatusLoading,
             isFoundingBeta: isFoundingBeta,
+            isLifetime: isLifetime,
             signedOutLabel: 'Sign in to Subscribe',
             eligibleLabel: 'Subscribe',
           ),
@@ -959,6 +965,7 @@ class _PricingViewState extends State<_PricingView> {
           ctaLabel: _paidCtaLabel(
             isStatusLoading: isStatusLoading,
             isFoundingBeta: isFoundingBeta,
+            isLifetime: isLifetime,
             signedOutLabel: 'Sign in to Subscribe',
             eligibleLabel: 'Subscribe',
           ),
@@ -988,6 +995,7 @@ class _PricingViewState extends State<_PricingView> {
           ctaLabel: _paidCtaLabel(
             isStatusLoading: isStatusLoading,
             isFoundingBeta: isFoundingBeta,
+            isLifetime: isLifetime,
             signedOutLabel: 'Sign in to Subscribe',
             eligibleLabel: 'Subscribe',
           ),
@@ -1018,6 +1026,7 @@ class _PricingViewState extends State<_PricingView> {
           ctaLabel: _paidCtaLabel(
             isStatusLoading: isStatusLoading,
             isFoundingBeta: isFoundingBeta,
+            isLifetime: isLifetime,
             signedOutLabel: 'Sign in to Subscribe',
             eligibleLabel: 'Subscribe',
           ),
@@ -1043,6 +1052,7 @@ class _PricingViewState extends State<_PricingView> {
           ctaLabel: _paidCtaLabel(
             isStatusLoading: isStatusLoading,
             isFoundingBeta: isFoundingBeta,
+            isLifetime: isLifetime,
             signedOutLabel: 'Sign in to Buy',
             eligibleLabel: r'Buy Lifetime ($500)',
           ),
