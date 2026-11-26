@@ -197,6 +197,32 @@ def test_at02_existing_users_and_demo_unchanged_when_allowlist_on(env_setup):
     assert res_eric.json()["show_morgan_home"] is True
 
 
+def test_preview_allowlist_env_override_isolated(env_setup, monkeypatch):
+    client, _ = env_setup
+    monkeypatch.setenv("MORGAN_PREVIEW_ALLOWLIST_EMAILS", "collector@example.com")
+
+    res_preview = client.get("/api/morgan/home_flags", headers={"Authorization": "Bearer tok-other"})
+    assert res_preview.status_code == 200
+    body_preview = res_preview.json()
+    assert body_preview["flags"] == {
+        "morgan_home_allowlist": False,
+        "morgan_home_new_users": False,
+        "morgan_home_everyone": False,
+    }
+    assert body_preview["eligible"] is True
+    assert body_preview["show_morgan_home"] is True
+
+    res_non_preview = client.get("/api/morgan/home_flags", headers={"Authorization": "Bearer tok-eric"})
+    assert res_non_preview.status_code == 200
+    assert res_non_preview.json()["eligible"] is False
+    assert res_non_preview.json()["show_morgan_home"] is False
+
+    res_demo = client.get("/api/morgan/home_flags", headers={"Authorization": "Bearer tok-demo"})
+    assert res_demo.status_code == 200
+    assert res_demo.json()["eligible"] is False
+    assert res_demo.json()["show_morgan_home"] is False
+
+
 def test_f6_new_users_uses_creation_time_not_auth_time(env_setup):
     client, mem_db = env_setup
     cutoff_s = 1_800_000_000.0

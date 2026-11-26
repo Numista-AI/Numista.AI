@@ -1034,6 +1034,12 @@ async def api_morgan_copilot(
 MORGAN_HOME_ALLOWLIST = {"eric.seaman@yahoo.com", "eric@numista.ai"}
 
 
+def _get_preview_allowlist_emails() -> set[str]:
+    """Optional preview-only allowlist via Cloud Run env var (empty in prod)."""
+    raw = os.getenv("MORGAN_PREVIEW_ALLOWLIST_EMAILS", "")
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
 class MorganHomePreferenceRequest(BaseModel):
     preferred_home: str
 
@@ -1072,9 +1078,13 @@ async def api_get_morgan_home_flags(
         or not caller_email
     )
 
+    preview_allowlist = _get_preview_allowlist_emails()
+
     eligible = False
     if not is_demo_or_anon:
-        if flags["morgan_home_everyone"]:
+        if preview_allowlist and caller_email in preview_allowlist:
+            eligible = True
+        elif flags["morgan_home_everyone"]:
             eligible = True
         elif flags["morgan_home_allowlist"] and caller_email in MORGAN_HOME_ALLOWLIST:
             eligible = True
