@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:numista_ai/constants.dart';
 import 'package:numista_ai/services/http_auth_client.dart';
 import 'package:numista_ai/services/stripe_service.dart';
 
@@ -130,5 +131,45 @@ void main() {
     expect(req!.method, 'POST');
     expect(req!.url.path, '/api/stripe/create-customer-portal');
     expect(req!.headers['Authorization'], 'Bearer portal-tok');
+  });
+
+  test('T-DART-5 (P5): fetchSubscriptionStatus sends GET with Bearer JWT to kApiBaseUrl and parses founding_beta', () async {
+    http.Request? capturedReq;
+    HttpAuthClient.tokenProviderOverride = () async => 'test_jwt';
+    final mockClient = MockClient((req) async {
+      capturedReq = req;
+      return http.Response(
+        jsonEncode({
+          'stripe_tier': 'sovereign',
+          'founding_beta': true,
+          'unlimited': true,
+          'estate_access': true,
+          'lifetime_family_estate': false,
+        }),
+        200,
+      );
+    });
+
+    final snap = await StripeService.fetchSubscriptionStatus(
+      uid: 'eIGZgYb49eeCR4Bsa5ABtHr94L63',
+      client: mockClient,
+    );
+
+    final expectedBase = Uri.parse(kApiBaseUrl);
+    expect(capturedReq, isNotNull);
+    expect(capturedReq!.method, 'GET');
+    expect(capturedReq!.url.scheme, expectedBase.scheme);
+    expect(capturedReq!.url.host, expectedBase.host);
+    expect(capturedReq!.url.port, expectedBase.port);
+    expect(capturedReq!.url.path, '/api/stripe/subscription-status');
+    expect(capturedReq!.url.queryParameters['uid'], 'eIGZgYb49eeCR4Bsa5ABtHr94L63');
+    expect(capturedReq!.headers['Authorization'], 'Bearer test_jwt');
+
+    expect(snap, isNotNull);
+    expect(snap!.foundingBeta, isTrue);
+    expect(snap.isFoundingBeta, isTrue);
+    expect(snap.stripeTier, 'sovereign');
+    expect(snap.lifetimeFamilyEstate, isFalse);
+    expect(snap.estateAccess, isTrue);
   });
 }

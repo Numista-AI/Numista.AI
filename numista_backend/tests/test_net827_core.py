@@ -2445,3 +2445,129 @@ def test_T_P5_PORTAL(fdb):
     finally:
         stripe.default_http_client = prev_client
         app.dependency_overrides.clear()
+
+
+def test_T_FB_1_subscription_status_pre_cutoff_sovereign_is_founding_beta(fdb, recs):
+    recs["uid_FB_SOV"] = FOUNDER("founder@example.com")
+    fdb.seed("users/uid_FB_SOV", {
+        "tier": "sovereign",
+        "stripe_tier": "sovereign",
+        "is_ai_qc_account": True,
+        "beta_tester": False,
+    })
+    client, app = _co_client(fdb, uid="uid_FB_SOV", email="founder@example.com")
+    try:
+        r = client.get("/api/stripe/subscription-status?uid=uid_FB_SOV")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["founding_beta"] is True
+        assert body["stripe_tier"] == "sovereign"
+        assert body["unlimited"] is True
+        assert body["estate_access"] is True
+        assert body["lifetime_family_estate"] is False
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_T_FB_2_subscription_status_post_cutoff_sovereign_not_founding_beta(fdb, recs):
+    recs["uid_POST_SOV"] = POST("post@example.com")
+    fdb.seed("users/uid_POST_SOV", {
+        "tier": "sovereign",
+        "stripe_tier": "sovereign",
+        "beta_tester": False,
+        "is_lifetime_family_estate": False,
+    })
+    client, app = _co_client(fdb, uid="uid_POST_SOV", email="post@example.com")
+    try:
+        r = client.get("/api/stripe/subscription-status?uid=uid_POST_SOV")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["founding_beta"] is False
+        assert body["stripe_tier"] == "sovereign"
+        assert body["unlimited"] is True
+        assert body["lifetime_family_estate"] is False
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_T_FB_3_subscription_status_every_json_return_path_includes_founding_beta(fdb, recs):
+    import ast
+
+    # Structural AST check: every JSON dict return in _own_status and api_subscription_status sets "founding_beta".
+    src_path = pathlib.Path(BACKEND) / "routes" / "payment_routes.py"
+    tree = ast.parse(src_path.read_text(encoding="utf-8"))
+    target_fns = {
+        node.name: node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name in ("_own_status", "api_subscription_status")
+    }
+    assert set(target_fns) == {"_own_status", "api_subscription_status"}
+    for fn_name, fn_node in target_fns.items():
+        for node in ast.walk(fn_node):
+            if isinstance(node, ast.Return) and isinstance(node.value, ast.Dict):
+                keys = [k.value for k in node.value.keys if isinstance(k, ast.Constant)]
+                assert "founding_beta" in keys, f"{fn_name} dict return missing 'founding_beta'"
+
+    # Path (a): _own_status with active Stripe subscription + Stripe customer mapping (founder vs post-cutoff).
+    recs["uid_SUB_F"] = FOUNDER("subfounder@example.com")
+    fdb.seed("users/uid_SUB_F", {"stripe_tier": "estate", "stripe_customer_id": "cus_sub_f"})
+    fdb.seed("entitlements/uid_SUB_F", {
+        "stripe_customer_id": "cus_sub_f",
+        "stripe_subscription_id": "sub_f_1",
+        "stripe_tier": "estate",
+        "subscription_status": "active",
+        "email": "subfounder@example.com",
+    })
+    fdb.seed("stripe_customers/cus_sub_f", {"uid": "uid_SUB_F"})
+    client, app = _co_client(fdb, uid="uid_SUB_F", email="subfounder@example.com")
+    try:
+        r_f = client.get("/api/stripe/subscription-status?uid=uid_SUB_F")
+        assert r_f.status_code == 200
+        assert r_f.json()["founding_beta"] is True
+        assert r_f.json()["stripe_tier"] == "estate"
+    finally:
+        app.dependency_overrides.clear()
+
+    recs["uid_SUB_P"] = POST("subpost@example.com")
+    fdb.seed("users/uid_SUB_P", {"stripe_tier": "estate", "stripe_customer_id": "cus_sub_p"})
+    fdb.seed("entitlements/uid_SUB_P", {
+        "stripe_customer_id": "cus_sub_p",
+        "stripe_subscription_id": "sub_p_1",
+        "stripe_tier": "estate",
+        "subscription_status": "active",
+        "email": "subpost@example.com",
+    })
+    fdb.seed("stripe_customers/cus_sub_p", {"uid": "uid_SUB_P"})
+    client, app = _co_client(fdb, uid="uid_SUB_P", email="subpost@example.com")
+    try:
+        r_p = client.get("/api/stripe/subscription-status?uid=uid_SUB_P")
+        assert r_p.status_code == 200
+        assert r_p.json()["founding_beta"] is False
+        assert r_p.json()["stripe_tier"] == "estate"
+    finally:
+        app.dependency_overrides.clear()
+
+    # Path (b): api_subscription_status fallback branch (admin reading non-own uid).
+    recs["uid_ADM_F"] = FOUNDER("targetf@example.com")
+    fdb.seed("users/uid_ADM_F", {"stripe_tier": "pro"})
+    recs["uid_ADM_P"] = POST("targetp@example.com")
+    fdb.seed("users/uid_ADM_P", {"stripe_tier": "pro"})
+    app.dependency_overrides[get_current_user] = lambda: {
+        "uid": "uid_admin",
+        "user_id": "uid_admin",
+        "email": "eric@numista.ai",
+        "admin": True,
+        "firebase": {"sign_in_provider": "password"},
+    }
+    try:
+        admin_client = TestClient(app, raise_server_exceptions=False)
+        r_af = admin_client.get("/api/stripe/subscription-status?uid=uid_ADM_F")
+        assert r_af.status_code == 200
+        assert r_af.json()["founding_beta"] is True
+
+        r_ap = admin_client.get("/api/stripe/subscription-status?uid=uid_ADM_P")
+        assert r_ap.status_code == 200
+        assert r_ap.json()["founding_beta"] is False
+    finally:
+        app.dependency_overrides.clear()

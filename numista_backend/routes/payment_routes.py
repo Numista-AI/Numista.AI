@@ -42,6 +42,7 @@ from tier_gatekeeper import (
     has_lifetime_flag,
     lifetime_flag_set,
     estate_access,
+    is_founding_beta,
     _fresh_email,
 )
 
@@ -273,6 +274,7 @@ def _own_status(uid: str, caller_uid: str, caller_email: str, sign_in_provider: 
         "coin_count": coin_count,
         "coin_limit": coin_limit,
         "unlimited": coin_limit is None,
+        "founding_beta": bool(is_founding_beta(profile)),
         "daily_ai_allowance": ai_allowance,
         "deepdive_count": profile.get("deepdive_count", 0),
         "invoice_scan_count": profile.get("invoice_scan_count", 0),
@@ -323,6 +325,7 @@ async def api_subscription_status(
             "coin_count": coin_count,
             "coin_limit": coin_limit,
             "unlimited": coin_limit is None,
+            "founding_beta": bool(is_founding_beta(profile)),
             "daily_ai_allowance": ai_allowance,
             "deepdive_count": profile.get("deepdive_count", 0),
             "invoice_scan_count": profile.get("invoice_scan_count", 0),

@@ -24,6 +24,7 @@ class CheckoutLaunchResult {
 class SubscriptionStatusSnapshot {
   final String stripeTier;
   final String subscriptionStatus;
+  final bool foundingBeta;
   final bool unlimited;
   final bool estateAccess;
   final bool lifetimeFamilyEstate;
@@ -32,11 +33,14 @@ class SubscriptionStatusSnapshot {
   const SubscriptionStatusSnapshot({
     required this.stripeTier,
     this.subscriptionStatus = 'active',
+    this.foundingBeta = false,
     this.unlimited = false,
     this.estateAccess = false,
     this.lifetimeFamilyEstate = false,
     this.coinLimit,
   });
+
+  bool get isFoundingBeta => foundingBeta || stripeTier == 'founding_beta';
 
   bool get hasPaidSubscription =>
       stripeTier != 'free' &&
@@ -184,9 +188,11 @@ class StripeService {
       final data = jsonDecode(response.body);
       if (data is! Map) return null;
       final rawLimit = data['coin_limit'];
+      final stripeTier = (data['stripe_tier'] ?? 'free').toString();
       return SubscriptionStatusSnapshot(
-        stripeTier: (data['stripe_tier'] ?? 'free').toString(),
+        stripeTier: stripeTier,
         subscriptionStatus: (data['subscription_status'] ?? 'active').toString(),
+        foundingBeta: data['founding_beta'] == true || stripeTier == 'founding_beta',
         unlimited: data['unlimited'] == true,
         estateAccess: data['estate_access'] == true,
         lifetimeFamilyEstate: data['lifetime_family_estate'] == true,

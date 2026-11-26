@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import '../utils/mint_helpers.dart';
 import '../utils/text_sanitizer.dart';
 
@@ -213,14 +214,7 @@ class CoinModel {
       retailerItemNo: data['Retailer Item No.']?.toString() ?? data['retailer_item_num']?.toString() ?? data['item_number']?.toString() ?? data['retailerItemNo']?.toString() ?? '',
       retailerInvoiceNo: data['Retailer Invoice #']?.toString() ?? data['retailer_invoice_num']?.toString() ?? data['invoice_number']?.toString() ?? data['retailerInvoiceNo']?.toString() ?? '',
       storageLocation: data['Storage Location']?.toString() ?? data['storageLocation']?.toString() ?? '',
-      personalNotes: TextSanitizer.fixMojibake(
-        data['Notes']?.toString() ??
-        data['notes']?.toString() ??
-        data['Personal Notes']?.toString() ??
-        data['Personal Notes I']?.toString() ??
-        data['personalNotes']?.toString() ??
-        '',
-      ),
+      personalNotes: resolvePersonalNotes(data),
       personalRef: data['Personal Reference #']?.toString() ?? data['personalRef']?.toString() ?? '',
       originalDescription: TextSanitizer.fixMojibake(data['Original Description from source']?.toString() ?? data['originalDescription']?.toString() ?? ''),
       aiEstimatedValue: data['ai_estimated_value']?.toString() ?? data['AI Estimated Value']?.toString() ?? 'Pending',
@@ -318,6 +312,25 @@ class CoinModel {
       'Country': country,
       'timestamp': timestamp ?? FieldValue.serverTimestamp(),
     };
+  }
+
+  /// Resolves the first non-empty trimmed personal note across legacy and current field names.
+  @visibleForTesting
+  static String resolvePersonalNotes(Map<String, dynamic> data) {
+    const keys = [
+      'Personal Notes I',
+      'Personal Notes',
+      'personalNotes',
+      'Notes',
+      'notes',
+    ];
+    for (final key in keys) {
+      final raw = data[key];
+      if (raw == null) continue;
+      final cleaned = TextSanitizer.fixMojibake(raw.toString()).trim();
+      if (cleaned.isNotEmpty) return cleaned;
+    }
+    return '';
   }
 
   /// Returns canonical short grader label ('NGC', 'PCGS', 'ANACS', 'CACG', 'CAC'),
