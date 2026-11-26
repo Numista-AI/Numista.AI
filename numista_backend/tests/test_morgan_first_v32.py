@@ -136,6 +136,7 @@ def env_setup(monkeypatch):
         "tok-eric": {"uid": "uid-eric", "email": "eric.seaman@yahoo.com", "firebase": {"sign_in_provider": "password"}},
         "tok-other": {"uid": "uid-other", "email": "collector@example.com", "firebase": {"sign_in_provider": "password"}},
         "tok-demo": {"uid": "uid-demo", "email": "", "firebase": {"sign_in_provider": "anonymous"}},
+        "tok-dev-guest": {"uid": "dev_guest_uid", "email": "collector@example.com", "firebase": {"sign_in_provider": "password"}},
     }
 
     def _verify(tok):
@@ -198,8 +199,24 @@ def test_at02_existing_users_and_demo_unchanged_when_allowlist_on(env_setup):
 
 
 def test_preview_allowlist_env_override_isolated(env_setup, monkeypatch):
-    client, _ = env_setup
-    monkeypatch.setenv("MORGAN_PREVIEW_ALLOWLIST_EMAILS", "collector@example.com")
+    client, mem_db = env_setup
+
+    # 1. Unset env -> exact default-off behavior (no regression)
+    monkeypatch.delenv("MORGAN_PREVIEW_ALLOWLIST_EMAILS", raising=False)
+    res_unset = client.get("/api/morgan/home_flags", headers={"Authorization": "Bearer tok-other"})
+    assert res_unset.status_code == 200
+    assert res_unset.json()["eligible"] is False
+    assert res_unset.json()["show_morgan_home"] is False
+
+    # 2. Empty / whitespace-only env -> no effect
+    monkeypatch.setenv("MORGAN_PREVIEW_ALLOWLIST_EMAILS", "   ")
+    res_empty = client.get("/api/morgan/home_flags", headers={"Authorization": "Bearer tok-other"})
+    assert res_empty.status_code == 200
+    assert res_empty.json()["eligible"] is False
+    assert res_empty.json()["show_morgan_home"] is False
+
+    # 3. Whitespace + mixed case -> listed matches token email; unlisted, anon, dev_guest_uid excluded
+    monkeypatch.setenv("MORGAN_PREVIEW_ALLOWLIST_EMAILS", "  Collector@Example.COM , other-ft@example.com  ")
 
     res_preview = client.get("/api/morgan/home_flags", headers={"Authorization": "Bearer tok-other"})
     assert res_preview.status_code == 200
@@ -221,6 +238,22 @@ def test_preview_allowlist_env_override_isolated(env_setup, monkeypatch):
     assert res_demo.status_code == 200
     assert res_demo.json()["eligible"] is False
     assert res_demo.json()["show_morgan_home"] is False
+
+    res_dev_guest = client.get("/api/morgan/home_flags", headers={"Authorization": "Bearer tok-dev-guest"})
+    assert res_dev_guest.status_code == 200
+    assert res_dev_guest.json()["eligible"] is False
+    assert res_dev_guest.json()["show_morgan_home"] is False
+
+    # 4. Additive check: existing hardcoded allowlist still works when flag is True
+    mem_db.store["app_config/morgan_first_flags"] = {
+        "morgan_home_allowlist": True,
+        "morgan_home_new_users": False,
+        "morgan_home_everyone": False,
+    }
+    res_hardcoded = client.get("/api/morgan/home_flags", headers={"Authorization": "Bearer tok-eric"})
+    assert res_hardcoded.status_code == 200
+    assert res_hardcoded.json()["eligible"] is True
+    assert res_hardcoded.json()["show_morgan_home"] is True
 
 
 def test_f6_new_users_uses_creation_time_not_auth_time(env_setup):
