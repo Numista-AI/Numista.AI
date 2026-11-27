@@ -35,10 +35,11 @@ class MorganGreeter extends StatefulWidget {
   /// Default is true — Morgan greets everyone on every login.
   static Future<bool> shouldShow() => MorganPrefs.showOnStartup();
 
-  /// Legacy "mark as seen" — kept for compatibility but no longer hides Morgan.
+  /// Legacy "mark as seen" — persists dismissal across browser reloads.
   static Future<void> markSeen() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefKey, true); // marks first-visit done only
+    await prefs.setBool(_prefKey, true);
+    await MorganPrefs.markGreeterSeen();
   }
 
   @override
@@ -384,7 +385,7 @@ class _MorganGreeterState extends State<MorganGreeter>
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              mainAxisExtent: 82, // tight height to fit on screen
+              mainAxisExtent: 96, // tight height allowing wrapped 2-line titles
             ),
             itemCount: _subTiles.length,
             itemBuilder: (context, index) {
@@ -417,6 +418,7 @@ class _MorganGreeterState extends State<MorganGreeter>
   Widget _buildCreditLine() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 6, height: 6,
@@ -430,9 +432,12 @@ class _MorganGreeterState extends State<MorganGreeter>
           ),
         ),
         const SizedBox(width: 6),
-        Text(
-          'Morgan • Your Numista.AI Guide',
-          style: TextStyle(color: _sub, fontSize: 11),
+        Flexible(
+          child: Text(
+            'Morgan • Your Numista.AI Guide',
+            style: TextStyle(color: _sub, fontSize: 11),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -647,7 +652,8 @@ class _ActionTileCardState extends State<_ActionTileCard> {
                         fontWeight: FontWeight.w600,
                         height: 1.2,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
+                      softWrap: true,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
@@ -655,7 +661,8 @@ class _ActionTileCardState extends State<_ActionTileCard> {
                       widget.tile.subtitle,
                       style: TextStyle(
                           color: _sub, fontSize: compact ? 11 : 12, height: 1.3),
-                      maxLines: 1,
+                      maxLines: 2,
+                      softWrap: true,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],

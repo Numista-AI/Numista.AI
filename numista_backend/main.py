@@ -2419,7 +2419,7 @@ async def process_invoice(
 
 
 class DeepDiveRequest(BaseModel):
-    user_email: str
+    user_email: Optional[str] = None
     query: str
     chat_history: list = []
     collection_context: str = ""
@@ -6493,10 +6493,10 @@ async def _extract_cert_with_budget(
 
 @app.post("/api/identify_coin_photo")
 async def identify_coin_photo(
-    user_email:    str        = Form(...),
-    image_a:       UploadFile = File(...),
+    user_email:    Optional[str] = Form(None),
+    image_a:       UploadFile    = File(...),
     image_b:       Optional[UploadFile] = File(None),
-    save_to_collection: bool  = Form(False),
+    save_to_collection: bool     = Form(False),
     # Optional user overrides sent from the review screen
     override_year:    Optional[str] = Form(None),
     override_denom:   Optional[str] = Form(None),
@@ -6527,7 +6527,8 @@ async def identify_coin_photo(
 
     Returns the full coin document as JSON whether or not it was saved.
     """
-    owner_key = _authenticate_request(authorization, user_email, current_user=_user)
+    body_email = (user_email or "").strip() or None
+    owner_key = _authenticate_request(authorization, body_email, current_user=_user)
     user_email = owner_key
     _req_start = time.monotonic()  # whole-request budget clock (FIX: 28s cap)
 

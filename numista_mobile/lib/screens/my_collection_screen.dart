@@ -48,6 +48,54 @@ import '../constants/denomination_canon.dart';
 import '../widgets/collection_card_valuation_row.dart';
 import '../widgets/collection_card_image.dart';
 
+/// Formats a collection coin title without doubling [year] or `<year><mint>`
+/// when descriptive labels or denominations already contain the year token.
+String formatCollectionCoinTitle({
+  required String year,
+  required String mint,
+  required String label,
+}) {
+  final cleanYear = year.trim();
+  final cleanMint = mint.trim();
+  final yearMint = (cleanMint.isNotEmpty && cleanMint != 'None')
+      ? '$cleanYear$cleanMint'
+      : cleanYear;
+  var cleanLabel = label.trim().replaceAll(RegExp(r'\s+'), ' ');
+  if (cleanYear.isNotEmpty && RegExp(r'^\d{4}$').hasMatch(cleanYear)) {
+    var stripped = cleanLabel;
+    if (cleanMint.isNotEmpty && cleanMint != 'None') {
+      stripped = stripped.replaceAll(
+        RegExp(
+          '\\b${RegExp.escape(cleanYear)}-?${RegExp.escape(cleanMint)}\\b',
+          caseSensitive: false,
+        ),
+        ' ',
+      );
+    }
+    stripped = stripped
+        .replaceAll(
+          RegExp('\\b${RegExp.escape(cleanYear)}\\b', caseSensitive: false),
+          ' ',
+        )
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceFirst(RegExp(r'^[-–—:,/\s]+'), '')
+        .replaceFirst(RegExp(r'[-–—:,/\s]+$'), '')
+        .trim();
+    if (stripped.isNotEmpty) {
+      cleanLabel = stripped;
+    }
+  }
+  if (cleanLabel.isEmpty) return yearMint;
+  final lowerLabel = cleanLabel.toLowerCase();
+  if (cleanYear.isNotEmpty &&
+      (lowerLabel.startsWith(cleanYear.toLowerCase()) ||
+          (yearMint.isNotEmpty &&
+              lowerLabel.startsWith(yearMint.toLowerCase())))) {
+    return cleanLabel;
+  }
+  return '$yearMint $cleanLabel'.trim();
+}
+
 // --- Field name constants -----------------------------------------------------
 class _F {
   static const country          = 'Country';
@@ -1586,8 +1634,15 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
                             addedDate = DateTime.tryParse(addedTs);
                           }
                           final denom = TextSanitizer.fixMojibake(data['Denomination']?.toString() ?? '');
-                          final year = data['Year']?.toString() ?? '';
-                          final title = TextSanitizer.fixMojibake('$year $denom'.trim());
+                          final year = (data['Year']?.toString() ?? '').replaceAll(RegExp(r'\.0+$'), '');
+                          final mint = (data['Mint Mark'] ?? data['mint_mark'])?.toString() ?? '';
+                          final title = TextSanitizer.fixMojibake(
+                            formatCollectionCoinTitle(
+                              year: year,
+                              mint: mint,
+                              label: denom,
+                            ),
+                          );
 
                           final coinCpg = _parseNumber(data['cpgRetail'] ?? data['cpg_retail']);
                           final aiVal = _parseAiValue(
@@ -1760,7 +1815,7 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
 
                         // Recent Additions Title
                         Text(
-                          'Recent Additions (${combinedItems.length} total)',
+                          'Recent Additions (${combinedItems.length} entries)',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -3104,19 +3159,16 @@ class _MyCollectionScreenState extends State<MyCollectionScreen> {
         final variety = _rowField(m, 'variety', _F.variety);
         final condition = _rowField(m, 'condition', _F.condition);
         final theme = _rowField(m, 'theme_subject', _F.themeSubject);
-        
-        final yearMint = (mint.isNotEmpty && mint != 'None') ? '$year$mint' : year;
-        var label = theme.isNotEmpty ? theme : denom;
-        // Strip doubled year from Theme if present (e.g. "2026 2026 Morgan..." -> "2026 Morgan...")
-        if (year.isNotEmpty) {
-          final doubledYear = RegExp(r'^(' + RegExp.escape(year) + r')\s+\1\b');
-          label = label.replaceFirst(doubledYear, year);
-        }
-        final themeStartsYear = label.toLowerCase().startsWith(year.toLowerCase()) ||
-            (yearMint.isNotEmpty && label.toLowerCase().startsWith(yearMint.toLowerCase()));
+
+        final rawLabel = theme.isNotEmpty ? theme : denom;
+        final formattedTitle = formatCollectionCoinTitle(
+          year: year,
+          mint: mint,
+          label: rawLabel,
+        );
         final displayTitle = crw.isVirtualChild
-            ? '\u21b3 ${themeStartsYear ? label : '$yearMint $label'}'.trim()
-            : (themeStartsYear ? label : '$yearMint $label').trim();
+            ? '\u21b3 $formattedTitle'.trim()
+            : formattedTitle;
         // Valuation precedence and pending chip encapsulated in CollectionCardValuationRow (NET-780b v2.3)
 
         // For virtual children, selection targets parent doc

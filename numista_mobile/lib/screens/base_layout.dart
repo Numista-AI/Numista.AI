@@ -106,6 +106,7 @@ class _BaseLayoutState extends State<BaseLayout> {
   String? _phoneDrillGroup; // null | 'Research' | 'Estate & Transfers' | 'Settings & Help'
   int _reviewQueueCount = 0;
   bool _isReviewCountLoading = true;
+  bool _viewingFullSiteTemporarily = false;
 
   void _openFeedbackAction() {
     FeedbackTriggerObserver.instance.fire(
@@ -283,12 +284,12 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
     // Run US Mint data normalization silently in background for all accounts.
     // Only processes coins that haven't been normalized yet.
-    if (!widget.testSkipFirebase && !AuthService.isGuest && !widget.isDemoMode && !GuestSeedService.isBrowseDemoMode && AuthService.isSignedIn) {
+    if (!widget.testSkipFirebase && !widget.isDemoMode && !GuestSeedService.isBrowseDemoMode && !AuthService.isGuest && AuthService.isSignedIn) {
       CoinNormalizerService.runForUser();
     }
     // Auto-start the guided wizard for first-time Guest users.
     // Demo mode gets a read-only experience without the wizard.
-    if (!widget.testSkipFirebase && AuthService.isGuest && !widget.isDemoMode) {
+    if (!widget.testSkipFirebase && !widget.isDemoMode && AuthService.isGuest) {
       WizardService.start(
         'guest',
         onNavigate: (route) {
@@ -459,11 +460,18 @@ class _BaseLayoutState extends State<BaseLayout> {
     }
     if (!widget.isDemoMode &&
         MorganFirstService.current.eligible &&
-        !MorganFirstService.current.showMorganHome) {
+        (!MorganFirstService.current.showMorganHome || _viewingFullSiteTemporarily)) {
       return Column(
         children: [
           FullSiteMorganBar(
-            onBackToMorgan: () => MorganFirstService.setPreference('morgan'),
+            onBackToMorgan: () {
+              if (_viewingFullSiteTemporarily) {
+                setState(() => _viewingFullSiteTemporarily = false);
+              }
+              if (!MorganFirstService.current.showMorganHome) {
+                MorganFirstService.setPreference('morgan');
+              }
+            },
           ),
           Expanded(child: bodyWidget),
         ],
@@ -668,7 +676,9 @@ class _BaseLayoutState extends State<BaseLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final user = widget.testSkipFirebase ? null : FirebaseAuth.instance.currentUser;
+    final user = (widget.testSkipFirebase || widget.isDemoMode)
+        ? null
+        : FirebaseAuth.instance.currentUser;
     final displayName = user?.displayName?.isNotEmpty == true
         ? user!.displayName!
         : (user?.email?.split('@').first ?? 'Collector');
@@ -677,14 +687,19 @@ class _BaseLayoutState extends State<BaseLayout> {
     final rootContent = ValueListenableBuilder<MorganHomeFlagsState>(
       valueListenable: MorganFirstService.state,
       builder: (context, mfState, _) {
-        if (!widget.isDemoMode && mfState.showMorganHome) {
+        if (!widget.isDemoMode && mfState.showMorganHome && !_viewingFullSiteTemporarily) {
           return MorganFirstHomeScreen(
-            onSwitchToFullSite: () =>
-                MorganFirstService.setPreference('full_site'),
-            onSeeMyCoins: () {
+            onSwitchToFullSite: () {
+              if (_viewingFullSiteTemporarily) {
+                setState(() => _viewingFullSiteTemporarily = false);
+              }
               MorganFirstService.setPreference('full_site');
+            },
+            onSeeMyCoins: () {
+              setState(() => _viewingFullSiteTemporarily = true);
               _navigateTo('My Collection');
             },
+            onSignOut: () => _confirmSignOut(context),
           );
         }
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -792,10 +807,11 @@ class _BaseLayoutState extends State<BaseLayout> {
                 children: [
                   if (GuestSeedService.isBrowseDemoMode)
                     _DemoBanner(onTryFree: () {
+                      AuthGate.clearDemoState();
                       GuestSeedService.deactivateBrowseDemo();
                       AuthGate.navigateTo(context, initialAuthTab: 1);
                     }),
-                  if (!widget.testSkipFirebase && AuthService.isGuest) _GuestBanner(),
+                  if (!widget.testSkipFirebase && !widget.isDemoMode && AuthService.isGuest) _GuestBanner(),
                   // Phone top bar: Numista.Ai + labeled Menu button (>= 56px)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1277,6 +1293,7 @@ class _BaseLayoutState extends State<BaseLayout> {
                       children: [
                         if (widget.isDemoMode || GuestSeedService.isBrowseDemoMode)
                           _DemoBanner(onTryFree: () {
+                            AuthGate.clearDemoState();
                             GuestSeedService.deactivateBrowseDemo();
                             AuthGate.navigateTo(context, initialAuthTab: 1);
                           }),
@@ -1548,8 +1565,12 @@ class _BaseLayoutState extends State<BaseLayout> {
       ),
     );
     if (confirm == true) {
+      if (_viewingFullSiteTemporarily) {
+        setState(() => _viewingFullSiteTemporarily = false);
+      }
       AuthGate.resetWelcome();
       if (isDemo) {
+        AuthGate.clearDemoState();
         GuestSeedService.deactivateBrowseDemo();
         UiVariantService.reset();
         MorganFirstService.reset();

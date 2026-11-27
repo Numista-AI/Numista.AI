@@ -3,13 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:numista_ai/screens/ai_chat_screen.dart';
+import 'package:numista_ai/screens/base_layout.dart';
 import 'package:numista_ai/screens/home_dashboard.dart';
 import 'package:numista_ai/screens/morgan_first_home_screen.dart';
+import 'package:numista_ai/screens/my_collection_screen.dart';
 import 'package:numista_ai/services/camera_capture_service.dart';
 import 'package:numista_ai/services/http_auth_client.dart';
 import 'package:numista_ai/services/morgan_first_service.dart';
+import 'package:numista_ai/services/morgan_prefs.dart';
 import 'package:numista_ai/widgets/morgan_full_site_toggle.dart';
+import 'package:numista_ai/widgets/morgan_greeter.dart';
 import 'package:numista_ai/widgets/morgan_settings_panel.dart';
 
 void main() {
@@ -255,6 +260,10 @@ void main() {
     expect(idReqs.length, 1);
     expect(idReqs.first.method, 'POST');
     expect(idReqs.first.headers['Authorization'], 'Bearer test-bearer-token');
+    expect(idReqs.first, isA<http.MultipartRequest>());
+    final mpReq = idReqs.first as http.MultipartRequest;
+    expect(mpReq.fields.containsKey('user_email'), isFalse);
+    expect(mpReq.fields['save_to_collection'], 'false');
 
     // AT-04: Real rendered <40% Confirm Card has NO Add button, shows Retake & Type
     expect(find.byKey(const Key('morgan_confirm_card')), findsOneWidget);
@@ -405,5 +414,315 @@ void main() {
     final aseWholeWord = MorganFirstHomeScreen.parseTypedCoin('2024 ASE');
     expect(aseWholeWord['Denomination'], 'Dollar');
     expect(aseWholeWord['Series'], 'American Silver Eagle');
+  });
+
+  test('D2 intent classifier + SAG 97->100 year-plus-question-mark negative tests & D6 title helpers', () {
+    // Questions & ambiguous inputs -> answer path (false)
+    expect(MorganFirstHomeScreen.isCoinAddDescription('What is a 1793 Chain cent worth?'), isFalse);
+    expect(MorganFirstHomeScreen.isCoinAddDescription('1793 Chain cent worth'), isFalse);
+    expect(MorganFirstHomeScreen.isCoinAddDescription('hello morgan'), isFalse);
+    // SAG 97->100 explicit negative test: string with BOTH a year and '?' routes to answer
+    expect(MorganFirstHomeScreen.isCoinAddDescription('1921 Morgan dollar?'), isFalse);
+    expect(MorganFirstHomeScreen.isCoinAddDescription('1921 Morgan dollar, Denver?'), isFalse);
+
+    // Clear coin descriptions -> propose/add path (true)
+    expect(MorganFirstHomeScreen.isCoinAddDescription('1921 Morgan dollar, Denver, about fine'), isTrue);
+    expect(MorganFirstHomeScreen.isCoinAddDescription('1921 Morgan dollar'), isTrue);
+    expect(MorganFirstHomeScreen.isCoinAddDescription('add 1909 s vdb cent'), isTrue);
+
+    // D6 doubled-year stripping & formatting
+    expect(
+      MorganFirstHomeScreen.stripRedundantYear('1921 Morgan Dollar', '1921'),
+      'Morgan Dollar',
+    );
+    expect(
+      MorganFirstHomeScreen.formatCoinTitle('1793', '1793 Cent'),
+      '1793 Cent',
+    );
+    expect(
+      formatCollectionCoinTitle(
+        year: '1921',
+        mint: 'D',
+        label: 'FT-TEST 1921 Morgan Dollar',
+      ),
+      '1921D FT-TEST Morgan Dollar',
+    );
+    expect(
+      formatCollectionCoinTitle(
+        year: '1793',
+        mint: '',
+        label: '1793 Cent',
+      ),
+      '1793 Cent',
+    );
+  });
+
+  testWidgets(
+      'D1, D2, D6, D9: Typed question answered + Add this coin instead, /api/deep_dive fallback, Fix Details no-double-year, typed Skip wording',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final captured = <http.BaseRequest>[];
+    final proposeBodies = <Map<String, dynamic>>[];
+    bool forceCopilot404 = false;
+
+    HttpAuthClient.tokenProviderOverride = () async => 'test-bearer-token';
+    HttpAuthClient.httpClientOverride = MockClient.streaming((req, bodyStream) async {
+      captured.add(req);
+      final bodyBytes = await bodyStream.toBytes();
+      final bodyStr = utf8.decode(bodyBytes);
+      if (req.url.path.endsWith('/api/morgan/copilot')) {
+        if (forceCopilot404) {
+          return http.StreamedResponse(Stream.value(utf8.encode('{}')), 404);
+        }
+        return http.StreamedResponse(
+          Stream.value(utf8.encode(jsonEncode({
+            'response': 'A 1793 Chain cent is the first large cent, very rare.',
+          }))),
+          200,
+        );
+      }
+      if (req.url.path.endsWith('/api/deep_dive')) {
+        return http.StreamedResponse(
+          Stream.value(utf8.encode(jsonEncode({
+            'response': 'Fallback answer from deep dive.',
+          }))),
+          200,
+        );
+      }
+      if (req.url.path.endsWith('/api/morgan/propose')) {
+        proposeBodies.add(jsonDecode(bodyStr) as Map<String, dynamic>);
+        return http.StreamedResponse(
+          Stream.value(utf8.encode(jsonEncode({
+            'status': 'proposed',
+            'proposal_id': 'prop-${proposeBodies.length}',
+          }))),
+          200,
+        );
+      }
+      return http.StreamedResponse(Stream.value(utf8.encode('{}')), 404);
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MorganFirstHomeScreen(
+          onSwitchToFullSite: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 1. D2 question path ("What is a 1793 Chain cent worth?")
+    await tester.tap(find.byKey(const Key('tile_type')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('morgan_type_input')),
+      'What is a 1793 Chain cent worth?',
+    );
+    await tester.tap(find.byKey(const Key('type_submit_btn')));
+    await tester.pumpAndSettle();
+
+    // P5: /api/morgan/copilot called with Bearer, ZERO query params in URL, ZERO propose/confirm
+    final copilotReqs =
+        captured.where((r) => r.url.path.endsWith('/api/morgan/copilot')).toList();
+    expect(copilotReqs.length, 1);
+    expect(copilotReqs.first.headers['Authorization'], 'Bearer test-bearer-token');
+    expect(copilotReqs.first.url.query, isEmpty);
+    expect(proposeBodies, isEmpty);
+    expect(captured.where((r) => r.url.path.endsWith('/api/morgan/confirm')), isEmpty);
+    expect(find.byKey(const Key('morgan_answer_card')), findsOneWidget);
+    expect(find.textContaining('first large cent'), findsOneWidget);
+    expect(find.byKey(const Key('answer_add_coin_instead_btn')), findsOneWidget);
+
+    // 2. Tap "Add this coin instead" -> proposes only (never confirms) + D9 typed Skip wording
+    await tester.tap(find.byKey(const Key('answer_add_coin_instead_btn')));
+    await tester.pumpAndSettle();
+    expect(proposeBodies.length, 1);
+    expect(find.byKey(const Key('morgan_confirm_card')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('confirm_skip_btn')));
+    await tester.pumpAndSettle();
+    expect(find.text('Throw away this entry?'), findsOneWidget);
+    expect(find.text('Throw away this photo?'), findsNothing);
+    await tester.tap(find.byKey(const Key('skip_discard_btn')));
+    await tester.pumpAndSettle();
+
+    // 3. SAG 97->100 negative case ("1921 Morgan dollar?") + /api/deep_dive fallback on 404
+    forceCopilot404 = true;
+    await tester.tap(find.byKey(const Key('tile_type')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('morgan_type_input')),
+      '1921 Morgan dollar?',
+    );
+    await tester.tap(find.byKey(const Key('type_submit_btn')));
+    await tester.pumpAndSettle();
+    expect(
+      captured.where((r) => r.url.path.endsWith('/api/deep_dive')).length,
+      1,
+    );
+    expect(find.text('Fallback answer from deep dive.'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('answer_back_home_btn')));
+    await tester.pumpAndSettle();
+
+    // 4. D6 Fix Details pre-fills clean name (no "1921") and avoids doubled year
+    await tester.tap(find.byKey(const Key('tile_type')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('morgan_type_input')),
+      '1921 Morgan dollar, Denver, about fine',
+    );
+    await tester.tap(find.byKey(const Key('type_submit_btn')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm_fix_btn')));
+    await tester.pumpAndSettle();
+    final nameField = tester.widget<TextField>(find.byKey(const Key('fix_name_input')));
+    expect(nameField.controller!.text, 'Morgan Dollar');
+    await tester.enterText(find.byKey(const Key('fix_name_input')), 'FT-TEST 1921 Morgan Dollar');
+    await tester.tap(find.byKey(const Key('fix_done_btn')));
+    await tester.pumpAndSettle();
+    expect(proposeBodies.last['coin_data']['Year'], '1921');
+    expect(proposeBodies.last['coin_data']['Denomination'], 'FT-TEST Morgan Dollar');
+    expect(find.text('1921 FT-TEST Morgan Dollar'), findsOneWidget);
+  });
+
+  testWidgets('D3 & D7: Sign Out button at 360x780 & 1440x900 (no preference change) + Photo error clears on leave',
+      (WidgetTester tester) async {
+    final captured = <http.BaseRequest>[];
+    HttpAuthClient.tokenProviderOverride = () async => 'test-bearer-token';
+    HttpAuthClient.httpClientOverride = MockClient((req) async {
+      captured.add(req);
+      return http.Response('{"detail": "server error"}', 500);
+    });
+
+    bool signOutTapped = false;
+    for (final size in [const Size(1440, 900), const Size(360, 780)]) {
+      signOutTapped = false;
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MorganFirstHomeScreen(
+            onSwitchToFullSite: () {},
+            onSignOut: () => signOutTapped = true,
+            pickFileFn: (slot) async => base64Decode(
+                'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('morgan_sign_out_btn')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('morgan_sign_out_btn')));
+      await tester.pumpAndSettle();
+      expect(signOutTapped, isTrue);
+      expect(
+        captured.where((r) => r.url.path.endsWith('/api/morgan/home_preference')),
+        isEmpty,
+      );
+    }
+    await tester.binding.setSurfaceSize(null);
+
+    // D7: Error banner on Photo screen clears cleanly on "Type instead" and dismiss button
+    await tester.tap(find.byKey(const Key('tile_photo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pick_front_file_btn')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('identify_photo_btn')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('morgan_error_banner')), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('photo_type_instead_btn')));
+    await tester.tap(find.byKey(const Key('photo_type_instead_btn')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('morgan_error_banner')), findsNothing);
+  });
+
+  testWidgets('D8 / P3: MorganGreeter 360x780 title wrap & markSeen persists across reload',
+      (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    expect(await MorganGreeter.shouldShow(), isTrue);
+    await MorganGreeter.markSeen();
+    expect(await MorganGreeter.shouldShow(), isFalse);
+    expect(await MorganPrefs.showOnStartup(), isFalse);
+
+    await tester.binding.setSurfaceSize(const Size(360, 780));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MorganGreeter(onAction: (_, _) {}),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 800));
+
+    final titleFinder = find.text('Add coins, notes, or medals');
+    expect(titleFinder, findsOneWidget);
+    final titleText = tester.widget<Text>(titleFinder);
+    expect(titleText.maxLines, 2);
+    expect(titleText.softWrap, isTrue);
+  });
+
+  testWidgets('D5: BaseLayout See my coins opens My Collection without flipping preferred_home',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final captured = <http.BaseRequest>[];
+    HttpAuthClient.tokenProviderOverride = () async => 'test-bearer-token';
+    HttpAuthClient.httpClientOverride = MockClient((req) async {
+      captured.add(req);
+      if (req.url.path.endsWith('/api/morgan/propose')) {
+        return http.Response(jsonEncode({'status': 'proposed', 'proposal_id': 'prop-d5'}), 200);
+      }
+      if (req.url.path.endsWith('/api/morgan/confirm')) {
+        return http.Response(jsonEncode({'status': 'success', 'coin_id': 'coin-d5'}), 200);
+      }
+      return http.Response('{}', 200);
+    });
+
+    MorganFirstService.state.value = const MorganHomeFlagsState(
+      morganHomeAllowlist: true,
+      eligible: true,
+      preferredHome: 'morgan',
+      showMorganHome: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BaseLayout(
+          testSkipFirebase: true,
+          testRouteBuilder: (route, _, _) => Center(child: Text('ROUTE:$route')),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text("Hello. I'm Morgan."), findsOneWidget);
+    await tester.tap(find.byKey(const Key('tile_type')));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.enterText(find.byKey(const Key('morgan_type_input')), '1921 Morgan dollar');
+    await tester.tap(find.byKey(const Key('type_submit_btn')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const Key('confirm_add_btn')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const Key('morgan_done_heading')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('see_my_coins_btn')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Opens My Collection with FullSiteMorganBar and ZERO POST /api/morgan/home_preference
+    expect(find.text('ROUTE:My Collection'), findsOneWidget);
+    expect(find.byKey(const Key('back_to_morgan_button')), findsOneWidget);
+    expect(MorganFirstService.current.preferredHome, 'morgan');
+    expect(
+      captured.where((r) => r.url.path.endsWith('/api/morgan/home_preference')),
+      isEmpty,
+    );
+
+    // Back to Morgan clears temporary full-site flag cleanly without extra POST
+    await tester.tap(find.byKey(const Key('back_to_morgan_button')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text("Hello. I'm Morgan."), findsOneWidget);
+    await tester.pump(const Duration(seconds: 26));
   });
 }

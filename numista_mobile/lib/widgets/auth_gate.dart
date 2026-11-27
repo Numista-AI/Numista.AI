@@ -20,6 +20,7 @@ class AuthGate extends StatefulWidget {
   final int initialAuthTab;
   final bool showResetForm;
   final Stream<User?>? authStream;
+  final WidgetBuilder? testDemoHomeBuilder;
 
   const AuthGate({
     super.key,
@@ -28,6 +29,7 @@ class AuthGate extends StatefulWidget {
     this.initialAuthTab = 0,
     this.showResetForm = false,
     this.authStream,
+    this.testDemoHomeBuilder,
   });
 
   /// Navigates to [AuthGate] and purges all previous routes from the stack.
@@ -40,7 +42,12 @@ class AuthGate extends StatefulWidget {
     String? publicRoute,
     int initialAuthTab = 0,
     Stream<User?>? authStream,
+    WidgetBuilder? testDemoHomeBuilder,
   }) {
+    if (!isDemo) {
+      _AuthGateState.clearDemoState();
+      GuestSeedService.deactivateBrowseDemo();
+    }
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (_) => AuthGate(
@@ -48,11 +55,15 @@ class AuthGate extends StatefulWidget {
           publicRoute: publicRoute,
           initialAuthTab: initialAuthTab,
           authStream: authStream,
+          testDemoHomeBuilder: testDemoHomeBuilder,
         ),
       ),
       (route) => false,
     );
   }
+
+  /// Clears cached demo mode flag cleanly on demo exit.
+  static void clearDemoState() => _AuthGateState.clearDemoState();
 
   /// Resets the welcome screen completion state (e.g. upon user sign-out).
   static void resetWelcome() => _AuthGateState.resetWelcome();
@@ -66,6 +77,9 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> {
   static bool _cachedDemoActive = false;
   static bool _welcomeDone = false;
+  static void clearDemoState() {
+    _cachedDemoActive = false;
+  }
   static void resetWelcome() {
     _welcomeDone = false;
   }
@@ -77,6 +91,8 @@ class _AuthGateState extends State<AuthGate> {
     if (widget.isDemo || GuestSeedService.isBrowseDemoMode) {
       _cachedDemoActive = true;
       GuestSeedService.activateBrowseDemo();
+    } else {
+      _cachedDemoActive = false;
     }
   }
 
@@ -115,7 +131,9 @@ class _AuthGateState extends State<AuthGate> {
           }
 
           if (GuestSeedService.isBrowseDemoMode || _cachedDemoActive) {
-            return const BaseLayout(isDemoMode: true);
+            return widget.testDemoHomeBuilder != null
+                ? widget.testDemoHomeBuilder!(context)
+                : const BaseLayout(isDemoMode: true);
           }
 
           assert(!GuestSeedService.isBrowseDemoMode,
@@ -136,6 +154,9 @@ class _AuthGateState extends State<AuthGate> {
               UiVariantService.refresh(),
               MorganFirstService.refresh(),
             ]);
+            if (MorganFirstService.current.showMorganHome) {
+              return false;
+            }
             return WelcomeScreen.shouldShow();
           }();
 
@@ -171,7 +192,9 @@ class _AuthGateState extends State<AuthGate> {
         // 2. If demo mode requested or active, show BaseLayout in demo mode
         if (widget.isDemo || GuestSeedService.isBrowseDemoMode || _cachedDemoActive) {
           _cachedDemoActive = true;
-          return const BaseLayout(isDemoMode: true);
+          return widget.testDemoHomeBuilder != null
+              ? widget.testDemoHomeBuilder!(context)
+              : const BaseLayout(isDemoMode: true);
         }
 
         // 3. Otherwise show LoginScreen

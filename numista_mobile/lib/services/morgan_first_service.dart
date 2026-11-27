@@ -135,6 +135,45 @@ class MorganFirstService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  /// Sends a typed user question through the existing Ask Morgan chat path
+  /// (`/api/morgan/copilot`, falling back to `/api/deep_dive` only on 404/501)
+  /// with Bearer auth, query strictly in JSON POST body, and no client user_email.
+  static Future<Map<String, dynamic>> askMorganQuestion(
+    String query, {
+    Future<http.Response> Function(Uri uri, {Object? body})? postFn,
+  }) async {
+    final copilotUri = Uri.parse('$kApiBaseUrl/api/morgan/copilot');
+    final copilotPayload = jsonEncode({
+      'query': query,
+      'chat_history': const [],
+      'collection_context': '',
+      'screen_state': const {'current_route': 'Morgan First Home'},
+    });
+    http.Response response = await (postFn != null
+        ? postFn(copilotUri, body: copilotPayload)
+        : HttpAuthClient.post(copilotUri, body: copilotPayload));
+    if (response.statusCode == 404 || response.statusCode == 501) {
+      final deepDiveUri = Uri.parse('$kApiBaseUrl/api/deep_dive');
+      final deepDivePayload = jsonEncode({
+        'query': query,
+        'chat_history': const [],
+        'collection_context': '',
+      });
+      response = await (postFn != null
+          ? postFn(deepDiveUri, body: deepDivePayload)
+          : HttpAuthClient.post(deepDiveUri, body: deepDivePayload));
+    }
+    if (response.statusCode != 200) {
+      throw Exception('Ask Morgan failed (${response.statusCode})');
+    }
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final reply = (decoded['response'] ?? '').toString().trim();
+    if (reply.isEmpty) {
+      throw Exception('Morgan returned an empty answer');
+    }
+    return decoded;
+  }
+
   static void reset() {
     state.value = const MorganHomeFlagsState();
   }

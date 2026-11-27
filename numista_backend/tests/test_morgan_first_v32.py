@@ -5,6 +5,7 @@ exact request URL, method, and Authorization: Bearer <token> (P5).
 """
 
 import io
+import json
 import os
 import sys
 from pathlib import Path
@@ -472,3 +473,70 @@ def test_at15_req031_write_routes_reject_no_token(env_setup, path):
         assert res.status_code in (401, 403, 404), f"Unexpected status on {path}: {res.status_code}"
     else:
         assert res.status_code in (401, 403), f"Expected 401/403 on {path}, got {res.status_code}"
+
+
+def test_d1_identify_coin_photo_p5_200_without_user_email(env_setup, monkeypatch):
+    """D1: POST /api/identify_coin_photo derives owner from Bearer token (200 w/o user_email)."""
+    client, _ = env_setup
+    mock_r1 = MagicMock()
+    mock_r1.text = json.dumps({
+        "year": "1921",
+        "denomination": "Morgan Dollar",
+        "country": "United States",
+        "program_series": "Morgan Dollars",
+        "mint_mark": "D",
+        "grade": "About Fine",
+        "confidence": "HIGH",
+        "obverse_image": "A",
+    })
+    mock_r2 = MagicMock()
+    mock_r2.text = json.dumps({
+        "refined_grade": "About Fine",
+        "estimated_value_usd": "$35.00",
+        "confidence": "HIGH",
+    })
+    mock_models = MagicMock()
+    mock_models.generate_content.side_effect = [mock_r1, mock_r2]
+    mock_genai = MagicMock()
+    mock_genai.models = mock_models
+    monkeypatch.setattr(main, "genai_client", mock_genai)
+
+    files = {"image_a": ("front.jpg", io.BytesIO(b"\xff\xd8\xff\xe0dummy"), "image/jpeg")}
+    res = client.post(
+        "/api/identify_coin_photo",
+        headers={"Authorization": "Bearer tok-eric"},
+        data={"save_to_collection": "false"},
+        files=files,
+    )
+    assert res.status_code == 200
+    assert client.captured[-1]["method"] == "POST"
+    assert client.captured[-1]["url"] == "/api/identify_coin_photo"
+    assert client.captured[-1]["authorization"] == "Bearer tok-eric"
+    body = res.json()
+    assert body["coin"]["Year"] == "1921"
+
+
+def test_d2_deep_dive_and_copilot_accept_no_user_email_in_body(env_setup):
+    """D2: /api/deep_dive and /api/morgan/copilot accept JSON body without user_email when Bearer is valid."""
+    client, _ = env_setup
+    assert client.post("/api/morgan/copilot", json={"query": "What is a 1793 Chain cent worth?"}).status_code == 401
+    assert client.post("/api/deep_dive", json={"query": "What is a 1793 Chain cent worth?"}).status_code == 401
+
+    with patch.object(morgan_routes, "genai_client", None):
+        res_cp = client.post(
+            "/api/morgan/copilot",
+            headers={"Authorization": "Bearer tok-eric"},
+            json={"query": "What is a 1793 Chain cent worth?", "chat_history": [], "collection_context": ""},
+        )
+        assert res_cp.status_code == 200
+        assert "response" in res_cp.json()
+        assert client.captured[-1]["authorization"] == "Bearer tok-eric"
+
+    with patch.object(main, "genai_client", None):
+        res_dd = client.post(
+            "/api/deep_dive",
+            headers={"Authorization": "Bearer tok-eric"},
+            json={"query": "What is a 1793 Chain cent worth?", "chat_history": [], "collection_context": ""},
+        )
+        assert res_dd.status_code != 422
+        assert client.captured[-1]["authorization"] == "Bearer tok-eric"

@@ -48,11 +48,26 @@ class MorganPrefs {
   }
 
   // ── Show on startup ──────────────────────────────────────────────────────────
-  /// Whether Morgan greets the user on every login. Default: true.
-  /// Users can opt out via Morgan settings ("Don't greet me on startup").
+  static Future<bool> isGreeterSeen() async {
+    final p = await SharedPreferences.getInstance();
+    return (p.getBool(_key('greeter_seen')) ?? false) ||
+        (p.getBool('morgan_greeter_seen') ?? false);
+  }
+
+  static Future<void> markGreeterSeen() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_key('greeter_seen'), true);
+    await p.setBool('morgan_greeter_seen', true);
+  }
+
+  /// Whether Morgan greets the user on login. Shown once by default until
+  /// dismissed, or governed by explicit user startup preference when set.
   static Future<bool> showOnStartup() async {
     final p = await SharedPreferences.getInstance();
-    return p.getBool(_key('show_on_startup')) ?? true;
+    if (p.containsKey(_key('show_on_startup'))) {
+      return p.getBool(_key('show_on_startup')) ?? false;
+    }
+    return !(await isGreeterSeen());
   }
 
   static Future<void> setShowOnStartup(bool value) async {
@@ -77,11 +92,15 @@ class MorganPrefs {
   static Future<String> getDisplayName() async {
     final saved = await getPreferredName();
     if (saved != null && saved.isNotEmpty) return saved;
-    final user = FirebaseAuth.instance.currentUser;
-    final raw = user?.displayName?.trim().isNotEmpty == true
-        ? user!.displayName!.trim()
-        : (user?.email?.split('@').first ?? 'there');
-    return raw.split(' ').first;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final raw = user?.displayName?.trim().isNotEmpty == true
+          ? user!.displayName!.trim()
+          : (user?.email?.split('@').first ?? 'there');
+      return raw.split(' ').first;
+    } catch (_) {
+      return 'there';
+    }
   }
 
   /// Clears all Morgan preferences for this user.

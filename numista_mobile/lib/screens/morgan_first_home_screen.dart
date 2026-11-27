@@ -11,7 +11,7 @@ import 'package:numista_ai/widgets/morgan_owl_avatar.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-enum _MorganStep { home, typeCoin, photoScan, confirmCard, fixDetails, done }
+enum _MorganStep { home, typeCoin, answerCard, photoScan, confirmCard, fixDetails, done }
 
 class MorganProposedCoin {
   final String proposalId;
@@ -72,6 +72,8 @@ class MorganProposedCoin {
 class MorganFirstHomeScreen extends StatefulWidget {
   final VoidCallback onSwitchToFullSite;
   final VoidCallback? onSeeMyCoins;
+  final VoidCallback? onSignOut;
+  final Future<Map<String, dynamic>> Function(String query)? askQuestionFn;
   final Future<Map<String, dynamic>> Function(Map<String, dynamic> coinData)?
       proposeFn;
   final Future<Map<String, dynamic>> Function(String proposalId)? confirmFn;
@@ -85,6 +87,8 @@ class MorganFirstHomeScreen extends StatefulWidget {
     super.key,
     required this.onSwitchToFullSite,
     this.onSeeMyCoins,
+    this.onSignOut,
+    this.askQuestionFn,
     this.proposeFn,
     this.confirmFn,
     this.identifyPhotoFn,
@@ -92,6 +96,92 @@ class MorganFirstHomeScreen extends StatefulWidget {
     this.capturePhotoFn,
     this.pickFileFn,
   });
+
+  /// Returns true only when [raw] is clearly a coin add description rather than
+  /// a question. Fail-safe toward false ("When unsure, answer and offer Add button").
+  static bool isCoinAddDescription(String raw) {
+    final text = raw.trim();
+    if (text.isEmpty) return false;
+    final lower = text.toLowerCase();
+
+    if (text.contains('?')) return false;
+    if (RegExp(
+      r'^(what|how|why|when|where|who|which|is|are|was|were|can|could|should|would|do|does|did|tell me|explain|compare|difference between|estimate|value of)\b',
+    ).hasMatch(lower)) {
+      return false;
+    }
+    if (RegExp(
+      r'\b(worth|value|price|mintage|history|story|rare|rarity|meaning|fake|authentic|real or fake|clean|cleaning|how much|how many|melt value|spot price|should i)\b',
+    ).hasMatch(lower)) {
+      return false;
+    }
+
+    final hasYear = RegExp(r'\b(1[789]\d{2}|20\d{2})\b').hasMatch(lower);
+    final hasCoinTerm = RegExp(
+      r'\b(dollar|dollars|morgan|peace|eagle|ase|half|quarter|dime|nickel|cent|penny|wheat|lincoln|kennedy|franklin|walking liberty|mercury|roosevelt|jefferson|buffalo|coin|round|bar|proof|set|commemorative|sovereign|maple|krugerrand|libertad|britannia|pcgs|ngc|anacs|icg)\b',
+    ).hasMatch(lower);
+    final hasExplicitAddVerb =
+        RegExp(r'^(add|log|save|record|put|enter)\b').hasMatch(lower);
+    final hasMint = RegExp(
+      r'\b(\d{4}-(cc|[dswop])|denver|san francisco|carson city|new orleans|west point|philadelphia|cc)\b',
+    ).hasMatch(lower);
+    final hasGrade = RegExp(
+      r'\b(about uncirculated|uncirculated|mint state|extremely fine|very fine|about fine|very good|au|ms\d*|ef|xf|vf|vg|fine|good)\b',
+    ).hasMatch(lower);
+
+    if (hasExplicitAddVerb && (hasYear || hasCoinTerm)) return true;
+    if (hasYear && hasCoinTerm) return true;
+    if (hasCoinTerm && (hasMint || hasGrade)) return true;
+    return false;
+  }
+
+  /// Removes redundant year / year+mint tokens from [rawLabel] when other descriptive
+  /// text remains so titles do not double the year on save or Fix Details.
+  static String stripRedundantYear(
+    String rawLabel,
+    String year, {
+    String mint = '',
+  }) {
+    final normalized = rawLabel.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final cleanYear = year.trim();
+    if (normalized.isEmpty || !RegExp(r'^\d{4}$').hasMatch(cleanYear)) {
+      return normalized;
+    }
+    var stripped = normalized;
+    final cleanMint = mint.trim();
+    if (cleanMint.isNotEmpty) {
+      stripped = stripped.replaceAll(
+        RegExp(
+          '\\b${RegExp.escape(cleanYear)}-?${RegExp.escape(cleanMint)}\\b',
+          caseSensitive: false,
+        ),
+        ' ',
+      );
+    }
+    stripped = stripped.replaceAll(
+      RegExp('\\b${RegExp.escape(cleanYear)}\\b', caseSensitive: false),
+      ' ',
+    );
+    stripped = stripped
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceFirst(RegExp(r'^[-–—:,/\s]+'), '')
+        .replaceFirst(RegExp(r'[-–—:,/\s]+$'), '')
+        .trim();
+    return stripped.isNotEmpty ? stripped : normalized;
+  }
+
+  /// Formats "`<year>` `<label>`" without doubling [year] if [rawLabel] already contains it.
+  static String formatCoinTitle(String year, String rawLabel) {
+    final cleanYear = year.trim();
+    final cleanLabel = stripRedundantYear(rawLabel, cleanYear);
+    if (cleanYear.isEmpty) return cleanLabel;
+    if (cleanLabel.isEmpty) return cleanYear;
+    if (cleanLabel.toLowerCase() == cleanYear.toLowerCase() ||
+        cleanLabel.toLowerCase().startsWith('${cleanYear.toLowerCase()} ')) {
+      return cleanLabel;
+    }
+    return '$cleanYear $cleanLabel';
+  }
 
   /// Pure typed-coin parser (G1): extracts Year, Denomination + Series, Mint Mark,
   /// and Condition without inventing confidence.
@@ -201,8 +291,10 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
   bool _busy = false;
   String? _errorMsg;
 
-  // Type step
+  // Type / Question step
   final TextEditingController _typeCtrl = TextEditingController();
+  String _lastTypedText = '';
+  String _morganAnswer = '';
 
   // Photo / Scan step
   Uint8List? _frontBytes;
@@ -251,6 +343,19 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
     super.dispose();
   }
 
+  void _goToStep(_MorganStep next, {bool? isScanMode}) {
+    setState(() {
+      _errorMsg = null;
+      if (isScanMode != null) _isScanMode = isScanMode;
+      _step = next;
+    });
+  }
+
+  Future<Map<String, dynamic>> _callAskQuestion(String query) {
+    if (widget.askQuestionFn != null) return widget.askQuestionFn!(query);
+    return MorganFirstService.askMorganQuestion(query);
+  }
+
   Future<Map<String, dynamic>> _callPropose(Map<String, dynamic> data) {
     if (widget.proposeFn != null) return widget.proposeFn!(data);
     return MorganFirstService.proposeAddCoin(data);
@@ -264,16 +369,53 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
   Future<void> _submitTypedCoin() async {
     final text = _typeCtrl.text.trim();
     if (text.isEmpty || _busy) return;
+    _lastTypedText = text;
+    if (MorganFirstHomeScreen.isCoinAddDescription(text)) {
+      await _proposeTypedCoin(text);
+    } else {
+      await _askMorganTypedQuestion(text);
+    }
+  }
+
+  Future<void> _askMorganTypedQuestion(String text) async {
+    if (text.isEmpty || _busy) return;
+    setState(() {
+      _busy = true;
+      _errorMsg = null;
+    });
+    try {
+      final res = await _callAskQuestion(text);
+      final answer = (res['response'] ?? '').toString().trim();
+      if (!mounted) return;
+      setState(() {
+        _lastTypedText = text;
+        _morganAnswer = answer;
+        _step = _MorganStep.answerCard;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _errorMsg = 'Could not get an answer: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _proposeTypedCoin(String rawText) async {
+    final text = rawText.trim();
+    if (text.isEmpty || _busy) return;
     setState(() {
       _busy = true;
       _errorMsg = null;
     });
     try {
       final parsed = MorganFirstHomeScreen.parseTypedCoin(text);
+      final year = (parsed['Year'] ?? '').toString();
+      final rawName = (parsed['name'] ?? '').toString();
+      final denom = (parsed['Denomination'] ?? 'Coin').toString();
+      final series = (parsed['Series'] ?? '').toString();
       final prop = await _callPropose({
-        'Year': parsed['Year'],
-        'Denomination': parsed['Denomination'],
-        if ((parsed['Series'] as String).isNotEmpty) 'Series': parsed['Series'],
+        'Year': year,
+        'Denomination': denom,
+        if (series.isNotEmpty) 'Series': series,
         'Mint Mark': parsed['Mint Mark'],
         'Condition': parsed['Condition'],
         'Personal Notes': parsed['Personal Notes'],
@@ -283,9 +425,9 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
       setState(() {
         _proposed = MorganProposedCoin(
           proposalId: propId,
-          name: parsed['name'] as String,
-          year: parsed['Year'] as String,
-          denomination: parsed['Denomination'] as String,
+          name: MorganFirstHomeScreen.formatCoinTitle(year, rawName),
+          year: year,
+          denomination: denom,
           mintMark: parsed['Mint Mark'] as String,
           condition: parsed['Condition'] as String,
           confidencePct: null,
@@ -312,6 +454,7 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
     }
     if (result == null || !mounted) return;
     setState(() {
+      _errorMsg = null;
       if (slot == 'front') _frontBytes = result!.bytes;
       if (slot == 'back') _backBytes = result!.bytes;
       if (slot == 'label') _labelBytes = result!.bytes;
@@ -330,6 +473,7 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
     }
     if (bytes == null || !mounted) return;
     setState(() {
+      _errorMsg = null;
       if (slot == 'front') _frontBytes = bytes;
       if (slot == 'back') _backBytes = bytes;
       if (slot == 'label') _labelBytes = bytes;
@@ -365,7 +509,6 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
           Uri.parse('$kApiBaseUrl/api/identify_coin_photo'),
           files: files,
           fields: const {
-            'user_email': '',
             'save_to_collection': 'false',
           },
         );
@@ -373,7 +516,10 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
         if (resp.statusCode != 200) {
           throw Exception('Identify failed (${resp.statusCode})');
         }
-        idResult = jsonDecode(resp.body) as Map<String, dynamic>;
+        final rawBody = jsonDecode(resp.body) as Map<String, dynamic>;
+        idResult = (rawBody['coin'] is Map<String, dynamic>)
+            ? rawBody['coin'] as Map<String, dynamic>
+            : rawBody;
       }
 
       final year = (idResult['Year'] ?? idResult['year'] ?? '').toString();
@@ -387,16 +533,36 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
       final cond =
           (idResult['Condition'] ?? idResult['condition'] ?? 'Circulated')
               .toString();
-      final confRaw = idResult['confidence'] ?? idResult['confidence_pct'] ?? 85;
-      final confPct = (confRaw is num)
-          ? (confRaw <= 1 ? confRaw * 100.0 : confRaw.toDouble())
-          : 85.0;
-      final certNo = (idResult['cert_number'] ?? '').toString();
-      final grader = (idResult['grading_service'] ?? '').toString();
+      final confRaw = idResult['confidence'] ??
+          idResult['confidence_pct'] ??
+          idResult['ai_confidence'] ??
+          85;
+      final double confPct;
+      if (confRaw is num) {
+        confPct = confRaw <= 1 ? confRaw * 100.0 : confRaw.toDouble();
+      } else {
+        final confStr = confRaw.toString().trim().toUpperCase();
+        confPct = confStr == 'HIGH'
+            ? 92.0
+            : confStr == 'MEDIUM'
+                ? 78.0
+                : confStr == 'LOW'
+                    ? 55.0
+                    : (double.tryParse(confStr) ?? 85.0);
+      }
+      final certNo =
+          (idResult['cert_number'] ?? idResult['Certification Number'] ?? '')
+              .toString();
+      final grader =
+          (idResult['grading_service'] ?? idResult['Grading Service'] ?? '')
+              .toString();
+      final series =
+          (idResult['Program/Series'] ?? idResult['Series'] ?? '').toString();
 
       final prop = await _callPropose({
         'Year': year,
         'Denomination': denom,
+        if (series.isNotEmpty) 'Series': series,
         'Mint Mark': mint,
         'Condition': cond,
       });
@@ -404,7 +570,7 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
       setState(() {
         _proposed = MorganProposedCoin(
           proposalId: (prop['proposal_id'] ?? '').toString(),
-          name: '$year $denom'.trim(),
+          name: MorganFirstHomeScreen.formatCoinTitle(year, denom),
           year: year,
           denomination: denom,
           mintMark: mint,
@@ -451,25 +617,37 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
   void _openFixDetails() {
     final p = _proposed;
     if (p == null) return;
-    _fixNameCtrl.text = p.name;
+    _fixNameCtrl.text = MorganFirstHomeScreen.stripRedundantYear(
+      p.name,
+      p.year,
+      mint: p.mintMark,
+    );
     _fixYearCtrl.text = p.year;
     _fixMintCtrl.text = p.mintMark;
     _fixCondCtrl.text = p.condition;
-    setState(() => _step = _MorganStep.fixDetails);
+    _goToStep(_MorganStep.fixDetails);
   }
 
   Future<void> _saveFixedDetailsAndReturnToCard() async {
     final p = _proposed;
     if (p == null || _busy) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _errorMsg = null;
+    });
     try {
       final newName = _fixNameCtrl.text.trim();
       final newYear = _fixYearCtrl.text.trim();
       final newMint = _fixMintCtrl.text.trim();
       final newCond = _fixCondCtrl.text.trim();
+      final cleanDenom = MorganFirstHomeScreen.stripRedundantYear(
+        newName,
+        newYear,
+        mint: newMint,
+      );
       final prop = await _callPropose({
         'Year': newYear,
-        'Denomination': newName,
+        'Denomination': cleanDenom,
         'Mint Mark': newMint,
         'Condition': newCond,
       });
@@ -477,7 +655,8 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
       setState(() {
         _proposed = p.copyWith(
           proposalId: (prop['proposal_id'] ?? p.proposalId).toString(),
-          name: newName,
+          name: MorganFirstHomeScreen.formatCoinTitle(newYear, cleanDenom),
+          denomination: cleanDenom,
           year: newYear,
           mintMark: newMint,
           condition: newCond,
@@ -492,13 +671,14 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
   }
 
   Future<void> _confirmSkipDialog() async {
+    final isTyped = _proposed?.isTypedEntry == true;
     final shouldDiscard = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _white,
-        title: const Text(
-          'Throw away this photo?',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _navy),
+        title: Text(
+          isTyped ? 'Throw away this entry?' : 'Throw away this photo?',
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: _navy),
         ),
         content: const Text(
           'This coin will not be saved to your collection.',
@@ -531,6 +711,7 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
 
     if (shouldDiscard == true && mounted) {
       setState(() {
+        _errorMsg = null;
         _proposed = null;
         _frontBytes = null;
         _backBytes = null;
@@ -561,15 +742,28 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
                       const SizedBox(height: 24),
                       if (_errorMsg != null) ...[
                         Container(
+                          key: const Key('morgan_error_banner'),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFF3F3),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: const Color(0xFFB91C1C)),
                           ),
-                          child: Text(
-                            _errorMsg!,
-                            style: const TextStyle(fontSize: 18, color: _navy),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _errorMsg!,
+                                  style: const TextStyle(fontSize: 18, color: _navy),
+                                ),
+                              ),
+                              IconButton(
+                                key: const Key('error_banner_dismiss_btn'),
+                                tooltip: 'Dismiss message',
+                                onPressed: () => setState(() => _errorMsg = null),
+                                icon: const Icon(Icons.close, color: _navy),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -610,20 +804,71 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
       onSelectFullSite: widget.onSwitchToFullSite,
     );
 
+    final Widget? signOutBtn = widget.onSignOut == null
+        ? null
+        : OutlinedButton.icon(
+            key: const Key('morgan_sign_out_btn'),
+            onPressed: widget.onSignOut,
+            icon: const Icon(Icons.logout, size: 20, color: _navy),
+            label: const Text(
+              'Sign out',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: _navy,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              minimumSize: Size(isPhone ? 108 : 128, 56),
+              padding: EdgeInsets.symmetric(horizontal: isPhone ? 10 : 14),
+              side: const BorderSide(color: _blue, width: 1.5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+
     if (isPhone) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          brand,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: brand)),
+              if (signOutBtn != null) ...[
+                const SizedBox(width: 8),
+                signOutBtn,
+              ],
+            ],
+          ),
           const SizedBox(height: 12),
           toggle,
         ],
       );
     }
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [brand, toggle],
+    return SizedBox(
+      width: double.infinity,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          brand,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              toggle,
+              if (signOutBtn != null) ...[
+                const SizedBox(width: 12),
+                signOutBtn,
+              ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -633,6 +878,8 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
         return _buildHome(isPhone);
       case _MorganStep.typeCoin:
         return _buildTypeStep();
+      case _MorganStep.answerCard:
+        return _buildAnswerCard();
       case _MorganStep.photoScan:
         return _buildPhotoScanStep();
       case _MorganStep.confirmCard:
@@ -671,27 +918,21 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
         icon: Icons.photo_camera_outlined,
         title: 'Photo',
         subtitle: 'Use your camera',
-        onTap: () => setState(() {
-          _isScanMode = false;
-          _step = _MorganStep.photoScan;
-        }),
+        onTap: () => _goToStep(_MorganStep.photoScan, isScanMode: false),
       ),
       _buildActionTile(
         key: const Key('tile_scan'),
         icon: Icons.biotech_outlined,
         title: 'Scan',
         subtitle: 'Use a microscope',
-        onTap: () => setState(() {
-          _isScanMode = true;
-          _step = _MorganStep.photoScan;
-        }),
+        onTap: () => _goToStep(_MorganStep.photoScan, isScanMode: true),
       ),
       _buildActionTile(
         key: const Key('tile_type'),
         icon: Icons.edit_note_outlined,
         title: 'Type',
         subtitle: 'Write it in',
-        onTap: () => setState(() => _step = _MorganStep.typeCoin),
+        onTap: () => _goToStep(_MorganStep.typeCoin),
       ),
     ];
 
@@ -761,12 +1002,12 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Tell me about your coin',
+          'Ask Morgan or tell me about your coin',
           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _navy),
         ),
         const SizedBox(height: 8),
         const Text(
-          'Example: 1921 Morgan dollar, Denver, about fine',
+          'Ask a question (e.g. What is a 1793 Chain cent worth?) or describe a coin to add (e.g. 1921 Morgan dollar, Denver, about fine).',
           style: TextStyle(fontSize: 18, color: _navy),
         ),
         const SizedBox(height: 16),
@@ -810,7 +1051,8 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
               ),
             ),
             OutlinedButton(
-              onPressed: () => setState(() => _step = _MorganStep.home),
+              key: const Key('type_back_btn'),
+              onPressed: () => _goToStep(_MorganStep.home),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(120, 56),
                 side: const BorderSide(color: _blue, width: 1.5),
@@ -822,6 +1064,112 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildAnswerCard() {
+    return Container(
+      key: const Key('morgan_answer_card'),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: _white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _blue, width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_lastTypedText.isNotEmpty) ...[
+            Text(
+              'You asked: "$_lastTypedText"',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: _blue,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          const Text(
+            'Morgan says',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: _navy,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            _morganAnswer,
+            key: const Key('morgan_answer_text'),
+            style: const TextStyle(fontSize: 18, height: 1.5, color: _navy),
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              ElevatedButton.icon(
+                key: const Key('answer_add_coin_instead_btn'),
+                onPressed: _busy ? null : () => _proposeTypedCoin(_lastTypedText),
+                icon: const Icon(Icons.add_circle_outline, color: _white),
+                label: Text(
+                  _busy ? 'Preparing...' : 'Add this coin instead',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: _white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _blue,
+                  minimumSize: const Size(220, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              OutlinedButton(
+                key: const Key('answer_ask_another_btn'),
+                onPressed: _busy
+                    ? null
+                    : () {
+                        _typeCtrl.clear();
+                        _goToStep(_MorganStep.typeCoin);
+                      },
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(180, 56),
+                  side: const BorderSide(color: _blue, width: 1.5),
+                ),
+                child: const Text(
+                  'Ask another question',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: _navy,
+                  ),
+                ),
+              ),
+              OutlinedButton(
+                key: const Key('answer_back_home_btn'),
+                onPressed: _busy ? null : () => _goToStep(_MorganStep.home),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(120, 56),
+                  side: const BorderSide(color: _blue, width: 1.5),
+                ),
+                child: const Text(
+                  'Back',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: _navy,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1014,7 +1362,8 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
               ),
             ),
             OutlinedButton(
-              onPressed: () => setState(() => _step = _MorganStep.typeCoin),
+              key: const Key('photo_type_instead_btn'),
+              onPressed: () => _goToStep(_MorganStep.typeCoin),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(160, 56),
                 side: const BorderSide(color: _blue, width: 1.5),
@@ -1024,7 +1373,8 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
                       fontSize: 18, fontWeight: FontWeight.w700, color: _navy)),
             ),
             OutlinedButton(
-              onPressed: () => setState(() => _step = _MorganStep.home),
+              key: const Key('photo_back_btn'),
+              onPressed: () => _goToStep(_MorganStep.home),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(120, 56),
                 side: const BorderSide(color: _blue, width: 1.5),
@@ -1176,8 +1526,7 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
               if (!canAdd) ...[
                 ElevatedButton(
                   key: const Key('confirm_retake_btn'),
-                  onPressed: () =>
-                      setState(() => _step = _MorganStep.photoScan),
+                  onPressed: () => _goToStep(_MorganStep.photoScan),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _blue,
                     minimumSize: const Size(160, 56),
@@ -1190,8 +1539,7 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
                 ),
                 OutlinedButton(
                   key: const Key('confirm_type_fallback_btn'),
-                  onPressed: () =>
-                      setState(() => _step = _MorganStep.typeCoin),
+                  onPressed: () => _goToStep(_MorganStep.typeCoin),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(140, 56),
                     side: const BorderSide(color: _blue, width: 1.5),
@@ -1303,8 +1651,7 @@ class _MorganFirstHomeScreenState extends State<MorganFirstHomeScreen> {
                         color: _white)),
               ),
               OutlinedButton(
-                onPressed: () =>
-                    setState(() => _step = _MorganStep.confirmCard),
+                onPressed: () => _goToStep(_MorganStep.confirmCard),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(120, 56),
                   side: const BorderSide(color: _blue, width: 1.5),
