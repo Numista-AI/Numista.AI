@@ -3,15 +3,18 @@
 tools/catalog/image_license_allowlist.py
 Fail-closed certified public-domain license allow-list for CR3 catalog image attach.
 
-Holds ONLY the four public-domain license classes and exact license strings present
-in attach_manifest_v4 (SHA8 58ac149a). PD-US-SI is its own US government /
-Smithsonian employee public-domain class and is NEVER treated as CC0.
+Holds ONLY the six certified public-domain license classes and exact license strings:
+the four attach_manifest_v4 (SHA8 58ac149a) classes plus ANS_PD_MARK ("Public Domain Mark")
+and PDM_1_0 ("Public Domain Mark 1.0") for museum photography (ANS / Berlin IKMK; images only).
+PD-US-SI is its own US government / Smithsonian employee public-domain class and is NEVER
+treated as CC0. CC0, CC BY-SA, CC BY-NC, BnF commercial-restricted, and All rights reserved
+remain rejected fail-closed.
 Adding any new class or string requires its own reviewed plan update.
 """
 
 from typing import Optional
 
-# Exact mapping of the 4 attach_manifest_v4 public-domain classes to their exact strings.
+# Exact mapping of the 6 certified public-domain classes to their exact strings.
 CERTIFIED_LICENSE_BY_CLASS = {
     "US_MINT_PD": "Public domain (US government work, 17 U.S.C. \u00a7 105)",
     "PD-US-SI": (
@@ -23,6 +26,8 @@ CERTIFIED_LICENSE_BY_CLASS = {
         "Public domain (Wikimedia Commons; photographer's own work). "
         "Credit the photographer."
     ),
+    "ANS_PD_MARK": "Public Domain Mark",
+    "PDM_1_0": "Public Domain Mark 1.0",
 }
 
 CERTIFIED_LICENSE_TO_CLASS = {

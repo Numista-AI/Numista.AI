@@ -202,16 +202,18 @@ def test_p5_url_allowlist_positives_and_all_negatives():
 
 
 def test_d3_n1_license_allowlist_and_fail_closed_fixtures(tmp_path):
-    # Exact 4 v4 classes only (N1: no CC0 category; PD-US-SI is not CC0)
+    # Exact 6 certified classes only (4 v4 classes + ANS_PD_MARK + PDM_1_0; no CC0)
     assert set(image_license_allowlist.CERTIFIED_LICENSE_BY_CLASS.keys()) == {
         "US_MINT_PD",
         "PD-US-SI",
         "WIKIMEDIA_PD_CONFIRMED",
         "WIKIMEDIA_PD_OWN_WORK",
+        "ANS_PD_MARK",
+        "PDM_1_0",
     }
     assert "CC0" not in image_license_allowlist.CERTIFIED_LICENSE_BY_CLASS
 
-    # All 4 certified classes pass
+    # All 6 certified classes pass
     for cls, lic in image_license_allowlist.CERTIFIED_LICENSE_BY_CLASS.items():
         assert image_license_allowlist.is_certified_license(lic)
         assert image_license_allowlist.is_certified_license(lic, cls)
@@ -225,23 +227,45 @@ def test_d3_n1_license_allowlist_and_fail_closed_fixtures(tmp_path):
         )
         assert cleaned is not None and cleaned["license"] == lic
 
-    # Specifically confirm PD-US-SI is NOT treated as CC0
+    # Specifically confirm PD-US-SI is NOT treated as CC0, and ANS_PD_MARK / PDM_1_0 require exact pair match
     pd_us_si = image_license_allowlist.CERTIFIED_LICENSE_BY_CLASS["PD-US-SI"]
     assert image_license_allowlist.is_certified_license(pd_us_si, "PD-US-SI")
     assert not image_license_allowlist.is_certified_license(pd_us_si, "CC0")
+    assert image_license_allowlist.is_certified_license("Public Domain Mark", "ANS_PD_MARK")
+    assert image_license_allowlist.is_certified_license("Public Domain Mark 1.0", "PDM_1_0")
+    assert not image_license_allowlist.is_certified_license("Public Domain Mark", "PDM_1_0")
+    assert not image_license_allowlist.is_certified_license("Public Domain Mark 1.0", "ANS_PD_MARK")
+    assert not image_license_allowlist.is_certified_license("Public Domain Mark", "CC0")
+    assert not image_license_allowlist.is_certified_license("Public Domain Mark 1.0", "CC0")
 
     bad_licenses = [
         ("missing", None),
         ("empty", ""),
         ("whitespace", "   "),
         ("cc_by_sa", "CC BY-SA 4.0"),
+        ("cc_by_sa_short", "CC BY-SA"),
+        ("cc_by_nc", "CC BY-NC 4.0"),
+        ("cc_by_nc_sa", "CC BY-NC-SA 4.0"),
+        ("bnf_gallica_nc", "BnF / Gallica (non-commercial only)"),
+        ("bnf_commercial_hold", "Public Domain (BnF commercial license required)"),
+        ("bnf_domaine_public", "Domaine public (BnF)"),
         ("all_rights_reserved", "All rights reserved"),
+        ("all_rights_reserved_lower", "all rights reserved"),
         ("cc0", "CC0 1.0 Universal"),
         ("cc0_plain", "CC0"),
         ("lookalike_no_section_symbol", "Public domain (US government work, 17 U.S.C. 105)"),
         ("lookalike_trailing_space", image_license_allowlist.CERTIFIED_LICENSE_BY_CLASS["US_MINT_PD"] + " "),
         ("lookalike_case", image_license_allowlist.CERTIFIED_LICENSE_BY_CLASS["WIKIMEDIA_PD_CONFIRMED"].upper()),
         ("lookalike_pd_us_si_cc0", "Public domain (PD-US-SI; Smithsonian Open Access CC0)"),
+        ("lookalike_pdm_lower", "public domain mark"),
+        ("lookalike_pdm_upper", "PUBLIC DOMAIN MARK"),
+        ("lookalike_pdm_trailing_space", "Public Domain Mark "),
+        ("lookalike_pdm10_trailing_space", "Public Domain Mark 1.0 "),
+        ("lookalike_pdm10_universal", "Public Domain Mark 1.0 Universal"),
+        ("lookalike_pdm_v2", "Public Domain Mark 2.0"),
+        ("lookalike_pdm_abbrev", "PDM 1.0"),
+        ("lookalike_public_domain_bare", "Public Domain"),
+        ("lookalike_pdm_plus_ccbysa", "Public Domain Mark / CC BY-SA 4.0"),
     ]
 
     target_path = tmp_path / "target.json"
@@ -562,7 +586,8 @@ def test_pii_gate_dry_run_on_manifest_v4_public_columns_and_e2e_attach(tmp_path)
             assert col in r
         public_scan_doc.append(entry)
 
-    assert seen_pairs == set(image_license_allowlist.CERTIFIED_LICENSE_BY_CLASS.items())
+    assert len(seen_pairs) == 4
+    assert seen_pairs.issubset(set(image_license_allowlist.CERTIFIED_LICENSE_BY_CLASS.items()))
 
     public_json = tmp_path / "v4_public_columns.json"
     public_json.write_text(json.dumps(public_scan_doc, ensure_ascii=False), encoding="utf-8")
