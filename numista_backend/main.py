@@ -12,6 +12,7 @@ import uuid
 import json
 import base64
 import traceback
+from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime, timezone
 import pandas as pd
 from google.cloud import firestore
@@ -7727,61 +7728,237 @@ async def import_process(
     return {"status": "processing", "session_id": session_id}
 
 
-def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "", session_id: str = "") -> list[dict]:
-    """
-    Production receipt normalization pipeline (NET-394, NET-400a, NET-400b, NET-400c).
-    - Merges line_items across multiple dict entries if Gemini returns a list (NET-400a).
-    - Handles quantities, multiplying out items by quantity (NET-400b).
-    - Filters out supply / album / folder rows (NET-400c).
-    - Normalizes set denominations and programs (NET-400c).
-    - Allocates landed cost if subtotal / shipping / tax / grand_total present.
-    """
-    if isinstance(data, list):
-        dict_entries = [d for d in data if isinstance(d, dict)]
-        first_d = dict_entries[0] if dict_entries else {}
-        if dict_entries and any("line_items" in d for d in dict_entries):
-            merged = dict(next(d for d in dict_entries if "line_items" in d))
-            merged_items = []
-            for d in dict_entries:
-                d_ret = d.get("retailer") or d.get("Retailer/Website") or ""
-                d_inv = d.get("invoice_number") or d.get("Retailer Invoice #") or ""
-                d_dt  = d.get("invoice_date") or d.get("Purchase Date") or d.get("purchase_date") or d.get("Date") or ""
-                for li in (d.get("line_items") or []):
-                    if isinstance(li, dict):
-                        li_copy = dict(li)
-                        if d_ret and not (li_copy.get("Retailer/Website") or li_copy.get("retailer")):
-                            li_copy["retailer"] = d_ret
-                        if d_inv and not (li_copy.get("Retailer Invoice #") or li_copy.get("invoice_number")):
-                            li_copy["invoice_number"] = d_inv
-                        if d_dt and not (li_copy.get("invoice_date") or li_copy.get("Invoice Date") or li_copy.get("Purchase Date") or li_copy.get("purchase_date") or li_copy.get("Date")):
-                            li_copy["invoice_date"] = d_dt
-                        merged_items.append(li_copy)
-            merged["line_items"] = merged_items
-            for fee_k in ("subtotal", "shipping_fee", "tax_fee", "total_amount"):
-                if len(dict_entries) > 1:
-                    merged[fee_k] = sum(clean_valuation_value(d.get(fee_k) or 0.0) for d in dict_entries)
-            data = merged
-        else:
-            data = {"line_items": dict_entries}
-            # Copy top-level metadata from first dict entry if present
-            for meta_k in ("retailer", "Retailer/Website", "invoice_number", "Retailer Invoice #", "invoice_date", "purchase_date", "Date", "subtotal", "shipping_fee", "tax_fee", "total_amount"):
-                if meta_k in first_d and meta_k not in data:
-                    data[meta_k] = first_d[meta_k]
-    elif not isinstance(data, dict):
-        data = {"line_items": []}
+def _to_cents(val: Any) -> int:
+    """Parse a currency/numeric value into integer cents using ROUND_HALF_UP."""
+    if val is None or isinstance(val, bool) or str(val).strip() == "":
+        return 0
+    num = clean_valuation_value(val)
+    return int((Decimal(f"{num:.4f}") * Decimal("100")).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
-    items = data.get("line_items")
+
+def _allocate_cents_largest_remainder(total_cents: int, weights: list[int]) -> list[int]:
+    """Allocate integer cents proportionally across weights using Hamilton/largest-remainder."""
+    n = len(weights)
+    if n == 0:
+        return []
+    if total_cents <= 0:
+        return [0] * n
+    clean_weights = [max(0, int(w)) for w in weights]
+    weight_sum = sum(clean_weights)
+    if weight_sum <= 0:
+        clean_weights = [1] * n
+        weight_sum = n
+
+    exact_shares = [Decimal(total_cents) * Decimal(w) / Decimal(weight_sum) for w in clean_weights]
+    floors = [int(s) for s in exact_shares]
+    remainder = total_cents - sum(floors)
+    if remainder > 0:
+        ranked = sorted(
+            range(n),
+            key=lambda i: (-(exact_shares[i] - floors[i]), i),
+        )
+        for i in ranked[:remainder]:
+            floors[i] += 1
+    return floors
+
+
+def _split_fee_per_unit_cents(row_fee_cents: int, qty: int) -> list[int]:
+    """Split a row's integer-cent fee across its physical units (e.g. 995 / 2 -> [498, 497])."""
+    return _allocate_cents_largest_remainder(row_fee_cents, [1] * max(1, int(qty)))
+
+
+def _normalize_invoice_num(val: Any) -> str:
+    return re.sub(r"\s+", "", str(val or "").strip().upper())
+
+
+def _split_pdf_pages_for_extraction(file_bytes: bytes, mime_type: str) -> list[tuple[bytes, str]]:
+    """Split multi-page PDFs into 1-page PDFs so each page/order is extracted independently."""
+    if mime_type != "application/pdf":
+        return [(file_bytes, mime_type)]
+    try:
+        from pypdf import PdfReader, PdfWriter
+
+        reader = PdfReader(io.BytesIO(file_bytes))
+        if len(reader.pages) <= 1:
+            return [(file_bytes, mime_type)]
+        pages_out: list[tuple[bytes, str]] = []
+        for page in reader.pages:
+            writer = PdfWriter()
+            writer.add_page(page)
+            buf = io.BytesIO()
+            writer.write(buf)
+            pages_out.append((buf.getvalue(), "application/pdf"))
+        return pages_out or [(file_bytes, mime_type)]
+    except Exception as pdf_err:
+        logger.warning(f"Multi-page PDF split skipped, using single payload: {pdf_err}")
+        return [(file_bytes, mime_type)]
+
+
+def _extract_order_items(entry: dict) -> list[dict]:
+    items = entry.get("line_items")
     if not isinstance(items, list) or not items:
         for fallback_key in ("items", "coins", "results", "data"):
-            candidate = data.get(fallback_key)
+            candidate = entry.get(fallback_key)
             if isinstance(candidate, list) and candidate:
                 items = candidate
                 break
     if not isinstance(items, list):
-        items = []
-    items = [it for it in items if isinstance(it, dict)]
+        return []
+    return [dict(it) for it in items if isinstance(it, dict)]
 
-    def _get_item_qty(item_dict):
+
+def _group_receipt_orders(data: Any) -> list[dict]:
+    """
+    Group raw Gemini/fixture payloads into isolated order dicts keyed by normalized
+    invoice_number. Distinct invoice numbers NEVER merge fees, dates, or line items.
+    """
+    raw_entries: list[dict] = []
+    if isinstance(data, dict) and isinstance(data.get("orders"), list) and data["orders"]:
+        raw_entries = [d for d in data["orders"] if isinstance(d, dict)]
+    elif isinstance(data, list):
+        dict_entries = [d for d in data if isinstance(d, dict)]
+        if dict_entries and any(
+            any(k in d for k in ("line_items", "items", "coins", "results", "data", "orders"))
+            for d in dict_entries
+        ):
+            for d in dict_entries:
+                if isinstance(d.get("orders"), list) and d["orders"]:
+                    raw_entries.extend([sub for sub in d["orders"] if isinstance(sub, dict)])
+                else:
+                    raw_entries.append(d)
+        elif dict_entries:
+            first_d = dict_entries[0]
+            wrapped: dict = {"line_items": dict_entries}
+            for meta_k in (
+                "retailer", "Retailer/Website", "invoice_number", "Retailer Invoice #",
+                "invoice_date", "purchase_date", "Date", "subtotal", "shipping_fee",
+                "tax_fee", "discount_amount", "discount", "total_amount",
+            ):
+                if meta_k in first_d:
+                    wrapped[meta_k] = first_d[meta_k]
+            raw_entries = [wrapped]
+    elif isinstance(data, dict):
+        raw_entries = [data]
+
+    if not raw_entries:
+        return [{"line_items": []}]
+
+    # If a single flat entry contains line items stamped with multiple distinct invoice numbers, split them cleanly.
+    if len(raw_entries) == 1:
+        entry = raw_entries[0]
+        entry_items = _extract_order_items(entry)
+        fallback_inv = (entry.get("invoice_number") or entry.get("retailer_invoice_num") or entry.get("Retailer Invoice #") or "").strip()
+        distinct_invs: list[str] = []
+        for it in entry_items:
+            norm = _normalize_invoice_num(it.get("Retailer Invoice #") or it.get("invoice_number") or fallback_inv)
+            if norm and norm not in distinct_invs:
+                distinct_invs.append(norm)
+        if len(distinct_invs) > 1:
+            split_map: dict[str, dict] = {}
+            for it in entry_items:
+                raw_inv = (it.get("Retailer Invoice #") or it.get("invoice_number") or fallback_inv or "").strip()
+                norm_inv = _normalize_invoice_num(raw_inv) or "__DEFAULT__"
+                if norm_inv not in split_map:
+                    split_map[norm_inv] = {
+                        "retailer": it.get("Retailer/Website") or it.get("retailer") or entry.get("retailer") or entry.get("Retailer/Website") or "",
+                        "invoice_number": raw_inv,
+                        "invoice_date": it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or "",
+                        "subtotal": 0.0,
+                        "shipping_fee": 0.0,
+                        "tax_fee": 0.0,
+                        "total_amount": 0.0,
+                        "line_items": [],
+                    }
+                split_map[norm_inv]["line_items"].append(dict(it))
+            return list(split_map.values())
+
+    grouped: list[dict] = []
+    inv_index: dict[str, int] = {}
+
+    for entry in raw_entries:
+        e_ret = (entry.get("retailer") or entry.get("retailer_website") or entry.get("Retailer/Website") or "").strip()
+        e_inv = (entry.get("invoice_number") or entry.get("retailer_invoice_num") or entry.get("Retailer Invoice #") or "").strip()
+        e_dt = (entry.get("invoice_date") or entry.get("Invoice Date") or entry.get("purchase_date") or entry.get("Purchase Date") or entry.get("Date") or "").strip()
+        e_items = _extract_order_items(entry)
+
+        if not e_inv and e_items:
+            for li in e_items:
+                cand_inv = (li.get("invoice_number") or li.get("Retailer Invoice #") or "").strip()
+                if cand_inv:
+                    e_inv = cand_inv
+                    break
+
+        norm_inv = _normalize_invoice_num(e_inv)
+        stamped_items = []
+        for li in e_items:
+            li_copy = dict(li)
+            if e_ret and not (li_copy.get("Retailer/Website") or li_copy.get("retailer")):
+                li_copy["retailer"] = e_ret
+            if e_inv and not (li_copy.get("Retailer Invoice #") or li_copy.get("invoice_number")):
+                li_copy["invoice_number"] = e_inv
+            if e_dt and not (li_copy.get("invoice_date") or li_copy.get("Invoice Date") or li_copy.get("Purchase Date") or li_copy.get("purchase_date") or li_copy.get("Date")):
+                li_copy["invoice_date"] = e_dt
+            stamped_items.append(li_copy)
+
+        if norm_inv and norm_inv in inv_index:
+            target = grouped[inv_index[norm_inv]]
+            target["line_items"].extend(stamped_items)
+            if not target.get("retailer") and e_ret:
+                target["retailer"] = e_ret
+            if not target.get("invoice_date") and e_dt:
+                target["invoice_date"] = e_dt
+            for fee_k in ("subtotal", "shipping_fee", "tax_fee", "discount_amount", "discount", "total_amount", "grand_total"):
+                cur = clean_valuation_value(target.get(fee_k) or 0.0)
+                nxt = clean_valuation_value(entry.get(fee_k) or 0.0)
+                if nxt > cur:
+                    target[fee_k] = nxt
+        elif not norm_inv and grouped:
+            # Blank invoice_number continuation page merges into previous order only.
+            target = grouped[-1]
+            target["line_items"].extend(stamped_items)
+            if not target.get("retailer") and e_ret:
+                target["retailer"] = e_ret
+            if not target.get("invoice_date") and e_dt:
+                target["invoice_date"] = e_dt
+            for fee_k in ("subtotal", "shipping_fee", "tax_fee", "discount_amount", "discount", "total_amount", "grand_total"):
+                if clean_valuation_value(target.get(fee_k) or 0.0) <= 0.0:
+                    nxt = clean_valuation_value(entry.get(fee_k) or 0.0)
+                    if nxt > 0.0:
+                        target[fee_k] = nxt
+        else:
+            order_copy = dict(entry)
+            order_copy["retailer"] = e_ret
+            order_copy["invoice_number"] = e_inv
+            order_copy["invoice_date"] = e_dt
+            order_copy["line_items"] = stamped_items
+            if norm_inv:
+                inv_index[norm_inv] = len(grouped)
+            grouped.append(order_copy)
+
+    return grouped or [{"line_items": []}]
+
+
+def _is_supply_item_dict(it: dict, fname: str) -> bool:
+    is_supply = bool(it.get("is_supply", False))
+    prog_val = (it.get("Program/Series") or "").strip()
+    raw_desc = (it.get("Personal Notes") or "") + " " + fname + " " + prog_val + " " + (it.get("Denomination") or "")
+    raw_lower = raw_desc.lower()
+    supply_kws = ("folder", "supply", "album", "holder", "capsule", "supplies", "binder", "display box")
+    has_year = bool(re.search(r"\b(1[789]\d\d|20[0-2]\d)\b", raw_desc))
+    return is_supply or (any(kw in raw_lower for kw in supply_kws) and not has_year and not it.get("Year"))
+
+
+def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "", session_id: str = "") -> list[dict]:
+    """
+    Production receipt normalization pipeline (Invoice Upload Mini-Beta v1 + NET-394/NET-400):
+    - Keeps multi-order/multi-page invoices strictly isolated by normalized invoice_number.
+    - Keeps Cost / Purchase Cost strictly per-unit excluding shipping/tax fees.
+    - Allocates per-order shipping + tax fees strictly within that order via integer-cent largest remainder.
+    - Runs line & order arithmetic sanity checks (+/-1 cent) and fails closed to Needs review on mismatch.
+    """
+    orders = _group_receipt_orders(data)
+
+    def _get_item_qty(item_dict: dict) -> int:
         try:
             raw_q = item_dict.get("qty") or item_dict.get("quantity") or item_dict.get("Quantity") or item_dict.get("Qty") or 1
             if isinstance(raw_q, str):
@@ -7790,202 +7967,293 @@ def normalize_and_validate_receipt(data: Any, fname: str = "", gcs_path: str = "
         except Exception:
             return 1
 
-    subtotal_val = clean_valuation_value(data.get("subtotal") or 0.0)
-    shipping_val = clean_valuation_value(data.get("shipping_fee") or 0.0)
-    tax_val      = clean_valuation_value(data.get("tax_fee") or 0.0)
-    grand_total  = clean_valuation_value(data.get("total_amount") or 0.0)
+    results: list[dict] = []
 
-    raw_item_sum = sum(clean_valuation_value(it.get("Cost") or 0.0) * _get_item_qty(it) for it in items)
-    if subtotal_val <= 0.0:
-        subtotal_val = raw_item_sum
+    for order in orders:
+        items = order.get("line_items") or []
+        order_subtotal_cents = _to_cents(order.get("subtotal") or 0.0)
+        order_shipping_cents = _to_cents(order.get("shipping_fee") or order.get("shipping") or 0.0)
+        order_tax_cents = _to_cents(order.get("tax_fee") or order.get("tax") or 0.0)
+        order_discount_cents = _to_cents(order.get("discount_amount") or order.get("discount") or 0.0)
+        order_total_cents = _to_cents(order.get("total_amount") or order.get("grand_total") or 0.0)
 
-    total_global_fees = 0.0
-    if grand_total > subtotal_val and subtotal_val > 0:
-        total_global_fees = grand_total - subtotal_val
-    elif grand_total <= 0 and (shipping_val + tax_val) > 0:
-        total_global_fees = shipping_val + tax_val
+        kept_rows: list[dict] = []
+        supply_lines_cents = 0
+        for it in items:
+            item_qty = _get_item_qty(it)
+            raw_unit_val = it.get("unit_price") if (it.get("unit_price") is not None and str(it.get("unit_price")).strip() != "") else (it.get("Cost") or it.get("Purchase Cost") or it.get("cost") or 0.0)
+            unit_price_cents = _to_cents(raw_unit_val)
+            raw_line_source = None
+            for lk in ("line_total", "extended_price", "amount"):
+                if it.get(lk) is not None and str(it.get(lk)).strip() != "":
+                    raw_line_source = it.get(lk)
+                    break
+            raw_line_total_cents = _to_cents(raw_line_source) if raw_line_source is not None else None
+            if raw_line_total_cents == 0 and raw_line_source is None:
+                raw_line_total_cents = None
+            expected_line_cents = unit_price_cents * item_qty
+            line_total_cents = raw_line_total_cents if (raw_line_total_cents is not None and raw_line_total_cents > 0) else expected_line_cents
 
-    # NET-538 / NET-539 / Plan v3.1: Fees & shipping allocation for US Mint orders
-    # Note: Plan v3.1 preserves parent receipt shipping_fee ($9.95), but child items have allocated_fees = 0.0
-    retailer_hint = ((data.get("retailer") if isinstance(data, dict) else "") or "").lower()
-    is_us_mint_order = (
-        "mint" in retailer_hint
-        or any(
-            (it.get("item_number") or it.get("Retailer Item No.") or "").upper() in ("26SQRP", "26XL", "26EA", "26XM", "26XE", "26XH")
-            or "26sqrp" in ((it.get("Personal Notes") or "") + " " + fname).lower()
-            for it in items
+            if _is_supply_item_dict(it, fname):
+                logger.info(f"Skipping supply/accessory item: {str(it.get('Personal Notes') or it.get('Program/Series') or '')[:60]}")
+                supply_lines_cents += line_total_cents
+                continue
+
+            kept_rows.append({
+                "raw": it,
+                "qty": item_qty,
+                "unit_price_cents": unit_price_cents,
+                "raw_line_total_cents": raw_line_total_cents,
+                "expected_line_cents": expected_line_cents,
+                "line_total_cents": line_total_cents,
+            })
+
+        coins_lines_cents = sum(r["line_total_cents"] for r in kept_rows)
+        all_lines_cents = coins_lines_cents + supply_lines_cents
+        effective_subtotal_cents = order_subtotal_cents if order_subtotal_cents > 0 else coins_lines_cents
+
+        # Preserve B4 shipping credit cap within this isolated order only.
+        order_fee_cents = 0
+        if order_total_cents > effective_subtotal_cents and effective_subtotal_cents > 0:
+            order_fee_cents = order_total_cents - effective_subtotal_cents
+        elif order_total_cents <= 0 and (order_shipping_cents + order_tax_cents) > 0:
+            order_fee_cents = order_shipping_cents + order_tax_cents
+
+        row_fee_allocations = _allocate_cents_largest_remainder(
+            order_fee_cents,
+            [r["line_total_cents"] for r in kept_rows],
         )
-    )
 
-    results = []
-    for it in items:
-        item_qty = _get_item_qty(it)
-        sticker_price = clean_valuation_value(it.get("Cost") or 0.0)
+        # Order-level arithmetic check (+/-1 cent tolerance).
+        order_math_errors: list[str] = []
+        if kept_rows and order_subtotal_cents > 0:
+            if abs(coins_lines_cents - order_subtotal_cents) > 1 and abs(all_lines_cents - order_subtotal_cents) > 1:
+                order_math_errors.append(
+                    f"Order lines sum ${coins_lines_cents / 100.0:.2f} != subtotal ${order_subtotal_cents / 100.0:.2f}"
+                )
+        if kept_rows and order_total_cents > 0:
+            coins_with_fees = coins_lines_cents + order_shipping_cents + order_tax_cents - order_discount_cents
+            all_with_fees = all_lines_cents + order_shipping_cents + order_tax_cents - order_discount_cents
+            b4_credit_match = (
+                order_subtotal_cents > 0
+                and (abs(coins_lines_cents - order_subtotal_cents) <= 1 or abs(all_lines_cents - order_subtotal_cents) <= 1)
+                and abs(order_subtotal_cents - order_total_cents) <= 1
+            )
+            if abs(coins_with_fees - order_total_cents) > 1 and abs(all_with_fees - order_total_cents) > 1 and not b4_credit_match:
+                order_math_errors.append(
+                    f"Order lines + S&H/tax ${coins_with_fees / 100.0:.2f} != order total ${order_total_cents / 100.0:.2f}"
+                )
 
-        # Proportional Landed Cost Allocation
-        if raw_item_sum > 0.0 and total_global_fees > 0.0:
-            allocated_fee = round(total_global_fees * (sticker_price / raw_item_sum), 2)
-        elif len(items) == 1 and total_global_fees > 0.0:
-            allocated_fee = round(total_global_fees, 2)
-        else:
-            allocated_fee = 0.0
+        order_ret = (order.get("retailer") or order.get("Retailer/Website") or "").strip()
+        order_inv = (order.get("invoice_number") or order.get("Retailer Invoice #") or "").strip()
+        order_date = (order.get("invoice_date") or order.get("Invoice Date") or order.get("purchase_date") or order.get("Purchase Date") or order.get("Date") or "").strip()
 
-        landed_cost_basis = round(sticker_price + allocated_fee, 2)
+        for row_idx, row_info in enumerate(kept_rows):
+            it = row_info["raw"]
+            item_qty = row_info["qty"]
+            unit_price_cents = row_info["unit_price_cents"]
+            raw_line_total_cents = row_info["raw_line_total_cents"]
+            line_total_cents = row_info["line_total_cents"]
+            row_fee_cents = row_fee_allocations[row_idx]
+            allocated_fee = float(Decimal(row_fee_cents) / Decimal("100"))
+            fee_per_unit_cents = _split_fee_per_unit_cents(row_fee_cents, item_qty)
+            unit_price_float = float(Decimal(unit_price_cents) / Decimal("100"))
+            line_total_float = float(Decimal(line_total_cents) / Decimal("100"))
 
-        is_supply = bool(it.get("is_supply", False))
-        prog_val = (it.get("Program/Series") or "").strip()
-        raw_desc = (it.get("Personal Notes") or "") + " " + fname + " " + prog_val + " " + (it.get("Denomination") or "")
-        raw_lower = raw_desc.lower()
+            prog_val = (it.get("Program/Series") or "").strip()
+            raw_desc = (it.get("Personal Notes") or "") + " " + fname + " " + prog_val + " " + (it.get("Denomination") or "")
+            raw_lower = raw_desc.lower()
 
-        # Supply / Folder Filter (NET-400c):
-        # Never import supply/folder rows as coins
-        supply_kws = ("folder", "supply", "album", "holder", "capsule", "supplies", "binder", "display box")
-        has_year = bool(re.search(r"\b(1[789]\d\d|20[0-2]\d)\b", raw_desc))
-        if is_supply or (any(kw in raw_lower for kw in supply_kws) and not has_year and not it.get("Year")):
-            logger.info(f"Skipping supply/accessory item: {raw_desc[:60]}")
-            continue
+            # Set & Denomination Normalization (NET-400c):
+            denom_val = (it.get("Denomination") or "").strip()
+            denom_lower = denom_val.lower()
+            if "unknown cent/nickel" in denom_lower or denom_lower in ("cent/nickel", "cent / nickel", "unknown cent / nickel"):
+                denom_val = "Cent"
+                if not prog_val:
+                    prog_val = "Cent & Nickel Set"
+            elif "quarter set" in raw_lower and ("unknown" in denom_lower or not denom_val):
+                denom_val = "Quarter"
+            elif not denom_val:
+                denom_val = "Dollar"
 
-        # Set & Denomination Normalization (NET-400c):
-        denom_val = (it.get("Denomination") or "").strip()
-        denom_lower = denom_val.lower()
-        if "unknown cent/nickel" in denom_lower or denom_lower in ("cent/nickel", "cent / nickel", "unknown cent / nickel"):
-            denom_val = "Cent"
-            if not prog_val:
-                prog_val = "Cent & Nickel Set"
-        elif "quarter set" in raw_lower and ("unknown" in denom_lower or not denom_val):
-            denom_val = "Quarter"
-        elif not denom_val:
-            denom_val = "Dollar"
+            # Smart Program/Series & Metal Content Normalization
+            metal_val = (it.get("Metal Content") or "").strip()
+            if "gold eagle" in raw_lower or "american gold eagle" in raw_lower:
+                if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                    prog_val = "American Gold Eagle"
+                if not metal_val:
+                    metal_val = "Gold"
+            elif "platinum eagle" in raw_lower or "american platinum eagle" in raw_lower:
+                if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                    prog_val = "American Platinum Eagle"
+                if not metal_val:
+                    metal_val = "Platinum"
+            elif "palladium eagle" in raw_lower or "american palladium eagle" in raw_lower:
+                if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                    prog_val = "American Palladium Eagle"
+                if not metal_val:
+                    metal_val = "Palladium"
+            elif "silver eagle" in raw_lower or "american silver eagle" in raw_lower or "26ea" in raw_lower or ("american eagle" in raw_lower and "gold" not in raw_lower and "platinum" not in raw_lower):
+                if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
+                    prog_val = "American Silver Eagle"
+                if not metal_val:
+                    metal_val = "Silver"
 
-        # Smart Program/Series & Metal Content Normalization
-        metal_val = (it.get("Metal Content") or "").strip()
-
-        if "gold eagle" in raw_lower or "american gold eagle" in raw_lower:
-            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                prog_val = "American Gold Eagle"
             if not metal_val:
-                metal_val = "Gold"
-        elif "platinum eagle" in raw_lower or "american platinum eagle" in raw_lower:
-            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                prog_val = "American Platinum Eagle"
-            if not metal_val:
-                metal_val = "Platinum"
-        elif "palladium eagle" in raw_lower or "american palladium eagle" in raw_lower:
-            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                prog_val = "American Palladium Eagle"
-            if not metal_val:
-                metal_val = "Palladium"
-        elif "silver eagle" in raw_lower or "american silver eagle" in raw_lower or "26ea" in raw_lower or ("american eagle" in raw_lower and "gold" not in raw_lower and "platinum" not in raw_lower):
-            if not prog_val or prog_val.lower() in ("american eagle", "eagle"):
-                prog_val = "American Silver Eagle"
-            if not metal_val:
-                metal_val = "Silver"
+                if "silver" in raw_lower or "morgan" in raw_lower or "peace" in raw_lower:
+                    metal_val = "Silver"
+                elif "gold" in raw_lower or "saint-gaudens" in raw_lower or "krugerrand" in raw_lower or "sovereign" in raw_lower:
+                    metal_val = "Gold"
+                elif "nickel" in raw_lower or "jefferson" in raw_lower or "buffalo nickel" in raw_lower:
+                    metal_val = "Cupronickel"
+                elif "cent" in raw_lower or "lincoln" in raw_lower or "penny" in raw_lower or "indian head" in raw_lower:
+                    metal_val = "Copper"
 
-        if not metal_val:
-            if "silver" in raw_lower or "morgan" in raw_lower or "peace" in raw_lower:
-                metal_val = "Silver"
-            elif "gold" in raw_lower or "saint-gaudens" in raw_lower or "krugerrand" in raw_lower or "sovereign" in raw_lower:
-                metal_val = "Gold"
-            elif "nickel" in raw_lower or "jefferson" in raw_lower or "buffalo nickel" in raw_lower:
-                metal_val = "Cupronickel"
-            elif "cent" in raw_lower or "lincoln" in raw_lower or "penny" in raw_lower or "indian head" in raw_lower:
-                metal_val = "Copper"
+            mint_mark_val = (it.get("Mint Mark") or "").strip()
+            notes_str = (it.get("Personal Notes") or "") + " " + fname
+            if not mint_mark_val and ("26ea" in notes_str.lower() or "west point" in notes_str.lower() or "26ea" in fname.lower()):
+                mint_mark_val = "W"
 
-        mint_mark_val = (it.get("Mint Mark") or "").strip()
-        notes_str = (it.get("Personal Notes") or "") + " " + fname
-        if not mint_mark_val and ("26ea" in notes_str.lower() or "west point" in notes_str.lower() or "26ea" in fname.lower()):
-            mint_mark_val = "W"
+            ret_val = (
+                it.get("Retailer/Website")
+                or it.get("retailer")
+                or order_ret
+                or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")
+            ).strip()
+            inv_val = (it.get("Retailer Invoice #") or it.get("invoice_number") or order_inv or "").strip()
+            pdate_val = (
+                it.get("invoice_date")
+                or it.get("Invoice Date")
+                or it.get("Purchase Date")
+                or it.get("purchase_date")
+                or it.get("Date")
+                or order_date
+                or ""
+            ).strip()
+            item_no_val = (it.get("Retailer Item No.") or it.get("item_number") or it.get("item_no") or "").strip()
 
-        # Plan 4.1 & Argon 4.1.x: Write pure snake_case keys; eliminate illegal key writes
-        ret_val = (it.get("Retailer/Website") or it.get("retailer") or (data.get("retailer") if isinstance(data, dict) else "") or (data.get("Retailer/Website") if isinstance(data, dict) else "") or ("United States Mint" if "usmint" in raw_lower or "united states mint" in raw_lower or "26ea" in raw_lower or "26xl" in raw_lower else "")).strip()
-        inv_val = (it.get("Retailer Invoice #") or it.get("invoice_number") or (data.get("invoice_number") if isinstance(data, dict) else "") or (data.get("Retailer Invoice #") if isinstance(data, dict) else "") or "").strip()
-        pdate_val = (it.get("invoice_date") or it.get("Invoice Date") or it.get("Purchase Date") or it.get("purchase_date") or it.get("Date") or (data.get("invoice_date") if isinstance(data, dict) else "") or (data.get("date") if isinstance(data, dict) else "") or (data.get("Purchase Date") if isinstance(data, dict) else "") or "").strip()
-        item_no_val = (it.get("Retailer Item No.") or it.get("item_number") or it.get("item_no") or "").strip()
+            doc = {
+                "Program/Series":              prog_val,
+                "Theme/Subject":               it.get("Theme/Subject") or it.get("theme") or "",
+                "Year":                        it.get("Year", ""),
+                "Mint Mark":                   mint_mark_val,
+                "Denomination":                denom_val,
+                "Condition":                   it.get("Condition", "Ungraded"),
+                "Strike Type":                 it.get("Strike Type") or it.get("strike_type") or "",
+                "Metal Content":               metal_val,
+                "Cost":                        unit_price_float,
+                "Purchase Cost":               unit_price_float,
+                "unit_price":                  unit_price_float,
+                "unit_price_cents":            unit_price_cents,
+                "line_total":                  line_total_float,
+                "line_total_cents":            line_total_cents,
+                "allocated_fees":              allocated_fee,
+                "shipping_fee":                allocated_fee,
+                "allocated_fee_cents":         row_fee_cents,
+                "allocated_fee_per_unit_cents": fee_per_unit_cents,
+                "order_landed_total":          float(Decimal(coins_lines_cents + order_fee_cents) / Decimal("100")),
+                "Quantity":                    item_qty,
+                "quantity":                    item_qty,
+                "Country":                     "United States",
+                "country":                     "United States",
+                "Personal Notes":              (it.get("Personal Notes") or it.get("Original Description from source") or "").strip(),
+                "source":                      "PDF Invoice",
+                "is_demo":                     False,
+                "is_demo_cleared":             False,
+                "retailer":                    ret_val,
+                "retailer_website":            ret_val,
+                "invoice_number":              inv_val,
+                "retailer_invoice_num":        inv_val,
+                "purchase_date":               pdate_val,
+                "item_number":                 item_no_val,
+                "retailer_item_num":           item_no_val,
+                "status":                      "pending",
+                "source_file":                 fname,
+                "import_session_id":           session_id,
+                "source_type":                 "invoice",
+                "deep_dive_status":            "PENDING",
+                "upload_method":               "pdf_invoice_import",
+                "item_type":                   "coin",
+            }
+            if gcs_path:
+                doc["gcs_path"] = gcs_path
+            try:
+                doc["item_type"] = _classify_item_type(doc)
+            except Exception:
+                pass
 
-        doc = {
-            "Program/Series":       prog_val,
-            "Theme/Subject":        it.get("Theme/Subject") or it.get("theme") or "",
-            "Year":                 it.get("Year", ""),
-            "Mint Mark":            mint_mark_val,
-            "Denomination":         denom_val,
-            "Condition":            it.get("Condition", "Ungraded"),
-            "Strike Type":          it.get("Strike Type") or it.get("strike_type") or "",
-            "Metal Content":        metal_val,
-            "Cost":                 landed_cost_basis,
-            "Purchase Cost":        landed_cost_basis,
-            "allocated_fees":       allocated_fee,
-            "shipping_fee":         allocated_fee,
-            "Quantity":             item_qty,
-            "quantity":             item_qty,
-            "Country":              "United States",
-            "country":              "United States",
-            "Personal Notes":       (it.get("Personal Notes") or it.get("Original Description from source") or "").strip(),
-            "source":               "PDF Invoice",
-            "is_demo":              False,
-            "is_demo_cleared":      False,
-            "retailer":             ret_val,
-            "retailer_website":     ret_val,
-            "invoice_number":       inv_val,
-            "retailer_invoice_num": inv_val,
-            "purchase_date":        pdate_val,
-            "item_number":          item_no_val,
-            "retailer_item_num":    item_no_val,
-            "status":               "pending",
-            "source_file":          fname,
-            "import_session_id":    session_id,
-            "source_type":          "invoice",
-            "deep_dive_status":     "PENDING",
-            "upload_method":        "pdf_invoice_import",
-            "item_type":            "coin",
-        }
-        if gcs_path:
-            doc["gcs_path"] = gcs_path
-        try:
-            doc["item_type"] = _classify_item_type(doc)
-        except Exception:
-            pass
+            # Enrich US Mint items without dividing an already per-unit Cost by qty.
+            try:
+                from services.us_mint_catalog_service import enrich_us_mint_item
 
-        # B1: Call enrich_us_mint_item on doc to expand pack/roll quantity (e.g. 26SQRP)
-        try:
-            from services.us_mint_catalog_service import enrich_us_mint_item
-            enrich_us_mint_item(doc)
-            doc["Purchase Cost"] = doc.get("Cost")
-            # Plan 4.1 §3.1 item 1 / Plan.v1 / Must-Fix A-1: Pure snake_case allocated_fees & shipping_fee
-            doc["allocated_fees"] = allocated_fee
-            doc["shipping_fee"] = allocated_fee
+                enrich_us_mint_item(doc)
+                doc["Purchase Cost"] = doc.get("Cost")
+                doc["allocated_fees"] = allocated_fee
+                doc["shipping_fee"] = allocated_fee
+                doc["allocated_fee_cents"] = row_fee_cents
+                doc["allocated_fee_per_unit_cents"] = fee_per_unit_cents
 
-            sku_upper = (doc.get("retailer_item_num") or doc.get("item_number") or "").upper()
-            if sku_upper == "26SQRP" or (doc.get("pack_expanded") and "semiquincentennial" in (prog_val + " " + raw_desc).lower()):
-                doc["from_set"] = True
-                doc["set_name"] = "2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll"
-            elif doc.get("pack_expanded"):
-                doc["from_set"] = True
-                doc["set_name"] = prog_val or "US Mint Coin Roll"
+                sku_upper = (doc.get("retailer_item_num") or doc.get("item_number") or "").upper()
+                if sku_upper == "26SQRP" or (doc.get("pack_expanded") and "semiquincentennial" in (prog_val + " " + raw_desc).lower()):
+                    doc["from_set"] = True
+                    doc["set_name"] = "2026 Semiquincentennial Presidential $1 Coin 25-Coin Roll"
+                elif doc.get("pack_expanded"):
+                    doc["from_set"] = True
+                    doc["set_name"] = prog_val or "US Mint Coin Roll"
 
-            if doc.get("pack_expanded") and doc.get("unit_cost"):
-                qty_val = doc.get("Quantity") or doc.get("quantity") or 1
-                cost_val = float(doc.get("Cost") or 0.0)
-                unit_val = float(doc.get("unit_cost") or 0.0)
-                doc["set_cost_label"] = f"${cost_val:.2f} ({qty_val} @ ${unit_val:.2f})"
-            elif not doc.get("set_cost_label"):
-                cost_val = float(doc.get("Cost") or 0.0)
-                doc["set_cost_label"] = f"${cost_val:.2f}"
-        except Exception as e:
-            logger.warning(f"Error enriching item in normalize_and_validate_receipt: {e}")
+                if doc.get("pack_expanded") and doc.get("unit_cost"):
+                    qty_val = doc.get("Quantity") or doc.get("quantity") or 1
+                    cost_val = float(doc.get("Cost") or 0.0)
+                    unit_val = float(doc.get("unit_cost") or 0.0)
+                    doc["set_cost_label"] = f"${cost_val:.2f} ({qty_val} @ ${unit_val:.2f})"
+                elif not doc.get("set_cost_label"):
+                    cost_val = float(doc.get("Cost") or 0.0)
+                    doc["set_cost_label"] = f"${cost_val:.2f}"
+            except Exception as e:
+                logger.warning(f"Error enriching item in normalize_and_validate_receipt: {e}")
 
-        results.append(dict(doc))
+            # Arithmetic sanity check (line-level & order-level, +/-1 cent).
+            math_errors = list(order_math_errors)
+            if raw_line_total_cents is not None and raw_line_total_cents > 0 and unit_price_cents > 0:
+                expected_cents = unit_price_cents * item_qty
+                if abs(expected_cents - raw_line_total_cents) > 1:
+                    math_errors.append(
+                        f"{item_qty} x ${unit_price_cents / 100.0:.2f} = ${expected_cents / 100.0:.2f} != line total ${raw_line_total_cents / 100.0:.2f}"
+                    )
+            if not doc.get("pack_expanded") and doc.get("unit_cost_cents") is not None and unit_price_cents > 0:
+                if abs(int(doc["unit_cost_cents"]) - unit_price_cents) > 1:
+                    math_errors.append(
+                        f"unit_cost ${int(doc['unit_cost_cents']) / 100.0:.2f} != unit_price ${unit_price_cents / 100.0:.2f}"
+                    )
 
-    # Defense-in-depth: Deduplicate identical US Mint SKU echoes from return coupons (NET-539)
+            if math_errors:
+                doc["math_check_passed"] = False
+                doc["review_needed"] = True
+                doc["needs_review_reason"] = "; ".join(math_errors)
+                try:
+                    cur_conf = float(doc.get("confidence_score") if doc.get("confidence_score") is not None else 1.0)
+                except (TypeError, ValueError):
+                    cur_conf = 1.0
+                doc["confidence_score"] = min(cur_conf, 0.75)
+            else:
+                doc["math_check_passed"] = True
+                doc.setdefault("review_needed", False)
+
+            results.append(dict(doc))
+
+    # Per-order defense-in-depth SKU dedup (scoped strictly by (invoice_number, sku)).
     if len(results) > 1:
         seen_skus = set()
         deduped = []
         for r in results:
-            sku = (r.get("Retailer Item No.") or "").upper()
+            sku = (r.get("retailer_item_num") or r.get("item_number") or r.get("Retailer Item No.") or "").upper()
+            inv_key = _normalize_invoice_num(r.get("invoice_number") or r.get("retailer_invoice_num") or "")
             if sku and sku in ("26SQRP", "26XL", "26EA", "26XM", "26XE", "26XH"):
-                if sku in seen_skus:
-                    logger.info(f"Collapsing duplicate US Mint coupon echo row for SKU {sku}")
+                dedup_key = (inv_key, sku)
+                if dedup_key in seen_skus:
+                    logger.info(f"Collapsing duplicate US Mint coupon echo row for SKU {sku} in order {inv_key or 'default'}")
                     continue
-                seen_skus.add(sku)
+                seen_skus.add(dedup_key)
             deduped.append(r)
         results = deduped
 
@@ -8279,7 +8547,7 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         per_file[idx]["document_type"] = "checklist"
                         continue
 
-                    pdf_part = genai_types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
+                    page_parts = _split_pdf_pages_for_extraction(file_bytes, mime_type)
 
                     pii_rule = ""
                     if mask_pii:
@@ -8290,14 +8558,14 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                         """
 
                     invoice_prompt = f"""
-                    You are an expert numismatic document processing AI. Extract structured coin and supply details from this invoice or receipt document.
+                    You are an expert numismatic document processing AI. Extract structured coin and supply details from this invoice or receipt page.
                     {pii_rule}
 
                     Required JSON output structure:
                     {{
                         "retailer": "Dealer or store name (use 'United States Mint' if document is from US Mint / shop.usmint.gov)",
-                        "invoice_number": "Invoice, order, or customer reference number",
-                        "invoice_date": "YYYY-MM-DD",
+                        "invoice_number": "Invoice, order, or customer reference number on THIS order/page",
+                        "invoice_date": "YYYY-MM-DD from THIS order/page header",
                         "subtotal": 0.00,
                         "shipping_fee": 0.00,
                         "tax_fee": 0.00,
@@ -8309,182 +8577,207 @@ def _execute_import_process_worker(user_email: str, session_id: str, mask_pii: b
                                 "Mint Mark": "Mint mark (e.g. S, D, O, CC, or blank)",
                                 "Denomination": "Denomination (e.g. Dollar, Quarter, Cent)",
                                 "Condition": "Grade or condition if mentioned (e.g. MS-65, VF-20, Ungraded)",
+                                "unit_price": 0.00,
                                 "Cost": 0.00,
+                                "line_total": 0.00,
                                 "qty": 1,
                                 "is_supply": false,
                                 "item_number": "Item number / catalog code if present",
-                                "invoice_number": "Invoice number from this page header",
-                                "invoice_date": "YYYY-MM-DD from this page header",
+                                "invoice_number": "Invoice number from this page/order header",
+                                "invoice_date": "YYYY-MM-DD from this page/order header",
                                 "Certification Number": "Cert number if graded",
                                 "Personal Notes": "Any item description, catalog number, or stock item number (e.g. 26EA, 26XL)"
                             }}
                         ]
                     }}
                     Field Instructions:
-                    - Multi-Page / Multi-Invoice Invoices: A multi-page document may contain separate invoices or packing slips with different invoice numbers and dates on each page header. Stamp each line item with the "invoice_number" and "invoice_date" (ISO 8601 YYYY-MM-DD) from its own page header.
+                    - Multi-Page / Multi-Order Isolation: Never copy invoice_number, invoice_date, shipping_fee, or totals from a different order or page.
                     - "retailer": If document header or body indicates "United States Mint" or "www.usmint.gov", set to "United States Mint".
                     - "invoice_number": Extract invoice number, order number, or packing slip number.
                     - "invoice_date": Output in ISO 8601 YYYY-MM-DD format.
                     - "qty": Integer quantity from the leftmost Qty / Qty. column on EVERY row (default 1). Inspect each row's Qty. column carefully (e.g., 1 vs 2) and never default qty to 1 when the Qty. column shows 2 or more. Do NOT split a qty > 1 line item into multiple JSON objects; emit a single line_item object with "qty": N.
-                    - "Cost": Sticker price / per-unit price of the line item before global fees. If the line shows an extended Amount for qty > 1 (e.g. Qty. 2 with Amount 15.30), divide Amount by qty so Cost is the per-unit price (7.65).
+                    - "unit_price" & "Cost": Per-unit item price BEFORE shipping/tax fees (do NOT add shipping here).
+                    - "line_total": Extended line subtotal for the row (unit_price * qty) BEFORE shipping/tax fees.
                     - "is_supply": Set to true ONLY if the item is a non-coin accessory/supply (e.g., coin album, display box, storage capsule, insurance, or grading fee).
                     Output ONLY valid JSON.
                     """
 
-                    data = None
-                    last_gen_err = None
-                    for attempt in range(3):
-                        try:
-                            resp = genai_client.models.generate_content(
-                                model=PRIMARY_MODEL,
-                                contents=[pdf_part, genai_types.Part.from_text(text=invoice_prompt)],
-                                config=genai_types.GenerateContentConfig(
-                                    response_mime_type="application/json",
-                                    thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
-                                ),
-                            )
-                            raw_text = resp.text.strip()
-                            if raw_text.startswith("```"):
-                                raw_text = raw_text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-                            data = json.loads(raw_text)
-                            break
-                        except Exception as g_err:
-                            last_gen_err = g_err
-                            time.sleep(1.0 * (2 ** attempt))
-                    if data is None:
-                        raise last_gen_err or RuntimeError("Failed to parse invoice with AI")
+                    extracted_pages = []
+                    for page_bytes, page_mime in page_parts:
+                        page_part = genai_types.Part.from_bytes(data=page_bytes, mime_type=page_mime)
+                        page_data = None
+                        last_gen_err = None
+                        for attempt in range(3):
+                            try:
+                                resp = genai_client.models.generate_content(
+                                    model=PRIMARY_MODEL,
+                                    contents=[page_part, genai_types.Part.from_text(text=invoice_prompt)],
+                                    config=genai_types.GenerateContentConfig(
+                                        response_mime_type="application/json",
+                                        thinking_config=gemini4_thinking_config(PRIMARY_MODEL, "low"),
+                                    ),
+                                )
+                                raw_text = resp.text.strip()
+                                if raw_text.startswith("```"):
+                                    raw_text = raw_text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                                page_data = json.loads(raw_text)
+                                break
+                            except Exception as g_err:
+                                last_gen_err = g_err
+                                time.sleep(1.0 * (2 ** attempt))
+                        if page_data is None:
+                            raise last_gen_err or RuntimeError("Failed to parse invoice with AI")
+                        if isinstance(page_data, list):
+                            for sub_entry in page_data:
+                                if isinstance(sub_entry, dict):
+                                    extracted_pages.append(sub_entry)
+                        elif isinstance(page_data, dict):
+                            extracted_pages.append(page_data)
+
+                    data = extracted_pages[0] if len(extracted_pages) == 1 else extracted_pages
+                    grouped_orders = _group_receipt_orders(data)
 
                     added_this_file = 0
-                    total_val = 0.0
+                    total_val_file = 0.0
                     col_ref = db.collection("users").document(user_email).collection("review_queue")
-                    batch = db.batch()
                     file_stem = fname.rsplit(".", 1)[0]
                     safe_file_stem = "".join(c if (c.isalnum() or c in ("_", "-")) else "_" for c in file_stem)
-                    receipt_id = f"rec_{safe_file_stem}"
-                    line_items_out = []
+                    base_receipt_id = f"rec_{safe_file_stem}"
+                    receipt_ids_written: list[str] = []
 
-                    normalized_coins = normalize_and_validate_receipt(data, fname=fname, gcs_path=gcs_path, session_id=session_id)
-                    total_val = round(sum(
-                        c.get("Cost", 0.0) * (
-                            (max(1, int(c.get("Quantity") or c.get("quantity") or 1)) // max(1, int(c.get("pack_quantity_multiplier") or 1)))
-                            if c.get("pack_expanded")
-                            else max(1, int(c.get("Quantity") or c.get("quantity") or 1))
-                        ) for c in normalized_coins
-                    ), 2)
+                    for order_idx, order_payload in enumerate(grouped_orders):
+                        receipt_id = base_receipt_id if len(grouped_orders) == 1 else f"{base_receipt_id}_o{order_idx + 1}"
+                        receipt_ids_written.append(receipt_id)
+                        batch = db.batch()
+                        line_items_out = []
 
-                    # Plan v3.1 §5.2 / §5.3 / §5.4: Stable doc_id generation & In-memory supersede (ZERO .delete())
-                    # 1. Compute stable doc_id for each line in normalized_coins
-                    new_item_specs = []
-                    new_doc_ids = set()
-                    for line_idx, coin_doc in enumerate(normalized_coins):
-                        item_sku = (coin_doc.get("Retailer Item No.") or coin_doc.get("item_number") or coin_doc.get("item_no") or "").strip()
-                        line_ordinal = line_idx + 1
-                        normalized_line_key = f"{item_sku or 'item'}_{line_ordinal}"
-                        raw_hash_input = f"{receipt_id}|{normalized_line_key}"
-                        stable_doc_id = hashlib.sha256(raw_hash_input.encode("utf-8")).hexdigest()[:40]
-                        new_doc_ids.add(stable_doc_id)
-                        new_item_specs.append((stable_doc_id, coin_doc))
+                        normalized_coins = normalize_and_validate_receipt(
+                            order_payload, fname=fname, gcs_path=gcs_path, session_id=session_id
+                        )
+                        order_total_val = round(sum(
+                            c.get("Cost", 0.0) * (
+                                (max(1, int(c.get("Quantity") or c.get("quantity") or 1)) // max(1, int(c.get("pack_quantity_multiplier") or 1)))
+                                if c.get("pack_expanded")
+                                else max(1, int(c.get("Quantity") or c.get("quantity") or 1))
+                            ) for c in normalized_coins
+                        ), 2)
+                        total_val_file = round(total_val_file + order_total_val, 2)
 
-                    # 2. In-memory supersede existing pending review_queue docs for this receipt_id (NO .delete())
-                    try:
-                        supersede_batch = db.batch()
-                        superseded_count = 0
-                        # Query using the deployed composite index: receipt_id ASC, status ASC
-                        # Argon 4.1.x: supersede any prior docs matching receipt_id with status in (pending, pending_review, staged)
-                        for st in ("pending", "pending_review", "staged"):
-                            st_snaps = col_ref.where("receipt_id", "==", receipt_id).where("status", "==", st).stream()
-                            for snap in st_snaps:
-                                if snap.id not in new_doc_ids:
-                                    supersede_batch.set(snap.reference, {"status": "superseded"}, merge=True)
-                                    superseded_count += 1
-                        if superseded_count > 0:
-                            supersede_batch.commit()
-                            logger.info(f"Superseded {superseded_count} older review_queue docs for receipt {receipt_id}")
-                    except Exception as sup_err:
-                        logger.warning(f"Error marking review_queue items superseded: {sup_err}")
+                        new_item_specs = []
+                        new_doc_ids = set()
+                        for line_idx, coin_doc in enumerate(normalized_coins):
+                            item_sku = (coin_doc.get("retailer_item_num") or coin_doc.get("item_number") or coin_doc.get("Retailer Item No.") or "").strip()
+                            line_ordinal = line_idx + 1
+                            normalized_line_key = f"{item_sku or 'item'}_{line_ordinal}"
+                            raw_hash_input = f"{receipt_id}|{normalized_line_key}"
+                            stable_doc_id = hashlib.sha256(raw_hash_input.encode("utf-8")).hexdigest()[:40]
+                            new_doc_ids.add(stable_doc_id)
+                            new_item_specs.append((stable_doc_id, coin_doc))
 
-                    hdr = data if isinstance(data, dict) else (data[0] if (isinstance(data, list) and data and isinstance(data[0], dict)) else {})
-                    subtotal_val = clean_valuation_value(hdr.get("subtotal") or 0.0)
-                    shipping_val = clean_valuation_value(hdr.get("shipping_fee") or hdr.get("shipping") or 0.0)
-                    tax_val      = clean_valuation_value(hdr.get("tax_fee") or hdr.get("tax") or 0.0)
-                    grand_total  = clean_valuation_value(hdr.get("total_amount") or hdr.get("grand_total") or 0.0)
+                        # In-memory supersede existing pending review_queue docs for this order receipt_id (NO .delete())
+                        try:
+                            supersede_batch = db.batch()
+                            superseded_count = 0
+                            for st in ("pending", "pending_review", "staged"):
+                                st_snaps = col_ref.where("receipt_id", "==", receipt_id).where("status", "==", st).stream()
+                                for snap in st_snaps:
+                                    if snap.id not in new_doc_ids:
+                                        supersede_batch.set(snap.reference, {"status": "superseded"}, merge=True)
+                                        superseded_count += 1
+                            if superseded_count > 0:
+                                supersede_batch.commit()
+                                logger.info(f"Superseded {superseded_count} older review_queue docs for receipt {receipt_id}")
+                        except Exception as sup_err:
+                            logger.warning(f"Error marking review_queue items superseded: {sup_err}")
 
-                    # Plan v3.1 / Plan 4.1: shipping_val remains parent-level (e.g. 9.95), subtotal remains sum of items, grand_total remains subtotal + shipping + tax
-                    if subtotal_val <= 0.0:
-                        subtotal_val = total_val
-                    if grand_total <= 0.0:
-                        grand_total = (subtotal_val + shipping_val + tax_val) if (shipping_val + tax_val) > 0 else total_val
+                        hdr = order_payload if isinstance(order_payload, dict) else {}
+                        subtotal_val = clean_valuation_value(hdr.get("subtotal") or 0.0)
+                        shipping_val = clean_valuation_value(hdr.get("shipping_fee") or hdr.get("shipping") or 0.0)
+                        tax_val      = clean_valuation_value(hdr.get("tax_fee") or hdr.get("tax") or 0.0)
+                        grand_total  = clean_valuation_value(hdr.get("total_amount") or hdr.get("grand_total") or 0.0)
 
-                    first_c = normalized_coins[0] if normalized_coins else {}
-                    retailer_val = (hdr.get("retailer") or hdr.get("retailer_website") or hdr.get("Retailer/Website") or first_c.get("retailer_website") or first_c.get("retailer") or "").strip()
-                    invoice_num_val = (hdr.get("invoice_number") or hdr.get("retailer_invoice_num") or hdr.get("Retailer Invoice #") or first_c.get("retailer_invoice_num") or first_c.get("invoice_number") or "").strip()
-                    invoice_date_val = (hdr.get("invoice_date") or hdr.get("date") or hdr.get("purchase_date") or hdr.get("Purchase Date") or first_c.get("purchase_date") or "").strip()
+                        if subtotal_val <= 0.0:
+                            subtotal_val = order_total_val
+                        if grand_total <= 0.0:
+                            grand_total = (subtotal_val + shipping_val + tax_val) if (shipping_val + tax_val) > 0 else order_total_val
 
-                    for stable_doc_id, coin_doc in new_item_specs:
-                        coin_doc["receipt_id"] = receipt_id
-                        coin_doc["status"] = "pending"
-                        coin_doc["created_at"] = firestore.SERVER_TIMESTAMP
-                        coin_doc["retailer_website"] = coin_doc.get("retailer_website") or coin_doc.get("retailer") or retailer_val or ""
-                        coin_doc["retailer"] = coin_doc["retailer_website"]
-                        coin_doc["retailer_invoice_num"] = coin_doc.get("retailer_invoice_num") or coin_doc.get("invoice_number") or invoice_num_val or ""
-                        coin_doc["invoice_number"] = coin_doc["retailer_invoice_num"]
-                        coin_doc["retailer_item_num"] = coin_doc.get("retailer_item_num") or coin_doc.get("item_number") or coin_doc.get("Retailer Item No.") or ""
-                        coin_doc["item_number"] = coin_doc["retailer_item_num"]
-                        if coin_doc.get("Allocated Fees") is not None and "allocated_fees" not in coin_doc:
-                            try:
-                                coin_doc["allocated_fees"] = float(coin_doc.get("Allocated Fees") or 0.0)
-                            except Exception:
-                                coin_doc["allocated_fees"] = 0.0
-                        coin_doc["purchase_date"] = coin_doc.get("purchase_date") or invoice_date_val or ""
-                        # Remove legacy illegal uppercase keys from the document payload if present
-                        coin_doc.pop("Retailer/Website", None)
-                        coin_doc.pop("Retailer Invoice #", None)
-                        coin_doc.pop("Retailer Item No.", None)
-                        coin_doc.pop("Allocated Fees", None)
+                        first_c = normalized_coins[0] if normalized_coins else {}
+                        retailer_val = (hdr.get("retailer") or hdr.get("retailer_website") or hdr.get("Retailer/Website") or first_c.get("retailer_website") or first_c.get("retailer") or "").strip()
+                        invoice_num_val = (hdr.get("invoice_number") or hdr.get("retailer_invoice_num") or hdr.get("Retailer Invoice #") or first_c.get("retailer_invoice_num") or first_c.get("invoice_number") or "").strip()
+                        invoice_date_val = (hdr.get("invoice_date") or hdr.get("date") or hdr.get("purchase_date") or hdr.get("Purchase Date") or first_c.get("purchase_date") or "").strip()
 
-                        doc_ref = col_ref.document(stable_doc_id)
-                        batch.set(doc_ref, coin_doc)  # Plan v3.1 §5.3: .set(payload) without merge
-                        new_coin_ids.append(doc_ref.id)
-                        doc_qty = max(1, int(coin_doc.get("Quantity") or coin_doc.get("quantity") or 1))
-                        added_this_file += doc_qty
-                        line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in coin_doc.items()}
-                        line_item_entry["id"] = doc_ref.id
-                        line_items_out.append(line_item_entry)
+                        added_this_order = 0
+                        for stable_doc_id, coin_doc in new_item_specs:
+                            coin_doc["receipt_id"] = receipt_id
+                            coin_doc["status"] = "pending"
+                            coin_doc["created_at"] = firestore.SERVER_TIMESTAMP
+                            coin_doc["retailer_website"] = coin_doc.get("retailer_website") or coin_doc.get("retailer") or retailer_val or ""
+                            coin_doc["retailer"] = coin_doc["retailer_website"]
+                            coin_doc["retailer_invoice_num"] = coin_doc.get("retailer_invoice_num") or coin_doc.get("invoice_number") or invoice_num_val or ""
+                            coin_doc["invoice_number"] = coin_doc["retailer_invoice_num"]
+                            coin_doc["retailer_item_num"] = coin_doc.get("retailer_item_num") or coin_doc.get("item_number") or coin_doc.get("Retailer Item No.") or ""
+                            coin_doc["item_number"] = coin_doc["retailer_item_num"]
+                            if coin_doc.get("Allocated Fees") is not None and "allocated_fees" not in coin_doc:
+                                try:
+                                    coin_doc["allocated_fees"] = float(coin_doc.get("Allocated Fees") or 0.0)
+                                except Exception:
+                                    coin_doc["allocated_fees"] = 0.0
+                            coin_doc["purchase_date"] = coin_doc.get("purchase_date") or invoice_date_val or ""
+                            coin_doc.pop("Retailer/Website", None)
+                            coin_doc.pop("Retailer Invoice #", None)
+                            coin_doc.pop("Retailer Item No.", None)
+                            coin_doc.pop("Allocated Fees", None)
 
-                    receipt_doc = {
-                        "receipt_id":          receipt_id,
-                        "session_id":          session_id,
-                        "import_session_id":   session_id,
-                        "original_filename":   fname,
-                        "gcs_path":            gcs_path,
-                        "retailer":            retailer_val,
-                        "invoice_number":      invoice_num_val,
-                        "invoice_date":        invoice_date_val,
-                        "subtotal":            subtotal_val,
-                        "shipping_fee":        shipping_val,
-                        "shipping_amount":     shipping_val,
-                        "tax_fee":             tax_val,
-                        "total_amount":        grand_total or total_val,
-                        "line_items":          line_items_out,
-                        "linked_coin_ids":     [],
-                        "unlinked_items":      [],
-                        "uploaded_at":         firestore.SERVER_TIMESTAMP,
-                    }
-                    receipt_ref = db.collection("users").document(user_email)\
-                      .collection("receipts").document(receipt_id)
-                    batch.set(receipt_ref, receipt_doc)
+                            doc_ref = col_ref.document(stable_doc_id)
+                            batch.set(doc_ref, coin_doc)
+                            new_coin_ids.append(doc_ref.id)
+                            doc_qty = max(1, int(coin_doc.get("Quantity") or coin_doc.get("quantity") or 1))
+                            added_this_order += doc_qty
+                            added_this_file += doc_qty
+                            line_item_entry = {k: (datetime.now(timezone.utc).isoformat() if k == "created_at" else v) for k, v in coin_doc.items()}
+                            line_item_entry["id"] = doc_ref.id
+                            line_items_out.append(line_item_entry)
 
-                    batch.commit()
+                        receipt_doc = {
+                            "receipt_id":          receipt_id,
+                            "session_id":          session_id,
+                            "import_session_id":   session_id,
+                            "original_filename":   fname,
+                            "gcs_path":            gcs_path,
+                            "retailer":            retailer_val,
+                            "invoice_number":      invoice_num_val,
+                            "invoice_date":        invoice_date_val,
+                            "subtotal":            subtotal_val,
+                            "shipping_fee":        shipping_val,
+                            "shipping_amount":     shipping_val,
+                            "tax_fee":             tax_val,
+                            "total_amount":        grand_total or order_total_val,
+                            "line_items":          line_items_out,
+                            "linked_coin_ids":     [],
+                            "unlinked_items":      [],
+                            "uploaded_at":         firestore.SERVER_TIMESTAMP,
+                        }
+                        receipt_ref = db.collection("users").document(user_email)\
+                          .collection("receipts").document(receipt_id)
+                        batch.set(receipt_ref, receipt_doc)
+                        batch.commit()
+                        summary["receipts_parsed"] += 1
 
                     summary["coins_identified"]     += added_this_file
-                    summary["receipts_parsed"]      += 1
-                    summary["total_purchase_value"] += total_val
-                    result_meta = {"coins_added": added_this_file, "receipt_id": receipt_id,
-                                   "total_value": total_val}
+                    summary["total_purchase_value"] += total_val_file
+                    primary_receipt_id = receipt_ids_written[0] if receipt_ids_written else base_receipt_id
+                    result_meta = {
+                        "coins_added": added_this_file,
+                        "receipt_id": primary_receipt_id,
+                        "receipt_ids": receipt_ids_written,
+                        "total_value": total_val_file,
+                    }
 
                     per_file[idx]["status"]      = "done"
                     per_file[idx]["coins_added"] = added_this_file
-                    per_file[idx]["receipt_id"]  = receipt_id
+                    per_file[idx]["receipt_id"]  = primary_receipt_id
+                    if len(receipt_ids_written) > 1:
+                        per_file[idx]["receipt_ids"] = receipt_ids_written
 
                 except Exception as e:
                     per_file[idx]["status"] = "error"

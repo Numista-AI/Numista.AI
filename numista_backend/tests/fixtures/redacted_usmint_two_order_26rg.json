@@ -1,0 +1,54 @@
+[
+  {
+    "retailer": "United States Mint",
+    "invoice_number": "USM25343756",
+    "invoice_date": "2026-11-19",
+    "subtotal": 214.00,
+    "shipping_fee": 0.00,
+    "tax_fee": 0.00,
+    "total_amount": 214.00,
+    "line_items": [
+      {
+        "Program/Series": "Proof Sets",
+        "Year": "2026",
+        "Denomination": "Set",
+        "Condition": "Proof",
+        "unit_price": 107.00,
+        "Cost": 107.00,
+        "line_total": 214.00,
+        "qty": 2,
+        "is_supply": false,
+        "item_number": "26RG",
+        "invoice_number": "USM25343756",
+        "invoice_date": "2026-11-19",
+        "Personal Notes": "26RG 2026 Semiquincentennial Clad Proof Set"
+      }
+    ]
+  },
+  {
+    "retailer": "United States Mint",
+    "invoice_number": "USM25258130",
+    "invoice_date": "2026-11-18",
+    "subtotal": 214.00,
+    "shipping_fee": 9.95,
+    "tax_fee": 0.00,
+    "total_amount": 223.95,
+    "line_items": [
+      {
+        "Program/Series": "Proof Sets",
+        "Year": "2026",
+        "Denomination": "Set",
+        "Condition": "Proof",
+        "unit_price": 107.00,
+        "Cost": 107.00,
+        "line_total": 214.00,
+        "qty": 2,
+        "is_supply": false,
+        "item_number": "26RG",
+        "invoice_number": "USM25258130",
+        "invoice_date": "2026-11-18",
+        "Personal Notes": "26RG 2026 Semiquincentennial Clad Proof Set"
+      }
+    ]
+  }
+]

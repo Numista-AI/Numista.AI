@@ -202,6 +202,7 @@ const _kFallbackUsMintSkus = kFallbackUsMintSkus;
 
 class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final ScrollController _nestedScrollController = ScrollController();
   bool _isProcessing = false;
   bool _showMoreWays = false;
   // ignore: prefer_final_fields
@@ -405,6 +406,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
 
   @override
   void dispose() {
+    _nestedScrollController.dispose();
     _tabController.dispose();
     _pcgsTokenCtrl.dispose();
     _pcgsCertCtrl.dispose();
@@ -990,14 +992,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
         },
       ),
       _QuickAddCard(
-        icon: Icons.receipt_long_outlined,
-        label: 'Upload an invoice',
-        onTap: () {
-          setState(() => _showMoreWays = true);
-          _tabController.animateTo(0);
-        },
-      ),
-      _QuickAddCard(
+        key: const Key('add_coins_upload_invoice_card'),
         icon: Icons.upload_file_outlined,
         label: 'Upload an invoice',
         onTap: _launchBulkImporter,
@@ -1064,6 +1059,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       child: Stack(
         children: [
           NestedScrollView(
+            controller: _nestedScrollController,
             headerSliverBuilder: (context, innerBoxIsScrolled) => [
               SliverToBoxAdapter(
                 child: Column(
@@ -1177,6 +1173,18 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
     );
   }
 
+  void _scrollTabsIntoView() {
+    if (!_nestedScrollController.hasClients) return;
+    final maxScroll = _nestedScrollController.position.maxScrollExtent;
+    if (maxScroll > 0) {
+      _nestedScrollController.animateTo(
+        maxScroll,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   Widget _buildTabBar() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 32),
@@ -1186,6 +1194,7 @@ class _AddCoinsHubState extends State<AddCoinsHub> with SingleTickerProviderStat
       child: TabBar(
         controller: _tabController,
         isScrollable: true,
+        onTap: (_) => _scrollTabsIntoView(),
         labelColor: const Color(0xFFF63366),
         unselectedLabelColor: const Color(0xFF64748B),
         indicatorColor: const Color(0xFFF63366),

@@ -632,14 +632,80 @@ def enrich_us_mint_item(item: Dict[str, Any]) -> Dict[str, Any]:
                 except (ValueError, TypeError):
                     pass
 
-        # Deterministic Integer Cents Pricing Contract (Lock L1 & G2, Argon R2.6 Decimal normalization)
-        cost_val = item.get("Cost") or item.get("Purchase Cost") or item.get("cost") or item.get("line_total")
-        raw_qty = item.get("Quantity") or item.get("qty") or 1
-        if cost_val is not None:
-            pricing = calculate_mint_pricing(cost_val, raw_qty)
-            item["unit_cost_cents"] = pricing["unit_cost_cents"]
-            item["unit_cost"] = pricing["unit_cost"]
-            item["line_total"] = pricing["line_total"]
+        # Deterministic Integer Cents Pricing Contract (v2: per-unit Cost preserved; never re-divide)
+        raw_qty = item.get("Quantity") or item.get("quantity") or item.get("qty") or 1
+        try:
+            clean_qty = max(1, int(float(re.sub(r"[^\d.]", "", str(raw_qty)) or "1")))
+        except (ValueError, TypeError):
+            clean_qty = 1
+
+        if item.get("pack_expanded"):
+            cost_val = item.get("Cost") or item.get("Purchase Cost") or item.get("cost") or item.get("line_total")
+            if cost_val is not None:
+                pricing = calculate_mint_pricing(cost_val, clean_qty)
+                item["unit_cost_cents"] = pricing["unit_cost_cents"]
+                item["unit_cost"] = pricing["unit_cost"]
+                item["line_total"] = pricing["line_total"]
+                item["line_total_cents"] = int(
+                    (Decimal(f"{pricing['line_total']:.2f}") * Decimal("100")).quantize(
+                        Decimal("1"), rounding=ROUND_HALF_UP
+                    )
+                )
+        elif not (
+            item.get("pricing_contract_version") == "v2_unit_and_line"
+            and item.get("unit_cost_cents") is not None
+            and item.get("line_total_cents") is not None
+        ):
+            def _parse_cents(val: Any) -> Optional[int]:
+                if val is None or isinstance(val, bool):
+                    return None
+                cleaned = re.sub(r"[^\d.]", "", str(val))
+                if not cleaned:
+                    return None
+                try:
+                    return int(
+                        (Decimal(f"{float(cleaned):.4f}") * Decimal("100")).quantize(
+                            Decimal("1"), rounding=ROUND_HALF_UP
+                        )
+                    )
+                except (ValueError, TypeError):
+                    return None
+
+            explicit_unit_cents = (
+                int(item["unit_price_cents"])
+                if item.get("unit_price_cents") is not None
+                else _parse_cents(item.get("unit_price"))
+            )
+            cost_unit_cents = _parse_cents(
+                item.get("Cost") or item.get("Purchase Cost") or item.get("cost")
+            )
+            unit_cents = explicit_unit_cents if explicit_unit_cents is not None else cost_unit_cents
+
+            explicit_line_cents = (
+                int(item["line_total_cents"])
+                if item.get("line_total_cents") is not None
+                else _parse_cents(item.get("line_total"))
+            )
+
+            if unit_cents is not None:
+                item["unit_cost_cents"] = unit_cents
+                item["unit_cost"] = float(Decimal(unit_cents) / Decimal("100"))
+                if explicit_line_cents is not None and explicit_line_cents > 0:
+                    line_cents = explicit_line_cents
+                else:
+                    line_cents = unit_cents * clean_qty
+                item["line_total_cents"] = line_cents
+                item["line_total"] = float(Decimal(line_cents) / Decimal("100"))
+                item["pricing_contract_version"] = "v2_unit_and_line"
+            elif explicit_line_cents is not None:
+                pricing = calculate_mint_pricing(
+                    float(Decimal(explicit_line_cents) / Decimal("100")), clean_qty
+                )
+                item["unit_cost_cents"] = pricing["unit_cost_cents"]
+                item["unit_cost"] = pricing["unit_cost"]
+                item["line_total"] = pricing["line_total"]
+                item["line_total_cents"] = explicit_line_cents
+                item["pricing_contract_version"] = "v2_unit_and_line"
 
         # Plan.v1 / Argon A-2: Propagate image keys so card & inspector resolve without error
         cat_obv = item.get("image_url_obverse")
