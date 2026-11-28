@@ -14,23 +14,38 @@ from typing import Dict
 
 CROCKFORD_32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
-# Plan.v2.2 + Wave 2 D.6 (Muse 97 / Gemini 99 ruling):
+# Plan.v2.2 + Wave 2 D.6 + Chapter 0 (Plan 8f01c991 / Muse PHD-4):
 # CC = US|CO|PF|CS|FS; FAC includes MO (Mexico City) distinct from M (Manila);
-# NY (New York Federal Reserve District note sheets, e.g. B7800/B7801) is permitted
-# ONLY when kind == "BN" (strictly rejected for CN/MD/TK/ST).
+# All 12 Federal Reserve District codes (BOS, NY, PHI, CLE, RIC, ATL, CHI, STL, MIN, KC, DAL, SF)
+# are permitted ONLY when kind == "BN" (strictly rejected for CN/MD/TK/ST).
+# PHI (Philadelphia Fed) is strictly distinct from coin mint facility PH / P.
 # CHK regex strictly excludes Crockford-ambiguous I, L, O, U ([0-9A-HJ-KM-NP-TV-Z]).
 NAC1_REGEX = re.compile(
     r"^(?P<payload>NAC1\.(?P<kind>CN|BN|MD|TK|ST)\.(?P<cc>US|CO|PF|CS|FS)\."
     r"(?P<denom>[A-Z0-9]{2,8})\.(?P<series>[A-Z0-9_]{2,12})\."
-    r"(?P<year>[0-9]{4}[A-Z]?|ND|XXXX)\.(?P<fac>P|D|S|W|CC|O|C|DD|M|MO|L|PTS|PH|BEP|NARA|NY|XX)\."
+    r"(?P<year>[0-9]{4}[A-Z]?|ND|XXXX)\."
+    r"(?P<fac>P|D|S|W|CC|O|C|DD|M|MO|L|PTS|PH|BEP|NARA|XX|BOS|NY|PHI|CLE|RIC|ATL|CHI|STL|MIN|KC|DAL|SF)\."
     r"(?P<var>[A-Z0-9_]{2,12}))\.(?P<chk>[0-9A-HJ-KM-NP-TV-Z])$"
 )
 
-BN_ONLY_FACILITIES = frozenset({"NY"})
+BN_ONLY_FACILITIES = frozenset({
+    "BOS",  # 1 - Boston
+    "NY",   # 2 - New York
+    "PHI",  # 3 - Philadelphia (distinct from coin mint PH / P)
+    "CLE",  # 4 - Cleveland
+    "RIC",  # 5 - Richmond
+    "ATL",  # 6 - Atlanta
+    "CHI",  # 7 - Chicago
+    "STL",  # 8 - St. Louis
+    "MIN",  # 9 - Minneapolis
+    "KC",   # 10 - Kansas City
+    "DAL",  # 11 - Dallas
+    "SF",   # 12 - San Francisco
+})
 
 
 def _match_nac1(nac_code):
-    """Regex match enforcing kind-scoped facility constraints (NY allowed for BN only)."""
+    """Regex match enforcing kind-scoped facility constraints (12 Fed district codes allowed for BN only)."""
     if not isinstance(nac_code, str):
         return None
     match = NAC1_REGEX.match(nac_code)

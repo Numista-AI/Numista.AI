@@ -467,5 +467,183 @@ class TestWave2MorganCatalogFirstAndNoScraper(unittest.TestCase):
             app_main.app.dependency_overrides.clear()
 
 
+class TestChapter0ShardingAndChildTables(unittest.TestCase):
+    """Chapter 0 (Plan 8f01c991): sharded manifest, enriched index, sub-chunking, child tables, PII manifest gate, & Morgan parity."""
+
+    def _build_fixture_master(self, td: str) -> str:
+        rows = [
+            {
+                "nac_code": "NAC1.CN.US.1D.MORGAN.1878.P.BASE.2",
+                "nac_aliases": ["NAC1.CN.US.1D.MORGAN.1878.XX.BASE.1"],
+                "search_aliases": ["8 Tail Feathers", "8TF"],
+                "name": "1878 Morgan Silver Dollar",
+                "type": "coin",
+                "year": 1878,
+                "denomination": "Dollar",
+                "series": "Morgan Silver Dollar",
+                "mint_facility": "Philadelphia",
+                "mint_mark_on_coin": None,
+                "era": "Seated & Gold Rush (1839–1891)",
+                "history": "First year of the Morgan dollar design.",
+                "mintage": {"value": 749500, "label": "8TF", "source_url": "https://fraser.stlouisfed.org/"},
+                "primary_image": {
+                    "url": "https://storage.googleapis.com/us_mint_coin_images/catalog/1878_morgan.jpg",
+                    "side": "obverse",
+                    "license": "Public domain (US government work, 17 U.S.C. § 105)",
+                    "credit": "Image: United States Mint",
+                    "source": "Image: United States Mint",
+                },
+                "varieties": [
+                    {"name": "8 Tail Feathers", "attribution": "VAM-14", "reference_work": "Van Allen & Mallis"},
+                    {"name": "Internal Held Variety", "held_from_live": True, "visibility": "internal"},
+                ],
+                "sources": [{"label": "U.S. Mint Report", "url": "https://fraser.stlouisfed.org/", "title": "Mint Report"}],
+            },
+            {
+                "nac_code": "NAC1.BN.US.1TO10.NOTESHEET.2021.ATL.B4003.J",
+                "name": "$1–$10 Note Sheet, Atlanta, Series 2021 (B4003)",
+                "type": "note",
+                "year": 2021,
+                "denomination": "Dollar",
+                "series": "Uncut Currency Sheet",
+                "mint_facility": "BEP",
+                "era": "21st century (2000–2026)",
+                "history": "Uncut Federal Reserve note sheet for the Atlanta district.",
+                "sources": [],
+            },
+            {
+                "nac_code": "NAC1.CN.US.25C.AWQ.2024.P.BASE.9",
+                "name": "2024-P American Women Quarter",
+                "type": "coin",
+                "year": 2024,
+                "denomination": "Quarter Dollar",
+                "series": "American Women Quarters",
+                "mint_facility": "Philadelphia",
+                "mint_mark_on_coin": "P",
+                "era": "21st century (2000–2026)",
+                "history": "2024 American Women Quarters release.",
+                "sources": [],
+            },
+        ]
+        inp = os.path.join(td, "master.jsonl")
+        with open(inp, "w", encoding="utf-8", newline="\n") as f:
+            for r in rows:
+                f.write(json.dumps(r) + "\n")
+        return inp
+
+    def test_sharded_manifest_index_children_and_no_monolith(self):
+        from tools.catalog.build_public_catalog import _partition_era_chunks, build_public_catalog
+        from tools.catalog.pii_gate_validator import run_manifest_gate
+
+        with tempfile.TemporaryDirectory() as td:
+            inp = self._build_fixture_master(td)
+            out = os.path.join(td, "catalog_public_v1.json")
+            rc = build_public_catalog(inp, out, emit_split_index=True, no_monolith=True)
+            self.assertEqual(rc, 0)
+            self.assertFalse(os.path.exists(out))
+
+            manifest_path = os.path.join(td, "catalog_manifest_v1.json")
+            self.assertTrue(os.path.exists(manifest_path))
+            manifest = json.load(open(manifest_path, encoding="utf-8"))
+            self.assertEqual(manifest["schema_version"], "catalog_sharded_v1")
+            self.assertEqual(manifest["public_row_count"], 3)
+            self.assertFalse(manifest["monolith_present"])
+            self.assertEqual(manifest["monolith_bytes"], 0)
+            self.assertEqual(manifest["index"]["files"], ["catalog_search_index_v1.json"])
+            self.assertEqual(manifest["child_tables"]["varieties"]["row_count"], 1)
+            self.assertEqual(manifest["child_tables"]["nbn_charters"]["row_count"], 0)
+            self.assertEqual(manifest["child_tables"]["obsolete_issuers"]["row_count"], 0)
+
+            # Enriched index parity checks
+            idx_rows = json.load(open(os.path.join(td, "catalog_search_index_v1.json"), encoding="utf-8"))
+            self.assertEqual(len(idx_rows), 3)
+            by_nac = {r["nac_code"]: r for r in idx_rows}
+            m78 = by_nac["NAC1.CN.US.1D.MORGAN.1878.P.BASE.2"]
+            self.assertIs(m78["is_placeholder"], False)
+            self.assertTrue(m78["has_photo"])
+            self.assertTrue(m78["has_varieties"])
+            self.assertEqual(m78["variety_count"], 1)
+            self.assertEqual(m78["mint_facility"], "Philadelphia")
+            self.assertIn("primary_image", m78)
+            self.assertNotIn("history", m78)
+
+            # Normalized varieties child table excludes held varieties fail-closed
+            var_rows = json.load(open(os.path.join(td, "children", "varieties_v1.json"), encoding="utf-8"))
+            self.assertEqual(len(var_rows), 1)
+            self.assertEqual(var_rows[0]["parent_nac1"], "NAC1.CN.US.1D.MORGAN.1878.P.BASE.2")
+            self.assertEqual(var_rows[0]["name"], "8 Tail Feathers")
+
+            # Fail-closed PII manifest gate + negative test passes on clean build
+            self.assertEqual(run_manifest_gate(manifest_path, dry_run=True, negative_test=True), 0)
+
+            # Sub-chunk partitioning splits deterministically when row cap exceeded
+            parts = _partition_era_chunks([{"nac_code": f"A{i}"} for i in range(5)], max_chunk_rows=2, max_chunk_bytes=100000)
+            self.assertEqual([len(p) for p in parts], [2, 2, 1])
+
+            # Tampered chunk with PII token fails manifest gate closed
+            chunk_rel = manifest["chunks"][0]["path"]
+            chunk_abs = os.path.join(td, chunk_rel)
+            chunk_data = json.load(open(chunk_abs, encoding="utf-8"))
+            chunk_data[0]["history"] = "from a private collector album"
+            with open(chunk_abs, "w", encoding="utf-8", newline="\n") as cf:
+                json.dump(chunk_data, cf)
+            self.assertEqual(run_manifest_gate(manifest_path), 1)
+
+    def test_morgan_knowledge_sharded_manifest_parity(self):
+        from tools.catalog.build_public_catalog import build_public_catalog
+
+        with tempfile.TemporaryDirectory() as td:
+            inp = self._build_fixture_master(td)
+            out = os.path.join(td, "catalog_public_v1.json")
+            build_public_catalog(inp, out, emit_split_index=True, no_monolith=True)
+            manifest_path = os.path.join(td, "catalog_manifest_v1.json")
+
+            mk.reset_public_catalog_cache()
+            try:
+                idx = mk.load_public_catalog_index(manifest_path=manifest_path)
+                self.assertEqual(idx["source_mode"], "sharded")
+                self.assertEqual(len(idx["entries"]), 3)
+                self.assertIn("NAC1.CN.US.1D.MORGAN.1878.P.BASE.2", idx["varieties_by_parent"])
+                self.assertEqual(len(idx["varieties_by_parent"]["NAC1.CN.US.1D.MORGAN.1878.P.BASE.2"]), 1)
+
+                # Tier-0 canonical NAC1 + retired alias parity
+                res_canonical = mk.get_catalog_context(
+                    "tell me about it",
+                    nac_code="NAC1.CN.US.1D.MORGAN.1878.P.BASE.2",
+                    catalog_index=idx,
+                )
+                self.assertEqual(res_canonical["matched_tier"], "tier0_nac")
+                res_alias = mk.get_catalog_context(
+                    "tell me about it",
+                    nac_code="NAC1.CN.US.1D.MORGAN.1878.XX.BASE.1",
+                    catalog_index=idx,
+                )
+                self.assertEqual(res_alias["matched_tier"], "tier0_nac")
+                self.assertEqual(
+                    res_alias["catalog_cards"][0]["nac_code"],
+                    "NAC1.CN.US.1D.MORGAN.1878.P.BASE.2",
+                )
+                # Atlanta BN vector resolves in Tier-0
+                res_atl = mk.get_catalog_context(
+                    "Atlanta note sheet",
+                    nac_code="NAC1.BN.US.1TO10.NOTESHEET.2021.ATL.B4003.J",
+                    catalog_index=idx,
+                )
+                self.assertEqual(res_atl["matched_tier"], "tier0_nac")
+            finally:
+                mk.reset_public_catalog_cache()
+
+    def test_all_12_fed_districts_bn_only_in_wave2_suite(self):
+        from catalog_nac1 import BN_ONLY_FACILITIES, build_nac1, validate_nac1
+
+        expected = {"BOS", "NY", "PHI", "CLE", "RIC", "ATL", "CHI", "STL", "MIN", "KC", "DAL", "SF"}
+        self.assertEqual(BN_ONLY_FACILITIES, frozenset(expected))
+        self.assertTrue(validate_nac1("NAC1.BN.US.1TO10.NOTESHEET.2021.ATL.B4003.J"))
+        for dist in sorted(expected):
+            self.assertTrue(validate_nac1(build_nac1(f"NAC1.BN.US.100.NOTESHEET.2025.{dist}.B7800")))
+            for kind in ("CN", "MD", "TK", "ST"):
+                self.assertFalse(validate_nac1(build_nac1(f"NAC1.{kind}.US.1D.MORGAN.2025.{dist}.BASE")))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -79,5 +79,51 @@ void main() {
         );
       }
     });
+
+    test('Chapter 0 (PHD-4): all 12 Federal Reserve districts allowed for BN only', () {
+      const districts = <String>[
+        'BOS', 'NY', 'PHI', 'CLE', 'RIC', 'ATL',
+        'CHI', 'STL', 'MIN', 'KC', 'DAL', 'SF',
+      ];
+      const nonBnKinds = <String>['CN', 'MD', 'TK', 'ST'];
+
+      expect(NacCodeParser.bnOnlyFacilities, equals(districts.toSet()));
+
+      // Specific Atlanta 2021 note sheet vector from 6db323ec
+      const atlCode = 'NAC1.BN.US.1TO10.NOTESHEET.2021.ATL.B4003.J';
+      expect(NacCodeParser.validateNac1(atlCode), isTrue);
+      final parsedAtl = NacCodeParser.parseNac1(atlCode);
+      expect(parsedAtl.kind, equals('BN'));
+      expect(parsedAtl.facilityCode, equals('ATL'));
+      expect(parsedAtl.targetCollection, equals('currency'));
+
+      // Underscore in series/variety matches Python catalog_nac1.py parity
+      final underscoreBn = NacCodeParser.buildNac1('NAC1.BN.US.FRN1.FED_RES.2021.NY.VAR_1');
+      expect(NacCodeParser.validateNac1(underscoreBn), isTrue);
+
+      for (final d in districts) {
+        final bnCode = NacCodeParser.buildNac1('NAC1.BN.US.100.NOTESHEET.2025.$d.B7800');
+        expect(
+          NacCodeParser.validateNac1(bnCode),
+          isTrue,
+          reason: 'BN should allow Federal Reserve district $d',
+        );
+        final parsed = NacCodeParser.parseNac1(bnCode);
+        expect(parsed.facilityCode, equals(d));
+
+        for (final k in nonBnKinds) {
+          final badCode = NacCodeParser.buildNac1('NAC1.$k.US.1D.MORGAN.2025.$d.BASE');
+          expect(
+            NacCodeParser.validateNac1(badCode),
+            isFalse,
+            reason: 'Non-BN kind $k must reject Federal Reserve district $d',
+          );
+          expect(
+            () => NacCodeParser.parseNac1(badCode),
+            throwsFormatException,
+          );
+        }
+      }
+    });
   });
 }

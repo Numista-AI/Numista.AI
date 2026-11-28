@@ -7,21 +7,22 @@ Enforces Section 3.3 and C1-C4 rules with negative planted-leak tests.
 
 import argparse
 import copy
+import hashlib
 import json
 import os
 import re
 import sys
 
 try:
-    from tools.catalog.build_public_catalog import is_approved_image_url
+    from tools.catalog.build_public_catalog import _FORBIDDEN_GREYSHEET_RE, is_approved_image_url
 except ImportError:
     try:
-        from build_public_catalog import is_approved_image_url
+        from build_public_catalog import _FORBIDDEN_GREYSHEET_RE, is_approved_image_url
     except ImportError:
         _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
         if _THIS_DIR not in sys.path:
             sys.path.insert(0, _THIS_DIR)
-        from build_public_catalog import is_approved_image_url
+        from build_public_catalog import _FORBIDDEN_GREYSHEET_RE, is_approved_image_url
 
 DEFAULT_INPUT_PATH = os.path.join(
     "numista_mobile", "assets", "catalog", "catalog_public_v1.json"
@@ -193,12 +194,120 @@ def run_negative_test(input_path):
         print("NEGATIVE TESTS FAILED: Gate did not catch all planted leaks.")
         return 1
 
+def _collect_manifest_targets(manifest_path):
+    """Returns list of (rel_label, abs_path, expected_sha256_or_None) for a sharded catalog manifest."""
+    abs_manifest = os.path.abspath(manifest_path)
+    base_dir = os.path.dirname(abs_manifest)
+    with open(abs_manifest, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+    if not isinstance(manifest, dict) or manifest.get("schema_version") != "catalog_sharded_v1":
+        raise ValueError("Invalid or unsupported catalog manifest schema_version")
+
+    targets = [("catalog_manifest_v1.json", abs_manifest, None)]
+
+    index_meta = manifest.get("index") or {}
+    index_files = index_meta.get("files") or []
+    index_sha = index_meta.get("sha256") if len(index_files) == 1 else None
+    for rel in index_files:
+        targets.append((rel, os.path.join(base_dir, rel), index_sha))
+
+    for chunk in (manifest.get("chunks") or []):
+        rel = chunk["path"]
+        targets.append((rel, os.path.join(base_dir, rel), chunk.get("sha256")))
+
+    for _tbl_name, tbl_meta in sorted((manifest.get("child_tables") or {}).items()):
+        rel = tbl_meta["path"]
+        targets.append((rel, os.path.join(base_dir, rel), tbl_meta.get("sha256")))
+
+    if manifest.get("monolith_present") is True:
+        mono_path = os.path.join(base_dir, "catalog_public_v1.json")
+        if os.path.exists(mono_path):
+            targets.append(("catalog_public_v1.json", mono_path, None))
+
+    return manifest, targets
+
+
+def run_manifest_gate(manifest_path, *, dry_run=False, negative_test=False):
+    """Fail-closed PII, Greysheet, and SHA-256 gate across manifest, index, all chunks, and all child tables."""
+    if not os.path.exists(manifest_path):
+        print(f"ERROR: Manifest file does not exist: {manifest_path}", file=sys.stderr)
+        return 1
+
+    try:
+        _manifest, targets = _collect_manifest_targets(manifest_path)
+    except Exception as exc:
+        print(f"GATE FAILED: Could not parse manifest ({exc})", file=sys.stderr)
+        return 1
+
+    print(f"Validating sharded catalog manifest ({len(targets)} files): {manifest_path}")
+    total_leaks = 0
+    for rel, abs_path, expected_sha in targets:
+        if not os.path.exists(abs_path):
+            print(f"GATE FAILED: Missing manifest target '{rel}' ({abs_path})", file=sys.stderr)
+            return 1
+        raw_bytes = open(abs_path, "rb").read()
+        actual_sha = hashlib.sha256(raw_bytes).hexdigest()
+        if expected_sha and actual_sha != expected_sha:
+            print(
+                f"GATE FAILED: SHA-256 mismatch for '{rel}': expected={expected_sha} actual={actual_sha}",
+                file=sys.stderr,
+            )
+            return 1
+        text = raw_bytes.decode("utf-8")
+        gs_match = _FORBIDDEN_GREYSHEET_RE.search(text)
+        if gs_match:
+            print(f"GATE FAILED: Greysheet/GSID leak in '{rel}': {gs_match.group(0)!r}", file=sys.stderr)
+            return 1
+        try:
+            doc = json.loads(text)
+        except json.JSONDecodeError as exc:
+            print(f"GATE FAILED: Invalid JSON in '{rel}' ({exc})", file=sys.stderr)
+            return 1
+        leaks = scan_document_for_leaks(doc)
+        if leaks:
+            total_leaks += len(leaks)
+            print(f"GATE FAILED: {len(leaks)} non-whitelisted leaks in '{rel}'!", file=sys.stderr)
+            for pat, matched, snip in leaks[:10]:
+                print(f"  Hit: token='{pat}' matched='{matched}' in: '...{snip}...'", file=sys.stderr)
+        elif dry_run:
+            print(f"  OK [{len(raw_bytes):9,d} B] {rel}")
+
+    if total_leaks > 0:
+        return 1
+
+    if negative_test:
+        # Planted-leak verification across manifest, index, first chunk, and varieties child table
+        sample_targets = []
+        for rel, abs_path, _ in targets:
+            if (
+                rel == "catalog_manifest_v1.json"
+                or rel.startswith("catalog_search_index")
+                or rel.startswith("chunks/")
+                or rel == "children/varieties_v1.json"
+            ):
+                if rel.startswith("chunks/") and any(r.startswith("chunks/") for r, _ in sample_targets):
+                    continue
+                sample_targets.append((rel, abs_path))
+        for rel, abs_path in sample_targets:
+            print(f"--- Sharded Negative Test on {rel} ---")
+            rc = run_negative_test(abs_path)
+            if rc != 0:
+                return rc
+
+    print(f"MANIFEST GATE PASSED: {len(targets)} files verified (0 leaks, 0 Greysheet hits, all SHA-256 valid).")
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description="PII & Internal Token Gate Validator")
     parser.add_argument("--input", default=DEFAULT_INPUT_PATH, help="Path to catalog JSON")
+    parser.add_argument("--manifest", default=None, help="Path to sharded catalog_manifest_v1.json")
     parser.add_argument("--dry-run", action="store_true", help="Perform census dry-run")
     parser.add_argument("--negative-test", action="store_true", help="Run planted-leak verification")
     args = parser.parse_args()
+
+    if args.manifest:
+        sys.exit(run_manifest_gate(args.manifest, dry_run=args.dry_run, negative_test=args.negative_test))
 
     if args.negative_test:
         sys.exit(run_negative_test(args.input))

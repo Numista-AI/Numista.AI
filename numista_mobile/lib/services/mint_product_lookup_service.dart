@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart'; // @visibleForTesting (v1.6)
 import 'package:flutter/services.dart';
 import '../models/coin_model.dart';
 import '../models/mint_product_metadata.dart';
+import 'catalog/catalog_asset_loader.dart';
 
 // v1.5 (R2): no cloud_firestore import and no Firestore field. Read-only asset join.
 
@@ -37,8 +38,8 @@ class MintProductLookupService {
     _isLoading = true;
     final b = bundle ?? rootBundle;
     try {
-      final catalogJson = jsonDecode(await b.loadString('assets/catalog/catalog_public_v1.json')) as List<dynamic>;
-      _rawCatalogEntries = catalogJson.whereType<Map<String, dynamic>>().toList();
+      final loader = bundle != null ? CatalogAssetLoader() : CatalogAssetLoader.instance;
+      _rawCatalogEntries = await loader.loadIndex(bundle: b);
       _eligibleRowsByNac = null;
 
       final overlayJson = jsonDecode(await b.loadString('assets/catalog/mint_product_fields_v1.json')) as Map<String, dynamic>;

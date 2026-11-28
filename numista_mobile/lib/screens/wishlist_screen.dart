@@ -11,6 +11,7 @@ import '../constants.dart';
 import '../models/coin_model.dart';
 import '../models/program_model.dart';
 import '../services/auth_service.dart';
+import '../services/catalog/catalog_asset_loader.dart';
 import '../services/epn_service.dart';
 import '../services/http_auth_client.dart';
 import '../services/reference_service.dart';
@@ -565,14 +566,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
   Future<void> _openAddCoinModal() async {
     List<Map<String, dynamic>> catalogItems = [];
     try {
-      final rawJson =
-          await rootBundle.loadString('assets/catalog/catalog_public_v1.json');
-      final decoded = jsonDecode(rawJson);
-      if (decoded is Map && decoded['items'] is List) {
-        catalogItems = List<Map<String, dynamic>>.from(decoded['items'] as List);
-      } else if (decoded is List) {
-        catalogItems = List<Map<String, dynamic>>.from(decoded);
-      }
+      catalogItems = await CatalogAssetLoader.instance.loadIndex();
     } catch (_) {
       catalogItems = [];
     }

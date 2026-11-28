@@ -25,8 +25,20 @@ COLLECTION       = "coins_reference"
 MAX_RESULTS      = 5     # max coin entries to inject per query
 MIN_SCORE        = 2     # minimum keyword match score to include
 
-# ─── WAVE 2 COMPONENT C: CATALOG-FIRST IN-MEMORY INDEX ────────────────────────
+# ─── WAVE 2 COMPONENT C + CHAPTER 0 SHARDING: CATALOG-FIRST IN-MEMORY INDEX ───
 # Canonical sanitized public catalog loaded in Cloud Run memory first (zero user Firestore reads).
+_CATALOG_DEFAULT_MANIFEST_PATHS = (
+    os.environ.get("CATALOG_MANIFEST_PATH", ""),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "catalog_manifest_v1.json"),
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "numista_mobile",
+        "assets",
+        "catalog",
+        "catalog_manifest_v1.json",
+    ),
+)
+
 _CATALOG_DEFAULT_PATHS = (
     os.environ.get("CATALOG_PUBLIC_JSON_PATH", ""),
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "catalog_public_v1.json"),
@@ -42,9 +54,11 @@ _CATALOG_DEFAULT_PATHS = (
 _CATALOG_INDEX_CACHE: Dict[str, Any] = {
     "loaded": False,
     "path": None,
+    "source_mode": None,
     "entries": [],
     "by_nac": {},
     "by_alias": {},
+    "varieties_by_parent": {},
 }
 
 # Ambiguous colloquial nicknames that span multiple U.S. series/denominations.
@@ -67,44 +81,24 @@ _NAC1_INLINE_RE = re.compile(r"\bNAC1\.[A-Z0-9_]+(?:\.[A-Z0-9_]+){7}\b")
 
 def reset_public_catalog_cache() -> None:
     """Reset in-memory public catalog index (used by unit tests)."""
-    _CATALOG_INDEX_CACHE.update(loaded=False, path=None, entries=[], by_nac={}, by_alias={})
+    _CATALOG_INDEX_CACHE.update(
+        loaded=False,
+        path=None,
+        source_mode=None,
+        entries=[],
+        by_nac={},
+        by_alias={},
+        varieties_by_parent={},
+    )
 
 
-def load_public_catalog_index(
-    catalog_path: Optional[str] = None,
-    entries_override: Optional[List[Dict[str, Any]]] = None,
-) -> Dict[str, Any]:
-    """Loads sanitized `catalog_public_v1.json` once into Cloud Run memory (strictly public data)."""
-    if entries_override is not None:
-        entries = list(entries_override)
-        by_nac: Dict[str, Dict[str, Any]] = {}
-        by_alias: Dict[str, Dict[str, Any]] = {}
-        for item in entries:
-            nac = str(item.get("nac_code") or "").strip().upper()
-            if nac:
-                by_nac[nac] = item
-            for alias in (item.get("nac_aliases") or []):
-                if isinstance(alias, str) and alias.strip():
-                    by_alias[alias.strip().upper()] = item
-        _CATALOG_INDEX_CACHE.update(
-            loaded=True, path="<override>", entries=entries, by_nac=by_nac, by_alias=by_alias
-        )
-        return _CATALOG_INDEX_CACHE
-
-    if _CATALOG_INDEX_CACHE["loaded"] and (catalog_path is None or _CATALOG_INDEX_CACHE["path"] == catalog_path):
-        return _CATALOG_INDEX_CACHE
-
-    candidates = [catalog_path] if catalog_path else list(_CATALOG_DEFAULT_PATHS)
-    chosen = next((p for p in candidates if p and os.path.exists(p)), None)
-    if not chosen:
-        _CATALOG_INDEX_CACHE.update(loaded=True, path=None, entries=[], by_nac={}, by_alias={})
-        return _CATALOG_INDEX_CACHE
-
-    with open(chosen, "r", encoding="utf-8") as f:
-        raw = json.load(f)
-    entries = raw if isinstance(raw, list) else []
-    by_nac = {}
-    by_alias = {}
+def _index_catalog_entries(
+    entries: List[Dict[str, Any]],
+    varieties_rows: Optional[List[Dict[str, Any]]] = None,
+) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]], Dict[str, List[Dict[str, Any]]]]:
+    by_nac: Dict[str, Dict[str, Any]] = {}
+    by_alias: Dict[str, Dict[str, Any]] = {}
+    varieties_by_parent: Dict[str, List[Dict[str, Any]]] = {}
     for item in entries:
         if not isinstance(item, dict):
             continue
@@ -114,8 +108,133 @@ def load_public_catalog_index(
         for alias in (item.get("nac_aliases") or []):
             if isinstance(alias, str) and alias.strip():
                 by_alias[alias.strip().upper()] = item
+    if varieties_rows:
+        for vr in varieties_rows:
+            if not isinstance(vr, dict):
+                continue
+            parent = str(vr.get("parent_nac1") or "").strip().upper()
+            if parent:
+                varieties_by_parent.setdefault(parent, []).append(vr)
+    return by_nac, by_alias, varieties_by_parent
+
+
+def _load_sharded_catalog_from_manifest(manifest_path: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    base_dir = os.path.dirname(os.path.abspath(manifest_path))
+    with open(manifest_path, "r", encoding="utf-8") as mf:
+        manifest = json.load(mf)
+    if not isinstance(manifest, dict) or manifest.get("schema_version") != "catalog_sharded_v1":
+        raise ValueError(f"Unsupported catalog manifest schema at {manifest_path}")
+
+    entries: List[Dict[str, Any]] = []
+    seen_nacs = set()
+    for chunk in (manifest.get("chunks") or []):
+        cpath = os.path.join(base_dir, chunk["path"])
+        with open(cpath, "r", encoding="utf-8") as cf:
+            chunk_rows = json.load(cf)
+        if isinstance(chunk_rows, list):
+            for item in chunk_rows:
+                if not isinstance(item, dict):
+                    continue
+                nac = str(item.get("nac_code") or "").strip().upper()
+                if nac and nac not in seen_nacs:
+                    seen_nacs.add(nac)
+                    entries.append(item)
+
+    varieties_rows: List[Dict[str, Any]] = []
+    var_meta = (manifest.get("child_tables") or {}).get("varieties")
+    if isinstance(var_meta, dict) and var_meta.get("path"):
+        vpath = os.path.join(base_dir, var_meta["path"])
+        if os.path.exists(vpath):
+            with open(vpath, "r", encoding="utf-8") as vf:
+                raw_v = json.load(vf)
+            if isinstance(raw_v, list):
+                varieties_rows = [v for v in raw_v if isinstance(v, dict)]
+
+    return entries, varieties_rows
+
+
+def load_public_catalog_index(
+    catalog_path: Optional[str] = None,
+    entries_override: Optional[List[Dict[str, Any]]] = None,
+    manifest_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Loads sanitized public catalog once into Cloud Run memory (strictly public data).
+    Chapter 0: prefers sharded `catalog_manifest_v1.json` + `chunks/*.json` + `children/varieties_v1.json`,
+    with transparent fallback to monolithic `catalog_public_v1.json`.
+    """
+    if entries_override is not None:
+        entries = list(entries_override)
+        by_nac, by_alias, varieties_by_parent = _index_catalog_entries(entries)
+        _CATALOG_INDEX_CACHE.update(
+            loaded=True,
+            path="<override>",
+            source_mode="override",
+            entries=entries,
+            by_nac=by_nac,
+            by_alias=by_alias,
+            varieties_by_parent=varieties_by_parent,
+        )
+        return _CATALOG_INDEX_CACHE
+
+    requested_target = manifest_path or catalog_path
+    if _CATALOG_INDEX_CACHE["loaded"] and (
+        requested_target is None or _CATALOG_INDEX_CACHE["path"] == requested_target
+    ):
+        return _CATALOG_INDEX_CACHE
+
+    # 1. Check explicit manifest_path, sibling manifest next to explicit catalog_path, or default manifest paths
+    manifest_candidates: List[str] = []
+    if manifest_path:
+        manifest_candidates.append(manifest_path)
+    elif catalog_path:
+        sibling = os.path.join(os.path.dirname(os.path.abspath(catalog_path)), "catalog_manifest_v1.json")
+        manifest_candidates.append(sibling)
+    else:
+        manifest_candidates.extend(p for p in _CATALOG_DEFAULT_MANIFEST_PATHS if p)
+
+    chosen_manifest = next((p for p in manifest_candidates if p and os.path.exists(p)), None)
+    if chosen_manifest:
+        entries, varieties_rows = _load_sharded_catalog_from_manifest(chosen_manifest)
+        by_nac, by_alias, varieties_by_parent = _index_catalog_entries(entries, varieties_rows)
+        _CATALOG_INDEX_CACHE.update(
+            loaded=True,
+            path=requested_target or chosen_manifest,
+            source_mode="sharded",
+            entries=entries,
+            by_nac=by_nac,
+            by_alias=by_alias,
+            varieties_by_parent=varieties_by_parent,
+        )
+        return _CATALOG_INDEX_CACHE
+
+    # 2. Fallback to legacy monolithic catalog_public_v1.json
+    candidates = [catalog_path] if catalog_path else list(_CATALOG_DEFAULT_PATHS)
+    chosen = next((p for p in candidates if p and os.path.exists(p)), None)
+    if not chosen:
+        _CATALOG_INDEX_CACHE.update(
+            loaded=True,
+            path=None,
+            source_mode=None,
+            entries=[],
+            by_nac={},
+            by_alias={},
+            varieties_by_parent={},
+        )
+        return _CATALOG_INDEX_CACHE
+
+    with open(chosen, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+    entries = raw if isinstance(raw, list) else []
+    by_nac, by_alias, varieties_by_parent = _index_catalog_entries(entries)
     _CATALOG_INDEX_CACHE.update(
-        loaded=True, path=chosen, entries=entries, by_nac=by_nac, by_alias=by_alias
+        loaded=True,
+        path=chosen,
+        source_mode="monolith",
+        entries=entries,
+        by_nac=by_nac,
+        by_alias=by_alias,
+        varieties_by_parent=varieties_by_parent,
     )
     return _CATALOG_INDEX_CACHE
 

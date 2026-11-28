@@ -19,11 +19,12 @@ Wave 2 v2.1 hardening (Plan cc9d2916):
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlsplit
 
 try:
@@ -189,8 +190,25 @@ EXTRA_IMAGE_KEYS = [
 PACKAGING_IMAGE_KEYS = EXTRA_IMAGE_KEYS
 
 WARN_SIZE_BYTES = 8 * 1024 * 1024
+AUTO_SPLIT_BYTES = 8 * 1024 * 1024
+AUTO_SPLIT_ROWS = 5000
 SPLIT_THRESHOLD_BYTES = 10 * 1024 * 1024
 SPLIT_THRESHOLD_ROWS = 10000
+MAX_MONOLITH_ROWS = 5500
+MAX_CHUNK_ROWS = 1500
+MAX_CHUNK_BYTES = 2_500_000
+
+CARD_IMAGE_INDEX_KEYS = (
+    "url",
+    "thumb_url",
+    "file",
+    "side",
+    "role",
+    "ai_generated",
+    "credit",
+    "source",
+    "source_url",
+)
 
 _FORBIDDEN_GREYSHEET_RE = re.compile(
     r"greysheet\.com|greysheet_gsid|\bgsid\b|cdnexchange",
@@ -481,38 +499,405 @@ def _clean_string_list(val: Any, field_name: str) -> Optional[List[str]]:
     return out if out else None
 
 
-def _write_split_index(records: List[Dict[str, Any]], output_path: str) -> Dict[str, Any]:
-    """Emits lightweight search index + lazy per-era detail chunks when payload exceeds 10 MB / 10k rows."""
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _compute_file_lf_sha8(path: str) -> str:
+    raw = open(path, "rb").read().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return _sha256_bytes(raw)[:8]
+
+
+def _assert_no_greysheet_leak(serialized: str, label: str) -> None:
+    gs_match = _FORBIDDEN_GREYSHEET_RE.search(serialized)
+    if gs_match:
+        raise RuntimeError(f"Greysheet/GSID leak detected in {label}: {gs_match.group(0)!r}")
+
+
+def _write_json_artifact(path: str, payload: Any, *, label: str) -> Tuple[int, str]:
+    serialized = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+    _assert_no_greysheet_leak(serialized, label)
+    raw = serialized.encode("utf-8")
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(raw)
+    return len(raw), _sha256_bytes(raw)
+
+
+def _compact_card_image(img: Any) -> Optional[Dict[str, Any]]:
+    """Extracts minimal card-rendering image metadata for catalog_search_index_v1.json."""
+    if not isinstance(img, dict) or not img:
+        return None
+    out: Dict[str, Any] = {}
+    for k in CARD_IMAGE_INDEX_KEYS:
+        v = img.get(k)
+        if v is not None and v != "":
+            out[k] = v
+    return out if out else None
+
+
+def _era_slug(era_val: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", str(era_val or "undated").lower()).strip("_") or "undated"
+
+
+def _partition_era_chunks(
+    era_rows: List[Dict[str, Any]],
+    *,
+    max_chunk_rows: int = MAX_CHUNK_ROWS,
+    max_chunk_bytes: int = MAX_CHUNK_BYTES,
+) -> List[List[Dict[str, Any]]]:
+    """Deterministically splits an era's sorted rows into parts within max_chunk_rows & max_chunk_bytes."""
+    if not era_rows:
+        return []
+    parts: List[List[Dict[str, Any]]] = []
+    current: List[Dict[str, Any]] = []
+    # Account for outer JSON array brackets "[]"
+    current_bytes = 2
+    for row in era_rows:
+        row_bytes = len(json.dumps(row, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
+        sep_bytes = 1 if current else 0
+        if current and (
+            len(current) >= max_chunk_rows or (current_bytes + sep_bytes + row_bytes) > max_chunk_bytes
+        ):
+            parts.append(current)
+            current = [row]
+            current_bytes = 2 + row_bytes
+        else:
+            current.append(row)
+            current_bytes += sep_bytes + row_bytes
+    if current:
+        parts.append(current)
+    return parts
+
+
+def _sanitize_variety_sidecar_row(
+    row: Dict[str, Any],
+    *,
+    valid_parent_nacs: set,
+    dropped_report: Optional[List[Dict[str, Any]]] = None,
+) -> Optional[Dict[str, Any]]:
+    """Fail-closed sanitizer for external Ch. 2 varieties_master.jsonl sidecar records."""
+    if row.get("held_from_live") is True or row.get("visibility") == "internal":
+        return None
+    parent_nac1 = _ensure_scalar(row.get("parent_nac1"), "varieties_sidecar.parent_nac1")
+    if not isinstance(parent_nac1, str) or parent_nac1 not in valid_parent_nacs:
+        return None
+    v_name = _rewrite_public_text(_ensure_scalar(row.get("name"), "varieties_sidecar.name"))
+    if not isinstance(v_name, str) or not v_name.strip():
+        return None
+    v_attr = _rewrite_public_text(_ensure_scalar(row.get("attribution"), "varieties_sidecar.attribution"))
+    v_ref = _rewrite_public_text(_ensure_scalar(row.get("reference_work"), "varieties_sidecar.reference_work"))
+    v_diag = _rewrite_public_text(
+        _ensure_scalar(row.get("diagnostic_markers"), "varieties_sidecar.diagnostic_markers")
+    )
+    v_cat = _ensure_scalar(row.get("category"), "varieties_sidecar.category") or "die_variety"
+    if v_cat not in ("die_variety", "mint_error", "design_subtype"):
+        v_cat = "die_variety"
+
+    sources: List[Dict[str, Any]] = []
+    for s in (row.get("sources") or []):
+        if not isinstance(s, dict):
+            continue
+        stype = str(s.get("type") or "")
+        slabel = str(s.get("label") or "")
+        surl = str(s.get("url") or "")
+        if stype == "collection-derived" or "collection-derived" in slabel:
+            continue
+        if "harvey-b-jacobson-jr-collection" in surl:
+            continue
+        cs: Dict[str, Any] = {}
+        for k in ("label", "url", "title"):
+            if k in s and s[k] is not None:
+                val = _ensure_scalar(s[k], f"varieties_sidecar.sources.{k}")
+                cs[k] = _rewrite_public_text(val) if k in ("label", "title") else val
+        if cs:
+            sources.append(cs)
+
+    images: List[Dict[str, Any]] = []
+    for idx, img in enumerate(row.get("images") or []):
+        cleaned = sanitize_image_dict(
+            img,
+            EXTRA_IMAGE_KEYS,
+            nac_code=parent_nac1,
+            field_name=f"varieties_sidecar.images[{idx}]",
+            item_type="coin",
+            dropped_report=dropped_report,
+        )
+        if cleaned:
+            images.append(cleaned)
+
+    return {
+        "parent_nac1": parent_nac1,
+        "name": v_name.strip(),
+        "attribution": v_attr,
+        "reference_work": v_ref,
+        "diagnostic_markers": v_diag,
+        "category": v_cat,
+        "sources": sources,
+        "images": images,
+    }
+
+
+def _build_varieties_child_table(
+    records: List[Dict[str, Any]],
+    *,
+    sidecar_rows: Optional[List[Dict[str, Any]]] = None,
+    dropped_report: Optional[List[Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """Builds deterministic normalized children/varieties_v1.json joined by immutable parent_nac1."""
+    valid_parents = {str(r.get("nac_code")) for r in records if r.get("nac_code")}
+    raw_entries: List[Dict[str, Any]] = []
+
+    for r in sorted(records, key=lambda x: str(x.get("nac_code") or "")):
+        parent_nac1 = str(r.get("nac_code") or "")
+        for v in (r.get("varieties") or []):
+            if not isinstance(v, dict):
+                continue
+            v_name = str(v.get("name") or "").strip()
+            if not v_name:
+                continue
+            raw_entries.append({
+                "parent_nac1": parent_nac1,
+                "name": v_name,
+                "attribution": v.get("attribution"),
+                "reference_work": v.get("reference_work"),
+                "diagnostic_markers": None,
+                "category": "die_variety",
+                "sources": [],
+                "images": [],
+            })
+
+    if sidecar_rows:
+        for sr in sidecar_rows:
+            if not isinstance(sr, dict):
+                continue
+            cleaned = _sanitize_variety_sidecar_row(
+                sr,
+                valid_parent_nacs=valid_parents,
+                dropped_report=dropped_report,
+            )
+            if cleaned:
+                raw_entries.append(cleaned)
+
+    seen_ids: Dict[str, int] = {}
+    out: List[Dict[str, Any]] = []
+    for entry in raw_entries:
+        p = entry["parent_nac1"]
+        nm = entry["name"]
+        attr = str(entry.get("attribution") or "")
+        h8 = _sha256_bytes(f"{p}|{nm}|{attr}".encode("utf-8"))[:8]
+        slug = re.sub(r"[^a-z0-9]+", "_", nm.lower()).strip("_")[:32] or "var"
+        base_id = f"VAR.{h8}.{slug}"
+        count = seen_ids.get(base_id, 0)
+        seen_ids[base_id] = count + 1
+        vid = base_id if count == 0 else f"{base_id}_{count + 1}"
+        out.append({
+            "variety_id": vid,
+            "parent_nac1": p,
+            "name": nm,
+            "attribution": entry.get("attribution"),
+            "reference_work": entry.get("reference_work"),
+            "diagnostic_markers": entry.get("diagnostic_markers"),
+            "category": entry.get("category") or "die_variety",
+            "sources": entry.get("sources") or [],
+            "images": entry.get("images") or [],
+        })
+    return out
+
+
+def _write_split_index(
+    records: List[Dict[str, Any]],
+    output_path: str,
+    *,
+    master_sha8: Optional[str] = None,
+    monolith_present: bool = True,
+    monolith_bytes: int = 0,
+    max_chunk_rows: int = MAX_CHUNK_ROWS,
+    max_chunk_bytes: int = MAX_CHUNK_BYTES,
+    varieties_sidecar_rows: Optional[List[Dict[str, Any]]] = None,
+    dropped_report: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """
+    Chapter 0 sharded catalog builder (Plan 8f01c991):
+    Emits catalog_manifest_v1.json, enriched compact catalog_search_index_v1.json,
+    deterministic sub-chunked chunks/era_<slug>[_pN].json, and normalized children/*.json.
+    """
     out_dir = os.path.dirname(os.path.abspath(output_path))
     chunks_dir = os.path.join(out_dir, "chunks")
+    children_dir = os.path.join(out_dir, "children")
     os.makedirs(chunks_dir, exist_ok=True)
-    index_records = []
+    os.makedirs(children_dir, exist_ok=True)
+
+    # Remove stale era chunk files so sub-chunked eras never leave orphaned unsplit files behind
+    for existing in os.listdir(chunks_dir):
+        if existing.startswith("era_") and existing.endswith(".json"):
+            os.remove(os.path.join(chunks_dir, existing))
+
+    sorted_records = sorted(
+        records,
+        key=lambda r: (_era_slug(r.get("era")), str(r.get("nac_code") or "")),
+    )
+
     by_era: Dict[str, List[Dict[str, Any]]] = {}
-    for r in records:
-        era_slug = re.sub(r"[^a-z0-9]+", "_", str(r.get("era") or "undated").lower()).strip("_") or "undated"
-        by_era.setdefault(era_slug, []).append(r)
-        prim = r.get("primary_image") or r.get("type_image") or {}
-        index_records.append({
-            "nac_code": r.get("nac_code"),
-            "nac_aliases": r.get("nac_aliases"),
-            "search_aliases": r.get("search_aliases"),
-            "name": r.get("name"),
-            "type": r.get("type"),
-            "year": r.get("year"),
-            "denomination": r.get("denomination"),
-            "series": r.get("series"),
-            "era": r.get("era"),
-            "status_badge": r.get("status_badge"),
-            "thumb_url": prim.get("thumb_url") or prim.get("url") if isinstance(prim, dict) else None,
-            "chunk": f"chunks/era_{era_slug}.json",
-        })
+    era_labels: Dict[str, Optional[str]] = {}
+    for r in sorted_records:
+        slug = _era_slug(r.get("era"))
+        by_era.setdefault(slug, []).append(r)
+        if slug not in era_labels and r.get("era"):
+            era_labels[slug] = r.get("era")
+
+    # Build normalized child tables first so index variety_count reflects parent + sidecar varieties
+    varieties_rows = _build_varieties_child_table(
+        sorted_records,
+        sidecar_rows=varieties_sidecar_rows,
+        dropped_report=dropped_report,
+    )
+    var_count_by_parent: Dict[str, int] = {}
+    for vr in varieties_rows:
+        p = vr["parent_nac1"]
+        var_count_by_parent[p] = var_count_by_parent.get(p, 0) + 1
+
+    chunk_manifest_entries: List[Dict[str, Any]] = []
+    index_records: List[Dict[str, Any]] = []
+
+    for slug in sorted(by_era.keys()):
+        era_rows = by_era[slug]
+        parts = _partition_era_chunks(
+            era_rows,
+            max_chunk_rows=max_chunk_rows,
+            max_chunk_bytes=max_chunk_bytes,
+        )
+        multi = len(parts) > 1
+        for part_idx, part_rows in enumerate(parts, 1):
+            part_slug = f"{slug}_p{part_idx}" if multi else slug
+            rel_path = f"chunks/era_{part_slug}.json"
+            abs_path = os.path.join(out_dir, "chunks", f"era_{part_slug}.json")
+            chunk_bytes, chunk_sha = _write_json_artifact(abs_path, part_rows, label=rel_path)
+            chunk_manifest_entries.append({
+                "slug": part_slug,
+                "era": era_labels.get(slug) or "Undated",
+                "path": rel_path,
+                "row_count": len(part_rows),
+                "bytes": chunk_bytes,
+                "sha256": chunk_sha,
+            })
+            for r in part_rows:
+                nac = r.get("nac_code")
+                prim_compact = _compact_card_image(r.get("primary_image"))
+                type_compact = _compact_card_image(r.get("type_image"))
+                has_pkg = bool(r.get("packaging_images"))
+                has_photo = bool(prim_compact or type_compact or has_pkg)
+                v_cnt = var_count_by_parent.get(str(nac or ""), len(r.get("varieties") or []))
+                prim_for_thumb = prim_compact or type_compact or {}
+
+                idx_rec: Dict[str, Any] = {
+                    "nac_code": nac,
+                    "name": r.get("name"),
+                    "type": r.get("type"),
+                    "is_placeholder": bool(r.get("is_placeholder") is True),
+                    "chunk": rel_path,
+                }
+                if r.get("nac_aliases"):
+                    idx_rec["nac_aliases"] = r["nac_aliases"]
+                if r.get("search_aliases"):
+                    idx_rec["search_aliases"] = r["search_aliases"]
+                if r.get("year") is not None:
+                    idx_rec["year"] = r["year"]
+                if r.get("denomination") is not None:
+                    idx_rec["denomination"] = r["denomination"]
+                if r.get("series") is not None:
+                    idx_rec["series"] = r["series"]
+                if r.get("era") is not None:
+                    idx_rec["era"] = r["era"]
+                if r.get("status_badge") is not None:
+                    idx_rec["status_badge"] = r["status_badge"]
+                if r.get("mint_facility") is not None:
+                    idx_rec["mint_facility"] = r["mint_facility"]
+                if r.get("mint_mark_on_coin") is not None:
+                    idx_rec["mint_mark_on_coin"] = r["mint_mark_on_coin"]
+                if r.get("is_pre_federal") is True:
+                    idx_rec["is_pre_federal"] = True
+                thumb = prim_for_thumb.get("thumb_url") or prim_for_thumb.get("url")
+                if thumb:
+                    idx_rec["thumb_url"] = thumb
+                if prim_compact:
+                    idx_rec["primary_image"] = prim_compact
+                if type_compact:
+                    idx_rec["type_image"] = type_compact
+                if has_photo:
+                    idx_rec["has_photo"] = True
+                if has_pkg:
+                    idx_rec["has_packaging_images"] = True
+                if v_cnt > 0:
+                    idx_rec["has_varieties"] = True
+                    idx_rec["variety_count"] = v_cnt
+                index_records.append(idx_rec)
+
     index_path = os.path.join(out_dir, "catalog_search_index_v1.json")
-    with open(index_path, "w", encoding="utf-8", newline="\n") as f:
-        json.dump(index_records, f, separators=(",", ":"), ensure_ascii=False)
-    for slug, chunk_rows in by_era.items():
-        with open(os.path.join(chunks_dir, f"era_{slug}.json"), "w", encoding="utf-8", newline="\n") as f:
-            json.dump(chunk_rows, f, separators=(",", ":"), ensure_ascii=False)
-    return {"index_path": index_path, "chunks": len(by_era)}
+    index_bytes, index_sha = _write_json_artifact(
+        index_path, index_records, label="catalog_search_index_v1.json"
+    )
+
+    varieties_path = os.path.join(children_dir, "varieties_v1.json")
+    varieties_bytes, varieties_sha = _write_json_artifact(
+        varieties_path, varieties_rows, label="children/varieties_v1.json"
+    )
+    nbn_path = os.path.join(children_dir, "nbn_charters_v1.json")
+    nbn_bytes, nbn_sha = _write_json_artifact(nbn_path, [], label="children/nbn_charters_v1.json")
+    obs_path = os.path.join(children_dir, "obsolete_issuers_v1.json")
+    obs_bytes, obs_sha = _write_json_artifact(obs_path, [], label="children/obsolete_issuers_v1.json")
+
+    manifest_payload = {
+        "schema_version": "catalog_sharded_v1",
+        "master_sha8": master_sha8,
+        "public_row_count": len(sorted_records),
+        "monolith_present": bool(monolith_present),
+        "monolith_bytes": int(monolith_bytes) if monolith_present else 0,
+        "index": {
+            "files": ["catalog_search_index_v1.json"],
+            "row_count": len(index_records),
+            "bytes": index_bytes,
+            "sha256": index_sha,
+        },
+        "chunks": chunk_manifest_entries,
+        "child_tables": {
+            "varieties": {
+                "path": "children/varieties_v1.json",
+                "row_count": len(varieties_rows),
+                "bytes": varieties_bytes,
+                "sha256": varieties_sha,
+            },
+            "nbn_charters": {
+                "path": "children/nbn_charters_v1.json",
+                "row_count": 0,
+                "bytes": nbn_bytes,
+                "sha256": nbn_sha,
+            },
+            "obsolete_issuers": {
+                "path": "children/obsolete_issuers_v1.json",
+                "row_count": 0,
+                "bytes": obs_bytes,
+                "sha256": obs_sha,
+            },
+        },
+    }
+    manifest_path = os.path.join(out_dir, "catalog_manifest_v1.json")
+    manifest_bytes, manifest_sha = _write_json_artifact(
+        manifest_path, manifest_payload, label="catalog_manifest_v1.json"
+    )
+
+    return {
+        "manifest_path": manifest_path,
+        "manifest_bytes": manifest_bytes,
+        "manifest_sha256": manifest_sha,
+        "index_path": index_path,
+        "index_bytes": index_bytes,
+        "index_sha256": index_sha,
+        "chunks": len(chunk_manifest_entries),
+        "chunk_details": chunk_manifest_entries,
+        "varieties_count": len(varieties_rows),
+        "child_tables": manifest_payload["child_tables"],
+    }
 
 
 def build_public_catalog(
@@ -522,6 +907,10 @@ def build_public_catalog(
     pretty: bool = False,
     strict_legacy_counts: bool = False,
     emit_split_index: bool = False,
+    no_monolith: bool = False,
+    allow_oversize_monolith: bool = False,
+    master_sha8: Optional[str] = None,
+    varieties_sidecar_path: Optional[str] = None,
 ) -> int:
     print(f"Reading master entries from: {input_path}")
     if not os.path.exists(input_path):
@@ -789,17 +1178,24 @@ def build_public_catalog(
     )
 
     # Hard Greysheet / GSID fail-closed assertion on public output
-    gs_match = _FORBIDDEN_GREYSHEET_RE.search(serialized)
-    if gs_match:
-        raise RuntimeError(f"Greysheet/GSID leak detected in public catalog build: {gs_match.group(0)!r}")
+    _assert_no_greysheet_leak(serialized, "public catalog monolith")
+
+    out_bytes = len(serialized.encode("utf-8"))
+    oversize_monolith = out_bytes > SPLIT_THRESHOLD_BYTES or len(records) > MAX_MONOLITH_ROWS
+    write_monolith = (not no_monolith) and (not oversize_monolith or allow_oversize_monolith)
 
     out_dir = os.path.dirname(os.path.abspath(output_path))
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(serialized)
+    if write_monolith:
+        with open(output_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(serialized)
+    else:
+        print(
+            f"Monolith omitted ({out_bytes:,} bytes, {len(records)} rows; "
+            f"no_monolith={no_monolith}, oversize={oversize_monolith}) — serving sharded bundle."
+        )
 
-    out_bytes = len(serialized.encode("utf-8"))
     pre_fed_count = sum(1 for r in records if r["is_pre_federal"])
     print(f"Successfully generated {len(records)} sanitized records ({out_bytes:,} bytes) to: {output_path}")
     print(
@@ -810,21 +1206,58 @@ def build_public_catalog(
     )
 
     if out_bytes >= WARN_SIZE_BYTES:
-        print(f"WARNING: Public catalog payload ({out_bytes:,} bytes) reached >= 8 MB watch threshold.")
-    if emit_split_index or out_bytes > SPLIT_THRESHOLD_BYTES or len(records) > SPLIT_THRESHOLD_ROWS:
-        split_info = _write_split_index(records, output_path)
-        print(f"Scaling guard emitted split search index ({split_info['chunks']} era chunks): {split_info['index_path']}")
+        print(f"WARNING: Public catalog payload ({out_bytes:,} bytes) reached >= 8 MiB watch threshold.")
+
+    sidecar_rows: Optional[List[Dict[str, Any]]] = None
+    if varieties_sidecar_path:
+        if not os.path.exists(varieties_sidecar_path):
+            raise FileNotFoundError(f"Varieties sidecar not found: {varieties_sidecar_path}")
+        sidecar_rows = []
+        with open(varieties_sidecar_path, "r", encoding="utf-8") as sf:
+            for sline in sf:
+                sline = sline.strip()
+                if sline:
+                    sidecar_rows.append(json.loads(sline))
+
+    should_split = (
+        emit_split_index
+        or no_monolith
+        or oversize_monolith
+        or out_bytes >= AUTO_SPLIT_BYTES
+        or len(records) > AUTO_SPLIT_ROWS
+        or bool(sidecar_rows)
+    )
+    if should_split:
+        resolved_sha8 = master_sha8 or _compute_file_lf_sha8(input_path)
+        split_info = _write_split_index(
+            records,
+            output_path,
+            master_sha8=resolved_sha8,
+            monolith_present=write_monolith,
+            monolith_bytes=out_bytes if write_monolith else 0,
+            varieties_sidecar_rows=sidecar_rows,
+            dropped_report=dropped_images,
+        )
+        print(
+            f"Chapter 0 sharded output emitted: manifest={split_info['manifest_path']}, "
+            f"index={split_info['index_bytes']:,} bytes, chunks={split_info['chunks']}, "
+            f"varieties={split_info['varieties_count']}"
+        )
 
     return 0
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Build sanitized public catalog JSON (Wave 2 v2.1).")
+    parser = argparse.ArgumentParser(description="Build sanitized public catalog JSON (Wave 2 v2.1 + Chapter 0).")
     parser.add_argument("input_path", nargs="?", default=DEFAULT_INPUT_PATH)
     parser.add_argument("output_path", nargs="?", default=DEFAULT_OUTPUT_PATH)
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON with indent=2")
     parser.add_argument("--strict-legacy-counts", action="store_true", help="Enforce legacy 3,202 snapshot counts")
-    parser.add_argument("--split-index", action="store_true", help="Force emit split search index + era chunks")
+    parser.add_argument("--split-index", action="store_true", help="Force emit sharded manifest, search index, era chunks & child tables")
+    parser.add_argument("--no-monolith", action="store_true", help="Omit monolithic catalog_public_v1.json and emit sharded bundle only")
+    parser.add_argument("--allow-oversize-monolith", action="store_true", help="Dev-only escape hatch to write monolith > 10 MiB / 5,500 rows (forbidden at CI/fold gates)")
+    parser.add_argument("--master-sha8", default=None, help="Explicit master SHA8 pin to record in catalog_manifest_v1.json")
+    parser.add_argument("--varieties-sidecar", default=None, help="Optional JSONL sidecar for normalized children/varieties_v1.json")
     args = parser.parse_args(argv)
     return build_public_catalog(
         args.input_path,
@@ -832,6 +1265,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         pretty=args.pretty,
         strict_legacy_counts=args.strict_legacy_counts,
         emit_split_index=args.split_index,
+        no_monolith=args.no_monolith,
+        allow_oversize_monolith=args.allow_oversize_monolith,
+        master_sha8=args.master_sha8,
+        varieties_sidecar_path=args.varieties_sidecar,
     )
 
 

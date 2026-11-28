@@ -7,6 +7,7 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from catalog_nac1 import (  # noqa: E402
+    BN_ONLY_FACILITIES,
     KIND_TO_COLLECTION,
     NAC1_REGEX,
     build_nac1,
@@ -93,3 +94,41 @@ def test_regex_rejects_excluded_crockford_chars_I_L_O_U(excluded_char):
     candidate = f"NAC1.CN.US.1D.MORGAN.1881.S.BASE.{excluded_char}"
     assert NAC1_REGEX.match(candidate) is None
     assert not validate_nac1(candidate)
+
+
+FED_12_DISTRICTS = (
+    "BOS", "NY", "PHI", "CLE", "RIC", "ATL",
+    "CHI", "STL", "MIN", "KC", "DAL", "SF",
+)
+NON_BN_KINDS = ("CN", "MD", "TK", "ST")
+
+
+def test_bn_only_facilities_exact_12_fed_districts():
+    assert BN_ONLY_FACILITIES == frozenset(FED_12_DISTRICTS)
+
+
+def test_atlanta_2021_notesheet_canonical_vector_resolves():
+    atl_code = "NAC1.BN.US.1TO10.NOTESHEET.2021.ATL.B4003.J"
+    assert validate_nac1(atl_code)
+    parsed = parse_nac1(atl_code)
+    assert parsed["kind"] == "BN"
+    assert parsed["facility_code"] == "ATL"
+    assert parsed["variety"] == "B4003"
+
+
+@pytest.mark.parametrize("district", FED_12_DISTRICTS)
+def test_all_12_fed_districts_allowed_for_bn(district):
+    code = build_nac1(f"NAC1.BN.US.100.NOTESHEET.2025.{district}.B7800")
+    assert validate_nac1(code)
+    parsed = parse_nac1(code)
+    assert parsed["kind"] == "BN"
+    assert parsed["facility_code"] == district
+
+
+@pytest.mark.parametrize("district", FED_12_DISTRICTS)
+@pytest.mark.parametrize("kind", NON_BN_KINDS)
+def test_all_12_fed_districts_rejected_for_non_bn_kinds(district, kind):
+    code = build_nac1(f"NAC1.{kind}.US.1D.MORGAN.2025.{district}.BASE")
+    assert not validate_nac1(code)
+    with pytest.raises(ValueError):
+        parse_nac1(code)

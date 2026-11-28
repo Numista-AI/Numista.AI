@@ -98,6 +98,49 @@ String _buildCoinDescription(Map<String, dynamic> item) {
   return 'U.S. Numismatics Reference Catalog — ${parts.join(' · ')}.';
 }
 
+String _formatCount(int n) {
+  final s = n.toString();
+  final buf = StringBuffer();
+  for (var i = 0; i < s.length; i++) {
+    final fromEnd = s.length - i;
+    if (i > 0 && fromEnd % 3 == 0) buf.write(',');
+    buf.write(s[i]);
+  }
+  return buf.toString();
+}
+
+Future<List<dynamic>> _loadPublicCatalogRecords() async {
+  final manifestFile = File('assets/catalog/catalog_manifest_v1.json');
+  if (manifestFile.existsSync()) {
+    final manifest = jsonDecode(await manifestFile.readAsString());
+    if (manifest is Map && manifest['schema_version'] == 'catalog_sharded_v1') {
+      final chunks = manifest['chunks'];
+      if (chunks is List) {
+        final merged = <dynamic>[];
+        for (final chunk in chunks) {
+          if (chunk is Map && chunk['path'] is String) {
+            final chunkFile = File('assets/catalog/${chunk['path']}');
+            if (!chunkFile.existsSync()) {
+              stderr.writeln('ERROR: Missing sharded chunk ${chunkFile.path}');
+              exit(1);
+            }
+            final rows = jsonDecode(await chunkFile.readAsString()) as List<dynamic>;
+            merged.addAll(rows);
+          }
+        }
+        return merged;
+      }
+    }
+  }
+
+  final catalogFile = File('assets/catalog/catalog_public_v1.json');
+  if (!catalogFile.existsSync()) {
+    stderr.writeln('ERROR: Neither assets/catalog/catalog_manifest_v1.json nor catalog_public_v1.json found.');
+    exit(1);
+  }
+  return jsonDecode(await catalogFile.readAsString()) as List<dynamic>;
+}
+
 Future<void> main() async {
   final indexFile = File('build/web/index.html');
   if (!indexFile.existsSync()) {
@@ -106,12 +149,8 @@ Future<void> main() async {
   }
   final templateHtml = await indexFile.readAsString();
 
-  final catalogFile = File('assets/catalog/catalog_public_v1.json');
-  if (!catalogFile.existsSync()) {
-    stderr.writeln('ERROR: assets/catalog/catalog_public_v1.json not found.');
-    exit(1);
-  }
-  final List<dynamic> catalog = jsonDecode(await catalogFile.readAsString()) as List<dynamic>;
+  final List<dynamic> catalog = await _loadPublicCatalogRecords();
+  final formattedCount = _formatCount(catalog.length);
 
   // 1. /catalog/index.html
   final catalogRootDir = Directory('build/web/catalog')..createSync(recursive: true);
@@ -119,12 +158,12 @@ Future<void> main() async {
     _injectHeadTags(
       templateHtml,
       title: 'Numista.AI Public Catalog — U.S. Numismatics Reference',
-      description: 'Explore 3,202 U.S. coins, banknotes, and medals in the Numista.AI Public Reference Catalog.',
+      description: 'Explore $formattedCount U.S. coins, banknotes, and medals in the Numista.AI Public Reference Catalog.',
       canonicalUrl: 'https://numista.ai/catalog',
     ),
   );
 
-  // 2. /catalog/<nac>/index.html for all 3,202 records
+  // 2. /catalog/<nac>/index.html for all public records
   int generatedCoins = 0;
   for (final raw in catalog) {
     final item = Map<String, dynamic>.from(raw as Map);

@@ -97,6 +97,8 @@ flutter:
     - assets/fonts/
     - assets/mint_mark_diagrams/
     - assets/catalog/
+    - assets/catalog/chunks/
+    - assets/catalog/children/
     - assets/config/
 
 

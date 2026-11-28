@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/coin_model.dart';
+import '../../services/catalog/catalog_asset_loader.dart';
 import '../../services/melt_value_service.dart';
 import '../../services/wishlist_service.dart';
 import '../../utils/catalog_image_guard.dart';
@@ -99,9 +98,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
 
   Future<void> _loadCatalog() async {
     try {
-      final jsonString = await rootBundle.loadString('assets/catalog/catalog_public_v1.json');
-      final List<dynamic> raw = json.decode(jsonString);
-      final List<Map<String, dynamic>> entries = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final entries = await CatalogAssetLoader.instance.loadIndex();
 
       if (mounted) {
         setState(() {
@@ -113,9 +110,14 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
         if (widget.initialNacCode != null && widget.initialNacCode!.trim().isNotEmpty) {
           final match = resolveEntryByNacOrAlias(_allEntries, widget.initialNacCode!);
           if (match != null && match.isNotEmpty) {
+            final hydrated = await CatalogAssetLoader.instance.loadFullEntry(
+                  (match['nac_code'] as String?) ?? widget.initialNacCode!,
+                ) ??
+                match;
+            if (!mounted) return;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                _showItemDetailModal(match);
+                _showItemDetailModal(hydrated);
               }
             });
           } else {
@@ -126,7 +128,7 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
         }
       }
     } catch (e) {
-      debugPrint('[Catalog] Failed to load catalog_public_v1.json: $e');
+      debugPrint('[Catalog] Failed to load catalog assets: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -179,7 +181,8 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
       if (selectedType == 'note' && type != 'note') return false;
       if (selectedType == 'medal' && type != 'medal') return false;
       if (selectedType == 'errors') {
-        final hasVarieties = item['varieties'] is List && (item['varieties'] as List).isNotEmpty;
+        final hasVarieties = item['has_varieties'] == true ||
+            (item['varieties'] is List && (item['varieties'] as List).isNotEmpty);
         final isErr = type == 'error' || nac.contains('.ERR.') || hasVarieties;
         if (!isErr) return false;
       }
@@ -208,8 +211,9 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
       if (photosOnly) {
         final hasPrimary = item['primary_image'] != null && (item['primary_image'] as Map).isNotEmpty;
         final hasType = item['type_image'] != null && (item['type_image'] as Map).isNotEmpty;
-        final hasPkg = item['packaging_images'] is List && (item['packaging_images'] as List).isNotEmpty;
-        if (!hasPrimary && !hasType && !hasPkg) return false;
+        final hasPkg = item['has_packaging_images'] == true ||
+            (item['packaging_images'] is List && (item['packaging_images'] as List).isNotEmpty);
+        if (!hasPrimary && !hasType && !hasPkg && item['has_photo'] != true) return false;
       }
 
       return true;
@@ -281,8 +285,20 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
     } else {
       // Default: Images + Sourced first
       result.sort((a, b) {
-        final hasImgA = (a['primary_image'] != null || a['type_image'] != null || (a['packaging_images'] is List && (a['packaging_images'] as List).isNotEmpty)) ? 1 : 0;
-        final hasImgB = (b['primary_image'] != null || b['type_image'] != null || (b['packaging_images'] is List && (b['packaging_images'] as List).isNotEmpty)) ? 1 : 0;
+        final hasImgA = (a['has_photo'] == true ||
+                a['primary_image'] != null ||
+                a['type_image'] != null ||
+                a['has_packaging_images'] == true ||
+                (a['packaging_images'] is List && (a['packaging_images'] as List).isNotEmpty))
+            ? 1
+            : 0;
+        final hasImgB = (b['has_photo'] == true ||
+                b['primary_image'] != null ||
+                b['type_image'] != null ||
+                b['has_packaging_images'] == true ||
+                (b['packaging_images'] is List && (b['packaging_images'] as List).isNotEmpty))
+            ? 1
+            : 0;
         if (hasImgA != hasImgB) return hasImgB.compareTo(hasImgA);
 
         final yA = a['year'] as int? ?? 9999;
@@ -719,7 +735,8 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
     final errCount = _allEntries.where((e) {
       final t = (e['type'] as String? ?? '').toLowerCase();
       final nac = (e['nac_code'] as String? ?? '').toUpperCase();
-      final hasVar = e['varieties'] is List && (e['varieties'] as List).isNotEmpty;
+      final hasVar = e['has_varieties'] == true ||
+          (e['varieties'] is List && (e['varieties'] as List).isNotEmpty);
       return t == 'error' || nac.contains('.ERR.') || hasVar;
     }).length;
     final upcomingCount = _allEntries.where((e) => (e['year'] is int) && (e['year'] as int) >= 2026).length;
@@ -971,11 +988,23 @@ class _CatalogBrowseScreenState extends State<CatalogBrowseScreen> {
     );
   }
 
-  void _showItemDetailModal(Map<String, dynamic> item) {
+  Future<void> _showItemDetailModal(Map<String, dynamic> item) async {
+    var resolvedItem = item;
+    if (item['chunk'] is String && (item['chunk'] as String).isNotEmpty) {
+      final nac = (item['nac_code'] as String? ?? '').trim();
+      if (nac.isNotEmpty) {
+        try {
+          resolvedItem = await CatalogAssetLoader.instance.loadFullEntry(nac) ?? item;
+        } catch (e) {
+          debugPrint('[Catalog] Failed to hydrate full entry $nac: $e');
+        }
+      }
+      if (!mounted) return;
+    }
     UnifiedCoinDetailScreen.showPublic(
       context,
-      projection: PublicCoinProjection.fromCatalogMap(item),
-      legacyOpen: () => _showLegacyItemDetailModal(item),
+      projection: PublicCoinProjection.fromCatalogMap(resolvedItem),
+      legacyOpen: () => _showLegacyItemDetailModal(resolvedItem),
     );
   }
 
